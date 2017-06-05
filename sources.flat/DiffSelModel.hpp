@@ -508,6 +508,25 @@ class DiffSelModel : public ProbModel {
 		}
 	}
 
+    void CheckSite(int i)   {
+		UpdateSiteFitnessProfiles(i);
+		CorruptSiteCodonMatrices(i);
+		for (int k=0; k<Ncond; k++)	{
+			if (fabs(sitecondsuffstatlogprob[k][i] - SiteCondSuffStatLogProb(i,k)) > 1e-8)  {
+                cerr << "error for site " << i << '\n';
+                cerr << sitecondsuffstatlogprob[k][i] << SiteCondSuffStatLogProb(i,k) << '\n';
+                exit(1);
+            }
+		}
+	}
+
+    void CheckAll() {
+		CorruptNucMatrix();
+        for (int i=0; i<Nsite; i++) {
+            CheckSite(i);
+        }
+    }
+
 	void BackupSite(int i)	{
 
 		for (int k=0; k<Ncond; k++)	{
@@ -637,7 +656,7 @@ class DiffSelModel : public ProbModel {
 	double LengthLogProb()	{
 
 		// iid exp of rate lambda: total length is suff stat
-		return -lambda*GetTotalLength();
+		return Nbranch*log(lambda)-lambda*GetTotalLength();
 	}
 
 	// ---------------
@@ -670,7 +689,7 @@ class DiffSelModel : public ProbModel {
 		}
 		else	{
 			for (int i=0; i<Nsite; i++)	{
-				phyloprocess->AddSuffStat(i,from->Out(),suffstatarray[branchalloc[from->GetBranch()->GetIndex()]][i]);
+				phyloprocess->AddSuffStat(i,from,suffstatarray[branchalloc[from->GetBranch()->GetIndex()]][i]);
 			}
 		}
 		for (const Link* link=from->Next(); link!=from; link=link->Next())	{
@@ -697,7 +716,7 @@ class DiffSelModel : public ProbModel {
 
 		if (! from->isRoot())	{
 			for (int i=0; i<Nsite; i++)	{
-				phyloprocess->AddLengthSuffStat(i,from->Out(),branchlengthcount[from->GetBranch()->GetIndex()],branchlengthbeta[from->GetBranch()->GetIndex()]);
+				phyloprocess->AddLengthSuffStat(i,from,branchlengthcount[from->GetBranch()->GetIndex()],branchlengthbeta[from->GetBranch()->GetIndex()]);
 			}
 		}
 		for (const Link* link=from->Next(); link!=from; link=link->Next())	{
@@ -725,6 +744,7 @@ class DiffSelModel : public ProbModel {
 		for (int rep=0; rep<nrep; rep++)	{
 
 			CollectLengthSuffStat();
+
 			MoveBranchLength();
 			MoveLambda(1.0,10);
 			MoveLambda(0.3,10);
@@ -741,8 +761,10 @@ class DiffSelModel : public ProbModel {
 				MoveDelta(k,5,1,10);
 			}
 
+            /*
 			MoveVarSel(1.0,10);
 			MoveVarSel(0.3,10);
+            */
 
 			MoveRR(0.1,1,3);
 			MoveRR(0.03,3,3);
@@ -765,6 +787,8 @@ class DiffSelModel : public ProbModel {
 		double* bk = new double[Naa];
 		for (int rep=0; rep<nrep; rep++)	{
 			for (int i=0; i<Nsite; i++)	{
+
+                // CheckSite(i);
 
 				for (int a=0; a<Naa; a++)	{
 					bk[a] = baseline[i][a];
@@ -790,6 +814,7 @@ class DiffSelModel : public ProbModel {
 					RestoreSite(i);
 				}
 				ntot++;
+                // CheckSite(i);
 			}
 		}
 		return nacc / ntot;
@@ -803,6 +828,8 @@ class DiffSelModel : public ProbModel {
 		for (int rep=0; rep<nrep; rep++)	{
 			for (int i=0; i<Nsite; i++)	{
 
+                // CheckSite(i);
+
 				for (int a=0; a<Naa; a++)	{
 					bk[a] = delta[k][i][a];
 				}
@@ -812,7 +839,8 @@ class DiffSelModel : public ProbModel {
 				double loghastings = Random::RealVectorProposeMove(delta[k][i],Naa,tuning,n);
 				deltalogprob += loghastings;
 
-				UpdateSiteFlagged(i,k);
+				UpdateSite(i);
+				// UpdateSiteFlagged(i,k);
 
 				deltalogprob += SiteCondProfileLogProb(i,k) + GetSiteSuffStatLogProb(i);
 
@@ -827,6 +855,7 @@ class DiffSelModel : public ProbModel {
 					RestoreSite(i);
 				}
 				ntot++;
+                // CheckSite(i);
 			}
 		}
 		return nacc / ntot;
@@ -837,6 +866,9 @@ class DiffSelModel : public ProbModel {
 		double ntot = 0;
 		double bk[Nrr];
 		for (int rep=0; rep<nrep; rep++)	{
+
+            // CheckAll();
+
 			for (int l=0; l<Nrr; l++)	{
 				bk[l] = nucrelrate[l];
 			}
@@ -861,6 +893,7 @@ class DiffSelModel : public ProbModel {
 				RestoreAll();
 			}
 			ntot++;
+            // CheckAll();
 		}
 		return nacc/ntot;
 	}
@@ -870,6 +903,7 @@ class DiffSelModel : public ProbModel {
 		double ntot = 0;
 		double bk[Nnuc];
 		for (int rep=0; rep<nrep; rep++)	{
+            // CheckAll();
 			for (int l=0; l<Nnuc; l++)	{
 				bk[l] = nucstat[l];
 			}
@@ -895,6 +929,7 @@ class DiffSelModel : public ProbModel {
 				RestoreAll();
 			}
 			ntot++;
+            // CheckAll();
 		}
 		return nacc/ntot;
 	}
