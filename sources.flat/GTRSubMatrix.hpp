@@ -7,7 +7,7 @@
 class GTRSubMatrix : public virtual SubMatrix {
   public:
     GTRSubMatrix(int inNstate, const double *rr, const double *stat, bool innormalise = false);
-    ~GTRSubMatrix() override = default;
+    ~GTRSubMatrix() = default;
 
     int GetNRelativeRate() { return Nrr; }
     double RelativeRate(int i, int j) { return mRelativeRate[rrindex(i, j, GetNstate())]; }

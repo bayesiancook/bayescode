@@ -36,25 +36,8 @@
 #include "Random.hpp"
 #include "SuffStat.hpp"
 
-class AbstractTransitionMatrix {
-  public:
-    virtual ~AbstractTransitionMatrix() = default;
 
-    virtual void BackwardPropagate(const double *down, double *up, double length) = 0;
-    virtual void ForwardPropagate(const double *up, double *down, double length) = 0;
-    virtual const double *GetStationary() = 0;
-    virtual double Stationary(int i) = 0;
-
-    virtual int GetNstate() = 0;
-    virtual void CorruptMatrix() = 0;
-    virtual double operator()(int, int) = 0;
-    virtual const double *GetRow(int i) = 0;
-
-    virtual bool check() { return true; }
-};
-
-
-class SubMatrix : public virtual AbstractTransitionMatrix {
+class SubMatrix {
   protected:
     // these 2 pure virtual functions are the most essential component of the
     // SubMatrix class
@@ -83,17 +66,17 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
     SubMatrix(int inNstate, bool innormalise = false);
-    ~SubMatrix() override;
+    ~SubMatrix();
 
     void Create();
 
-    double operator()(int /*i*/, int /*j*/) override;
-    const double *GetRow(int i) override;
+    double operator()(int /*i*/, int /*j*/);
+    const double *GetRow(int i);
 
-    const double *GetStationary() override;
-    double Stationary(int i) override;
+    const double *GetStationary();
+    double Stationary(int i);
 
-    int GetNstate() override { return Nstate; }
+    int GetNstate() { return Nstate; }
 
     double GetRate();
     void ScalarMul(double e);
@@ -101,7 +84,7 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
     bool isNormalised() { return normalise; }
     void Normalise();
 
-    void CorruptMatrix() override;
+    virtual void CorruptMatrix();
     void UpdateMatrix();
 
     void ActivatePowers();
@@ -118,8 +101,8 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
 
     int GetDiagStat() { return ndiagfailed; }
 
-    void BackwardPropagate(const double *up, double *down, double length) override;
-    void ForwardPropagate(const double *down, double *up, double length) override;
+    void BackwardPropagate(const double *up, double *down, double length);
+    void ForwardPropagate(const double *down, double *up, double length);
     // virtual void     FiniteTime(int i0, double* down, double length);
 
     double **GetQ() { return Q; }

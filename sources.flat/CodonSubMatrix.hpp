@@ -79,7 +79,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
         nucflag = false;
     }
 
-    ~MGCodonSubMatrix() override {
+    ~MGCodonSubMatrix() {
         for (int i = 0; i < Nnuc; i++) {
             delete[] synnucarray[i];
             delete[] nonsynnucarray[i];
