@@ -15,7 +15,6 @@ class DiffSelModel : public ProbModel {
 	// model selectors
 	// ----- 
 
-	int conjugate;
 	int fixglob;
 	int fixvar;
 	int codonmodel;
@@ -116,11 +115,13 @@ class DiffSelModel : public ProbModel {
 	public:
 
 	DiffSelModel(std::string datafile, std::string treefile, int inNcond,
-					      int inNlevel, int infixglob, int infixvar,
-					      int inconjugate, int incodonmodel,
-					      bool sample) {
-		conjugate = inconjugate;
+					      int inNlevel, int infixglob, int infixvar, int incodonmodel, bool sample) {
+
 		fixglob = infixglob;
+        if (! fixglob)  {
+            cerr << "error: free hyperparameters for baseline (global profile) not yet implemented\n";
+            exit(1);
+        }
 		fixvar = infixvar;
 		codonmodel = incodonmodel;
 		Ncond = inNcond;
@@ -586,7 +587,7 @@ class DiffSelModel : public ProbModel {
 	double GlobalProfileLogProb()	{
 
 		// uniform dirichlet: log prob is constant
-		return 0;
+        return Nsite * Random::logGamma((double) Naa);
 		/*
 		double total = 0;
 		for (int i=0; i<Nsite; i++)	{
@@ -616,7 +617,7 @@ class DiffSelModel : public ProbModel {
 		for (int i=0; i<Nsite; i++)	{
 			total += SiteCondProfileLogProb(i,k);
 		}
-		total -= 0.5 * Nsite * log(varsel[k]);
+		total -= 0.5 * Nsite * log(2 * Pi * varsel[k]);
 		return total;
 	}
 
@@ -630,7 +631,6 @@ class DiffSelModel : public ProbModel {
 			sum2 += delta[k][i][a] * delta[k][i][a];
 		}
 		return - 0.5 * sum2 / varsel[k];
-		//  - 0.5 * log(varsel[k]);
 	}
 
 	double VarSelLogProb()	{
@@ -650,7 +650,7 @@ class DiffSelModel : public ProbModel {
 
 	double LambdaLogProb()	{
 
-		return -lambda/10;
+		return -log(10.0) - lambda/10;
 	}
 
 	double LengthLogProb()	{
@@ -761,10 +761,10 @@ class DiffSelModel : public ProbModel {
 				MoveDelta(k,5,1,10);
 			}
 
-            /*
-			MoveVarSel(1.0,10);
-			MoveVarSel(0.3,10);
-            */
+            if (! fixvar)   {
+                MoveVarSel(1.0,10);
+                MoveVarSel(0.3,10);
+            }
 
 			MoveRR(0.1,1,3);
 			MoveRR(0.03,3,3);
@@ -1037,21 +1037,31 @@ class DiffSelModel : public ProbModel {
 	}
 
 	double GetLogPrior() {
+
 		double total = 0;
+
+        // branchlengths
 		total += LambdaLogProb();
 		total += LengthLogProb();
+
+        // uniform on relrates and nucstat
+        total += Random::logGamma((double) Nnuc);
+        total += Random::logGamma((double) Nrr);
+
+        // uniform on baseline
 		total += GlobalProfileLogProb();
+
+        // variance parameters
 		total += VarSelLogProb();
+
+        // differential selection effects
 		total += ProfileLogProb();
+
 		return total;
 	}
 
 	double GetLogLikelihood()	{
 		return phyloprocess->GetLogProb();
-		/*
-		UpdateFitnessProfiles();
-		return SuffStatLogProb();
-		*/
 	}
 
 	void TraceHeader(std::ostream& os)  {
@@ -1078,8 +1088,66 @@ class DiffSelModel : public ProbModel {
 
 	void Monitor(ostream& os) {}
 
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+	void FromStream(istream& is) {
+        is >> lambda;
+        for (int i=0; i<Nbranch; i++)   {
+            is >> branchlength[i];
+        }
+        for (int i=0; i<Nrr; i++)   {
+            is >> nucrelrate[i];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            is >> nucstat[i];
+        }
+        for (int i=0; i<Nsite; i++) {
+            for (int a=0; a<Naa; a++)   {
+                is >> baseline[i][a];
+            }
+        }
+        for (int k=1; k<Ncond; k++) {
+            is >> varsel[k];
+        }
+        for (int k=1; k<Ncond; k++) {
+            for (int i=0; i<Nsite; i++) {
+                for (int a=0; a<Naa; a++)   {
+                    is >> delta[k][i][a];
+                }
+            }
+        }
+    }
+
+	void ToStream(ostream& os) {
+        os << lambda << '\n';
+        for (int i=0; i<Nbranch; i++)   {
+            os << branchlength[i] << '\t';
+        }
+        os << '\n';
+        for (int i=0; i<Nrr; i++)   {
+            os << nucrelrate[i] << '\t';
+        }
+        os << '\n';
+        for (int i=0; i<Nnuc; i++)  {
+            os << nucstat[i] << '\t';
+        }
+        os << '\n';
+        for (int i=0; i<Nsite; i++) {
+            for (int a=0; a<Naa; a++)   {
+                os << baseline[i][a] << '\t';
+            }
+            os << '\n';
+        }
+        for (int k=1; k<Ncond; k++) {
+            os << varsel[k] << '\n';
+        }
+        for (int k=1; k<Ncond; k++) {
+            for (int i=0; i<Nsite; i++) {
+                for (int a=0; a<Naa; a++)   {
+                    os << delta[k][i][a] << '\t';
+                }
+                os << '\n';
+            }
+        }
+    }
 
 };
 
