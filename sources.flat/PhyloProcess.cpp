@@ -657,11 +657,11 @@ BranchSitePath* PhyloProcess::ResampleUniformized(int stateup, int statedown, do
 
 }
 
-void PhyloProcess::AddRootSuffStat(int site, SuffStat& suffstat)	{
+void PhyloProcess::AddRootSuffStat(int site, PoissonSuffStat& suffstat)	{
 	suffstat.rootcount[GetState(GetRoot()->GetNode(),site)]++;
 }
 
-void PhyloProcess::AddSuffStat(int site, const Link* link, SuffStat& suffstat)	{
+void PhyloProcess::AddSuffStat(int site, const Link* link, PoissonSuffStat& suffstat)	{
 	pathmap[link->GetNode()][site]->AddSuffStat(suffstat,GetBranchLength(link->GetBranch()) * GetSiteRate(site));
 }
 

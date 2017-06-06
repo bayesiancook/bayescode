@@ -13,7 +13,7 @@ class SingleOmegaModel : public ProbModel	{
 
 	Tree* tree;
 	FileSequenceAlignment* data;
-	TaxonSet* taxonset;
+	const TaxonSet* taxonset;
 	CodonSequenceAlignment* codondata;
 
 	int Nsite;
@@ -37,7 +37,7 @@ class SingleOmegaModel : public ProbModel	{
 
 	PhyloProcess* phyloprocess;
 
-	SuffStat suffstat;
+	PoissonSuffStat suffstat;
 	double suffstatlogprob;
 	double bksuffstatlogprob;
 

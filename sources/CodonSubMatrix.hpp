@@ -173,37 +173,4 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix {
     double omega;
 };
 
-// this class implements the projection of a 61x61 codon substitution process
-// onto a 20x20 amino-acid replacement process
-// according to the formula:
-//
-// R_{ab} = [ \sum \pi_i Q_{ij} ] [ \sum_i \pi_i ]
-//
-// where a,b runs over amino-acids
-// and i (resp. j) over all codons encoding for amino acid a (resp. b)
-//
-/*
-class AminoAcidReducedCodonSubMatrix : public virtual SubMatrix {
-  public:
-    AminoAcidReducedCodonSubMatrix(CodonSubMatrix *incodonmatrix, bool innormalise = false)
-        : SubMatrix(Naa, innormalise), codonmatrix(incodonmatrix) {
-        aastatespace = new ProteinStateSpace();
-    }
-
-    CodonSubMatrix *GetCodonMatrix() { return codonmatrix; }
-    CodonSubMatrix *GetCodonSubMatrix() { return codonmatrix; }
-    CodonStateSpace *GetCodonStateSpace() { return GetCodonMatrix()->GetCodonStateSpace(); }
-    ProteinStateSpace *GetProteinStateSpace() { return aastatespace; }
-
-  protected:
-    void SetCodonMatrix(CodonSubMatrix *incodonmatrix) { codonmatrix = incodonmatrix; }
-
-    void ComputeArray(int a) override;
-    void ComputeStationary() override;
-
-    CodonSubMatrix *codonmatrix;
-    ProteinStateSpace *aastatespace;
-};
-*/
-
 #endif

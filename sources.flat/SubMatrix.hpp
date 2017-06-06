@@ -34,7 +34,7 @@
 #include <cstdlib>
 #include <iostream>
 #include "Random.hpp"
-#include "SuffStat.hpp"
+#include "PoissonSuffStat.hpp"
 
 
 class SubMatrix {
@@ -128,7 +128,7 @@ class SubMatrix {
 	double			DrawWaitingTime(int state);
 	int 			DrawFromStationary();
 
-	double SuffStatLogProb(SuffStat* suffstat);
+	double SuffStatLogProb(PoissonSuffStat* suffstat);
 
   protected:
     void UpdateRow(int state);

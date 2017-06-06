@@ -13,7 +13,7 @@ class MultiGeneSingleOmegaModel : public ProbModel	{
 
 	Tree* tree;
 	FileSequenceAlignment** data;
-	TaxonSet* taxonset;
+	const TaxonSet* taxonset;
 	CodonSequenceAlignment** codondata;
 
     int Ngene;
@@ -45,7 +45,7 @@ class MultiGeneSingleOmegaModel : public ProbModel	{
 
 	PhyloProcess** phyloprocess;
 
-	SuffStat* suffstat;
+	PoissonSuffStat* suffstat;
 	double* suffstatlogprob;
 	double* bksuffstatlogprob;
 
@@ -170,7 +170,7 @@ class MultiGeneSingleOmegaModel : public ProbModel	{
             // phyloprocess
             phyloprocess[gene] = new PhyloProcess(tree,codondata[gene],branchlength,0,phylosubmatrix[gene],0,rootsubmatrix[gene]);
 
-		suffstat = new SuffStat[Ngene];
+		suffstat = new PoissonSuffStat[Ngene];
 		suffstatlogprob = new double[Ngene];
 		bksuffstatlogprob = new double[Ngene];
         }

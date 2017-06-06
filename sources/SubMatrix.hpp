@@ -34,27 +34,10 @@
 #include <cstdlib>
 #include <iostream>
 #include "Random.hpp"
-// #include "SuffStat.hpp"
-
-class AbstractTransitionMatrix {
-  public:
-    virtual ~AbstractTransitionMatrix() = default;
-
-    virtual void BackwardPropagate(const double *down, double *up, double length) const = 0;
-    virtual void ForwardPropagate(const double *up, double *down, double length) const = 0;
-    virtual const double *GetStationary() const = 0;
-    virtual double Stationary(int i) const = 0;
-
-    virtual int GetNstate() const = 0;
-    virtual void CorruptMatrix() = 0;
-    virtual double operator()(int, int) const = 0;
-    virtual const double *GetRow(int i) const = 0;
-
-    virtual bool check() const { return true; }
-};
 
 
-class SubMatrix : public virtual AbstractTransitionMatrix {
+class SubMatrix {
+
   protected:
     // these 2 pure virtual functions are the most essential component of the
     // SubMatrix class
@@ -83,17 +66,17 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
     SubMatrix(int inNstate, bool innormalise = false);
-    ~SubMatrix() override;
+    virtual ~SubMatrix();
 
     void Create();
 
-    double operator()(int /*i*/, int /*j*/) const override;
-    const double *GetRow(int i) const override;
+    double operator()(int /*i*/, int /*j*/) const;
+    const double *GetRow(int i) const;
 
-    const double *GetStationary() const override;
-    double Stationary(int i) const override;
+    const double *GetStationary() const;
+    double Stationary(int i) const;
 
-    int GetNstate() const override { return Nstate; }
+    int GetNstate() const { return Nstate; }
 
     double GetRate() const;
     void ScalarMul(double e);
@@ -101,7 +84,7 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
     bool isNormalised() const { return normalise; }
     void Normalise() const;
 
-    void CorruptMatrix() override;
+    virtual void CorruptMatrix();
     void UpdateMatrix() const;
 
     void ActivatePowers() const;
@@ -118,8 +101,8 @@ class SubMatrix : public virtual AbstractTransitionMatrix {
 
     int GetDiagStat() const { return ndiagfailed; }
 
-    void BackwardPropagate(const double *up, double *down, double length) const override;
-    void ForwardPropagate(const double *down, double *up, double length) const override;
+    void BackwardPropagate(const double *up, double *down, double length) const;
+    void ForwardPropagate(const double *down, double *up, double length) const;
     // virtual void     FiniteTime(int i0, double* down, double length);
 
     double **GetQ() const { return Q; }

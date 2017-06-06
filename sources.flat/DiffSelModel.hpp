@@ -26,7 +26,7 @@ class DiffSelModel : public ProbModel {
 
 	Tree* tree;
 	FileSequenceAlignment* data;
-	TaxonSet* taxonset;
+	const TaxonSet* taxonset;
 	CodonSequenceAlignment* codondata;
 
 	// number of sites
@@ -100,7 +100,7 @@ class DiffSelModel : public ProbModel {
 
 	// suff stats, for each site and under each condition
 	// Ncond * Nsite
-	SuffStat** suffstatarray;
+	PoissonSuffStat** suffstatarray;
 
 	// storing cond/site suff stat log probs
 	double** sitecondsuffstatlogprob;
@@ -323,9 +323,9 @@ class DiffSelModel : public ProbModel {
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,phylosubmatrix,0,rootsubmatrix);
 
 		// create suffstat arrays
-		suffstatarray = new SuffStat*[Ncond];
+		suffstatarray = new PoissonSuffStat*[Ncond];
 		for (int k=0; k<Ncond; k++)	{
-			suffstatarray[k] = new SuffStat[Nsite];
+			suffstatarray[k] = new PoissonSuffStat[Nsite];
 		}
 
 		// -----

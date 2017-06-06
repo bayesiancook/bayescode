@@ -6,7 +6,7 @@
 #include <map>
 using namespace std;
 
-#include "SuffStat.hpp"
+#include "PoissonSuffStat.hpp"
 #include "SubMatrix.hpp"
 
 
@@ -69,7 +69,7 @@ class BranchSitePath {
     void AddCounts(int **paircounts, int *statecounts);
 
     void AddLengthSuffStat(int& count, double& beta, double factor, SubMatrix* mat);
-    void AddSuffStat(SuffStat& suffstat, double factor);
+    void AddSuffStat(PoissonSuffStat& suffstat, double factor);
 
     /*
     void SetTimesRelativeToAbsolute();

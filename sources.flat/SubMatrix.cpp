@@ -551,7 +551,7 @@ void SubMatrix::PowerOf2(double **y, int z) {
     PowerOf2(y, z / 2);
 }
 
-double SubMatrix::SuffStatLogProb(SuffStat* suffstat)	{
+double SubMatrix::SuffStatLogProb(PoissonSuffStat* suffstat)	{
 
 	double total = 0;
 	const double* stat = GetStationary();
