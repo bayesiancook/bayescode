@@ -100,7 +100,7 @@ class DiffSelModel : public ProbModel {
 
 	// suff stats, for each site and under each condition
 	// Ncond * Nsite
-	PoissonSuffStat** suffstatarray;
+	PathSuffStat** suffstatarray;
 
 	// storing cond/site suff stat log probs
 	double** sitecondsuffstatlogprob;
@@ -323,9 +323,9 @@ class DiffSelModel : public ProbModel {
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,phylosubmatrix,0,rootsubmatrix);
 
 		// create suffstat arrays
-		suffstatarray = new PoissonSuffStat*[Ncond];
+		suffstatarray = new PathSuffStat*[Ncond];
 		for (int k=0; k<Ncond; k++)	{
-			suffstatarray[k] = new PoissonSuffStat[Nsite];
+			suffstatarray[k] = new PathSuffStat[Nsite];
 		}
 
 		// -----

@@ -102,8 +102,8 @@ class PhyloProcess	{
     void ResampleSub();  // clamped Nielsen
     void ResampleSub(int site);
 
-    void AddSuffStat(int site, const Link* link, PoissonSuffStat& suffstat);
-    void AddRootSuffStat(int site, PoissonSuffStat& suffstat);
+    void AddSuffStat(int site, const Link* link, PathSuffStat& suffstat);
+    void AddRootSuffStat(int site, PathSuffStat& suffstat);
     void AddLengthSuffStat(int site, const Link* link, int& count, double& beta);
 
     void PostPredSample(bool rootprior = false);  // unclamped Nielsen

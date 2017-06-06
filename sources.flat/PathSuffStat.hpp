@@ -1,16 +1,16 @@
 
-#ifndef POISUFFSTAT_H
-#define POISUFFSTAT_H
+#ifndef PATHSUFFSTAT_H
+#define PATHSUFFSTAT_H
 
 #include <map>
 using namespace std;
 
-class PoissonSuffStat	{
+class PathSuffStat	{
 
 	public:
 
-	PoissonSuffStat() {}
-	~PoissonSuffStat() {}
+	PathSuffStat() {}
+	~PathSuffStat() {}
 
 	void Clear()	{
 		rootcount.clear();

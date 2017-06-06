@@ -99,7 +99,7 @@ string BranchSitePath::ToString(bool redundant) {
 }
 */
 
-void BranchSitePath::AddSuffStat(PoissonSuffStat& suffstat, double factor)	{
+void BranchSitePath::AddSuffStat(PathSuffStat& suffstat, double factor)	{
 	Plink* link = Init();
 	while (link)	{
 		int state = link->GetState();
