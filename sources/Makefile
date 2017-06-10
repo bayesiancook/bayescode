@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=..
-ALL= globom siteom
+ALL= codonm8 globom siteom
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -61,6 +61,10 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
+
+codonm8$(EXEEXT): $(PROGSDIR)/codonm8$(EXEEXT)
+$(PROGSDIR)/codonm8$(EXEEXT): CodonM8.o $(OBJS)
+	$(CC) CodonM8.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
