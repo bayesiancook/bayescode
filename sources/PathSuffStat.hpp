@@ -44,6 +44,12 @@ class PathSuffStat : public SuffStat	{
 		waitingtime[state] += in;
 	}
 
+	void AddTo(PathSuffStat& suffstat) const {
+		for (std::map<int,int>::iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
+			suffstat.AddRootCount(i->first,i->second);
+		}
+	}
+
 	int GetRootCount(int state) const {
 		return rootcount[state];
 	}
@@ -129,6 +135,12 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 			total += GetVal(i).GetLogProb(matrixarray->GetVal(i));
 		}
 		return total;
+	}
+
+	void AddTo(Array<PathSuffStat>& suffstatarray, const Array<int>& alloc)	const {
+		for (int i=0; i<GetSize(); i++)	{
+			GetVal(i).AddTo(suffstatarray[alloc.GetVal(i)]);
+		}
 	}
 
     /*

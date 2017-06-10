@@ -94,7 +94,7 @@ class SiteOmegaMixtureModel	{
 
 		matrixsystem = new BranchHomogeneousSiteHeterogeneousArray<SubMatrix>(matrixmixture);
 
-		phyloprocess = new PhyloProcess(tree,data,branchlength,0,matrixsystem,0,matrixmixture);
+		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,matrixsystem,0,matrixmixture);
 	}
 
 };

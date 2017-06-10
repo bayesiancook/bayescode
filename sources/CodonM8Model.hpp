@@ -29,6 +29,13 @@ class MultinomialAllocationVector : public SimpleArray<int> {
         }
     }
 	
+	void GibbsResample(const vector<vector<double> >& postprobarray)	{
+		for (int i=0; i<GetSize(); i++) {
+		    (*this)[i] = Random::DrawFromDiscreteDistribution(postprobarray[i]);
+		}
+
+	}
+
 	void AddSuffStat(vector<int>& occupancy) const {
         if (occupancy.size() != weight.size())  {
             cerr << "error: non matching size\n";
@@ -61,6 +68,21 @@ template<class T> class FiniteMixture : public virtual ConstArray<T>	{
 
 	private:
 	const Array<T>* components;
+	const Array<int>* alloc;
+};
+
+class MGOmegaCodonSubMatrixDistributor : public ConstArray<MGOmegaCodonSubMatrix>	{
+
+	public:
+	MGOmegaCodonSubMatrixDistributor(const MGOmegaHeterogeneousCodonSubMatrixArray* incomponents, const Array<int>* inalloc) : ConstArray<MGOmegaCodonSubMatrix>(inalloc->GetSize()), components(incomponents), alloc(inalloc) {}
+	~MGOmegaCodonSubMatrixDistributor() {}
+
+	const MGOmegaCodonSubMatrix& GetVal(int i) const override	{
+		return *components->GetMGOmegaCodonSubMatrix(alloc->GetVal(i));
+	}
+
+	private:
+	const MGOmegaHeterogeneousCodonSubMatrixArray* components;
 	const Array<int>* alloc;
 };
 
@@ -165,18 +187,20 @@ class CodonM8Model	{
 	double beta;
     double posw;
     double dposom;
-    DiscBetaWithPos* omegaarray;
+    DiscBetaWithPos* componentomegaarray;
 
-	MultinomialAllocationVector* alloc;
+	MultinomialAllocationVector* sitealloc;
 
-    vector<vector<double> > postprobarray;
+    vector<vector<double> > sitepostprobarray;
 
 	vector<double> nucrelrate;
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
-	MGOmegaHeterogeneousCodonSubMatrixArray* codonmatrixarray;
-    FiniteMixture<SubMatrix>* submatrixarray;
+	MGOmegaHeterogeneousCodonSubMatrixArray* componentcodonmatrixarray;
+
+    FiniteMixture<SubMatrix>* sitesubmatrixarray;
+	MGOmegaCodonSubMatrixDistributor* sitecodonmatrixarray;
 
     PhyloProcess* phyloprocess;
 
@@ -184,8 +208,9 @@ class CodonM8Model	{
 
 	PoissonSuffStatBranchArray* lengthsuffstatarray;
 	GammaSuffStat lambdasuffstat;
-	OmegaSuffStatArray* omegasuffstatarray;
-	PathSuffStatArray* pathsuffstatarray;
+	OmegaSuffStatArray* siteomegasuffstatarray;
+	PathSuffStatArray* sitepathsuffstatarray;
+	PathSuffStatArray* componentpathsuffstatarray;
 	// NucPathSuffStat nucsuffstat;	
 
     public:
@@ -227,7 +252,7 @@ class CodonM8Model	{
 		Trace(cerr);
 	}
 
-    int GetNsite() {return data->GetNsite();}
+    int GetNsite() {return codondata->GetNsite();}
 
 	void Allocate()	{
 
@@ -238,9 +263,9 @@ class CodonM8Model	{
         posw = 0.1;
         dposom = 0.5;
 
-		omegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1);
-        alloc = new MultinomialAllocationVector(GetNsite(),omegaarray->GetWeights());
-        postprobarray.assign(GetNsite(),vector<double>(ncat+1,0));
+		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1);
+        sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
+        sitepostprobarray.assign(GetNsite(),vector<double>(ncat+1,0));
 
 		nucrelrate.assign(Nrr,0);
 		double totrr = 0;
@@ -263,18 +288,17 @@ class CodonM8Model	{
 		}
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-		codonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
-        for (int k=0; k<=ncat; k++) {
-            cerr << codonmatrixarray->GetVal(k).GetNstate() << '\n';
-        }
+		componentcodonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
-        submatrixarray = new FiniteMixture<SubMatrix>(codonmatrixarray,alloc);
+        sitesubmatrixarray = new FiniteMixture<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitecodonmatrixarray = new MGOmegaCodonSubMatrixDistributor(componentcodonmatrixarray,sitealloc);
 
-		phyloprocess = new PhyloProcess(tree,data,branchlength,0,submatrixarray);
+		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
 		lengthsuffstatarray = new PoissonSuffStatBranchArray(tree);
-		pathsuffstatarray = new PathSuffStatArray(GetNsite());
-		omegasuffstatarray = new OmegaSuffStatArray(GetNsite());
+		sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
+		componentpathsuffstatarray = new PathSuffStatArray(ncat+1);
+		siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
 	}
 
 	void UpdateNucMatrix()	{
@@ -283,7 +307,7 @@ class CodonM8Model	{
 	}
 
 	void UpdateCodonMatrices()	{
-		codonmatrixarray->UpdateCodonMatrices();
+		componentcodonmatrixarray->UpdateCodonMatrices();
 	}
 		
 	void UpdateMatrices()   {
@@ -292,11 +316,11 @@ class CodonM8Model	{
 	}
 
 	double GetPathSuffStatLogProb()	{
-		return pathsuffstatarray->GetLogProb(codonmatrixarray);
+		return componentpathsuffstatarray->GetLogProb(componentcodonmatrixarray);
 	}
 
     double GetOmegaSuffStatLogProb()    {
-        return 0;
+	return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
     }
 
     // only for posom
@@ -341,17 +365,11 @@ class CodonM8Model	{
 
 			CollectPathSuffStat();
 
-            MoveAlpha(1,10);
-            MoveBeta(1,10);
-            MovePosOm(1,10);
-            MovePosWeight(1,10);
+			MoveOmega();
 
-			MoveRR(0.1,1,3);
-			MoveRR(0.03,3,3);
-			MoveRR(0.01,3,3);
+			CollectComponentPathSuffStat();
 
-			MoveNucStat(0.1,1,3);
-			MoveNucStat(0.01,1,3);
+			MoveNuc();
 		}
 	}
 
@@ -373,14 +391,43 @@ class CodonM8Model	{
 
 	void CollectPathSuffStat()	{
 
-		pathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(pathsuffstatarray);
+		sitepathsuffstatarray->Clear();
+		phyloprocess->AddPathSuffStat(sitepathsuffstatarray);
+	}
+
+	void CollectComponentPathSuffStat()	{
+
+		componentpathsuffstatarray->Clear();
+		sitepathsuffstatarray->AddTo(*componentpathsuffstatarray,*sitealloc);
 	}
 
 	void CollectOmegaSuffStat()	{
 
-		omegasuffstatarray->Clear();
-		omegasuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
+		siteomegasuffstatarray->Clear();
+		siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+	}
+
+	void MoveOmega() 	{
+            MoveAlpha(1,10);
+            MoveBeta(1,10);
+            MovePosOm(1,10);
+            MovePosWeight(1,10);
+	    ResampleAlloc();
+	}
+
+	void MoveNuc()	{
+
+			MoveRR(0.1,1,3);
+			MoveRR(0.03,3,3);
+			MoveRR(0.01,3,3);
+
+			MoveNucStat(0.1,1,3);
+			MoveNucStat(0.01,1,3);
+	}
+
+	void ResampleAlloc()	{
+		sitealloc->GibbsResample(sitepostprobarray);
+
 	}
 
 	double MoveRR(double tuning, int n, int nrep)	{
@@ -448,7 +495,7 @@ class CodonM8Model	{
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			alpha *= e;
-            omegaarray->SetAlphaBeta(alpha,beta);
+            componentomegaarray->SetAlphaBeta(alpha,beta);
 			deltalogprob += AlphaLogProb() + GetOmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -457,7 +504,7 @@ class CodonM8Model	{
 			}
 			else	{
 				alpha /= e;
-                omegaarray->SetAlphaBeta(alpha,beta);
+                componentomegaarray->SetAlphaBeta(alpha,beta);
 			}
 			ntot++;
 		}
@@ -473,7 +520,7 @@ class CodonM8Model	{
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			beta *= e;
-            omegaarray->SetAlphaBeta(alpha,beta);
+            componentomegaarray->SetAlphaBeta(alpha,beta);
 			deltalogprob += BetaLogProb() + GetOmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -482,7 +529,7 @@ class CodonM8Model	{
 			}
 			else	{
 				beta /= e;
-                omegaarray->SetAlphaBeta(alpha,beta);
+                componentomegaarray->SetAlphaBeta(alpha,beta);
 			}
 			ntot++;
 		}
@@ -498,7 +545,7 @@ class CodonM8Model	{
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			dposom *= e;
-            omegaarray->SetPos(posw,dposom+1);
+            componentomegaarray->SetPos(posw,dposom+1);
 			deltalogprob += PosOmegaLogProb() + GetOmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -507,7 +554,7 @@ class CodonM8Model	{
 			}
 			else	{
 				dposom /= e;
-                omegaarray->SetPos(posw,dposom+1);
+                componentomegaarray->SetPos(posw,dposom+1);
 			}
 			ntot++;
 		}
@@ -531,7 +578,7 @@ class CodonM8Model	{
                     posw = 2- posw;
                 }
             }
-            omegaarray->SetPos(posw,dposom+1);
+            componentomegaarray->SetPos(posw,dposom+1);
 			deltalogprob += PosWeightLogProb() + GetOmegaSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -539,7 +586,7 @@ class CodonM8Model	{
 			}
 			else	{
                 posw = bkposw;
-                omegaarray->SetPos(posw,dposom+1);
+                componentomegaarray->SetPos(posw,dposom+1);
 			}
 			ntot++;
 		}

@@ -64,10 +64,16 @@ class OmegaSuffStatArray : public PoissonSuffStatArray	{
             return dynamic_cast<const OmegaSuffStat&> (GetVal(i));
         }
         catch(std::bad_cast exp)    {
-            std::cerr << "in OmegaSuffStatArray: bad cast exception\n";
+            std::cerr << "in OmegaSuffStatArray: bad cast exception (const)\n";
             exit(1);
         }
     }
+
+	void AddSuffStat(const ConstArray<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
+		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
+            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(i));
+		}
+	}
 
 	void AddSuffStat(const MGOmegaHeterogeneousCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
 		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{

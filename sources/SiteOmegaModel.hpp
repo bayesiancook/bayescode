@@ -86,7 +86,7 @@ class SiteOmegaModel	{
 		Trace(cerr);
 	}
 
-    int GetNsite() {return data->GetNsite();}
+    int GetNsite() {return codondata->GetNsite();}
 
 	void Allocate()	{
 
@@ -119,7 +119,7 @@ class SiteOmegaModel	{
 
 		codonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
 
-		phyloprocess = new PhyloProcess(tree,data,branchlength,0,codonmatrixarray);
+		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrixarray);
 
 		lengthsuffstatarray = new PoissonSuffStatBranchArray(tree);
 		pathsuffstatarray = new PathSuffStatArray(GetNsite());
