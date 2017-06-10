@@ -117,18 +117,18 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
             double logp[ncat+1];
             double max = 0;
-            for (int cat=0; cat<ncat+1; cat++)  {
+            for (int cat=0; cat<=ncat; cat++)  {
                 logp[cat] = suffstat.GetLogProb(GetVal(cat));
                 if ((!cat) || (max < logp[cat]))    {
                     max = logp[cat];
                 }
             }
             double tot = 0;
-            for (int cat=0; cat<ncat+1; cat++)  {
+            for (int cat=0; cat<=ncat; cat++)  {
                 postprob[cat] = weight[cat] * exp(logp[cat] - max);
                 tot += postprob[cat];
             }
-            for (int cat=0; cat<ncat+1; cat++)  {
+            for (int cat=0; cat<=ncat; cat++)  {
                 postprob[cat] /= tot;
             }
             return log(tot) + max;
@@ -315,7 +315,6 @@ class CodonM8Model	{
 
 	double GetPathSuffStatLogProb()	{
 		return componentpathsuffstatarray->GetLogProb(componentcodonmatrixarray);
-		// return sitepathsuffstatarray->GetLogProb(sitesubmatrixarray);
 	}
 
     double GetOmegaSuffStatLogProb()    {
@@ -360,11 +359,11 @@ class CodonM8Model	{
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            UpdateMatrices();
 			ResampleBranchLengths();
 			MoveLambda();
 
 			CollectPathSuffStat();
+
 			MoveOmega();
 			MoveNuc();
 		}
@@ -427,8 +426,8 @@ class CodonM8Model	{
 	}
 
 	void ResampleAlloc()	{
+        GetOmegaSuffStatLogProb();
 		sitealloc->GibbsResample(sitepostprobarray);
-
 	}
 
 	double MoveRR(double tuning, int n, int nrep)	{

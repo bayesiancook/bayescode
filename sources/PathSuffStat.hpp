@@ -50,6 +50,12 @@ class PathSuffStat : public SuffStat	{
 		for (std::map<int,int>::iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
 			suffstat.AddRootCount(i->first,i->second);
 		}
+		for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+            suffstat.AddPairCount(i->first.first,i->first.second,i->second);
+		}
+		for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+            suffstat.AddWaitingTime(i->first,i->second);
+        }
 	}
 
 	int GetRootCount(int state) const {
