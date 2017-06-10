@@ -8,6 +8,7 @@
 #include "IIDGamma.hpp"
 #include "CodonSuffStat.hpp"
 #include "CodonSubMatrixArray.hpp"
+#include "cdf.hpp"
 
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
@@ -16,7 +17,10 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 
 	public:
 
-	MultinomialAllocationVector(int insize, const vector<double>& inweight) : SimpleArray<int>(insize), weight(inweight) {}
+	MultinomialAllocationVector(int insize, const vector<double>& inweight) : SimpleArray<int>(insize), weight(inweight) {
+            SampleAlloc();
+    }
+
     ~MultinomialAllocationVector() {}
 
 	void SampleAlloc()  {
@@ -51,7 +55,7 @@ template<class T> class FiniteMixture : public virtual ConstArray<T>	{
 
 	~FiniteMixture() {}
 
-	const T& GetVal(int i) const	{
+	const T& GetVal(int i) const override {
 		return components->GetVal(alloc->GetVal(i));
 	}
 
@@ -66,6 +70,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom) : SimpleArray<double>(inncat+1) , ncat(inncat), weight(inncat+1), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom) {
             ComputeDiscBeta();
+            (*this)[ncat] = posom;
             ComputeWeights();
     }
 
@@ -80,6 +85,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     void SetPos(double inposw, double inposom)  {
         posw = inposw;
         posom = inposom;
+        (*this)[ncat] = posom;
         ComputeWeights();
     }
 
@@ -118,8 +124,9 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     private:
 
     void ComputeDiscBeta()   {
-        cerr << "compute disc beta\n";
-        exit(1);
+        for (int cat=0; cat<ncat; cat++)  {
+            (*this)[cat] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
+        }
     }
 
     void ComputeWeights()   {
@@ -157,10 +164,12 @@ class CodonM8Model	{
 	double alpha;
 	double beta;
     double posw;
-    double posom;
+    double dposom;
     DiscBetaWithPos* omegaarray;
 
-	MultinomialAllocationVector* alloc;;
+	MultinomialAllocationVector* alloc;
+
+    vector<vector<double> > postprobarray;
 
 	vector<double> nucrelrate;
 	vector<double> nucstat;
@@ -178,9 +187,6 @@ class CodonM8Model	{
 	OmegaSuffStatArray* omegasuffstatarray;
 	PathSuffStatArray* pathsuffstatarray;
 	// NucPathSuffStat nucsuffstat;	
-
-	double suffstatlogprob;
-	double bksuffstatlogprob;
 
     public:
 
@@ -214,6 +220,7 @@ class CodonM8Model	{
 		Allocate();
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
+        cerr << "-- logprob\n";
 		cerr << phyloprocess->GetLogProb() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
@@ -229,10 +236,11 @@ class CodonM8Model	{
 
 		alpha = beta = 1.0;
         posw = 0.1;
-        posom = 1.5;
+        dposom = 0.5;
 
-		omegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,posom);
+		omegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1);
         alloc = new MultinomialAllocationVector(GetNsite(),omegaarray->GetWeights());
+        postprobarray.assign(GetNsite(),vector<double>(ncat+1,0));
 
 		nucrelrate.assign(Nrr,0);
 		double totrr = 0;
@@ -256,6 +264,10 @@ class CodonM8Model	{
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
 		codonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
+        for (int k=0; k<=ncat; k++) {
+            cerr << codonmatrixarray->GetVal(k).GetNstate() << '\n';
+        }
+
         submatrixarray = new FiniteMixture<SubMatrix>(codonmatrixarray,alloc);
 
 		phyloprocess = new PhyloProcess(tree,data,branchlength,0,submatrixarray);
@@ -274,27 +286,22 @@ class CodonM8Model	{
 		codonmatrixarray->UpdateCodonMatrices();
 	}
 		
-	void UpdateSuffStatLogProb()	{
+	void UpdateMatrices()   {
 		UpdateNucMatrix();
 		UpdateCodonMatrices();
-		suffstatlogprob = pathsuffstatarray->GetLogProb(codonmatrixarray);
 	}
 
-	double GetSuffStatLogProb()	{
-		return suffstatlogprob;
+	double GetPathSuffStatLogProb()	{
+		return pathsuffstatarray->GetLogProb(codonmatrixarray);
 	}
 
-	void BackupSuffStatLogProb()	{
-		bksuffstatlogprob = suffstatlogprob;
-	}
-
-	void RestoreSuffStatLogProb()	{
-		suffstatlogprob = bksuffstatlogprob;
-	}
+    double GetOmegaSuffStatLogProb()    {
+        return 0;
+    }
 
     // only for posom
 	double PosOmegaLogProb()	{
-		return 0;
+		return -dposom;
 	}
 
     double PosWeightLogProb()   {
@@ -334,13 +341,10 @@ class CodonM8Model	{
 
 			CollectPathSuffStat();
 
-			MoveOmega();
-            /*
-            MoveAlpha();
-            MoveBeta();
-            */
-
-			UpdateSuffStatLogProb();
+            MoveAlpha(1,10);
+            MoveBeta(1,10);
+            MovePosOm(1,10);
+            MovePosWeight(1,10);
 
 			MoveRR(0.1,1,3);
 			MoveRR(0.03,3,3);
@@ -348,9 +352,6 @@ class CodonM8Model	{
 
 			MoveNucStat(0.1,1,3);
 			MoveNucStat(0.01,1,3);
-
-			UpdateSuffStatLogProb();
-
 		}
 	}
 
@@ -374,15 +375,12 @@ class CodonM8Model	{
 
 		pathsuffstatarray->Clear();
 		phyloprocess->AddPathSuffStat(pathsuffstatarray);
-		UpdateSuffStatLogProb();
 	}
 
-	void MoveOmega()	{
+	void CollectOmegaSuffStat()	{
 
 		omegasuffstatarray->Clear();
 		omegasuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
-        // omegaarray->GibbsResample(omegasuffstatarray);
-		UpdateCodonMatrices();
 	}
 
 	double MoveRR(double tuning, int n, int nrep)	{
@@ -393,12 +391,11 @@ class CodonM8Model	{
 			for (int l=0; l<Nrr; l++)	{
 				bk[l] = nucrelrate[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -GetPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+			UpdateMatrices();
+			deltalogprob += GetPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -407,7 +404,7 @@ class CodonM8Model	{
 				for (int l=0; l<Nrr; l++)	{
 					nucrelrate[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatrices();
 			}
 			ntot++;
 		}
@@ -422,12 +419,11 @@ class CodonM8Model	{
 			for (int l=0; l<Nnuc; l++)	{
 				bk[l] = nucstat[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -GetPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+            UpdateMatrices();
+			deltalogprob += GetPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -436,7 +432,114 @@ class CodonM8Model	{
 				for (int l=0; l<Nnuc; l++)	{
 					nucstat[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatrices();
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double MoveAlpha(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - AlphaLogProb() - GetOmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			alpha *= e;
+            omegaarray->SetAlphaBeta(alpha,beta);
+			deltalogprob += AlphaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				alpha /= e;
+                omegaarray->SetAlphaBeta(alpha,beta);
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double MoveBeta(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - BetaLogProb() - GetOmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			beta *= e;
+            omegaarray->SetAlphaBeta(alpha,beta);
+			deltalogprob += BetaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				beta /= e;
+                omegaarray->SetAlphaBeta(alpha,beta);
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double MovePosOm(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - PosOmegaLogProb() - GetOmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			dposom *= e;
+            omegaarray->SetPos(posw,dposom+1);
+			deltalogprob += PosOmegaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				dposom /= e;
+                omegaarray->SetPos(posw,dposom+1);
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double MovePosWeight(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+            double bkposw = posw;
+			double deltalogprob = - PosWeightLogProb() - GetOmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+            posw += m;
+            while ((posw<0) && (posw>1))    {
+                if (posw <0)    {
+                    posw = -posw;
+                }
+                if (posw > 1)   {
+                    posw = 2- posw;
+                }
+            }
+            omegaarray->SetPos(posw,dposom+1);
+			deltalogprob += PosWeightLogProb() + GetOmegaSuffStatLogProb();
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+                posw = bkposw;
+                omegaarray->SetPos(posw,dposom+1);
 			}
 			ntot++;
 		}
@@ -523,7 +626,7 @@ class CodonM8Model	{
 		os << GetMeanOmega() << '\t';
         os << GetVarOmega() << '\t';
         os << alpha << '\t' << beta << '\t';
-        os << posom << '\t' << posw << '\t';
+        os << dposom+1 << '\t' << posw << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 	}
