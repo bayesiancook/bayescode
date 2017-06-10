@@ -11,6 +11,8 @@
 #include "Array.hpp"
 #include <map>
 
+class OmegaSuffStat;
+
 class PathSuffStat : public SuffStat	{
 
 	public:
@@ -77,36 +79,7 @@ class PathSuffStat : public SuffStat	{
 		return total;
 	}
 
-	void AddOmegaSuffStat(PoissonSuffStat& omegasuffstat, const MGOmegaCodonSubMatrix& matrix) const {
-
-		int ncodon = matrix.GetNstate();
-		const CodonStateSpace* statespace = matrix.GetCodonStateSpace();
-
-		double beta = 0;
-		for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
-			double totnonsynrate = 0;
-			int a = i->first;
-			for (int b=0; b<ncodon; b++)	{
-				if (b != a)	{
-					if (matrix(a,b) != 0)	{
-						if (!statespace->Synonymous(a,b))	{
-							totnonsynrate += matrix(a,b);
-						}
-					}
-				}
-			}
-			beta += i->second * totnonsynrate;
-		}
-		beta /= matrix.GetOmega();
-
-		int count = 0;
-		for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
-			if (! statespace->Synonymous(i->first.first,i->first.second))	{
-				count += i->second;
-			}
-		}
-		omegasuffstat.AddSuffStat(count,beta);
-	}
+	void AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaCodonSubMatrix& matrix) const;
 
 	private:
 
@@ -128,7 +101,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const Array<SubMatrix>* matrixarray) const	{
+	double GetLogProb(const ConstArray<SubMatrix>* matrixarray) const	{
 
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -146,7 +119,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
     /*
     void AddOmegaSuffStat(PoissonSuffStatArray* omegasuffstatarray, const MGOmegaHeterogeneousCodonSubMatrixArray* matrixarray) const {
 		for (int i=0; i<GetSize(); i++)	{
-                GetVal(i).AddOmegaSuffStat(omegasuffstatarray->GetOmegaSuffStat(i),matrixarray->GetMGOmegaCodonSubMatrix(i));
+                GetVal(i).AddOmegaSuffStat(omegasuffstatarray->GetVal(i),matrixarray->GetMGOmegaCodonSubMatrix(i));
                 // GetVal(i).AddOmegaSuffStat((*omegasuffstatarray)[i],matrixarray->GetMGOmegaCodonSubMatrix(i));
         }
     }

@@ -6,6 +6,7 @@
 #include "BranchArray.hpp"
 #include "Random.hpp"
 #include "PoissonSuffStat.hpp"
+#include "CodonSuffStat.hpp"
 
 class GammaSuffStat : public SuffStat	{
 
@@ -66,6 +67,13 @@ class IIDGamma: public virtual SimpleArray<double>	{
 	void GibbsResample(const PoissonSuffStatArray* suffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray->GetVal(i);
+			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
+		}
+	}
+
+	void GibbsResample(const OmegaSuffStatArray* suffstatarray)	{
+		for (int i=0; i<GetSize(); i++)	{
+			const OmegaSuffStat& suffstat = suffstatarray->GetVal(i);
 			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
 		}
 	}

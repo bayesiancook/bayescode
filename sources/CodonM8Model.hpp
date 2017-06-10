@@ -134,11 +134,11 @@ class DiscBetaWithPos : public SimpleArray<double>  {
             return log(tot) + max;
     }
 
-    double GetPostProbArray(const OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
+    double GetPostProbArray(OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
 
         double total = 0;
         for (int i=0; i<suffstatarray.GetSize(); i++)   {
-            total += GetPostProbArray(suffstatarray.GetConstOmegaSuffStat(i),postprobarray[i]);
+            total += GetPostProbArray(suffstatarray.GetVal(i),postprobarray[i]);
         }
         return total;
     }
@@ -200,7 +200,6 @@ class CodonM8Model	{
 	MGOmegaHeterogeneousCodonSubMatrixArray* componentcodonmatrixarray;
 
     FiniteMixture<SubMatrix>* sitesubmatrixarray;
-	MGOmegaCodonSubMatrixDistributor* sitecodonmatrixarray;
 
     PhyloProcess* phyloprocess;
 
@@ -291,7 +290,6 @@ class CodonM8Model	{
 		componentcodonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
         sitesubmatrixarray = new FiniteMixture<SubMatrix>(componentcodonmatrixarray,sitealloc);
-        sitecodonmatrixarray = new MGOmegaCodonSubMatrixDistributor(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
@@ -317,10 +315,11 @@ class CodonM8Model	{
 
 	double GetPathSuffStatLogProb()	{
 		return componentpathsuffstatarray->GetLogProb(componentcodonmatrixarray);
+		// return sitepathsuffstatarray->GetLogProb(sitesubmatrixarray);
 	}
 
     double GetOmegaSuffStatLogProb()    {
-	return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
+        return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
     }
 
     // only for posom
@@ -354,21 +353,19 @@ class CodonM8Model	{
 
 	void Move()	{
 
+        UpdateMatrices();
 		phyloprocess->ResampleSub();
 
 		int nrep = 30;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
+            UpdateMatrices();
 			ResampleBranchLengths();
 			MoveLambda();
 
 			CollectPathSuffStat();
-
 			MoveOmega();
-
-			CollectComponentPathSuffStat();
-
 			MoveNuc();
 		}
 	}
@@ -404,19 +401,23 @@ class CodonM8Model	{
 	void CollectOmegaSuffStat()	{
 
 		siteomegasuffstatarray->Clear();
-		siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+		siteomegasuffstatarray->AddSuffStat(*componentcodonmatrixarray,*sitepathsuffstatarray,*sitealloc);
 	}
 
 	void MoveOmega() 	{
+
+            CollectOmegaSuffStat();
             MoveAlpha(1,10);
             MoveBeta(1,10);
             MovePosOm(1,10);
             MovePosWeight(1,10);
-	    ResampleAlloc();
+            ResampleAlloc();
 	}
 
 	void MoveNuc()	{
 
+            CollectComponentPathSuffStat();
+            UpdateMatrices();
 			MoveRR(0.1,1,3);
 			MoveRR(0.03,3,3);
 			MoveRR(0.01,3,3);
@@ -642,11 +643,7 @@ class CodonM8Model	{
 	}
 
     double GetMeanOmega()   {
-        return 0;
-    }
-
-    double GetVarOmega()    {
-        return 0;
+        return (1-posw)*alpha/(alpha+beta) + posw*(1+dposom);
     }
 
 	double GetEntropy(const std::vector<double>& profile, int dim) const {
@@ -658,9 +655,8 @@ class CodonM8Model	{
 	}
 
 	void TraceHeader(std::ostream& os)  {
-		os << "#logprior\tlnL\tlength\tlambda\t";
-		os << "meanomega\tvaromega\talpha\tbeta\t";
-        os << "posom\tposw\t";
+		os << "#logprior\tlnL\tlength\t";
+		os << "meanomega\tposom\tposw\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
@@ -669,15 +665,18 @@ class CodonM8Model	{
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
 		os << GetTotalLength() << '\t';
-		os << lambda << '\t';
 		os << GetMeanOmega() << '\t';
-        os << GetVarOmega() << '\t';
-        os << alpha << '\t' << beta << '\t';
         os << dposom+1 << '\t' << posw << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 	}
 
+    void TracePostProb(ostream& os) {
+        for (int i=0; i<GetNsite(); i++)    {
+            os << sitepostprobarray[i][ncat] << '\t';
+        }
+        os << '\n';
+    }
 	void Monitor(ostream& os) {}
 
 	void FromStream(istream& is) {}

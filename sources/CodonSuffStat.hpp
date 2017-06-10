@@ -20,7 +20,7 @@ class NucPathSuffStat : public PathSuffStat	{
 };
 */
 
-class OmegaSuffStat : public PoissonSuffStat	{
+class OmegaSuffStat {
 
 	public:
 
@@ -40,45 +40,128 @@ class OmegaSuffStat : public PoissonSuffStat	{
 		}
 	}
 
+	void Clear()	{
+		count = beta = 0;
+	}
+
+	void IncrementCount()	{
+		count++;
+	}
+
+	void AddCount(int in)	{
+		count += in;
+	}
+
+	void AddBeta(double in)	{
+		beta += in;
+	}
+
+	void AddSuffStat(int incount, double inbeta)	{
+		count += incount;
+		beta += inbeta;
+	}
+
+	int GetCount() const {
+		return count;
+	}
+
+	double GetBeta() const {
+		return beta;
+	}
+
+	double GetLogProb(double rate) const {
+		return count*log(rate) - beta*rate;
+	}
+
+	double GetMarginalLogProb(double shape, double scale) const {
+		return shape*log(scale) - Random::logGamma(shape) - (shape + count)*log(scale + beta) + Random::logGamma(shape + count);
+	}
+
+	private:
+
+	int count;
+	double beta;
 };
 
-class OmegaSuffStatArray : public PoissonSuffStatArray	{
+void PathSuffStat::AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaCodonSubMatrix& matrix) const {
+
+    int ncodon = matrix.GetNstate();
+    const CodonStateSpace* statespace = matrix.GetCodonStateSpace();
+
+    double beta = 0;
+    for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+        double totnonsynrate = 0;
+        int a = i->first;
+        for (int b=0; b<ncodon; b++)	{
+            if (b != a)	{
+                if (matrix(a,b) != 0)	{
+                    if (!statespace->Synonymous(a,b))	{
+                        totnonsynrate += matrix(a,b);
+                    }
+                }
+            }
+        }
+        beta += i->second * totnonsynrate;
+    }
+    beta /= matrix.GetOmega();
+
+    int count = 0;
+    for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+        if (! statespace->Synonymous(i->first.first,i->first.second))	{
+            count += i->second;
+        }
+    }
+    omegasuffstat.AddSuffStat(count,beta);
+}
+
+class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>    {
 
 	public:
 
-	OmegaSuffStatArray(int insize) : PoissonSuffStatArray(insize) {}
+	OmegaSuffStatArray(int insize) : SimpleArray<OmegaSuffStat>(insize) {}
 	~OmegaSuffStatArray() {}
-
-    OmegaSuffStat& GetOmegaSuffStat(int i)  {
-        try {
-            return dynamic_cast<OmegaSuffStat&> ((*this)[i]);
-        }
-        catch(std::bad_cast exp)    {
-            std::cerr << "in OmegaSuffStatArray: bad cast exception\n";
-            exit(1);
-        }
-    }
-
-    const OmegaSuffStat& GetConstOmegaSuffStat(int i)  const {
-        try {
-            return dynamic_cast<const OmegaSuffStat&> (GetVal(i));
-        }
-        catch(std::bad_cast exp)    {
-            std::cerr << "in OmegaSuffStatArray: bad cast exception (const)\n";
-            exit(1);
-        }
-    }
-
-	void AddSuffStat(const ConstArray<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
-		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(i));
-		}
-	}
 
 	void AddSuffStat(const MGOmegaHeterogeneousCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
 		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
             pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],*codonsubmatrixarray.GetMGOmegaCodonSubMatrix(i));
 		}
+	}
+
+	void AddSuffStat(const MGOmegaHeterogeneousCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray, const ConstArray<int>& alloc)	{
+		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
+            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],*codonsubmatrixarray.GetMGOmegaCodonSubMatrix(alloc.GetVal(i)));
+		}
+	}
+
+	void Clear()	{
+		for (int i=0; i<GetSize(); i++)	{
+			(*this)[i].Clear();
+		}
+	}
+
+	double GetLogProb(const Array<double>* ratearray) const{
+		double total = 0;
+		for (int i=0; i<GetSize(); i++)	{
+			total += GetVal(i).GetLogProb(ratearray->GetVal(i));
+		}
+		return total;
+	}
+
+	double GetMarginalLogProb(double shape, double scale)	const {
+		double total = 0;
+		/*
+		for (int i=0; i<GetSize(); i++)	{
+			total += GetVal(i).GetMarginalLogProb(shape,scale);
+		}
+		*/
+		// factoring out prior factor
+		for (int i=0; i<GetSize(); i++)	{
+			int count = GetVal(i).GetCount();
+			double beta = GetVal(i).GetBeta();
+			total += -(shape+count)*log(scale+beta) + Random::logGamma(shape+count);
+		}
+		total += GetSize() * (shape*log(scale) - Random::logGamma(shape));
+		return total;
 	}
 };
 

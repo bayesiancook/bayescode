@@ -13,12 +13,15 @@ int main(int argc, char* argv[])	{
 
 	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,withpos);
 	ofstream os((name + ".trace").c_str());
+	ofstream pos((name + ".sitepp").c_str());
 	model->TraceHeader(os);
 	os.flush();
 	while(1)	{
 		model->Move();
 		model->Trace(os);
+        model->TracePostProb(pos);
 		os.flush();
+        pos.flush();
 	}
 }
 
