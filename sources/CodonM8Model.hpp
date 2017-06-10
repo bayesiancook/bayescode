@@ -12,7 +12,9 @@
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
-class MultinomialAllocationVector : public Array<int> {
+class MultinomialAllocationVector : public SimpleArray<int> {
+
+	public:
 
 	MultinomialAllocationVector(int insize, const vector<double>& inweight) : SimpleArray<int>(insize), weight(inweight) {}
     ~MultinomialAllocationVector() {}
@@ -28,7 +30,7 @@ class MultinomialAllocationVector : public Array<int> {
             cerr << "error: non matching size\n";
             exit(1);
         }
-        for (int k=0 ; k<occupancy.size(); k++)  {
+        for (unsigned int k=0 ; k<occupancy.size(); k++)  {
             occupancy[k] = 0;
         }
         for (int i=0; i<GetSize(); i++) {
@@ -40,25 +42,29 @@ class MultinomialAllocationVector : public Array<int> {
 	const vector<double>& weight;
 };
 
-template<class T> FiniteMixture : public virtual ConstArray<T>	{
+template<class T> class FiniteMixture : public virtual ConstArray<T>	{
 
 	public:
 
-	FiniteMixture(const Array<T>* incomponents, const Array<int>* inalloc) : ConstArray<T>(inalloc->GetSize()), components(incompoments), alloc(inalloc)	{
+	FiniteMixture(const Array<T>* incomponents, const Array<int>* inalloc) : ConstArray<T>(inalloc->GetSize()), components(incomponents), alloc(inalloc)	{
 	}
 
 	~FiniteMixture() {}
 
-	const T& GetVal(int index) const	{
-		return components->GetVal(alloc->GetAlloc(i));
+	const T& GetVal(int i) const	{
+		return components->GetVal(alloc->GetVal(i));
 	}
-}
+
+	private:
+	const Array<T>* components;
+	const Array<int>* alloc;
+};
 
 class DiscBetaWithPos : public SimpleArray<double>  {
 
     public:
 
-    DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom) : SimpleArray<double>(inncat+1) : ncat(inncat), weight(inncat+1), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom) {
+    DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom) : SimpleArray<double>(inncat+1) , ncat(inncat), weight(inncat+1), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom) {
             ComputeDiscBeta();
             ComputeWeights();
     }
@@ -104,7 +110,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
         double total = 0;
         for (int i=0; i<suffstatarray.GetSize(); i++)   {
-            total += GetMarginalLogProb(suffstatarray.GetVal(i),postprobarray[i]);
+            total += GetPostProbArray(suffstatarray.GetConstOmegaSuffStat(i),postprobarray[i]);
         }
         return total;
     }
@@ -128,6 +134,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     double alpha;
     double beta;
     double posw;
+    double posom;
 };
 
 class CodonM8Model	{
@@ -151,7 +158,7 @@ class CodonM8Model	{
 	double beta;
     double posw;
     double posom;
-    DiscBetaWithPos* omegarray;
+    DiscBetaWithPos* omegaarray;
 
 	MultinomialAllocationVector* alloc;;
 
@@ -160,7 +167,7 @@ class CodonM8Model	{
 	GTRSubMatrix* nucmatrix;
 
 	MGOmegaHeterogeneousCodonSubMatrixArray* codonmatrixarray;
-    FiniteMixture<SubMatrix*>* submatrixarray;
+    FiniteMixture<SubMatrix>* submatrixarray;
 
     PhyloProcess* phyloprocess;
 
@@ -249,7 +256,7 @@ class CodonM8Model	{
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
 		codonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
-        submatrixarray = new FiniteMixture<SubMatrix*>(codonmatrixarray,alloc);
+        submatrixarray = new FiniteMixture<SubMatrix>(codonmatrixarray,alloc);
 
 		phyloprocess = new PhyloProcess(tree,data,branchlength,0,submatrixarray);
 
@@ -374,7 +381,7 @@ class CodonM8Model	{
 
 		omegasuffstatarray->Clear();
 		omegasuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
-        omegaarray->GibbsResample(omegasuffstatarray);
+        // omegaarray->GibbsResample(omegasuffstatarray);
 		UpdateCodonMatrices();
 	}
 

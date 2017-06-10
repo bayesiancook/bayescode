@@ -7,10 +7,11 @@ int main(int argc, char* argv[])	{
 
 	string datafile = argv[1];
 	string treefile = argv[2];
-    int withpos = atoi(argv[3]);
-	string name = argv[4];
+	int ncat = atoi(argv[3]);
+	int withpos = atoi(argv[4]);
+	string name = argv[5];
 
-	CodonM8Model* model = new CodonM8Model(datafile,treefile,withpos);
+	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,withpos);
 	ofstream os((name + ".trace").c_str());
 	model->TraceHeader(os);
 	os.flush();

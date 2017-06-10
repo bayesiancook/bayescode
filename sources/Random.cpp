@@ -160,7 +160,7 @@ double Random::Gamma(double alpha, double beta) { return sGamma(alpha) / beta; }
 // ---------------------------------------------------------------------------------
 //		¥ DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
-int Random::DrawFromDiscreteDistribution(const vector<double>& prob)    {
+int Random::DrawFromDiscreteDistribution(const std::vector<double>& prob)    {
     try {
         int nstate = prob.size();
         double total = 0;
