@@ -85,7 +85,7 @@ double invbetaInc(double a, double b, double p) {
 
     double x1 = 0;
     double x2 = 1;
-    double eps = 1e-10;
+    double eps = 1e-8;
     while (x2-x1 > eps) {
         double xmid = (x1+x2)/2;
         double pmid = betaInc(a,b,xmid);

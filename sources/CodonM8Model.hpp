@@ -131,7 +131,19 @@ class DiscBetaWithPos : public SimpleArray<double>  {
             for (int cat=0; cat<=ncat; cat++)  {
                 postprob[cat] /= tot;
             }
-            return log(tot) + max;
+            double ret = log(tot) + max;
+            if (isinf(ret)) {
+                cerr << "ret is inf: " << tot << '\t' << max << '\n';
+                exit(1);
+            }
+            if (isnan(ret)) {
+                cerr << "ret is nan: " << tot << '\t' << max << '\n';
+                for (int cat=0; cat<=ncat; cat++)   {
+                    cerr << GetVal(cat) << '\t' << weight[cat] << '\n';
+                }
+                exit(1);
+            }
+            return ret;
     }
 
     double GetPostProbArray(OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
@@ -145,6 +157,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     private:
 
+    // still numerically unstable
     void ComputeDiscBeta()   {
         for (int cat=0; cat<ncat; cat++)  {
             (*this)[cat] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
@@ -152,6 +165,14 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     }
 
     void ComputeWeights()   {
+        if (posw > 1)   {
+            cerr << "error: pos weight greater than 1\n";
+            exit(1);
+        }
+        if (posw < 0)   {
+            cerr << "error: negative pos weight\n";
+            exit(1);
+        }
         for (int cat=0; cat<ncat; cat++)    {
             weight[cat] = (1-posw)/ncat;
         }
@@ -365,6 +386,7 @@ class CodonM8Model	{
 			CollectPathSuffStat();
 
 			MoveOmega();
+            UpdateMatrices();
 			MoveNuc();
 		}
 	}
@@ -406,8 +428,10 @@ class CodonM8Model	{
 	void MoveOmega() 	{
 
             CollectOmegaSuffStat();
-            MoveAlpha(1,10);
-            MoveBeta(1,10);
+            /*
+            MoveAlpha(0.1,10);
+            MoveBeta(0.1,10);
+            */
             MovePosOm(1,10);
             MovePosWeight(1,10);
             ResampleAlloc();
@@ -570,7 +594,7 @@ class CodonM8Model	{
 			double deltalogprob = - PosWeightLogProb() - GetOmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
             posw += m;
-            while ((posw<0) && (posw>1))    {
+            while ((posw<0) || (posw>1))    {
                 if (posw <0)    {
                     posw = -posw;
                 }
@@ -656,6 +680,7 @@ class CodonM8Model	{
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\t";
 		os << "meanomega\tposom\tposw\t";
+        os << "alpha\tbeta\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
@@ -666,6 +691,7 @@ class CodonM8Model	{
 		os << GetTotalLength() << '\t';
 		os << GetMeanOmega() << '\t';
         os << dposom+1 << '\t' << posw << '\t';
+        os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 	}
