@@ -692,9 +692,9 @@ class Tree : public NewickTree {
     // just 2 pointers, to the root and to a list of taxa
     Link *root;
     const TaxonSet *taxset;
-	mutable int Nlink;
-	mutable int Nbranch;
-	mutable int Nnode;
+	int Nlink;
+	int Nbranch;
+	int Nnode;
 };
 
 #endif  // TREE_H
