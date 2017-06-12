@@ -9,7 +9,7 @@ template<class T> class ConstArray	{
 	public:
 	virtual ~ConstArray() {}
 
-	int GetSize() const = 0;
+	virtual int GetSize() const = 0;
 	virtual const T& GetVal(int index) const = 0;
 };
 

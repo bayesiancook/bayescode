@@ -12,7 +12,7 @@ template<class T> class ConstBranchArray	{
 
 	int GetNbranch() const {return GetTree()->GetNbranch();}
 
-	const Tree* GetTree() const = 0;
+	virtual const Tree* GetTree() const = 0;
 	virtual const T& GetVal(int index) const = 0;
 
 };

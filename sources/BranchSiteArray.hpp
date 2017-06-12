@@ -10,10 +10,10 @@ template<class T> class ConstBranchSiteArray	{
 	public:
 	virtual ~ConstBranchSiteArray() {}
 
-	const Tree* GetTree() const  = 0;
-	int GetNbranch() const {return tree->GetNbranch();}
+	virtual const Tree* GetTree() const  = 0;
+	int GetNbranch() const {return GetTree()->GetNbranch();}
 
-	int GetSize() const  = 0;
+	virtual int GetSize() const  = 0;
 	virtual const T& GetVal(int branch, int site) const = 0;
 };
 

@@ -57,11 +57,11 @@ template<class T> class FiniteMixture : public virtual ConstArray<T>	{
 
 	public:
 
-	FiniteMixture(const Array<T>* incomponents, const Array<int>* inalloc) : ConstArray<T>(inalloc->GetSize()), components(incomponents), alloc(inalloc)	{
+	FiniteMixture(const Array<T>* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc)	{
 	}
-
 	~FiniteMixture() {}
 
+    int GetSize() const override {return alloc->GetSize();}
 	const T& GetVal(int i) const override {
 		return components->GetVal(alloc->GetVal(i));
 	}
@@ -74,11 +74,12 @@ template<class T> class FiniteMixture : public virtual ConstArray<T>	{
 class MGOmegaCodonSubMatrixDistributor : public ConstArray<MGOmegaCodonSubMatrix>	{
 
 	public:
-	MGOmegaCodonSubMatrixDistributor(const MGOmegaHeterogeneousCodonSubMatrixArray* incomponents, const Array<int>* inalloc) : ConstArray<MGOmegaCodonSubMatrix>(inalloc->GetSize()), components(incomponents), alloc(inalloc) {}
+	MGOmegaCodonSubMatrixDistributor(const MGOmegaHeterogeneousCodonSubMatrixArray* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc) {}
 	~MGOmegaCodonSubMatrixDistributor() {}
 
+    int GetSize() const override {return alloc->GetSize();}
 	const MGOmegaCodonSubMatrix& GetVal(int i) const override	{
-		return *components->GetMGOmegaCodonSubMatrix(alloc->GetVal(i));
+		return components->GetVal(alloc->GetVal(i));
 	}
 
 	private:

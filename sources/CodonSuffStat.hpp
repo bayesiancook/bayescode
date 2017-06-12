@@ -123,13 +123,13 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>    {
 
 	void AddSuffStat(const MGOmegaHeterogeneousCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
 		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],*codonsubmatrixarray.GetMGOmegaCodonSubMatrix(i));
+            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(i));
 		}
 	}
 
 	void AddSuffStat(const MGOmegaHeterogeneousCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray, const ConstArray<int>& alloc)	{
 		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],*codonsubmatrixarray.GetMGOmegaCodonSubMatrix(alloc.GetVal(i)));
+            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(alloc.GetVal(i)));
 		}
 	}
 

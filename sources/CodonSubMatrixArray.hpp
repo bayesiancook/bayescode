@@ -6,7 +6,7 @@
 #include "CodonSubMatrix.hpp"
 #include "Array.hpp"
 
-class MGOmegaHeterogeneousCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegacodonSubMatrix>	{
+class MGOmegaHeterogeneousCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegaCodonSubMatrix>	{
 
 	public:
 	MGOmegaHeterogeneousCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
@@ -25,8 +25,8 @@ class MGOmegaHeterogeneousCodonSubMatrixArray : public Array<SubMatrix>, public 
 
     void UpdateCodonMatrices()  {
 		for (int i=0; i<GetSize(); i++)	{
-            (*this)[i]->SetOmega(omegaarray->GetVal(i));
-            (*this)[i]->CorruptMatrix();
+            (*this)[i].SetOmega(omegaarray->GetVal(i));
+            (*this)[i].CorruptMatrix();
 		}
     }
 
