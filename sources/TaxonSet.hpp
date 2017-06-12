@@ -25,7 +25,7 @@ class TaxonSet {
     void RecursiveGetSubSet(const Link *from, int &i);
 
     int Ntaxa;
-    mutable std::map<std::string, int> taxmap;
+    std::map<std::string, int> taxmap;
     std::string *taxlist;
 };
 
@@ -37,6 +37,6 @@ class TaxonSet {
 
 inline int TaxonSet::GetNtaxa() const { return Ntaxa; }
 inline std::string TaxonSet::GetTaxon(int index) const { return taxlist[index]; }
-inline int TaxonSet::GetTaxonIndex(std::string intaxon) const { return taxmap[intaxon] - 1; }
+inline int TaxonSet::GetTaxonIndex(std::string intaxon) const { return taxmap.find(intaxon)->second - 1; }
 
 #endif  // TAXONSET_H
