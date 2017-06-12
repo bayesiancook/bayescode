@@ -42,7 +42,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
         std::cerr << "error in PhyloProcess constructor: size of matrix array does not match alignment size\n";
         exit(1);
     }
-    submatrixarray = new BranchHomogeneousSiteHeterogeneousArray<SubMatrix>(tree,insubmatrixarray);
+    submatrixarray = new BranchHomogeneousSiteHeterogeneousArray<SubMatrix>(*tree,*insubmatrixarray);
     allocsubmatrixarray = true;
     rootsubmatrixarray = insubmatrixarray;
     allocrootsubmatrixarray = false;
@@ -728,34 +728,34 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suff
 	}
 }
 
-void PhyloProcess::AddPathSuffStat(PathSuffStatArray* suffstatarray)	{
+void PhyloProcess::AddPathSuffStat(PathSuffStatArray& suffstatarray)	{
 
 	for (int i=0; i<GetNsite(); i++)	{
-		AddRootSuffStat(i,(*suffstatarray)[i]);
+		AddRootSuffStat(i,suffstatarray[i]);
 	}
 	RecursiveAddPathSuffStat(GetRoot(),suffstatarray);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray* suffstatarray)	{
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray& suffstatarray)	{
 
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
 		for (int i=0; i<GetNsite(); i++)	{
-			AddPathSuffStat(link,i,(*suffstatarray)[i]);
+			AddPathSuffStat(link,i,suffstatarray[i]);
 		}
 		RecursiveAddPathSuffStat(link->Out(),suffstatarray);
 	}
 }
 
-void PhyloProcess::AddLengthSuffStat(PoissonSuffStatBranchArray* branchlengthsuffstatarray)	{
+void PhyloProcess::AddLengthSuffStat(PoissonSuffStatBranchArray& branchlengthsuffstatarray)	{
 
 	RecursiveAddLengthSuffStat(GetRoot(),branchlengthsuffstatarray);
 }
 
-void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, PoissonSuffStatBranchArray* branchlengthsuffstatarray)	{
+void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, PoissonSuffStatBranchArray& branchlengthsuffstatarray)	{
 
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
 		for (int i=0; i<GetNsite(); i++)	{
-			AddLengthSuffStat(link,i,(*branchlengthsuffstatarray)[link->GetBranch()->GetIndex()]);
+			AddLengthSuffStat(link,i,branchlengthsuffstatarray[link->GetBranch()->GetIndex()]);
 		}
 		RecursiveAddLengthSuffStat(link->Out(),branchlengthsuffstatarray);
 	}

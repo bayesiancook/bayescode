@@ -302,7 +302,7 @@ class CodonM8Model	{
 	}
 
 	double GetPathSuffStatLogProb()	{
-		return componentpathsuffstatarray->GetLogProb(componentcodonmatrixarray);
+		return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
     double GetOmegaSuffStatLogProb()    {
@@ -361,8 +361,8 @@ class CodonM8Model	{
 	void ResampleBranchLengths()	{
 
 		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(lengthsuffstatarray);
-		branchlength->GibbsResample(lengthsuffstatarray);
+		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
 
 	void MoveLambda()	{
@@ -377,7 +377,7 @@ class CodonM8Model	{
 	void CollectPathSuffStat()	{
 
 		sitepathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(sitepathsuffstatarray);
+		phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
 	}
 
 	void CollectComponentPathSuffStat()	{

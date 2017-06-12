@@ -105,7 +105,7 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 
 	public: 
 
-	BranchIIDGamma(const Tree* intree, double inshape, double inscale) : SimpleBranchArray<double>(intree), shape(inshape), scale(inscale)	{
+	BranchIIDGamma(const Tree& intree, double inshape, double inscale) : SimpleBranchArray<double>(intree), shape(inshape), scale(inscale)	{
 		Sample();
 	}
 
@@ -128,9 +128,9 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		}
 	}
 
-	void GibbsResample(const PoissonSuffStatBranchArray* suffstatarray)	{
+	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
 		for (int i=0; i<GetNbranch(); i++)	{
-			const PoissonSuffStat& suffstat = suffstatarray->GetVal(i);
+			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
 			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
 		}
 	}

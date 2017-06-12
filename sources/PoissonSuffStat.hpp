@@ -70,10 +70,10 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const Array<double>* ratearray) const{
+	double GetLogProb(const Array<double>& ratearray) const{
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
-			total += GetVal(i).GetLogProb(ratearray->GetVal(i));
+			total += GetVal(i).GetLogProb(ratearray.GetVal(i));
 		}
 		return total;
 	}
@@ -109,10 +109,10 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const ConstBranchArray<double>* ratearray) const{
+	double GetLogProb(const ConstBranchArray<double>& ratearray) const{
 		double total = 0;
 		for (int i=0; i<GetNbranch(); i++)	{
-			total += GetVal(i).GetLogProb(ratearray->GetVal(i));
+			total += GetVal(i).GetLogProb(ratearray.GetVal(i));
 		}
 		return total;
 	}

@@ -187,8 +187,8 @@ class SingleOmegaModel : public ProbModel	{
 	void ResampleBranchLengths()	{
 
 		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(lengthsuffstatarray);
-		branchlength->GibbsResample(lengthsuffstatarray);
+		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
 
 	void MoveLambda()	{

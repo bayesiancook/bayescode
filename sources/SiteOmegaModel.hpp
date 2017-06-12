@@ -137,7 +137,7 @@ class SiteOmegaModel	{
 	void UpdateSuffStatLogProb()	{
 		UpdateNucMatrix();
 		UpdateCodonMatrices();
-		suffstatlogprob = pathsuffstatarray->GetLogProb(codonmatrixarray);
+		suffstatlogprob = pathsuffstatarray->GetLogProb(*codonmatrixarray);
 	}
 
 	double GetSuffStatLogProb()	{
@@ -213,8 +213,8 @@ class SiteOmegaModel	{
 	void ResampleBranchLengths()	{
 
 		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(lengthsuffstatarray);
-		branchlength->GibbsResample(lengthsuffstatarray);
+		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
 
 	void MoveLambda()	{
@@ -229,7 +229,7 @@ class SiteOmegaModel	{
 	void CollectPathSuffStat()	{
 
 		pathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(pathsuffstatarray);
+		phyloprocess->AddPathSuffStat(*pathsuffstatarray);
 		UpdateSuffStatLogProb();
 	}
 

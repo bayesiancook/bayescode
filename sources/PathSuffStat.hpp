@@ -119,11 +119,11 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const ConstArray<SubMatrix>* matrixarray) const	{
+	double GetLogProb(const ConstArray<SubMatrix>& matrixarray) const	{
 
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
-			total += GetVal(i).GetLogProb(matrixarray->GetVal(i));
+			total += GetVal(i).GetLogProb(matrixarray.GetVal(i));
 		}
 		return total;
 	}
@@ -133,15 +133,6 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 			GetVal(i).AddTo(suffstatarray[alloc.GetVal(i)]);
 		}
 	}
-
-    /*
-    void AddOmegaSuffStat(PoissonSuffStatArray* omegasuffstatarray, const MGOmegaHeterogeneousCodonSubMatrixArray* matrixarray) const {
-		for (int i=0; i<GetSize(); i++)	{
-                GetVal(i).AddOmegaSuffStat(omegasuffstatarray->GetVal(i),matrixarray->GetMGOmegaCodonSubMatrix(i));
-                // GetVal(i).AddOmegaSuffStat((*omegasuffstatarray)[i],matrixarray->GetMGOmegaCodonSubMatrix(i));
-        }
-    }
-    */
 };
 
 #endif

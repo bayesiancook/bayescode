@@ -108,21 +108,21 @@ public:
 	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
 
 	// heterogeneeous across sites, homogeneous across branches
-	void AddPathSuffStat(PathSuffStatArray* suffstatarray);
-	void RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray* suffstatarray);
+	void AddPathSuffStat(PathSuffStatArray& suffstatarray);
+	void RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray& suffstatarray);
 
 	// homogeneous across sites, heterogeneous across branches
-	// void AddSuffStat(BranchPathSuffStatArray* branchsuffstatarray, PathSuffStat& rootsuffstat);
+	// void AddSuffStat(BranchPathSuffStatArray& branchsuffstatarray, PathSuffStat& rootsuffstat);
 
 	// heterogeneous across sites and branches
-	// void AddSuffStat(BranchSitePathSuffStatArray* branchsitesuffstatarray);
+	// void AddSuffStat(BranchSitePathSuffStatArray& branchsitesuffstatarray);
 
 	// homogeneous across sites
-	void AddLengthSuffStat(PoissonSuffStatBranchArray* branchlengthsuffstatarray);
-	void RecursiveAddLengthSuffStat(const Link* from, PoissonSuffStatBranchArray* branchlengthsuffstatarray);
+	void AddLengthSuffStat(PoissonSuffStatBranchArray& branchlengthsuffstatarray);
+	void RecursiveAddLengthSuffStat(const Link* from, PoissonSuffStatBranchArray& branchlengthsuffstatarray);
 
 	// homogeneous across branches
-	// void AddPoissonSuffStat(PoissonSuffStatArray* poissonsuffstatarray);
+	// void AddPoissonSuffStat(PoissonSuffStatArray& poissonsuffstatarray);
 
 	void PostPredSample(bool rootprior = false);  // unclamped Nielsen
 	void PostPredSample(int site, bool rootprior = false);
