@@ -34,8 +34,7 @@ class SiteOmegaModel	{
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
-	MGOmegaHeterogeneousCodonSubMatrixArray* codonmatrixarray;
-	// BranchHomogeneousSiteHeterogeneousArray<SubMatrix>* matrixsystem;
+	MGSiteOmegaCodonSubMatrixArray* codonmatrixarray;
 
     PhyloProcess* phyloprocess;
 
@@ -117,7 +116,7 @@ class SiteOmegaModel	{
 		}
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-		codonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
+		codonmatrixarray = new MGSiteOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,omegaarray);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrixarray);
 

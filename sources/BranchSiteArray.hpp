@@ -25,7 +25,7 @@ template<class T> class BranchSiteArray : public ConstBranchSiteArray<T> {
 	virtual T& operator()(int branch, int site) = 0;
 };
 
-template<class T> class HomogeneousBranchSiteArray : public virtual ConstBranchSiteArray<T> {
+template<class T> class HomogeneousBranchSiteArray : public ConstBranchSiteArray<T> {
 
 	public:
 	HomogeneousBranchSiteArray(const Tree* intree, int insize, const T& invalue) : tree(intree), size(insize), value(invalue) {}
@@ -41,7 +41,7 @@ template<class T> class HomogeneousBranchSiteArray : public virtual ConstBranchS
 	const T& value;
 };
 
-template<class T> class BranchHomogeneousSiteHeterogeneousArray : public virtual ConstBranchSiteArray<T>	{
+template<class T> class BranchHomogeneousSiteHeterogeneousArray : public ConstBranchSiteArray<T>	{
 
 	public:
 	BranchHomogeneousSiteHeterogeneousArray(const Tree* intree, const ConstArray<T>* inarray) : tree(intree), array(inarray) {}
@@ -56,7 +56,7 @@ template<class T> class BranchHomogeneousSiteHeterogeneousArray : public virtual
 	const ConstArray<T>* array;
 };
 
-template<class T> class BranchHeterogeneousSiteHomogeneousArray : public virtual ConstBranchSiteArray<T> {
+template<class T> class BranchHeterogeneousSiteHomogeneousArray : public ConstBranchSiteArray<T> {
 
 	public:
 	BranchHeterogeneousSiteHomogeneousArray(const ConstBranchArray<T>* inbrancharray, int insize) : brancharray(inbrancharray), size(insize) {}

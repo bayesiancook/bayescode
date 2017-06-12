@@ -6,14 +6,14 @@
 #include "CodonSubMatrix.hpp"
 #include "Array.hpp"
 
-class MGOmegaHeterogeneousCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegaCodonSubMatrix>	{
+class MGSiteOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegaCodonSubMatrix>	{
 
 	public:
-	MGOmegaHeterogeneousCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	MGSiteOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         Create();
 	}
 
-	~MGOmegaHeterogeneousCodonSubMatrixArray()	{
+	~MGSiteOmegaCodonSubMatrixArray()	{
         Delete();
 	}
 		

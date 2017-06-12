@@ -37,7 +37,7 @@ class GammaSuffStat : public SuffStat	{
 	int n;
 };
 
-class IIDGamma: public virtual SimpleArray<double>	{
+class IIDGamma: public SimpleArray<double>	{
 
 	public: 
 
@@ -101,7 +101,7 @@ class IIDGamma: public virtual SimpleArray<double>	{
 	double scale;
 };
 
-class BranchIIDGamma: public virtual SimpleBranchArray<double>	{
+class BranchIIDGamma: public SimpleBranchArray<double>	{
 
 	public: 
 

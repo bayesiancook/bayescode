@@ -53,40 +53,6 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 	const vector<double>& weight;
 };
 
-template<class T> class FiniteMixture : public virtual ConstArray<T>	{
-
-	public:
-
-	FiniteMixture(const Array<T>* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc)	{
-	}
-	~FiniteMixture() {}
-
-    int GetSize() const override {return alloc->GetSize();}
-	const T& GetVal(int i) const override {
-		return components->GetVal(alloc->GetVal(i));
-	}
-
-	private:
-	const Array<T>* components;
-	const Array<int>* alloc;
-};
-
-class MGOmegaCodonSubMatrixDistributor : public ConstArray<MGOmegaCodonSubMatrix>	{
-
-	public:
-	MGOmegaCodonSubMatrixDistributor(const MGOmegaHeterogeneousCodonSubMatrixArray* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc) {}
-	~MGOmegaCodonSubMatrixDistributor() {}
-
-    int GetSize() const override {return alloc->GetSize();}
-	const MGOmegaCodonSubMatrix& GetVal(int i) const override	{
-		return components->GetVal(alloc->GetVal(i));
-	}
-
-	private:
-	const MGOmegaHeterogeneousCodonSubMatrixArray* components;
-	const Array<int>* alloc;
-};
-
 class DiscBetaWithPos : public SimpleArray<double>  {
 
     public:
@@ -219,9 +185,9 @@ class CodonM8Model	{
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
-	MGOmegaHeterogeneousCodonSubMatrixArray* componentcodonmatrixarray;
+	MGSiteOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
-    FiniteMixture<SubMatrix>* sitesubmatrixarray;
+    ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
 
     PhyloProcess* phyloprocess;
 
@@ -309,9 +275,9 @@ class CodonM8Model	{
 		}
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-		componentcodonmatrixarray = new MGOmegaHeterogeneousCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
+		componentcodonmatrixarray = new MGSiteOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
-        sitesubmatrixarray = new FiniteMixture<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
