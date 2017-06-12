@@ -100,7 +100,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 
 	public:
 
-	PoissonSuffStatBranchArray(const Tree* intree) : SimpleBranchArray<PoissonSuffStat>(intree) {}
+	PoissonSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<PoissonSuffStat>(intree) {}
 	~PoissonSuffStatBranchArray() {}
 
 	void Clear()	{

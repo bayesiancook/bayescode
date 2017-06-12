@@ -254,7 +254,8 @@ class CodonM8Model	{
 	void Allocate()	{
 
 		lambda = 10.0;
-		branchlength = new BranchIIDGamma(tree,1.0,lambda);
+		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
+        branchlength->Sample();
 
 		alpha = beta = 1.0;
         posw = 0.1;
@@ -292,7 +293,7 @@ class CodonM8Model	{
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(tree);
+		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 		sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
 		componentpathsuffstatarray = new PathSuffStatArray(ncat+1);
 		siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());

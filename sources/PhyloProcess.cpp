@@ -24,7 +24,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     maxtrial = DEFAULTMAXTRIAL;
     branchlength = inbranchlength;
     siterate = insiterate;
-    submatrixarray = new HomogeneousBranchSiteArray<SubMatrix>(tree,GetNsite(),*insubmatrix);
+    submatrixarray = new HomogeneousBranchSiteArray<SubMatrix>(*tree,GetNsite(),*insubmatrix);
     allocsubmatrixarray = true;
     rootsubmatrixarray = new HomogeneousArray<SubMatrix>(GetNsite(),*insubmatrix);
     allocrootsubmatrixarray = true;
