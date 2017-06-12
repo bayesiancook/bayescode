@@ -728,7 +728,7 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suff
 	}
 }
 
-void PhyloProcess::AddPathSuffStat(PathSuffStatArray& suffstatarray)	{
+void PhyloProcess::AddPathSuffStat(Array<PathSuffStat>& suffstatarray)	{
 
 	for (int i=0; i<GetNsite(); i++)	{
 		AddRootSuffStat(i,suffstatarray[i]);
@@ -736,7 +736,7 @@ void PhyloProcess::AddPathSuffStat(PathSuffStatArray& suffstatarray)	{
 	RecursiveAddPathSuffStat(GetRoot(),suffstatarray);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray& suffstatarray)	{
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray)	{
 
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
 		for (int i=0; i<GetNsite(); i++)	{
@@ -746,12 +746,12 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStatArray&
 	}
 }
 
-void PhyloProcess::AddLengthSuffStat(PoissonSuffStatBranchArray& branchlengthsuffstatarray)	{
+void PhyloProcess::AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
 
 	RecursiveAddLengthSuffStat(GetRoot(),branchlengthsuffstatarray);
 }
 
-void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, PoissonSuffStatBranchArray& branchlengthsuffstatarray)	{
+void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
 
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
 		for (int i=0; i<GetNsite(); i++)	{

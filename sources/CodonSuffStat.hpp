@@ -4,6 +4,7 @@
 
 #include "PathSuffStat.hpp"
 #include "CodonSubMatrixArray.hpp"
+#include "PoissonSuffStat.hpp"
 #include <typeinfo>
 
 /*
@@ -20,7 +21,7 @@ class NucPathSuffStat : public PathSuffStat	{
 };
 */
 
-class OmegaSuffStat {
+class OmegaSuffStat : public PoissonSuffStat {
 
 	public:
 
@@ -30,108 +31,51 @@ class OmegaSuffStat {
 	// assumes pathsuffstat is 61x61
 	// tease out syn and non-syn substitutions and sum up count and beta stats  
 	void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix, const PathSuffStat& pathsuffstat)	{
-		pathsuffstat.AddOmegaSuffStat(*this,codonsubmatrix);
-	}
 
-	// summing over all entries of an array
-	void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix, const PathSuffStatArray& pathsuffstatarray)	{
-		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-			AddSuffStat(codonsubmatrix,pathsuffstatarray.GetVal(i));
-		}
-	}
+        int ncodon = codonsubmatrix.GetNstate();
+        const CodonStateSpace* statespace = codonsubmatrix.GetCodonStateSpace();
 
-	void Clear()	{
-		count = beta = 0;
-	}
+        const std::map<pair<int,int>,int>& paircount = pathsuffstat.GetPairCountMap();
+        const std::map<int,double>& waitingtime = pathsuffstat.GetWaitingTimeMap();
 
-	void IncrementCount()	{
-		count++;
-	}
-
-	void AddCount(int in)	{
-		count += in;
-	}
-
-	void AddBeta(double in)	{
-		beta += in;
-	}
-
-	void AddSuffStat(int incount, double inbeta)	{
-		count += incount;
-		beta += inbeta;
-	}
-
-	int GetCount() const {
-		return count;
-	}
-
-	double GetBeta() const {
-		return beta;
-	}
-
-	double GetLogProb(double rate) const {
-		return count*log(rate) - beta*rate;
-	}
-
-	double GetMarginalLogProb(double shape, double scale) const {
-		return shape*log(scale) - Random::logGamma(shape) - (shape + count)*log(scale + beta) + Random::logGamma(shape + count);
-	}
-
-	private:
-
-	int count;
-	double beta;
-};
-
-void PathSuffStat::AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaCodonSubMatrix& matrix) const {
-
-    int ncodon = matrix.GetNstate();
-    const CodonStateSpace* statespace = matrix.GetCodonStateSpace();
-
-    double beta = 0;
-    for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
-        double totnonsynrate = 0;
-        int a = i->first;
-        for (int b=0; b<ncodon; b++)	{
-            if (b != a)	{
-                if (matrix(a,b) != 0)	{
-                    if (!statespace->Synonymous(a,b))	{
-                        totnonsynrate += matrix(a,b);
+        double tmpbeta = 0;
+        for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+            double totnonsynrate = 0;
+            int a = i->first;
+            for (int b=0; b<ncodon; b++)	{
+                if (b != a)	{
+                    if (codonsubmatrix(a,b) != 0)	{
+                        if (!statespace->Synonymous(a,b))	{
+                            totnonsynrate += codonsubmatrix(a,b);
+                        }
                     }
                 }
             }
+            tmpbeta += i->second * totnonsynrate;
         }
-        beta += i->second * totnonsynrate;
-    }
-    beta /= matrix.GetOmega();
+        tmpbeta /= codonsubmatrix.GetOmega();
 
-    int count = 0;
-    for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
-        if (! statespace->Synonymous(i->first.first,i->first.second))	{
-            count += i->second;
+        int tmpcount = 0;
+        for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+            if (! statespace->Synonymous(i->first.first,i->first.second))	{
+                tmpcount += i->second;
+            }
         }
-    }
-    omegasuffstat.AddSuffStat(count,beta);
-}
 
-class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>    {
+        PoissonSuffStat::AddSuffStat(tmpcount,tmpbeta);
+    }
+};
+
+class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<PoissonSuffStat>    {
 
 	public:
 
 	OmegaSuffStatArray(int insize) : SimpleArray<OmegaSuffStat>(insize) {}
 	~OmegaSuffStatArray() {}
 
-	void AddSuffStat(const MGSiteOmegaCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray)	{
-		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(i));
-		}
-	}
-
-	void AddSuffStat(const MGSiteOmegaCodonSubMatrixArray& codonsubmatrixarray, const PathSuffStatArray& pathsuffstatarray, const ConstArray<int>& alloc)	{
-		for (int i=0; i<pathsuffstatarray.GetSize(); i++)	{
-            pathsuffstatarray.GetVal(i).AddOmegaSuffStat((*this)[i],codonsubmatrixarray.GetVal(alloc.GetVal(i)));
-		}
-	}
+    int GetSize() const override {return array.size();}
+    const OmegaSuffStat& GetVal(int i) const override {return array[i];}
+    OmegaSuffStat& operator[](int i) override {return array[i];}
 
 	void Clear()	{
 		for (int i=0; i<GetSize(); i++)	{
@@ -139,21 +83,22 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>    {
 		}
 	}
 
-	double GetLogProb(const Array<double>* ratearray) const{
+	void AddSuffStat(const ConstArray<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
+		}
+	}
+
+	double GetLogProb(const Array<double>* omegaarray) const{
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
-			total += GetVal(i).GetLogProb(ratearray->GetVal(i));
+			total += GetVal(i).GetLogProb(omegaarray->GetVal(i));
 		}
 		return total;
 	}
 
 	double GetMarginalLogProb(double shape, double scale)	const {
 		double total = 0;
-		/*
-		for (int i=0; i<GetSize(); i++)	{
-			total += GetVal(i).GetMarginalLogProb(shape,scale);
-		}
-		*/
 		// factoring out prior factor
 		for (int i=0; i<GetSize(); i++)	{
 			int count = GetVal(i).GetCount();
@@ -164,17 +109,5 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>    {
 		return total;
 	}
 };
-
-/*
-class BranchOmegaSuffStatArray : public BranchPoissonSuffStatArray	{
-
-	public:
-	void AddSuffStat(CodonStateSpace* codonstatespace, BranchPathSuffStatArray* branchpathsuffstatarray)	{
-		for (int i=0; i<GetNbranch(); i++)	{
-			GetOmegaSuffStat(i).AddSuffStat(codonstatespace,branchpathsuffstatarray->GetVal(i));
-		}
-	}
-};
-*/
 
 #endif

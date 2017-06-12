@@ -64,16 +64,9 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-	void GibbsResample(const PoissonSuffStatArray* suffstatarray)	{
+	void GibbsResample(const ConstArray<PoissonSuffStat>& suffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
-			const PoissonSuffStat& suffstat = suffstatarray->GetVal(i);
-			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
-		}
-	}
-
-	void GibbsResample(const OmegaSuffStatArray* suffstatarray)	{
-		for (int i=0; i<GetSize(); i++)	{
-			const OmegaSuffStat& suffstat = suffstatarray->GetVal(i);
+			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
 			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
 		}
 	}

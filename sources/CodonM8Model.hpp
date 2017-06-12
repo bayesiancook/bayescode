@@ -36,6 +36,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 
 	}
 
+    /*
 	void AddSuffStat(vector<int>& occupancy) const {
         if (occupancy.size() != weight.size())  {
             cerr << "error: non matching size\n";
@@ -48,6 +49,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
             occupancy[GetVal(i)]++;
         }
     }
+    */
 
 	private:
 	const vector<double>& weight;
@@ -185,8 +187,16 @@ class CodonM8Model	{
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
-	MGSiteOmegaCodonSubMatrixArray* componentcodonmatrixarray;
+    // array of matrices across components of the mixture
+	MGOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
+    // arrays of matrices across sites (such as determined by the site allocations to the mixture components)
+    // two versions differing only by their exact type
+    
+    // used for collecting omega suffstats: need to have access to the *codon* matrix for each site
+    ConstMixtureArray<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
+
+    // used by PhyloProcess: has to be a ConstArray<SubMatrix>
     ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
 
     PhyloProcess* phyloprocess;
@@ -275,9 +285,10 @@ class CodonM8Model	{
 		}
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-		componentcodonmatrixarray = new MGSiteOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
+		componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
         sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
@@ -383,13 +394,13 @@ class CodonM8Model	{
 	void CollectComponentPathSuffStat()	{
 
 		componentpathsuffstatarray->Clear();
-		sitepathsuffstatarray->AddTo(*componentpathsuffstatarray,*sitealloc);
+		sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
 	}
 
 	void CollectOmegaSuffStat()	{
 
 		siteomegasuffstatarray->Clear();
-		siteomegasuffstatarray->AddSuffStat(*componentcodonmatrixarray,*sitepathsuffstatarray,*sitealloc);
+		siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
 	}
 
 	void MoveOmega() 	{

@@ -3,15 +3,10 @@
 #define PATHSUFFSTAT_H
 
 #include "SuffStat.hpp"
-#include "PoissonSuffStat.hpp"
-#include "CodonSubMatrix.hpp"
 #include "SubMatrix.hpp"
-#include "CodonSubMatrix.hpp"
-#include "CodonSubMatrixArray.hpp"
 #include "Array.hpp"
 #include <map>
 
-class OmegaSuffStat;
 
 class PathSuffStat : public SuffStat	{
 
@@ -97,7 +92,9 @@ class PathSuffStat : public SuffStat	{
 		return total;
 	}
 
-	void AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaCodonSubMatrix& matrix) const;
+    const std::map<int,int>& GetRootCountMap() const {return rootcount;}
+    const std::map<pair<int,int>,int>& GetPairCountMap() const {return paircount;}
+    const std::map<int,double>& GetWaitingTimeMap() const {return waitingtime;}
 
 	private:
 
@@ -128,7 +125,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		return total;
 	}
 
-	void AddTo(Array<PathSuffStat>& suffstatarray, const Array<int>& alloc)	const {
+	void AddToComponents(Array<PathSuffStat>& suffstatarray, const Array<int>& alloc)	const {
 		for (int i=0; i<GetSize(); i++)	{
 			GetVal(i).AddTo(suffstatarray[alloc.GetVal(i)]);
 		}
