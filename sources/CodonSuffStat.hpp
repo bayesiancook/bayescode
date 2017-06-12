@@ -89,7 +89,7 @@ void PathSuffStat::AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaC
     const CodonStateSpace* statespace = matrix.GetCodonStateSpace();
 
     double beta = 0;
-    for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+    for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
         double totnonsynrate = 0;
         int a = i->first;
         for (int b=0; b<ncodon; b++)	{
@@ -106,7 +106,7 @@ void PathSuffStat::AddOmegaSuffStat(OmegaSuffStat& omegasuffstat, const MGOmegaC
     beta /= matrix.GetOmega();
 
     int count = 0;
-    for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+    for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
         if (! statespace->Synonymous(i->first.first,i->first.second))	{
             count += i->second;
         }

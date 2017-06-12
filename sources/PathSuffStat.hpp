@@ -47,39 +47,39 @@ class PathSuffStat : public SuffStat	{
 	}
 
 	void AddTo(PathSuffStat& suffstat) const {
-		for (std::map<int,int>::iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
+		for (std::map<int,int>::const_iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
 			suffstat.AddRootCount(i->first,i->second);
 		}
-		for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+		for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
             suffstat.AddPairCount(i->first.first,i->first.second,i->second);
 		}
-		for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+		for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
             suffstat.AddWaitingTime(i->first,i->second);
         }
 	}
 
 	int GetRootCount(int state) const {
-		return rootcount[state];
+		return rootcount.find(state)->second;
 	}
 
 	int GetPairCount(int state1, int state2) const  {
-		return paircount[pair<int,int>(state1,state2)];
+		return paircount.find(pair<int,int>(state1,state2))->second;
 	}
 
 	double GetWaitingTime(int state) const	{
-		return waitingtime[state];
+		return waitingtime.find(state)->second;
 	}
 	
 	double GetLogProb(const SubMatrix& mat) const {
 		double total = 0;
 		const double* stat = mat.GetStationary();
-		for (std::map<int,int>::iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
+		for (std::map<int,int>::const_iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
 			total += i->second * log(stat[i->first]);
 		}
-		for (std::map<int,double>::iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+		for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
 			total += i->second * mat(i->first,i->first);
 		}
-		for (std::map<pair<int,int>, int>::iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+		for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
 			total += i->second * log(mat(i->first.first, i->first.second));
 		}
 		return total;
@@ -89,9 +89,9 @@ class PathSuffStat : public SuffStat	{
 
 	private:
 
-	mutable std::map<int,int> rootcount;
-	mutable std::map<pair<int,int>,int> paircount;
-	mutable std::map<int,double> waitingtime;
+	std::map<int,int> rootcount;
+	std::map<pair<int,int>,int> paircount;
+	std::map<int,double> waitingtime;
 };
 
 class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
