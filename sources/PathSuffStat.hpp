@@ -59,15 +59,27 @@ class PathSuffStat : public SuffStat	{
 	}
 
 	int GetRootCount(int state) const {
-		return rootcount.find(state)->second;
+        std::map<int,int>::const_iterator i = rootcount.find(state);
+        if (i == rootcount.end())   {
+            return 0;
+        }
+        return i->second;
 	}
 
 	int GetPairCount(int state1, int state2) const  {
-		return paircount.find(pair<int,int>(state1,state2))->second;
+        std::map<pair<int,int>,int>::const_iterator i = paircount.find(pair<int,int>(state1,state2));
+        if (i == paircount.end())   {
+            return 0;
+        }
+        return i->second;
 	}
 
 	double GetWaitingTime(int state) const	{
-		return waitingtime.find(state)->second;
+        std::map<int,double>::const_iterator i = waitingtime.find(state);
+        if (i == waitingtime.end()) {
+            return 0;
+        }
+        return i->second;
 	}
 	
 	double GetLogProb(const SubMatrix& mat) const {

@@ -37,6 +37,13 @@ class TaxonSet {
 
 inline int TaxonSet::GetNtaxa() const { return Ntaxa; }
 inline std::string TaxonSet::GetTaxon(int index) const { return taxlist[index]; }
-inline int TaxonSet::GetTaxonIndex(std::string intaxon) const { return taxmap.find(intaxon)->second - 1; }
+inline int TaxonSet::GetTaxonIndex(std::string intaxon) const { 
+    std::map<std::string,int>::const_iterator i = taxmap.find(intaxon);
+    if (i == taxmap.end())  {
+        std::cerr << "error in TaxonSet: taxon not found\n";
+        exit(1);
+    }
+    return i->second - 1; 
+}
 
 #endif  // TAXONSET_H

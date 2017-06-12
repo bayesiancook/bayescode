@@ -131,18 +131,33 @@ public:
 
 	// various accessors
 
-	bool isMissing(const Node *node, int site) const { return false; return missingmap[node][site]; }
+	bool isMissing(const Node *node, int site) const { 
+        return false; 
+        map<const Node*, bool*>::const_iterator i = missingmap.find(node);
+        if (i == missingmap.end())  {
+            cerr << "error in PhyloProcess::isMissing\n";
+            exit(1);
+        }
+        return i->second[site];
+    }
 
 	bool isMissing(const Link *link, int site) const {
 		return false;
-		return (missingmap[link->GetNode()][site] || missingmap[link->Out()->GetNode()][site]);
+		// return (missingmap[link->GetNode()][site] || missingmap[link->Out()->GetNode()][site]);
 	}
 
 	void CreateMissingMap();
 	void RecursiveCreateMissingMap(const Link *from);
 	bool FillMissingMap(const Link *from, int i);
 
-	double *GetCondLikelihood(const Link *from) const { return condlmap[from]; }
+	double* GetCondLikelihood(const Link *from) const {
+        map<const Link*, double*>::const_iterator i = condlmap.find(from); 
+        if (i == condlmap.end())    {
+            cerr << "error in PhyloProcess::GetCondLikelihood\n";
+            exit(1);
+        }
+        return i->second;
+    }
 
 	double GetPruningTime() const { return pruningchrono.GetTime(); }
 	double GetResampleTime() const { return resamplechrono.GetTime(); }
@@ -185,7 +200,6 @@ public:
 
 	int *sitearray;
 	double *sitelnL;
-	mutable std::map<const Link *, double *> condlmap;
 
 	int Nstate;
 
@@ -201,10 +215,11 @@ public:
 
 	private:
 
-	mutable std::map<const Node*, BranchSitePath **> pathmap;
-	mutable std::map<const Node *, int *> statemap;
-	mutable std::map<const Node *, bool *> missingmap;
-	mutable std::map<const Node *, int> totmissingmap;
+	std::map<const Link *, double *> condlmap;
+	std::map<const Node*, BranchSitePath **> pathmap;
+	std::map<const Node *, int *> statemap;
+	std::map<const Node *, bool *> missingmap;
+	std::map<const Node *, int> totmissingmap;
 
 	int maxtrial;
 	static const int unknown = -1;

@@ -486,14 +486,29 @@ class Tree : public NewickTree {
 	}
 
 	const Node* GetNode(int index) const {
-		return nodemap.find(index)->second;
+		map<int,const Node*>::const_iterator i = nodemap.find(index);
+        if (i == nodemap.end()) {
+            cerr << "error in Tree::GetNode(int): not found\n";
+            exit(1);
+        }
+        return i->second;
 	}
+
 	const Branch* GetBranch(int index) const  {
-		return branchmap.find(index)->second;
+		map<int,const Branch*>::const_iterator i = branchmap.find(index);
+        if (i == branchmap.end())   {
+            cerr << "error in Tree::GetBranch(int): not found\n";
+            exit(1);
+        }
+        return i->second;
 	}
 
 	Link* GetLink(int index) const {
-		return linkmap.find(index)->second;
+		map<int, Link*>::const_iterator i = linkmap.find(index);
+        if (i == linkmap.end()) {
+            cerr << "error in Tree::GetLink(int): not found\n";
+        }
+        return i->second;
 	}
 
 	protected:
@@ -501,41 +516,6 @@ class Tree : public NewickTree {
 	map<int,const Node*> nodemap;
 	map<int,const Branch*> branchmap;
 	map<int,Link*> linkmap;
-
-	void CheckIndices(Link* from) const {
-
-		if (! from->isRoot())	{
-			if (from->GetBranch() != branchmap.find(from->GetBranch()->GetIndex())->second)	{
-				cerr << "branch index : " << from->GetBranch()->GetIndex() << '\n';
-				exit(1);
-			}
-		}
-		else	{
-			if (branchmap.find(0)->second != 0)	{
-				cerr << "root branch index\n";
-				exit(1);
-			}
-		}
-
-		if (from->GetNode() != nodemap.find(from->GetNode()->GetIndex())->second)	{
-			cerr << "node index: " << from->GetNode()->GetIndex() << '\n';
-			exit(1);
-		}
-
-		if (! from->isRoot())	{
-			if (from->Out() != linkmap.find(from->Out()->GetIndex())->second)	{
-				cerr << "link index : " << from->Out()->GetIndex() << '\n';
-			}
-		}
-		if (from != linkmap.find(from->GetIndex())->second)	{
-			cerr << "link index : " << from->GetIndex() << '\n';
-		}
-
-
-		for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-			CheckIndices(link->Out());
-		}
-	}
 
 	void SetIndices(Link* from, int& linkindex, int& nodeindex, int& branchindex) {
 
