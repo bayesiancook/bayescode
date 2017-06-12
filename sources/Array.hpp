@@ -7,22 +7,16 @@
 template<class T> class ConstArray	{
 
 	public:
-	ConstArray(int insize) : size(insize) {}
 	virtual ~ConstArray() {}
 
-	int GetSize() const {return size;}
-
+	int GetSize() const = 0;
 	virtual const T& GetVal(int index) const = 0;
-
-	protected:
-	int size;
 };
 
 template<class T> class Array : public ConstArray<T>	{
 
 	public:
-	Array(int insize) : ConstArray<T>(insize) {}
-	~Array() {}
+	virtual ~Array() {}
 
 	virtual T& operator[](int index) = 0;
 };
@@ -30,21 +24,24 @@ template<class T> class Array : public ConstArray<T>	{
 template<class T> class HomogeneousArray : public ConstArray<T>	{
 
 	public:
-	HomogeneousArray(int insize, const T& invalue) : ConstArray<T>(insize), value(invalue) {}
+	HomogeneousArray(int insize, const T& invalue) : size(insize), value(invalue) {}
 	~HomogeneousArray() {}
 
+    int GetSize() const override {return size;}
 	const T& GetVal(int index) const override {return value;}
 
 	private:
+    int size;
 	const T& value;
 };
 
 template<class T> class SimpleArray : public Array<T>	{
 
 	public:
-	SimpleArray(int insize) : Array<T>(insize), array(insize) {}
+	SimpleArray(int insize) : array(insize) {}
 	virtual ~SimpleArray() {}
 
+    int GetSize() const override {return array.size();}
 	T& operator[](int index) override {return array[index];}
 	const T& GetVal(int index) const override {return array[index];}
     const vector<T>& GetArray() const {return array;}

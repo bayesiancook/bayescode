@@ -8,23 +8,19 @@
 template<class T> class ConstBranchArray	{
 
 	public:
-	ConstBranchArray(const Tree* intree) : tree(intree) {}
 	virtual ~ConstBranchArray() {}
 
-	const Tree* GetTree() const {return tree;}
-	int GetNbranch() const {return tree->GetNbranch();}
+	int GetNbranch() const {return GetTree()->GetNbranch();}
 
+	const Tree* GetTree() const = 0;
 	virtual const T& GetVal(int index) const = 0;
 
-	protected:
-	const Tree* tree;
 };
 
 template<class T> class BranchArray : public ConstBranchArray<T>	{
 
 	public:
-	BranchArray(const Tree* intree) : ConstBranchArray<T>(intree) {}
-	~BranchArray() {}
+	virtual ~BranchArray() {}
 
 	virtual T& operator[](int index) = 0;
 };
@@ -32,25 +28,29 @@ template<class T> class BranchArray : public ConstBranchArray<T>	{
 template<class T> class HomogeneousBranchArray : public ConstBranchArray<T>	{
 
 	public:
-	HomogeneousBranchArray(const Tree* intree, const T& invalue) : ConstBranchArray<T>(intree), value(invalue) {}
+	HomogeneousBranchArray(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
 	~HomogeneousBranchArray() {}
 
+	const Tree* GetTree() const override {return tree;}
 	const T& GetVal(int index) const override {return value;}
 
 	private:
+	const Tree* tree;
 	const T& value;
 };
 
 template<class T> class SimpleBranchArray : public BranchArray<T>	{
 
 	public:
-	SimpleBranchArray(const Tree* intree) : BranchArray<T>(intree), array(intree->GetNbranch()) {}
+	SimpleBranchArray(const Tree* intree) : tree(intree), array(intree->GetNbranch()) {}
 	virtual ~SimpleBranchArray() {}
 
+	const Tree* GetTree() const override {return tree;}
 	T& operator[](int index) override {return array[index];}
 	const T& GetVal(int index) const override {return array[index];}
 
 	private:
+	const Tree* tree;
 	vector<T> array;
 };
 
