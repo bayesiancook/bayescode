@@ -255,7 +255,6 @@ class CodonM8Model	{
 
 		lambda = 10.0;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-        branchlength->Sample();
 
 		alpha = beta = 1.0;
         posw = 0.1;
