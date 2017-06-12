@@ -486,48 +486,48 @@ class Tree : public NewickTree {
 	}
 
 	const Node* GetNode(int index) const {
-		return nodemap[index];
+		return nodemap.find(index)->second;
 	}
 	const Branch* GetBranch(int index) const  {
-		return branchmap[index];
+		return branchmap.find(index)->second;
 	}
 
 	Link* GetLink(int index) const {
-		return linkmap[index];
+		return linkmap.find(index)->second;
 	}
 
 	protected:
 
-	mutable map<int,const Node*> nodemap;
-	mutable map<int,const Branch*> branchmap;
-	mutable map<int,Link*> linkmap;
+	map<int,const Node*> nodemap;
+	map<int,const Branch*> branchmap;
+	map<int,Link*> linkmap;
 
 	void CheckIndices(Link* from) const {
 
 		if (! from->isRoot())	{
-			if (from->GetBranch() != branchmap[from->GetBranch()->GetIndex()])	{
+			if (from->GetBranch() != branchmap.find(from->GetBranch()->GetIndex())->second)	{
 				cerr << "branch index : " << from->GetBranch()->GetIndex() << '\n';
 				exit(1);
 			}
 		}
 		else	{
-			if (branchmap[0] != 0)	{
+			if (branchmap.find(0)->second != 0)	{
 				cerr << "root branch index\n";
 				exit(1);
 			}
 		}
 
-		if (from->GetNode() != nodemap[from->GetNode()->GetIndex()])	{
+		if (from->GetNode() != nodemap.find(from->GetNode()->GetIndex())->second)	{
 			cerr << "node index: " << from->GetNode()->GetIndex() << '\n';
 			exit(1);
 		}
 
 		if (! from->isRoot())	{
-			if (from->Out() != linkmap[from->Out()->GetIndex()])	{
+			if (from->Out() != linkmap.find(from->Out()->GetIndex())->second)	{
 				cerr << "link index : " << from->Out()->GetIndex() << '\n';
 			}
 		}
-		if (from != linkmap[from->GetIndex()])	{
+		if (from != linkmap.find(from->GetIndex())->second)	{
 			cerr << "link index : " << from->GetIndex() << '\n';
 		}
 
