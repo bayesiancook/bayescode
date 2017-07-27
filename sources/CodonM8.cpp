@@ -9,9 +9,10 @@ int main(int argc, char* argv[])	{
 	string treefile = argv[2];
 	int ncat = atoi(argv[3]);
 	int withpos = atoi(argv[4]);
-	string name = argv[5];
+    int withnucsuffstat = atoi(argv[5]);
+	string name = argv[6];
 
-	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,withpos);
+	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,withpos,withnucsuffstat);
 	ofstream os((name + ".trace").c_str());
 	ofstream pos((name + ".sitepp").c_str());
 	model->TraceHeader(os);

@@ -11,7 +11,7 @@
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
-class SingleOmegaModel : public ProbModel	{
+class SingleOmegaModel {
 
 	Tree* tree;
 	FileSequenceAlignment* data;
@@ -39,12 +39,15 @@ class SingleOmegaModel : public ProbModel	{
 
 	PathSuffStat pathsuffstat;
 
-	double suffstatlogprob;
-	double bksuffstatlogprob;
+    int withnucsuffstat;
+    NucPathSuffStat nucpathsuffstat;
+
 
 	public:
 
-	SingleOmegaModel(string datafile, string treefile)	{
+	SingleOmegaModel(string datafile, string treefile, int inwithnucsuffstat)	{
+
+        withnucsuffstat = inwithnucsuffstat;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -78,11 +81,15 @@ class SingleOmegaModel : public ProbModel	{
 		Trace(cerr);
 	}
 
+    CodonStateSpace* GetCodonStateSpace()   {
+		return (CodonStateSpace*) codondata->GetStateSpace();
+    }
+
 	void Allocate()	{
 
 		lambda = 10;
-		branchlength = new BranchIIDGamma(tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(tree);
+		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
+		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
 		double totrr = 0;
@@ -106,7 +113,7 @@ class SingleOmegaModel : public ProbModel	{
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
 		omega = 1.0;
-		codonmatrix = new MGOmegaCodonSubMatrix((CodonStateSpace*) codondata->GetStateSpace(), nucmatrix, omega);
+		codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
 	}
@@ -121,22 +128,13 @@ class SingleOmegaModel : public ProbModel	{
 		codonmatrix->CorruptMatrix();
 	}
 		
-	void UpdateSuffStatLogProb()	{
-		UpdateNucMatrix();
-		UpdateCodonMatrix();
-		suffstatlogprob = pathsuffstat.GetLogProb(*codonmatrix);
-	}
+    void UpdateMatrices()   {
+        UpdateNucMatrix();
+        UpdateCodonMatrix();
+    }
 
-	double GetSuffStatLogProb()	{
-		return suffstatlogprob;
-	}
-
-	void BackupSuffStatLogProb()	{
-		bksuffstatlogprob = suffstatlogprob;
-	}
-
-	void RestoreSuffStatLogProb()	{
-		suffstatlogprob = bksuffstatlogprob;
+	double PathSuffStatLogProb()	{
+		return pathsuffstat.GetLogProb(*codonmatrix);
 	}
 
 	// exponential of mean 1
@@ -156,8 +154,9 @@ class SingleOmegaModel : public ProbModel	{
 		return branchlength->GetLogProb();
 	}
 
-	double Move()	{
+	void Move()	{
 
+        UpdateMatrices();
 		phyloprocess->ResampleSub();
 
 		int nrep = 30;
@@ -170,18 +169,8 @@ class SingleOmegaModel : public ProbModel	{
 			CollectPathSuffStat();
 
 			MoveOmega();
-
-			MoveRR(0.1,1,3);
-			MoveRR(0.03,3,3);
-			MoveRR(0.01,3,3);
-
-			MoveNucStat(0.1,1,3);
-			MoveNucStat(0.01,1,3);
-
-			UpdateSuffStatLogProb();
-
+			MoveNuc();
 		}
-		return 1.0;
 	}
 
 	void ResampleBranchLengths()	{
@@ -204,7 +193,6 @@ class SingleOmegaModel : public ProbModel	{
 
 		pathsuffstat.Clear();
 		phyloprocess->AddPathSuffStat(pathsuffstat);
-		UpdateSuffStatLogProb();
 	}
 
 	void MoveOmega()	{
@@ -215,6 +203,41 @@ class SingleOmegaModel : public ProbModel	{
 		UpdateCodonMatrix();
 	}
 
+    double NucPathSuffStatLogProb() {
+        if (! withnucsuffstat)  {
+            return PathSuffStatLogProb();
+        }
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    void UpdateMatricesForMoveNuc() {
+        if (withnucsuffstat)    {
+            UpdateNucMatrix();
+        }
+        else    {
+            UpdateMatrices();
+        }
+    }
+
+	void MoveNuc()	{
+
+		UpdateMatrices();
+
+        if (withnucsuffstat)    {
+            nucpathsuffstat.Clear();
+            nucpathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
+        }
+
+		MoveRR(0.1,1,3);
+		MoveRR(0.03,3,3);
+		MoveRR(0.01,3,3);
+
+		MoveNucStat(0.1,1,3);
+		MoveNucStat(0.01,1,3);
+
+        UpdateMatrices();
+	}
+
 	double MoveRR(double tuning, int n, int nrep)	{
 		double nacc = 0;
 		double ntot = 0;
@@ -223,12 +246,11 @@ class SingleOmegaModel : public ProbModel	{
 			for (int l=0; l<Nrr; l++)	{
 				bk[l] = nucrelrate[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+            UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -237,7 +259,7 @@ class SingleOmegaModel : public ProbModel	{
 				for (int l=0; l<Nrr; l++)	{
 					nucrelrate[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}
@@ -252,12 +274,11 @@ class SingleOmegaModel : public ProbModel	{
 			for (int l=0; l<Nnuc; l++)	{
 				bk[l] = nucstat[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+            UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -266,7 +287,7 @@ class SingleOmegaModel : public ProbModel	{
 				for (int l=0; l<Nnuc; l++)	{
 					nucstat[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}
@@ -290,32 +311,6 @@ class SingleOmegaModel : public ProbModel	{
 			}
 			else	{
 				lambda /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveOmega(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			BackupSuffStatLogProb();
-			double deltalogprob = - OmegaLogProb() - GetSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			omega *= e;
-			UpdateSuffStatLogProb();
-			deltalogprob += OmegaLogProb() + GetSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				omega /= e;
-				RestoreSuffStatLogProb();
 			}
 			ntot++;
 		}

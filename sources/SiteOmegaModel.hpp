@@ -44,14 +44,15 @@ class SiteOmegaModel	{
 	GammaSuffStat lambdasuffstat;
 	OmegaSuffStatArray* omegasuffstatarray;
 	PathSuffStatArray* pathsuffstatarray;
-	// NucPathSuffStat nucsuffstat;	
 
-	double suffstatlogprob;
-	double bksuffstatlogprob;
+    int withnucsuffstat;
+    NucPathSuffStat nucpathsuffstat;
 
 	public:
 
-	SiteOmegaModel(string datafile, string treefile)	{
+	SiteOmegaModel(string datafile, string treefile, int inwithnucsuffstat)	{
+
+        withnucsuffstat = inwithnucsuffstat;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -79,6 +80,7 @@ class SiteOmegaModel	{
 		Allocate();
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
+		cerr << "-- logprob\n";
 		cerr << phyloprocess->GetLogProb() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
@@ -87,10 +89,14 @@ class SiteOmegaModel	{
 
 	int GetNsite() {return codondata->GetNsite();}
 
+    CodonStateSpace* GetCodonStateSpace()   {
+		return (CodonStateSpace*) codondata->GetStateSpace();
+    }
+
 	void Allocate()	{
 
 		lambda = 10.0;
-		branchlength = new BranchIIDGamma(tree,1.0,lambda);
+		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
 
 		alpha = beta = 1.0;
 		omegaarray = new IIDGamma(GetNsite(),alpha,beta);
@@ -120,7 +126,7 @@ class SiteOmegaModel	{
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrixarray);
 
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(tree);
+		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 		pathsuffstatarray = new PathSuffStatArray(GetNsite());
 		omegasuffstatarray = new OmegaSuffStatArray(GetNsite());
 	}
@@ -134,22 +140,13 @@ class SiteOmegaModel	{
 		codonmatrixarray->UpdateCodonMatrices();
 	}
 		
-	void UpdateSuffStatLogProb()	{
-		UpdateNucMatrix();
-		UpdateCodonMatrices();
-		suffstatlogprob = pathsuffstatarray->GetLogProb(*codonmatrixarray);
-	}
+    void UpdateMatrices()   {
+        UpdateNucMatrix();
+        UpdateCodonMatrices();
+    }
 
-	double GetSuffStatLogProb()	{
-		return suffstatlogprob;
-	}
-
-	void BackupSuffStatLogProb()	{
-		bksuffstatlogprob = suffstatlogprob;
-	}
-
-	void RestoreSuffStatLogProb()	{
-		suffstatlogprob = bksuffstatlogprob;
+	double PathSuffStatLogProb()	{
+		return pathsuffstatarray->GetLogProb(*codonmatrixarray);
 	}
 
 	// exponential of mean 1
@@ -179,6 +176,7 @@ class SiteOmegaModel	{
 
 	void Move()	{
 
+        UpdateMatrices();
 		phyloprocess->ResampleSub();
 
 		int nrep = 30;
@@ -195,18 +193,7 @@ class SiteOmegaModel	{
 			MoveAlpha();
 			MoveBeta();
 			*/
-
-			UpdateSuffStatLogProb();
-
-			MoveRR(0.1,1,3);
-			MoveRR(0.03,3,3);
-			MoveRR(0.01,3,3);
-
-			MoveNucStat(0.1,1,3);
-			MoveNucStat(0.01,1,3);
-
-			UpdateSuffStatLogProb();
-
+			MoveNuc();
 		}
 	}
 
@@ -230,7 +217,6 @@ class SiteOmegaModel	{
 
 		pathsuffstatarray->Clear();
 		phyloprocess->AddPathSuffStat(*pathsuffstatarray);
-		UpdateSuffStatLogProb();
 	}
 
 	void MoveOmega()	{
@@ -241,6 +227,41 @@ class SiteOmegaModel	{
 		UpdateCodonMatrices();
 	}
 
+    double NucPathSuffStatLogProb() {
+        if (! withnucsuffstat)  {
+            return PathSuffStatLogProb();
+        }
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    void UpdateMatricesForMoveNuc() {
+        if (withnucsuffstat)    {
+            UpdateNucMatrix();
+        }
+        else    {
+            UpdateMatrices();
+        }
+    }
+
+	void MoveNuc()	{
+
+		UpdateMatrices();
+
+        if (withnucsuffstat)    {
+            nucpathsuffstat.Clear();
+            nucpathsuffstat.AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
+        }
+
+		MoveRR(0.1,1,3);
+		MoveRR(0.03,3,3);
+		MoveRR(0.01,3,3);
+
+		MoveNucStat(0.1,1,3);
+		MoveNucStat(0.01,1,3);
+
+        UpdateMatrices();
+	}
+
 	double MoveRR(double tuning, int n, int nrep)	{
 		double nacc = 0;
 		double ntot = 0;
@@ -249,12 +270,11 @@ class SiteOmegaModel	{
 			for (int l=0; l<Nrr; l++)	{
 				bk[l] = nucrelrate[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+			UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -263,7 +283,7 @@ class SiteOmegaModel	{
 				for (int l=0; l<Nrr; l++)	{
 					nucrelrate[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}
@@ -278,12 +298,11 @@ class SiteOmegaModel	{
 			for (int l=0; l<Nnuc; l++)	{
 				bk[l] = nucstat[l];
 			}
-			BackupSuffStatLogProb();
-			double deltalogprob = -GetSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
 			deltalogprob += loghastings;
-			UpdateSuffStatLogProb();
-			deltalogprob += GetSuffStatLogProb();
+            UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -292,7 +311,7 @@ class SiteOmegaModel	{
 				for (int l=0; l<Nnuc; l++)	{
 					nucstat[l] = bk[l];
 				}
-				RestoreSuffStatLogProb();
+                UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}

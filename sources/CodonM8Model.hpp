@@ -66,16 +66,19 @@ class CodonM8Model	{
 	OmegaSuffStatArray* siteomegasuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;
-	// NucPathSuffStat nucsuffstat;	
+
+    NucPathSuffStat nucpathsuffstat;
+    int withnucsuffstat;
 
 	public:
 
-	CodonM8Model(string datafile, string treefile, int inncat, int inwithpos)	{
+	CodonM8Model(string datafile, string treefile, int inncat, int inwithpos, int inwithnucsuffstat)	{
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
 		ncat = inncat;
 		withpos = inwithpos;
+        withnucsuffstat = inwithnucsuffstat;
 
 		Nsite = codondata->GetNsite();    // # columns
 		Ntaxa = codondata->GetNtaxa();
@@ -108,6 +111,10 @@ class CodonM8Model	{
 	}
 
 	int GetNsite() {return codondata->GetNsite();}
+
+    CodonStateSpace* GetCodonStateSpace()   {
+		return (CodonStateSpace*) codondata->GetStateSpace();
+    }
 
 	void Allocate()	{
 
@@ -170,11 +177,11 @@ class CodonM8Model	{
 		UpdateCodonMatrices();
 	}
 
-	double GetPathSuffStatLogProb()	{
+	double PathSuffStatLogProb()	{
 		return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
-	double GetOmegaSuffStatLogProb()    {
+	double OmegaSuffStatLogProb()    {
 		return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
 	}
 
@@ -273,20 +280,44 @@ class CodonM8Model	{
 		ResampleAlloc();
 	}
 
+    double NucPathSuffStatLogProb() {
+        if (! withnucsuffstat)  {
+            return PathSuffStatLogProb();
+        }
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    void UpdateMatricesForMoveNuc() {
+        if (withnucsuffstat)    {
+            UpdateNucMatrix();
+        }
+        else    {
+            UpdateMatrices();
+        }
+    }
+
 	void MoveNuc()	{
 
 		CollectComponentPathSuffStat();
 		UpdateMatrices();
+
+        if (withnucsuffstat)    {
+            nucpathsuffstat.Clear();
+            nucpathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
+        }
+
 		MoveRR(0.1,1,3);
 		MoveRR(0.03,3,3);
 		MoveRR(0.01,3,3);
 
 		MoveNucStat(0.1,1,3);
 		MoveNucStat(0.01,1,3);
+
+        UpdateMatrices();
 	}
 
 	void ResampleAlloc()	{
-		GetOmegaSuffStatLogProb();
+		OmegaSuffStatLogProb();
 		sitealloc->GibbsResample(sitepostprobarray);
 	}
 
@@ -298,11 +329,11 @@ class CodonM8Model	{
 			for (int l=0; l<Nrr; l++)	{
 				bk[l] = nucrelrate[l];
 			}
-			double deltalogprob = -GetPathSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
 			deltalogprob += loghastings;
-			UpdateMatrices();
-			deltalogprob += GetPathSuffStatLogProb();
+			UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -311,7 +342,7 @@ class CodonM8Model	{
 				for (int l=0; l<Nrr; l++)	{
 					nucrelrate[l] = bk[l];
 				}
-                UpdateMatrices();
+                UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}
@@ -326,11 +357,11 @@ class CodonM8Model	{
 			for (int l=0; l<Nnuc; l++)	{
 				bk[l] = nucstat[l];
 			}
-			double deltalogprob = -GetPathSuffStatLogProb();
+			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
 			deltalogprob += loghastings;
-			UpdateMatrices();
-			deltalogprob += GetPathSuffStatLogProb();
+			UpdateMatricesForMoveNuc();
+			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
@@ -339,7 +370,7 @@ class CodonM8Model	{
 				for (int l=0; l<Nnuc; l++)	{
 					nucstat[l] = bk[l];
 				}
-				UpdateMatrices();
+				UpdateMatricesForMoveNuc();
 			}
 			ntot++;
 		}
@@ -351,12 +382,12 @@ class CodonM8Model	{
 		double nacc = 0;
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - AlphaLogProb() - GetOmegaSuffStatLogProb();
+			double deltalogprob = - AlphaLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			alpha *= e;
 			componentomegaarray->SetAlphaBeta(alpha,beta);
-			deltalogprob += AlphaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += AlphaLogProb() + OmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -376,12 +407,12 @@ class CodonM8Model	{
 		double nacc = 0;
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - BetaLogProb() - GetOmegaSuffStatLogProb();
+			double deltalogprob = - BetaLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			beta *= e;
 			componentomegaarray->SetAlphaBeta(alpha,beta);
-			deltalogprob += BetaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += BetaLogProb() + OmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -401,12 +432,12 @@ class CodonM8Model	{
 		double nacc = 0;
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - PosOmegaLogProb() - GetOmegaSuffStatLogProb();
+			double deltalogprob = - PosOmegaLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			dposom *= e;
 			componentomegaarray->SetPos(posw,dposom+1);
-			deltalogprob += PosOmegaLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += PosOmegaLogProb() + OmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -427,7 +458,7 @@ class CodonM8Model	{
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
 			double bkposw = posw;
-			double deltalogprob = - PosWeightLogProb() - GetOmegaSuffStatLogProb();
+			double deltalogprob = - PosWeightLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			posw += m;
 			while ((posw<0) || (posw>1))    {
@@ -439,7 +470,7 @@ class CodonM8Model	{
 				}
 			}
 			componentomegaarray->SetPos(posw,dposom+1);
-			deltalogprob += PosWeightLogProb() + GetOmegaSuffStatLogProb();
+			deltalogprob += PosWeightLogProb() + OmegaSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;

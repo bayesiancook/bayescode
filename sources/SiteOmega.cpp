@@ -7,9 +7,10 @@ int main(int argc, char* argv[])	{
 
 	string datafile = argv[1];
 	string treefile = argv[2];
-	string name = argv[3];
+    int withnuc = atoi(argv[3]);
+	string name = argv[4];
 
-	SiteOmegaModel* model = new SiteOmegaModel(datafile,treefile);
+	SiteOmegaModel* model = new SiteOmegaModel(datafile,treefile,withnuc);
 	ofstream os((name + ".trace").c_str());
 	model->TraceHeader(os);
 	os.flush();
