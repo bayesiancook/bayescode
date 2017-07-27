@@ -36,7 +36,7 @@ class SiteOmegaModel	{
 
 	MGOmegaCodonSubMatrixArray* codonmatrixarray;
 
-    PhyloProcess* phyloprocess;
+	PhyloProcess* phyloprocess;
 
 	// suffstats
 
@@ -49,7 +49,7 @@ class SiteOmegaModel	{
 	double suffstatlogprob;
 	double bksuffstatlogprob;
 
-    public:
+	public:
 
 	SiteOmegaModel(string datafile, string treefile)	{
 
@@ -85,7 +85,7 @@ class SiteOmegaModel	{
 		Trace(cerr);
 	}
 
-    int GetNsite() {return codondata->GetNsite();}
+	int GetNsite() {return codondata->GetNsite();}
 
 	void Allocate()	{
 
@@ -157,13 +157,13 @@ class SiteOmegaModel	{
 		return omegaarray->GetLogProb();
 	}
 
-    double AlphaLogProb()   {
-        return -alpha;
-    }
+	double AlphaLogProb()   {
+		return -alpha;
+	}
 
-    double BetaLogProb()    {
-        return -beta;
-    }
+	double BetaLogProb()    {
+		return -beta;
+	}
 
 	double LambdaLogProb()	{
 		return -lambda / 10;
@@ -191,10 +191,10 @@ class SiteOmegaModel	{
 			CollectPathSuffStat();
 
 			MoveOmega();
-            /*
-            MoveAlpha();
-            MoveBeta();
-            */
+			/*
+			MoveAlpha();
+			MoveBeta();
+			*/
 
 			UpdateSuffStatLogProb();
 
@@ -237,7 +237,7 @@ class SiteOmegaModel	{
 
 		omegasuffstatarray->Clear();
 		omegasuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
-        omegaarray->GibbsResample(*omegasuffstatarray);
+		omegaarray->GibbsResample(*omegasuffstatarray);
 		UpdateCodonMatrices();
 	}
 
@@ -344,13 +344,13 @@ class SiteOmegaModel	{
 		return tot;
 	}
 
-    double GetMeanOmega()   {
-        return 0;
-    }
+	double GetMeanOmega()   {
+		return 0;
+	}
 
-    double GetVarOmega()    {
-        return 0;
-    }
+	double GetVarOmega()    {
+		return 0;
+	}
 
 	double GetEntropy(const std::vector<double>& profile, int dim) const {
 		double tot = 0;
@@ -373,8 +373,8 @@ class SiteOmegaModel	{
 		os << GetTotalLength() << '\t';
 		os << lambda << '\t';
 		os << GetMeanOmega() << '\t';
-        os << GetVarOmega() << '\t';
-        os << alpha << '\t' << beta << '\t';
+		os << GetVarOmega() << '\t';
+		os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 	}

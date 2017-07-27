@@ -27,11 +27,11 @@ template<class T> class HomogeneousArray : public ConstArray<T>	{
 	HomogeneousArray(int insize, const T& invalue) : size(insize), value(invalue) {}
 	~HomogeneousArray() {}
 
-    int GetSize() const override {return size;}
+	int GetSize() const override {return size;}
 	const T& GetVal(int index) const override {return value;}
 
 	private:
-    int size;
+	int size;
 	const T& value;
 };
 
@@ -41,12 +41,12 @@ template<class T> class SimpleArray : public Array<T>	{
 	SimpleArray(int insize) : array(insize) {}
 	virtual ~SimpleArray() {}
 
-    int GetSize() const override {return array.size();}
+	int GetSize() const override {return array.size();}
 	T& operator[](int index) override {return array[index];}
 	const T& GetVal(int index) const override {return array[index];}
-    const vector<T>& GetArray() const {return array;}
+	const vector<T>& GetArray() const {return array;}
 
-    protected:
+	protected:
 	vector<T> array;
 };
 
@@ -59,7 +59,7 @@ template<class T> class ConstMixtureArray : public ConstArray<T>	{
 	}
 	~ConstMixtureArray() {}
 
-    int GetSize() const override {return alloc->GetSize();}
+	int GetSize() const override {return alloc->GetSize();}
 	const T& GetVal(int i) const override {
 		return components->GetVal(alloc->GetVal(i));
 	}
@@ -77,7 +77,7 @@ template<class T> class MixtureArray : public Array<T>	{
 	}
 	~MixtureArray() {}
 
-    int GetSize() const override {return alloc->GetSize();}
+	int GetSize() const override {return alloc->GetSize();}
 	const T& GetVal(int i) const override {
 		return components->GetVal(alloc->GetVal(i));
 	}
