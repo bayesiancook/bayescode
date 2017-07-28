@@ -133,13 +133,13 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         lnL = new double[Ngene];
 
         if (! GetMyid())    {
-            geneprocess.assign(0,0);
+            geneprocess.assign(0,(SingleOmegaModel*) 0);
 
             MasterSendGlobalParameters();
             MasterSendOmega();
         }
         else    {
-            geneprocess.assign(Ngene,0);
+            geneprocess.assign(Ngene,(SingleOmegaModel*) 0);
 
             SlaveReceiveGlobalParameters();
             SlaveReceiveOmega();

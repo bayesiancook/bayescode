@@ -1,5 +1,7 @@
 #include "Chrono.hpp"
 
+#define nullptr 0
+
 void Chrono::Reset() {
     TotalTime = 0;
     N = 0;

@@ -4,6 +4,9 @@
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
 
+// c++11
+#define nullptr 0 
+
 class Random {
   public:
     static const double INFPROB;

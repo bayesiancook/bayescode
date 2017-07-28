@@ -5,6 +5,9 @@
 #include "Chrono.hpp"
 using namespace std;
 
+// c++11
+#define nullptr 0 
+
 Chain::Chain() {
     every = 1;
     until = -1;

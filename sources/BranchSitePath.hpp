@@ -11,7 +11,6 @@ using namespace std;
 #include "PathSuffStat.hpp"
 #include "SubMatrix.hpp"
 
-
 class Plink {
     friend class BranchSitePath;
 

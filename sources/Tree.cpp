@@ -5,6 +5,9 @@
 #include "TaxonSet.hpp"
 using namespace std;
 
+// c++11
+typedef list<string>::const_iterator csit;
+
 bool NewickTree::simplify = false;
 
 void NewickTree::ToStream(ostream &os) const {
@@ -84,6 +87,28 @@ Tree::Tree(const Tree *from) {
     RecursiveClone(from->root, root);
 }
 
+void Tree::RecursiveClone(const Link* from, Link* to)	{
+	Node* node = new Node(from->GetNode());
+	to->SetNode(node);
+	const Link* linkfrom = from->Next();
+	Link* linkto = to;
+	while (linkfrom != from)	{
+		Link* newnext = new Link(linkfrom); // newnext points to same node and branch as linkfrom
+		newnext->SetNode(node);
+		linkto->Insert(newnext);
+		Link* newout = new Link(linkfrom->Out()); // idem, same node and branch as linkfrom->Out()
+		newout->InsertOut(newnext);
+		Branch* branch = new Branch(linkfrom->GetBranch());
+		newnext->SetBranch(branch);
+		newout->SetBranch(branch);
+		RecursiveClone(linkfrom->Out(),newout);
+		linkfrom = linkfrom->Next();
+		linkto = linkto->Next();
+	}
+}
+
+// c++11
+/*
 void Tree::RecursiveClone(const Link *from, Link *to) {
     auto node = new Node(from->GetNode());
     to->SetNode(node);
@@ -103,6 +128,7 @@ void Tree::RecursiveClone(const Link *from, Link *to) {
         linkto = linkto->Next();
     }
 }
+*/
 
 void Tree::RecursiveDelete(Link *from) {
     Link *link = from->Next();
@@ -272,6 +298,8 @@ void Tree::ReadFromStream(istream &is) {
     SetRoot(ParseGroup(expr, nullptr));
 }
 
+// c++11
+/*
 Link *Tree::ParseList(string input, Node *node) {
     try {
         // parse input as a list of strings separated by ','
@@ -327,6 +355,63 @@ Link *Tree::ParseList(string input, Node *node) {
         cout << "exit in parse list\n";
         exit(1);
     }
+}
+*/
+
+Link* Tree::ParseList(string input, Node* node)	{
+
+	try	{
+
+		// parse input as a list of strings separated by ','
+		list<string> lst;
+		int n = input.size();
+		int k = 0;
+		int brack = 0;
+		int b = 0;
+		while (k<n)	{
+			char c = input[k];
+			if (c == '(') brack++;
+			if (c == ')') brack--;
+			if ((!brack) && (c == ','))	{
+				lst.push_back((string) (input.substr(b,k-b)));
+				b = k+1;
+			}
+
+			if (brack<0)	{
+				cout << "in parse list : too many )\n";
+				cout << input.substr(0,k) << '\n';
+				cout << input << '\n';
+				throw;
+			}
+			k++;
+		}
+		if (brack)	{
+			cout << "in parse list : too many (\n";
+			cout << input << '\n';
+			throw;
+		}
+		lst.push_back(input.substr(b,k-b));
+
+		// make a circular single link chain around the node
+		// with one link for each term of the list
+		// and call parse group on each term
+		Link* firstlink = new Link;
+		Link* prevlink = firstlink;
+		firstlink->SetNode(node);
+		for (csit i=lst.begin(); i!=lst.end(); i++)	{
+			Link* link = new Link;
+			link->SetNode(node);
+			link->AppendTo(prevlink);
+			ParseGroup(*i,link);
+			prevlink = link;
+		}
+		firstlink->AppendTo(prevlink);
+		return firstlink;
+	}
+	catch(...)	{
+		cout << "exit in parse list\n";
+		exit(1);
+	}
 }
 
 Link *Tree::ParseGroup(string input, Link *from) {
@@ -391,6 +476,55 @@ Link *Tree::ParseGroup(string input, Link *from) {
     }
 }
 
+
+void Tree::Subdivide(Link* from, int Ninterpol)	{
+
+	for (Link* link=from->Next(); link!=from; link=link->Next())	{
+		Subdivide(link->Out(),Ninterpol);
+	}
+	// if ((! from->isLeaf()) && (! from->isRoot()))	{
+	if (! from->isRoot())	{
+		double l = atof(from->GetBranch()->GetName().c_str());
+		if (l <= 0)	{
+			cerr << "warning : non strictly positive branch length : " << l << '\n';
+			cerr << "correcting and setting to 0.001\n";
+			l = 0.001;
+		}
+
+		ostringstream s;
+		s << l / Ninterpol;
+
+		delete from->GetBranch();
+
+		Link* current = from;
+		Link* final = from->Out();
+		int i = 0;
+		while (i < Ninterpol-1)	{
+			Link* link1 = new Link;
+			Link* link2 = new Link;
+			Branch* newbranch = new Branch(s.str());
+			Node* newnode = new Node();
+			current->SetBranch(newbranch);
+			link1->SetNext(link2);
+			link2->SetNext(link1);
+			link1->SetBranch(newbranch);
+			link1->SetNode(newnode);
+			link2->SetNode(newnode);
+			current->SetOut(link1);
+			link1->SetOut(current);
+			current = link2;
+			i++;
+		}
+		current->SetOut(final);
+		final->SetOut(current);
+		Branch* newbranch = new Branch(s.str());
+		final->SetBranch(newbranch);
+		current->SetBranch(newbranch);
+	}
+}
+
+// c++11
+/*
 void Tree::Subdivide(Link *from, int Ninterpol) {
     for (Link *link = from->Next(); link != from; link = link->Next()) {
         Subdivide(link->Out(), Ninterpol);
@@ -435,6 +569,7 @@ void Tree::Subdivide(Link *from, int Ninterpol) {
         current->SetBranch(newbranch);
     }
 }
+*/
 
 int Tree::CountInternalNodes(const Link *from) const {
     int total = 0;

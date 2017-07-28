@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#define nullptr 0 
 
 class Tree;
 class Link;
