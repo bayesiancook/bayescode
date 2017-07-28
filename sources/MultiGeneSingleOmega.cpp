@@ -31,7 +31,7 @@ int main(int argc, char* argv[])	{
 
 	string datafile = argv[1];
 	string treefile = argv[2];
-	string name = argv[4];
+	string name = argv[3];
 
 	MultiGeneSingleOmegaModel* model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
 
