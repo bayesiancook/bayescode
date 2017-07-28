@@ -127,6 +127,28 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 		total += GetNbranch() * (shape*log(scale) - Random::logGamma(shape));
 		return total;
 	}
+
+    void Add(const PoissonSuffStatBranchArray& from)    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            (*this)[i].AddCount(from.GetVal(i).GetCount());
+            (*this)[i].AddBeta(from.GetVal(i).GetBeta());
+        }
+    }
+
+    void Push(int* count, double* beta) const   {
+        for (int i=0; i<GetNbranch(); i++)  {
+            count[i] = GetVal(i).GetCount();
+            beta[i] = GetVal(i).GetBeta();
+        }
+    }
+
+    void Add(const int* count, const double* beta)  {
+        for (int i=0; i<GetNbranch(); i++)  {
+            (*this)[i].AddCount(count[i]);
+            (*this)[i].AddBeta(beta[i]);
+        }
+    }
+
 };
 
 #endif

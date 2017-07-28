@@ -105,6 +105,55 @@ class NucPathSuffStat : public SuffStat	{
 		return total;
 	}
 
+    void Add(const NucPathSuffStat& from)   {
+
+        for (int i=0; i<Nnuc; i++)  {
+            rootcount[i] += from.rootcount[i];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                paircount[i][j] += from.paircount[i][j];
+                pairbeta[i][j] += from.pairbeta[i][j];
+            }
+        }
+    }
+
+    void Push(int* incount, double* inbeta) const {
+        int index = 0;
+        for (int i=0; i<Nnuc; i++)  {
+            incount[index++] = rootcount[i];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                incount[index++] = paircount[i][j];
+            }
+        }
+        index = 0;
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                inbeta[index++] = pairbeta[i][j];
+            }
+        }
+    }
+
+    void Add(const int* incount, const double* inbeta)  {
+        int index = 0;
+        for (int i=0; i<Nnuc; i++)  {
+            rootcount[i] += incount[index++];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                paircount[i][j] += incount[index++];
+            }
+        }
+        index = 0;
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                pairbeta[i][j] += inbeta[index++];
+            }
+        }
+    }
+
     private:
 
     std::vector<int> rootcount;

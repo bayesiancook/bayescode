@@ -81,9 +81,9 @@ class SingleOmegaModel {
 		Trace(cerr);
 	}
 
-    CodonStateSpace* GetCodonStateSpace()   {
+	CodonStateSpace* GetCodonStateSpace()   {
 		return (CodonStateSpace*) codondata->GetStateSpace();
-    }
+	}
 
 	void Allocate()	{
 
@@ -117,6 +117,44 @@ class SingleOmegaModel {
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
 	}
+
+    void SetBranchLengths(const ConstArray<double>& inbranchlength)    {
+        for (int j=0; j<Nbranch; j++)   {
+            (*branchlength)[j] = inbranchlength.GetVal(j);
+        }
+    }
+
+    void SetOmega(double inomega)   {
+        omega = inomega;
+        UpdateCodonMatrix();
+    }
+
+    void SetAlphaBeta(double inalpha, double inbeta)    {
+        alpha = inalpha;
+        beta = inbeta;
+    }
+
+    void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
+        for (int j=0; j<Nrr; j++)   {
+            nucrelrate[j] = innucrelrate[j];
+        }
+        for (int j=0; j<Nnuc; j++)  {
+            nucstat[j] = innucstat[j];
+        }
+        UpdateMatrices();
+    }
+
+    double GetOmega()   {
+        return omega;
+    }
+
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
+        return lengthsuffstatarray;
+    }
+
+    const NucPathSuffStat& GetNucPathSuffStat() {
+        return nucpathsuffstat;
+    }
 
 	void UpdateNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
@@ -173,10 +211,13 @@ class SingleOmegaModel {
 		}
 	}
 
-	void ResampleBranchLengths()	{
-
+    void CollectLengthSuffStat()    {
 		lengthsuffstatarray->Clear();
 		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+    }
+
+	void ResampleBranchLengths()	{
+        CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
 
@@ -219,13 +260,19 @@ class SingleOmegaModel {
         }
     }
 
+    void CollectNucPathSuffStat()    {
+        UpdateMatrices();
+        nucpathsuffstat.Clear();
+        nucpathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
+    }
+
 	void MoveNuc()	{
 
-		UpdateMatrices();
-
         if (withnucsuffstat)    {
-            nucpathsuffstat.Clear();
-            nucpathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
+            CollectNucPathSuffStat();
+        }
+        else    {
+            UpdateMatrices();
         }
 
 		MoveRR(0.1,1,3);

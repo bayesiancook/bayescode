@@ -13,7 +13,7 @@ endif
 LIBS=$(GSLLIB)
 #LIBS=$(GSLLIB) -lboost_regex
 
-CC=g++
+CC=mpic++
 SYSLIB=
 INCLUDES=
 #CPPFLAGS= $(USE_GSL) $(INCLUDES)
@@ -21,7 +21,7 @@ CPPFLAGS= -std=c++11 -g -Wall -O3 $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp linalg2.cpp cdf.cpp Chain.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp linalg2.cpp cdf.cpp Chain.cpp MultiGeneMPIModule.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
@@ -65,6 +65,10 @@ endif
 codonm8$(EXEEXT): $(PROGSDIR)/codonm8$(EXEEXT)
 $(PROGSDIR)/codonm8$(EXEEXT): CodonM8.o $(OBJS)
 	$(CC) CodonM8.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigeneglobom$(EXEEXT): $(PROGSDIR)/multigeneglobom$(EXEEXT)
+$(PROGSDIR)/multigeneglobom$(EXEEXT): MultiGeneSingleOmega.o $(OBJS)
+	$(CC) MultiGeneSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)

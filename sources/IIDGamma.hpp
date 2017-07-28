@@ -89,6 +89,28 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
+    double GetMean()    {
+        double m1 = 0;
+        for (int i=0; i<GetSize(); i++) {
+            m1 += GetVal(i);
+        }
+        m1 /= GetSize();
+        return m1;
+    }
+
+    double GetVar() {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i=0; i<GetSize(); i++) {
+            m1 += GetVal(i);
+            m2 += GetVal(i) * GetVal(i);
+        }
+        m1 /= GetSize();
+        m2 /= GetSize();
+        m2 -= m1*m1;
+        return m2;
+    }
+
 	protected:
 	double shape;
 	double scale;
