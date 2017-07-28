@@ -24,8 +24,8 @@ class MGSRFitnessCodonUsageSubMatrix : public MGCodonSubMatrix {
     // look at how ComputeArray and ComputeStationary are implemented in
     // CodonSubMatrix.cpp
 
-    void ComputeArray(int i) const override;
-    void ComputeStationary() const override;
+    void ComputeArray(int i) const /*override*/;
+    void ComputeStationary() const /*override*/;
     // data members
     const double *fitness;
     const double *codonusageselection;
@@ -51,8 +51,8 @@ class MGMSFitnessCodonUsageSubMatrix : public MGCodonSubMatrix {
     // look at how ComputeArray and ComputeStationary are implemented in
     // CodonSubMatrix.cpp
 
-    void ComputeArray(int i) const override;
-    void ComputeStationary() const override;
+    void ComputeArray(int i) const /*override*/;
+    void ComputeStationary() const /*override*/;
 
     // data members
     const double *fitness;

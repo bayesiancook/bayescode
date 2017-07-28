@@ -237,7 +237,7 @@ class Tree : public NewickTree {
     // create a tree by reading into a file (netwick format expected)
     // calls ReadFromStream
 
-    ~Tree() override;
+    ~Tree() /*override*/;
     // calls RecursiveDelete
     // but does NOT delete the Nodes and Branches
 
@@ -247,7 +247,7 @@ class Tree : public NewickTree {
     // Delete the unary Node wich from is paart of and set everithing right.
     void DeleteUnaryNode(Link *from);
 
-    Link *GetRoot() const override { return root; }
+    Link *GetRoot() const /*override*/ { return root; }
     const TaxonSet *GetTaxonSet() const { return taxset; }
 
     void RootAt(Link *from);
@@ -317,11 +317,11 @@ class Tree : public NewickTree {
         }
     }
 
-    std::string GetBranchName(const Link *link) const override {
+    std::string GetBranchName(const Link *link) const /*override*/ {
         return link->GetBranch()->GetName();
     }
 
-    std::string GetNodeName(const Link *link) const override {
+    std::string GetNodeName(const Link *link) const /*override*/ {
         return link->GetNode()->GetName();
         /*
           if (! link->isLeaf())	{

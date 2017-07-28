@@ -80,7 +80,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 	*/
     }
 
-    ~MGCodonSubMatrix() override {
+    ~MGCodonSubMatrix() /*override*/ {
 	/*
         for (int i = 0; i < Nnuc; i++) {
             delete[] synnucarray[i];
@@ -115,7 +115,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
     }
     */
 
-    void CorruptMatrix() override {
+    void CorruptMatrix() /*override*/ {
         // nucflag = false;
         SubMatrix::CorruptMatrix();
     }
@@ -123,8 +123,8 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
   protected:
     // look at how ComputeArray and ComputeStationary are implemented in
     // CodonSubMatrix.cpp
-    void ComputeArray(int i) const override;
-    void ComputeStationary() const override;
+    void ComputeArray(int i) const /*override*/;
+    void ComputeStationary() const /*override*/;
 
     /*
     virtual void ComputeNucArrays();
@@ -156,11 +156,11 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix {
   protected:
     // look at how ComputeArray and ComputeStationary are implemented in
     // CodonSubMatrix.cpp
-    void ComputeArray(int i) const override;
+    void ComputeArray(int i) const /*override*/;
 
-    // void ComputeNucArrays() const override;
+    // void ComputeNucArrays() const /*override*/;
 
-    void ToStream(std::ostream &os) const override {
+    void ToStream(std::ostream &os) const /*override*/ {
         os << "Omega : " << omega << '\n';
         os << "nuc matrix\n";
         GetNucMatrix()->ToStream(os);

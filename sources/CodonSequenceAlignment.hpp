@@ -15,7 +15,7 @@ class CodonSequenceAlignment : public SequenceAlignment {
     CodonSequenceAlignment(SequenceAlignment *from, bool force_stops = false,
                            GeneticCodeType type = Universal);
 
-    ~CodonSequenceAlignment() override = default;
+    ~CodonSequenceAlignment() /*override*/ = default;
 
     void DeleteAAConstantSites() {
         int i = 0;

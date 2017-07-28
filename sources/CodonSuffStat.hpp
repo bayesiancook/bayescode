@@ -213,9 +213,9 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 	OmegaSuffStatArray(int insize) : SimpleArray<OmegaSuffStat>(insize) {}
 	~OmegaSuffStatArray() {}
 
-    int GetSize() const override {return array.size();}
-    const OmegaSuffStat& GetVal(int i) const override {return array[i];}
-    OmegaSuffStat& operator[](int i) override {return array[i];}
+    int GetSize() const /*override*/ {return array.size();}
+    const OmegaSuffStat& GetVal(int i) const /*override*/ {return array[i];}
+    OmegaSuffStat& operator[](int i) /*override*/ {return array[i];}
 
 	void Clear()	{
 		for (int i=0; i<GetSize(); i++)	{

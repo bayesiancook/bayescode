@@ -14,19 +14,19 @@ class CodonStateSpace : public StateSpace {
     // method's name
 
     CodonStateSpace(GeneticCodeType type);
-    ~CodonStateSpace() override;
+    ~CodonStateSpace() /*override*/;
 
     // -----
     // generic methods
     // exist for any state space, and should have a consistent meaning throughout
 
-    int GetNstate() const override { return Nstate; }
+    int GetNstate() const /*override*/ { return Nstate; }
 
     // give a three letter code, returns codon (if stop exits with error message)
-    int GetState(std::string word) const override;
+    int GetState(std::string word) const /*override*/;
 
     // give a codon (stops excluded), returns a three letter code
-    std::string GetState(int codon) const override;
+    std::string GetState(int codon) const /*override*/;
 
     // -----
     // codon specific methods

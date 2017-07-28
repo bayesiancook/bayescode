@@ -7,7 +7,7 @@
 class GTRSubMatrix : public virtual SubMatrix {
   public:
     GTRSubMatrix(int inNstate, const std::vector<double>& rr, const std::vector<double>& stat, bool innormalise = false);
-    ~GTRSubMatrix() override = default;
+    ~GTRSubMatrix() /*override*/ = default;
 
     int GetNRelativeRate() const { return Nrr; }
     double RelativeRate(int i, int j) const { return mRelativeRate[rrindex(i, j, GetNstate())]; }
@@ -23,8 +23,8 @@ class GTRSubMatrix : public virtual SubMatrix {
   protected:
 
   protected:
-    void ComputeArray(int i) const override;
-    void ComputeStationary() const override {}
+    void ComputeArray(int i) const /*override*/;
+    void ComputeStationary() const /*override*/ {}
 
     const std::vector<double>&  mRelativeRate;
     int Nrr;
