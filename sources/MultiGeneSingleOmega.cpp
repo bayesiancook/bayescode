@@ -1,7 +1,10 @@
 #include <cmath>
 #include <fstream>
 #include "MultiGeneSingleOmegaModel.hpp"
+
 using namespace std;
+
+MPI_Datatype Propagate_arg;
 
 int main(int argc, char* argv[])	{
 
@@ -23,7 +26,7 @@ int main(int argc, char* argv[])	{
 	MPI_Type_commit(&Propagate_arg); 
 
 	if (! myid)	{
-        cerr << "master\n";
+		cerr << "master\n";
 	}
 
 	string datafile = argv[1];
@@ -36,12 +39,17 @@ int main(int argc, char* argv[])	{
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
-    }
-
 	while(1)	{
-		model->Move();
-		model->Trace(os);
+		model->MasterMove();
+		model->MasterTrace(os);
 	}
+    }
+    else	{
+	while(1)	{
+		model->SlaveMove();
+		model->SlaveTrace();
+	}
+    }
 
 	MPI_Finalize();
 }

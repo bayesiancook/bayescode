@@ -1,6 +1,9 @@
 
 #include "MultiGeneMPIModule.hpp"
 
+#include <fstream>
+#include "SequenceAlignment.hpp"
+
 void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 
 	ifstream is(datafile.c_str());
@@ -13,7 +16,6 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 	for (int gene=0; gene<Ngene; gene++)	{
 		is >> genename[gene];
 		SequenceAlignment* tmpdata = new FileSequenceAlignment(genename[gene]);
-		int nstate = tmpdata->GetNstate();
         /*
 		if (! gene)	{
 			data = tmpdata;
@@ -28,7 +30,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
         */
 
 		genesize[gene] = tmpdata->GetNsite();
-		geneweight[gene] = tmpdata->GetNsite() * localdata->GetNtaxa();
+		geneweight[gene] = tmpdata->GetNsite() * tmpdata->GetNtaxa();
         delete tmpdata;
         /*
 		if (gene)	{

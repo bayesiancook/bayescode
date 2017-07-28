@@ -31,6 +31,8 @@ class SingleOmegaModel {
 	std::vector<double> nucrelrate;
 	GTRSubMatrix* nucmatrix;
 
+    double alpha;
+    double beta;
 	double omega;
 	OmegaSuffStat omegasuffstat;
 	MGOmegaCodonSubMatrix* codonmatrix;
@@ -73,13 +75,17 @@ class SingleOmegaModel {
 		std::cerr << "-- Tree and data fit together\n";
 
 		Allocate();
+	}
+
+    void Unfold()   {
+
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
 		cerr << phyloprocess->GetLogProb() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
-		Trace(cerr);
-	}
+		// Trace(cerr);
+    }
 
 	CodonStateSpace* GetCodonStateSpace()   {
 		return (CodonStateSpace*) codondata->GetStateSpace();
@@ -112,13 +118,14 @@ class SingleOmegaModel {
 		}
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
+        alpha = beta = 1.0;
 		omega = 1.0;
 		codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
 	}
 
-    void SetBranchLengths(const ConstArray<double>& inbranchlength)    {
+    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
         for (int j=0; j<Nbranch; j++)   {
             (*branchlength)[j] = inbranchlength.GetVal(j);
         }
@@ -177,7 +184,7 @@ class SingleOmegaModel {
 
 	// exponential of mean 1
 	double OmegaLogProb()	{
-		return -omega;
+		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
 	}
 
 	double LambdaLogProb()	{
@@ -194,8 +201,7 @@ class SingleOmegaModel {
 
 	void Move()	{
 
-        UpdateMatrices();
-		phyloprocess->ResampleSub();
+        ResampleSub();
 
 		int nrep = 30;
 
@@ -210,6 +216,11 @@ class SingleOmegaModel {
 			MoveNuc();
 		}
 	}
+
+    void ResampleSub()  {
+        UpdateMatrices();
+		phyloprocess->ResampleSub();
+    }
 
     void CollectLengthSuffStat()    {
 		lengthsuffstatarray->Clear();

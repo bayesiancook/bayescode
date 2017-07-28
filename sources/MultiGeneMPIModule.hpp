@@ -1,11 +1,15 @@
 #ifndef MULTIGENE_H
 #define MULTIGENE_H
 
+#include <vector>
+#include <string>
+using namespace std;
+
 class MultiGeneMPIModule    {
 
     public:
 
-    MultiGeneMPIModule(int inmyid, int innprocs) : myid(inyid), nprocs(innprocs) {}
+    MultiGeneMPIModule(int inmyid, int innprocs) : myid(inmyid), nprocs(innprocs) {}
     ~MultiGeneMPIModule() {}
 
 	int GetMyid() {

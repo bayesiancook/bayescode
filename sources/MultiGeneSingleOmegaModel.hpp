@@ -27,6 +27,7 @@ for i=1..Nrep
 */
 
 #include "SingleOmegaModel.hpp"
+#include "MultiGeneMPIModule.hpp"
 #include "Parallel.hpp"
 
 class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
@@ -35,8 +36,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
 	Tree* tree;
 	FileSequenceAlignment* refdata;
+	CodonSequenceAlignment* refcodondata;
 	const TaxonSet* taxonset;
-	// CodonSequenceAlignment* codondata;
+
+    string treefile;
 
 	int Ntaxa;
 	int Nbranch;
@@ -62,15 +65,21 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
     public:
 
-    MultiGeneSingleOmegaModel(string datafile, string treefile, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
+	CodonStateSpace* GetCodonStateSpace()   {
+		return (CodonStateSpace*) refcodondata->GetStateSpace();
+	}
+
+    MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
 
         AllocateAlignments(datafile);
+        treefile = intreefile;
 
         // all datafiles have all taxa (with missing data if needed) in same order
         // makes it easier to register tree with data, etc.
 
-        string datafile = genename[0];
-        refdata = new FileSequenceAlignment(datafile);
+        string filename = genename[0];
+        refdata = new FileSequenceAlignment(filename);
+		refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
         Ntaxa = refdata->GetNtaxa();
 
@@ -138,26 +147,27 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
             for (int gene=0; gene<GetNgene(); gene++)   {
                 if (genealloc[gene])    {
                     geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile,1);
-                    geneprocess[gene]->SetBranchLengths(branchlength);
+                    geneprocess[gene]->SetBranchLengths(*branchlength);
                     geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
                     geneprocess[gene]->SetAlphaBeta(alpha,beta);
-                    geneprocess[gene]->SetOmega(omegarray->GetVal(gene));
+                    geneprocess[gene]->SetOmega(omegaarray->GetVal(gene));
                     geneprocess[gene]->UpdateMatrices();
                     geneprocess[gene]->Unfold();
                 }
             }
         }
-        Trace(cerr);
     }
 
+    /*
     void Trace(ostream& os) {
         if (! GetMyid())    {
-            MasterTrace(ostream& os);
+            MasterTrace(os);
         }
         else    {
             SlaveTrace();
         }
     }
+    */
 
     void TraceHeader(ostream& os)   {
 
@@ -173,8 +183,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         MasterReceiveLogLikelihood();
 		os << GetLogLikelihood() << '\t';
 		os << GetTotalLength() << '\t';
-        os << omegaarray->GetMean() << '\t'
-        os << omegaarray->GetVar() << '\t'
+        os << omegaarray->GetMean() << '\t';
+        os << omegaarray->GetVar() << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 		os.flush();
@@ -191,6 +201,31 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		total += OmegaLogProb();
         total += AlphaBetaLogProb();
 		return total;
+    }
+
+	double LambdaLogProb()	{
+		return -lambda / 10;
+	}
+
+	double LengthSuffStatLogProb()	{
+		return lambdasuffstat.GetLogProb(1.0,lambda);
+	}
+
+	double LengthLogProb()	{
+		return branchlength->GetLogProb();
+	}
+
+    double AlphaBetaLogProb()   {
+        return 0;
+    }
+
+    double OmegaLogProb()   {
+        double tot = 0;
+        for (int gene=0; gene<Ngene; gene++)    {
+            double omega = omegaarray->GetVal(gene);
+            tot += alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
+        }
+        return tot;
     }
 
     double GetLogLikelihood()   {
@@ -221,6 +256,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) {}
 
+    /*
     void Move() {
 
         if (! GetMyid())    {
@@ -230,6 +266,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
             SlaveMove();
         }
     }
+    */
 
 
     void MasterMove() {
@@ -322,7 +359,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         }
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene])    {
-                geneprocess[gene]->SetBranchLengths(branchlength);
+                geneprocess[gene]->SetBranchLengths(*branchlength);
                 geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
                 geneprocess[gene]->SetAlphaBeta(alpha,beta);
             }
@@ -334,7 +371,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene])    {
-                geneprocess[gene]->UpdateMatrices();
                 geneprocess[gene]->ResampleSub();
             }
         }
@@ -345,8 +381,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         lengthsuffstatarray->Clear();
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene])    {
-                geneprocess[gene] = CollectLengthSuffStat();
-                lengthsuffstatarray->Add(geneprocess[gene]->GetLengthSuffStat());
+                geneprocess[gene]->CollectLengthSuffStat();
+                lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
             }
         }
 
@@ -387,8 +423,39 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		branchlength->SetScale(lambda);
     }
 
+	double MoveLambda(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - LambdaLogProb() - LengthSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			lambda *= e;
+			deltalogprob += LambdaLogProb() + LengthSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				lambda /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
     void MasterMoveAlphaBeta()  {
 
+    }
+
+    void SlaveCollectPathSuffStat() {
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            if (genealloc[gene])    {
+                geneprocess[gene]->CollectPathSuffStat();
+            }
+        }
     }
 
     void SlaveSendNucPathSuffStat()  {
@@ -396,14 +463,14 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         nucpathsuffstat.Clear();
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene])    {
-                geneprocess[gene] = CollectNucPathSuffStat();
+                geneprocess[gene]->CollectNucPathSuffStat();
                 nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
             }
         }
 
         int* count = new int[Nnuc+Nnuc*Nnuc];
         double* beta = new double[Nnuc*Nnuc];
-        nucpathsuffstat->Push(count,beta);
+        nucpathsuffstat.Push(count,beta);
         MPI_Send(count,Nnuc+Nnuc*Nnuc,MPI_INT,0,TAG1,MPI_COMM_WORLD);
         MPI_Send(beta,Nnuc*Nnuc,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
         delete[] count;
@@ -414,12 +481,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         int* count = new int[Nnuc+Nnuc*Nnuc];
         double* beta = new double[Nnuc*Nnuc];
-        nucpathsuffstat->Clear();
+        nucpathsuffstat.Clear();
         MPI_Status stat;
         for (int proc=1; proc<GetNprocs(); proc++)  {
             MPI_Recv(count,Nnuc+Nnuc*Nnuc,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
             MPI_Recv(beta,Nnuc*Nnuc,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            nucpathsuffstat->Add(count,beta);
+            nucpathsuffstat.Add(count,beta);
         }
         delete[] count;
         delete[] beta;
@@ -433,12 +500,16 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
 		MoveNucStat(0.1,1,3);
 		MoveNucStat(0.01,1,3);
-
     }
 
     double NucPathSuffStatLogProb() {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
+
+	void UpdateNucMatrix()	{
+		nucmatrix->CopyStationary(nucstat);
+		nucmatrix->CorruptMatrix();
+	}
 
 	double MoveRR(double tuning, int n, int nrep)	{
 		double nacc = 0;
@@ -538,7 +609,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void MasterSendOmega()  {
 
         double* array = new double[Ngene];
-        omegaarray->Push(array);
+        for (int gene=0; gene<Ngene; gene++)    {
+            array[gene] = (*omegaarray)[gene];
+        }
         MPI_Bcast(array,Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
         delete[] array;
     }
