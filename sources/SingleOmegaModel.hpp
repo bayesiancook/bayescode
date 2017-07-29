@@ -251,7 +251,7 @@ class SingleOmegaModel {
 
 		omegasuffstat.Clear();
 		omegasuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
-		omega = Random::Gamma(1 + omegasuffstat.GetCount(), 1 + omegasuffstat.GetBeta());
+		omega = Random::Gamma(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
 		UpdateCodonMatrix();
 	}
 

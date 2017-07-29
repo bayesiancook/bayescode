@@ -132,31 +132,40 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         lnL = new double[Ngene];
 
+        cerr << "gene processes\n";
         if (! GetMyid())    {
             geneprocess.assign(0,(SingleOmegaModel*) 0);
-
-            MasterSendGlobalParameters();
-            MasterSendOmega();
         }
         else    {
             geneprocess.assign(Ngene,(SingleOmegaModel*) 0);
 
+            for (int gene=0; gene<GetNgene(); gene++)   {
+                if (genealloc[gene] == myid)    {
+                    geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile,1);
+                }
+            }
+        }
+    }
+
+    void Unfold()   {
+
+        if (! GetMyid())    {
+            MasterSendGlobalParameters();
+            MasterSendOmega();
+        }
+        else    {
             SlaveReceiveGlobalParameters();
             SlaveReceiveOmega();
 
             for (int gene=0; gene<GetNgene(); gene++)   {
-                if (genealloc[gene])    {
-                    geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile,1);
-                    geneprocess[gene]->SetBranchLengths(*branchlength);
-                    geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
-                    geneprocess[gene]->SetAlphaBeta(alpha,beta);
-                    geneprocess[gene]->SetOmega(omegaarray->GetVal(gene));
+                if (genealloc[gene] == myid)    {
                     geneprocess[gene]->UpdateMatrices();
                     geneprocess[gene]->Unfold();
                 }
             }
         }
     }
+
 
     /*
     void Trace(ostream& os) {
@@ -197,9 +206,25 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     double GetLogPrior()    {
 		double total = 0;
 		total += LambdaLogProb();
+        if (isnan(total))   {
+            cerr << "lambda\n";
+            exit(1);
+        }
 		total += LengthLogProb();
+        if (isnan(total))   {
+            cerr << "length\n";
+            exit(1);
+        }
 		total += OmegaLogProb();
+        if (isnan(total))   {
+            cerr << "omega\n";
+            exit(1);
+        }
         total += AlphaBetaLogProb();
+        if (isnan(total))   {
+            cerr << "alphabeta\n";
+            exit(1);
+        }
 		return total;
     }
 
@@ -320,9 +345,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         // branch lengths
         // nuc relrate
         // nucstat
-        // 2 + Nbranch + 5 + 4
 
-        int N = 2 + Nbranch + 5 + 4;
+        int N = 2 + Nbranch + Nrr + Nnuc;
         double* array = new double[N];
         int i = 0;
         array[i++] = alpha;
@@ -342,7 +366,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
     void SlaveReceiveGlobalParameters()   {
 
-        int N = 2 + Nbranch + 5 + 4;
+        int N = 2 + Nbranch + Nrr + Nnuc;
         double* array = new double[N];
         MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
         int i = 0;
@@ -358,7 +382,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
             nucstat[j] = array[i++];
         }
         for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->SetBranchLengths(*branchlength);
                 geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
                 geneprocess[gene]->SetAlphaBeta(alpha,beta);
@@ -370,7 +394,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void SlaveResampleSub()  {
 
         for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->ResampleSub();
             }
         }
@@ -380,7 +404,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         lengthsuffstatarray->Clear();
         for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->CollectLengthSuffStat();
                 lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
             }
@@ -452,7 +476,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
     void SlaveCollectPathSuffStat() {
         for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->CollectPathSuffStat();
             }
         }
@@ -462,7 +486,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         nucpathsuffstat.Clear();
         for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->CollectNucPathSuffStat();
                 nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
             }
@@ -570,7 +594,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void SlaveMoveOmega()  {
 
         for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->MoveOmega();
             }
         }
@@ -580,11 +604,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         double* array = new double[Ngene];
         for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene])    {
-                (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
+            if (genealloc[gene] == myid)    {
+                array[gene] = geneprocess[gene]->GetOmega();
             }
             else    {
-                (*omegaarray)[gene] = -1;
+                array[gene] = -1;
             }
         }
         MPI_Send(array,Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
@@ -627,7 +651,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         }
 
         for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 geneprocess[gene]->SetOmega(array[gene]);
             }
         }
@@ -637,7 +661,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void SlaveSendLogLikelihood()   {
 
         for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene])    {
+            if (genealloc[gene] == myid)    {
                 lnL[gene] = geneprocess[gene]->GetLogLikelihood();
             }
             else    {

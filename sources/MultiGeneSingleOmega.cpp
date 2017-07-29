@@ -25,30 +25,32 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
-	if (! myid)	{
-		cerr << "master\n";
-	}
-
 	string datafile = argv[1];
 	string treefile = argv[2];
 	string name = argv[3];
 
 	MultiGeneSingleOmegaModel* model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
-
+    if (! myid) {
+        cerr << " -- master unfold\n";
+    }
+    if (! myid) {
+        cerr << " -- start\n";
+    }
+    model->Unfold();
     if (! myid) {
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
-	while(1)	{
-		model->MasterMove();
-		model->MasterTrace(os);
-	}
+        while(1)	{
+            model->MasterMove();
+            model->MasterTrace(os);
+        }
     }
     else	{
-	while(1)	{
-		model->SlaveMove();
-		model->SlaveTrace();
-	}
+        while(1)	{
+            model->SlaveMove();
+            model->SlaveTrace();
+        }
     }
 
 	MPI_Finalize();
