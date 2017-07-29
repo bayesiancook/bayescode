@@ -232,7 +232,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	}
 
     double AlphaBetaLogProb()   {
-        return 0;
+        return -0.1*alpha - 0.1*beta;
     }
 
     double OmegaLogProb()   {
