@@ -50,6 +50,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	double alpha;
 	double beta;
 	IIDGamma* omegaarray;
+	GammaSuffStat alphabetasuffstat;
 
 	vector<double> nucrelrate;
 	vector<double> nucstat;
@@ -183,6 +184,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         os << "#logprior\tlnL\tlength\t";
         os << "meanomega\t";
         os << "varomega\t";
+        os << "alpha\tbeta\t";
         os << "statent\t";
         os << "rrent\n";
     }
@@ -194,6 +196,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		os << GetTotalLength() << '\t';
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
+        os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 		os.flush();
@@ -206,25 +209,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     double GetLogPrior()    {
 		double total = 0;
 		total += LambdaLogProb();
-        if (isnan(total))   {
-            cerr << "lambda\n";
-            exit(1);
-        }
 		total += LengthLogProb();
-        if (isnan(total))   {
-            cerr << "length\n";
-            exit(1);
-        }
 		total += OmegaLogProb();
-        if (isnan(total))   {
-            cerr << "omega\n";
-            exit(1);
-        }
         total += AlphaBetaLogProb();
-        if (isnan(total))   {
-            cerr << "alphabeta\n";
-            exit(1);
-        }
 		return total;
     }
 
@@ -235,6 +222,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	double LengthSuffStatLogProb()	{
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
+
+    double OmegaSuffStatLogProb()   {
+        return alphabetasuffstat.GetLogProb(alpha,beta);
+    }
 
 	double LengthLogProb()	{
 		return branchlength->GetLogProb();
@@ -472,7 +463,61 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
     void MasterMoveAlphaBeta()  {
 
+		alphabetasuffstat.Clear();
+		omegaarray->AddSuffStat(alphabetasuffstat);
+		MoveAlpha(1.0,10);
+		MoveBeta(1.0,10);
+		MoveAlpha(0.3,10);
+		MoveBeta(0.3,10);
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
     }
+
+	double MoveAlpha(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - AlphaBetaLogProb() - OmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			alpha *= e;
+			deltalogprob += AlphaBetaLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				alpha /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double MoveBeta(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - AlphaBetaLogProb() - OmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			beta *= e;
+			deltalogprob += AlphaBetaLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				beta /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
 
     void SlaveCollectPathSuffStat() {
         for (int gene=0; gene<GetNgene(); gene++)   {
