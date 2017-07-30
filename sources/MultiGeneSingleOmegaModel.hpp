@@ -142,7 +142,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
             for (int gene=0; gene<GetNgene(); gene++)   {
                 if (genealloc[gene] == myid)    {
-                    geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile,1);
+                    geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile);
                 }
             }
         }
@@ -211,7 +211,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		total += LambdaLogProb();
 		total += LengthLogProb();
 		total += OmegaLogProb();
-        total += AlphaBetaLogProb();
+        total += AlphaLogProb();
+        total += BetaLogProb();
 		return total;
     }
 
@@ -231,8 +232,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		return branchlength->GetLogProb();
 	}
 
-    double AlphaBetaLogProb()   {
-        return -0.1*alpha - 0.1*beta;
+    double AlphaLogProb()   {
+        return -alpha/10;
+    }
+
+    double BetaLogProb()    {
+        return -beta/10;
     }
 
     double OmegaLogProb()   {
@@ -478,11 +483,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		double nacc = 0;
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - AlphaBetaLogProb() - OmegaSuffStatLogProb();
+			double deltalogprob = - AlphaLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			alpha *= e;
-			deltalogprob += AlphaBetaLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += AlphaLogProb() + OmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -501,11 +506,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		double nacc = 0;
 		double ntot = 0;
 		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - AlphaBetaLogProb() - OmegaSuffStatLogProb();
+			double deltalogprob = - BetaLogProb() - OmegaSuffStatLogProb();
 			double m = tuning * (Random::Uniform() - 0.5);
 			double e = exp(m);
 			beta *= e;
-			deltalogprob += AlphaBetaLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += BetaLogProb() + OmegaSuffStatLogProb();
 			deltalogprob += m;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{

@@ -40,16 +40,12 @@ class SingleOmegaModel {
 	PhyloProcess* phyloprocess;
 
 	PathSuffStat pathsuffstat;
-
-    int withnucsuffstat;
     NucPathSuffStat nucpathsuffstat;
 
 
 	public:
 
-	SingleOmegaModel(string datafile, string treefile, int inwithnucsuffstat)	{
-
-        withnucsuffstat = inwithnucsuffstat;
+	SingleOmegaModel(string datafile, string treefile)  {
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -256,19 +252,7 @@ class SingleOmegaModel {
 	}
 
     double NucPathSuffStatLogProb() {
-        if (! withnucsuffstat)  {
-            return PathSuffStatLogProb();
-        }
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
-    }
-
-    void UpdateMatricesForMoveNuc() {
-        if (withnucsuffstat)    {
-            UpdateNucMatrix();
-        }
-        else    {
-            UpdateMatrices();
-        }
     }
 
     void CollectNucPathSuffStat()    {
@@ -279,12 +263,7 @@ class SingleOmegaModel {
 
 	void MoveNuc()	{
 
-        if (withnucsuffstat)    {
-            CollectNucPathSuffStat();
-        }
-        else    {
-            UpdateMatrices();
-        }
+        CollectNucPathSuffStat();
 
 		MoveRR(0.1,1,3);
 		MoveRR(0.03,3,3);
@@ -307,7 +286,7 @@ class SingleOmegaModel {
 			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
 			deltalogprob += loghastings;
-            UpdateMatricesForMoveNuc();
+            UpdateNucMatrix();
 			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -317,7 +296,7 @@ class SingleOmegaModel {
 				for (int l=0; l<Nrr; l++)	{
 					nucrelrate[l] = bk[l];
 				}
-                UpdateMatricesForMoveNuc();
+                UpdateNucMatrix();
 			}
 			ntot++;
 		}
@@ -335,7 +314,7 @@ class SingleOmegaModel {
 			double deltalogprob = -NucPathSuffStatLogProb();
 			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
 			deltalogprob += loghastings;
-            UpdateMatricesForMoveNuc();
+            UpdateNucMatrix();
 			deltalogprob += NucPathSuffStatLogProb();
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
@@ -345,7 +324,7 @@ class SingleOmegaModel {
 				for (int l=0; l<Nnuc; l++)	{
 					nucstat[l] = bk[l];
 				}
-                UpdateMatricesForMoveNuc();
+                UpdateNucMatrix();
 			}
 			ntot++;
 		}

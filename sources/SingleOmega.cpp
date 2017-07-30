@@ -7,10 +7,9 @@ int main(int argc, char* argv[])	{
 
 	string datafile = argv[1];
 	string treefile = argv[2];
-	int withnuc = atoi(argv[3]);
-	string name = argv[4];
+	string name = argv[3];
 
-	SingleOmegaModel* model = new SingleOmegaModel(datafile,treefile,withnuc);
+	SingleOmegaModel* model = new SingleOmegaModel(datafile,treefile);
 	model->Unfold();
 	ofstream os((name + ".trace").c_str());
 	model->TraceHeader(os);
