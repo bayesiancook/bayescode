@@ -71,7 +71,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-	double GetLogProb()	{
+	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
 			total += GetLogProb(i);
@@ -79,17 +79,17 @@ class IIDGamma: public SimpleArray<double>	{
 		return total;
 	}
 
-	double GetLogProb(int index)	{
-		return shape * log(scale) - Random::logGamma(shape) + (shape-1)*log((*this)[index]) - scale*(*this)[index];
+	double GetLogProb(int index) const {
+		return shape * log(scale) - Random::logGamma(shape) + (shape-1)*log(GetVal(index)) - scale*GetVal(index);
 	}
 
-	void AddSuffStat(GammaSuffStat& suffstat)	{
+	void AddSuffStat(GammaSuffStat& suffstat) const {
 		for (int i=0; i<GetSize(); i++)	{
-			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
+			suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
 		}
 	}
 
-    double GetMean()    {
+    double GetMean() const {
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {
             m1 += GetVal(i);
@@ -98,7 +98,7 @@ class IIDGamma: public SimpleArray<double>	{
         return m1;
     }
 
-    double GetVar() {
+    double GetVar() const {
         double m1 = 0;
         double m2 = 0;
         for (int i=0; i<GetSize(); i++) {
