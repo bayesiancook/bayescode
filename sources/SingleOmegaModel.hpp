@@ -197,7 +197,7 @@ class SingleOmegaModel {
 
 	void Move()	{
 
-        ResampleSub();
+		ResampleSub();
 
 		int nrep = 30;
 
