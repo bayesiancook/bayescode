@@ -6,7 +6,6 @@
 #include "BranchArray.hpp"
 #include "Random.hpp"
 #include "PoissonSuffStat.hpp"
-#include "CodonSuffStat.hpp"
 
 class GammaSuffStat : public SuffStat	{
 
