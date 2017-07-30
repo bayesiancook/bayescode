@@ -168,17 +168,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     }
 
 
-    /*
-    void Trace(ostream& os) {
-        if (! GetMyid())    {
-            MasterTrace(os);
-        }
-        else    {
-            SlaveTrace();
-        }
-    }
-    */
-
     void TraceHeader(ostream& os)   {
 
         os << "#logprior\tlnL\tlength\t";
@@ -276,19 +265,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	void Monitor(ostream& os) {}
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) {}
-
-    /*
-    void Move() {
-
-        if (! GetMyid())    {
-            MasterMove();
-        }
-        else    {
-            SlaveMove();
-        }
-    }
-    */
-
 
     void MasterMove() {
 
