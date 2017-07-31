@@ -3,6 +3,7 @@
 #include "MultiGeneMPIModule.hpp"
 #include "Parallel.hpp"
 #include "IIDBernoulliBeta.hpp"
+#include "IIDDirichlet.hpp"
 
 class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
@@ -26,25 +27,29 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
 	double aalpha;
     double abeta;
+	IIDGamma* alphaarray;
+	GammaSuffStat alphasuffstat;
+
     double balpha;
     double bbeta;
+	IIDGamma* betaarray;
+	GammaSuffStat betasuffstat;
 
     double pi;
     double poswalpha;
     double poswbeta;
+    IIDBernoulliBeta* poswarray;
+    BernoulliBetaSuffStat poswsuffstat;
 
     double dposomalpha;
     double dposombeta;
-
-	IIDGamma* alphaarray;
-	IIDGamma* betaarray;
-    IIDBernoulliBeta* poswarray;
     IIDGamma* dposomarray;
-
-	GammaSuffStat alphasuffstat;
-	GammaSuffStat betasuffstat;
-    BernoulliBetaSuffStat poswsuffstat;
     GammaSuffStat dposomsuffstat;
+
+    vector<double> purifcenter;
+    double purifconcentration;
+    IIDDirichlet* purifweightarray;
+    DirichletSuffStat purifweightsuffstat;
 
 	vector<double> nucrelrate;
 	vector<double> nucstat;
@@ -65,7 +70,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
-    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int inwithpos, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
+    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int inwithpos, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
 
         ncat = inncat;
         withpos = inwithpos;
@@ -132,10 +137,14 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         poswalpha = poswbeta = 1.0;
         dposomalpha = dposombeta = 1.0;
 
+        purifconcentration = 3.0;
+        purifcenter.assign(3,1.0/3);
+
 		alphaarray = new IIDGamma(GetNgene(),aalpha,abeta);
 		betaarray = new IIDGamma(GetNgene(),balpha,bbeta);
 		dposomarray = new IIDGamma(GetNgene(),dposomalpha,dposombeta);
         poswarray = new IIDBernoulliBeta(GetNgene(),pi,poswalpha,poswbeta);
+        purifweightarray = new IIDDirichlet(GetNgene(),purifcenter,purifconcentration);
 
         lnL = new double[Ngene];
 
@@ -180,6 +189,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << "nposfrac\t";
         os << "meanposfrac\t";
         os << "meanposom\t";
+        os << "meanw0\tmeanw1\tpurifconc\t";
         os << "aalpha\tabeta\tbalpha\tbbeta\t";
         os << "poswalpha\tposwbeta\t";
         os << "dposomalpha\tdposombeta\t";
@@ -196,6 +206,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << GetNpos() << '\t';
         os << GetMeanPosFrac() << '\t';
         os << GetMeanPosOmega() << '\t';
+        os << purifconcentration*purifcenter[0] << '\t' << purifconcentration*purifcenter[2] << '\t' << purifconcentration << '\t';
         os << aalpha << '\t' << abeta << '\t' << balpha << '\t' << bbeta << '\t';
         os << poswalpha << '\t' << poswbeta << '\t';
         os << dposomalpha << '\t' << dposombeta << '\t';
@@ -255,6 +266,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         total += betasuffstat.GetLogProb(balpha,bbeta);
         total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
         total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
+        total += purifweightsuffstat.GetLogProb(purifcenter,purifconcentration);
         return total;
     }
 
@@ -398,7 +410,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             if (genealloc[gene] == myid)    {
                 geneprocess[gene]->SetBranchLengths(*branchlength);
                 geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
-                geneprocess[gene]->SetMixtureHyperParameters(aalpha,abeta,balpha,bbeta,pi,poswalpha,poswbeta,dposomalpha,dposombeta);
+                geneprocess[gene]->SetMixtureHyperParameters(aalpha,abeta,balpha,bbeta,pi,poswalpha,poswbeta,dposomalpha,dposombeta,purifcenter,purifconcentration);
             }
         }
         delete[] array;
@@ -493,6 +505,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		poswarray->AddSuffStat(poswsuffstat);
 		dposomsuffstat.Clear();
 		dposomarray->AddSuffStat(dposomsuffstat);
+        purifweightsuffstat.Clear();
+        purifweightarray->AddSuffStat(purifweightsuffstat);
 
 		HyperScalingMove(aalpha,1.0,10);
 		HyperScalingMove(abeta,1.0,10);
@@ -515,6 +529,12 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		HyperScalingMove(dposomalpha,0.3,10);
 		HyperScalingMove(dposombeta,0.3,10);
 
+        HyperScalingMove(purifconcentration,1.0,10);
+        HyperScalingMove(purifconcentration,0.3,10);
+
+        HyperProfileMove(purifcenter,1.0,1,10);
+        HyperProfileMove(purifcenter,0.3,1,10);
+
         alphaarray->SetShape(aalpha);
         alphaarray->SetScale(abeta);
         betaarray->SetShape(balpha);
@@ -524,6 +544,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         poswarray->SetBeta(poswbeta);
         dposomarray->SetShape(dposomalpha);
         dposomarray->SetScale(dposombeta);
+        purifweightarray->SetConcentration(purifconcentration);
+        purifweightarray->SetCenter(purifcenter);
     }
 
     void ResamplePi()   {
@@ -562,6 +584,29 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		return nacc/ntot;
 	}
 
+	double HyperProfileMove(vector<double>& x, double tuning, int n, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        vector<double> bk(x.size(),0);
+		for (int rep=0; rep<nrep; rep++)	{
+            bk = x;
+			double deltalogprob = - HyperLogPrior() - HyperSuffStatLogProb();
+            double loghastings = Random::ProfileProposeMove(x,x.size(),tuning,n);
+			deltalogprob += HyperLogPrior() + HyperSuffStatLogProb();
+			deltalogprob += loghastings;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x = bk;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
     void SlaveCollectPathSuffStat() {
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene] == myid)    {
@@ -575,6 +620,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         nucpathsuffstat.Clear();
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene] == myid)    {
+                geneprocess[gene]->CollectComponentPathSuffStat();
                 geneprocess[gene]->CollectNucPathSuffStat();
                 nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
             }
@@ -691,37 +737,46 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     void SlaveSendMixture()   {
 
         // alpha,beta,posw,dposom
-        double* array = new double[4*Ngene];
+        double* array = new double[6*Ngene];
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
                 array[gene] = geneprocess[gene]->GetAlpha();
                 array[Ngene+gene] = geneprocess[gene]->GetBeta();
                 array[2*Ngene+gene] = geneprocess[gene]->GetPosW();
                 array[3*Ngene+gene] = geneprocess[gene]->GetDPosOm();
+                array[4*Ngene+gene] = geneprocess[gene]->GetPurifWeight(0);
+                array[5*Ngene+gene] = geneprocess[gene]->GetPurifWeight(1);
+                array[6*Ngene+gene] = geneprocess[gene]->GetPurifWeight(2);
             }
             else    {
                 array[gene] = -1;
                 array[Ngene+gene] = -1;
                 array[2*Ngene+gene] = -1;
                 array[3*Ngene+gene] = -1;
+                array[4*Ngene+gene] = -1;
+                array[5*Ngene+gene] = -1;
+                array[6*Ngene+gene] = -1;
             }
         }
-        MPI_Send(array,4*Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(array,6*Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
         delete[] array;
     }
 
     void MasterReceiveMixture()    {
 
-        double* array = new double[4*Ngene];
+        double* array = new double[6*Ngene];
         MPI_Status stat;
         for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(array,4*Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPI_Recv(array,6*Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
             for (int gene=0; gene<Ngene; gene++)    {
                 if (array[gene] != -1)    {
                     (*alphaarray)[gene] = array[gene];
                     (*betaarray)[gene] = array[Ngene+gene];
                     (*poswarray)[gene] = array[2*Ngene+gene];
                     (*dposomarray)[gene] = array[3*Ngene+gene];
+                    (*purifweightarray)[gene][0] = array[4*Ngene+gene];
+                    (*purifweightarray)[gene][1] = array[5*Ngene+gene];
+                    (*purifweightarray)[gene][2] = array[6*Ngene+gene];
                 }
             }
         }
@@ -730,33 +785,38 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void MasterSendMixture()  {
 
-        double* array = new double[4*Ngene];
+        double* array = new double[6*Ngene];
         for (int gene=0; gene<Ngene; gene++)    {
             array[gene] = (*alphaarray)[gene];
             array[Ngene+gene] = (*betaarray)[gene];
             array[2*Ngene+gene] = (*poswarray)[gene];
             array[3*Ngene+gene] = (*dposomarray)[gene];
+            array[4*Ngene+gene] = (*purifweightarray)[gene][0];
+            array[5*Ngene+gene] = (*purifweightarray)[gene][1];
+            array[6*Ngene+gene] = (*purifweightarray)[gene][2];
         }
-        MPI_Bcast(array,4*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Bcast(array,6*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
         delete[] array;
     }
 
     void SlaveReceiveMixture()    {
 
-        double* array = new double[4*Ngene];
-        MPI_Bcast(array,4*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        double* array = new double[6*Ngene];
+        MPI_Bcast(array,6*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
-        // this is not useful
         for (int gene=0; gene<Ngene; gene++)    {
             (*alphaarray)[gene] = array[gene];
             (*betaarray)[gene] = array[Ngene+gene];
             (*poswarray)[gene] = array[2*Ngene+gene];
             (*dposomarray)[gene] = array[3*Ngene+gene];
+            (*purifweightarray)[gene][0] = array[4*Ngene+gene];
+            (*purifweightarray)[gene][1] = array[5*Ngene+gene];
+            (*purifweightarray)[gene][2] = array[6*Ngene+gene];
         }
 
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
-                geneprocess[gene]->SetMixtureParameters(array[gene],array[Ngene+gene],array[2*Ngene+gene],array[3*Ngene+gene]);
+                geneprocess[gene]->SetMixtureParameters((*alphaarray)[gene],(*betaarray)[gene],(*poswarray)[gene],(*dposomarray)[gene],(*purifweightarray)[gene]);
             }
         }
         delete[] array;
