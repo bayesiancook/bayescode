@@ -28,9 +28,9 @@ class DirichletSuffStat : public SuffStat	{
 
 	double GetLogProb(const vector<double>& center, double concentration) const    {
         
-        double tot = Random::logGamma(concentration);
+        double tot = n * Random::logGamma(concentration);
         for (unsigned int i=0; i<sumlog.size(); i++)    {
-            tot -= Random::logGamma(concentration*center[i]) + (concentration*center[i]-1)*sumlog[i];
+            tot += - n * Random::logGamma(concentration*center[i]) + (concentration*center[i]-1)*sumlog[i];
         }
         return tot;
     }

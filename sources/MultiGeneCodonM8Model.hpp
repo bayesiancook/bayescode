@@ -206,7 +206,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << GetNpos() << '\t';
         os << GetMeanPosFrac() << '\t';
         os << GetMeanPosOmega() << '\t';
-        os << purifconcentration*purifcenter[0] << '\t' << purifconcentration*purifcenter[2] << '\t' << purifconcentration << '\t';
+        os << purifcenter[0] << '\t' purifcenter[2] << '\t' << purifconcentration << '\t';
         os << aalpha << '\t' << abeta << '\t' << balpha << '\t' << bbeta << '\t';
         os << poswalpha << '\t' << poswbeta << '\t';
         os << dposomalpha << '\t' << dposombeta << '\t';
@@ -257,7 +257,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 	}
 
     double HyperLogPrior()   {
-        return - (aalpha + abeta + balpha + bbeta + poswalpha + poswbeta + dposomalpha + dposombeta) / 10;
+        return - (aalpha + abeta + balpha + bbeta + poswalpha + poswbeta + dposomalpha + dposombeta + purifconcentration) / 10;
     }
 
     double HyperSuffStatLogProb()   {
@@ -348,13 +348,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void MasterSendGlobalParameters() {
 
-        // alpha
-        // beta
-        // branch lengths
-        // nuc relrate
-        // nucstat
-
-        int N = Nbranch + Nrr + Nnuc + 9;
+        int N = Nbranch + Nrr + Nnuc + 13;
         double* array = new double[N];
         int i = 0;
         for (int j=0; j<Nbranch; j++)   {
@@ -375,6 +369,16 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         array[i++] = poswbeta;
         array[i++] = dposomalpha;
         array[i++] = dposombeta;
+        array[i++] = purifcenter[0];
+        array[i++] = purifcenter[1];
+        array[i++] = purifcenter[2];
+        array[i++] = purifconcentration;
+
+        if (i != N) {
+            cerr << "error when sending global params: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
 
         MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
         delete[] array;
@@ -382,7 +386,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void SlaveReceiveGlobalParameters()   {
 
-        int N = Nbranch + Nrr + Nnuc + 9;
+        int N = Nbranch + Nrr + Nnuc + 13;
         double* array = new double[N];
         MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
         int i = 0;
@@ -405,6 +409,16 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         poswbeta = array[i++];
         dposomalpha = array[i++];
         dposombeta = array[i++];
+        purifcenter[0] = array[i++];
+        purifcenter[1] = array[i++];
+        purifcenter[2] = array[i++];
+        purifconcentration = array[i++];
+
+        if (i != N) {
+            cerr << "error when sending global params: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
 
         for (int gene=0; gene<GetNgene(); gene++)   {
             if (genealloc[gene] == myid)    {
@@ -737,7 +751,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     void SlaveSendMixture()   {
 
         // alpha,beta,posw,dposom
-        double* array = new double[6*Ngene];
+        double* array = new double[7*Ngene];
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
                 array[gene] = geneprocess[gene]->GetAlpha();
@@ -758,16 +772,16 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
                 array[6*Ngene+gene] = -1;
             }
         }
-        MPI_Send(array,6*Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(array,7*Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
         delete[] array;
     }
 
     void MasterReceiveMixture()    {
 
-        double* array = new double[6*Ngene];
+        double* array = new double[7*Ngene];
         MPI_Status stat;
         for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(array,6*Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPI_Recv(array,7*Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
             for (int gene=0; gene<Ngene; gene++)    {
                 if (array[gene] != -1)    {
                     (*alphaarray)[gene] = array[gene];
@@ -785,7 +799,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void MasterSendMixture()  {
 
-        double* array = new double[6*Ngene];
+        double* array = new double[7*Ngene];
         for (int gene=0; gene<Ngene; gene++)    {
             array[gene] = (*alphaarray)[gene];
             array[Ngene+gene] = (*betaarray)[gene];
@@ -795,14 +809,14 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             array[5*Ngene+gene] = (*purifweightarray)[gene][1];
             array[6*Ngene+gene] = (*purifweightarray)[gene][2];
         }
-        MPI_Bcast(array,6*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Bcast(array,7*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
         delete[] array;
     }
 
     void SlaveReceiveMixture()    {
 
-        double* array = new double[6*Ngene];
-        MPI_Bcast(array,6*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        double* array = new double[7*Ngene];
+        MPI_Bcast(array,7*Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
         for (int gene=0; gene<Ngene; gene++)    {
             (*alphaarray)[gene] = array[gene];
