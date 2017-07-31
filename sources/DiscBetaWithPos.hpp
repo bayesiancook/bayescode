@@ -8,9 +8,11 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     public:
 
-    DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom) : SimpleArray<double>(inncat+1) , ncat(inncat), weight(inncat+1), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom) {
+    DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom, vector<double>& inw) : SimpleArray<double>(inncat+3) , ncat(inncat), weight(inncat+3), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom), w(inw) {
             ComputeDiscBeta();
-            (*this)[ncat] = posom;
+            (*this)[0] = 1e-5;
+            (*this)[ncat+1] = 1;
+            (*this)[ncat+2] = posom;
             ComputeWeights();
     }
 
@@ -22,10 +24,15 @@ class DiscBetaWithPos : public SimpleArray<double>  {
         ComputeDiscBeta();
     }
     
+    void SetW(const vector<double>& inw)    {
+        w = inw;
+        ComputeWeights();
+    }
+
     void SetPos(double inposw, double inposom)  {
         posw = inposw;
         posom = inposom;
-        (*this)[ncat] = posom;
+        (*this)[ncat+2] = posom;
         ComputeWeights();
     }
 
@@ -33,20 +40,20 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     double GetPostProbArray(const OmegaSuffStat& suffstat, vector<double>& postprob) const {
 
-            double logp[ncat+1];
+            double logp[GetSize()];
             double max = 0;
-            for (int cat=0; cat<=ncat; cat++)  {
+            for (int cat=0; cat<GetSize(); cat++)  {
                 logp[cat] = suffstat.GetLogProb(GetVal(cat));
                 if ((!cat) || (max < logp[cat]))    {
                     max = logp[cat];
                 }
             }
             double tot = 0;
-            for (int cat=0; cat<=ncat; cat++)  {
+            for (int cat=0; cat<GetSize(); cat++)  {
                 postprob[cat] = weight[cat] * exp(logp[cat] - max);
                 tot += postprob[cat];
             }
-            for (int cat=0; cat<=ncat; cat++)  {
+            for (int cat=0; cat<GetSize(); cat++)  {
                 postprob[cat] /= tot;
             }
             double ret = log(tot) + max;
@@ -56,9 +63,10 @@ class DiscBetaWithPos : public SimpleArray<double>  {
             }
             if (isnan(ret)) {
                 cerr << "ret is nan: " << tot << '\t' << max << '\n';
-                for (int cat=0; cat<=ncat; cat++)   {
-                    cerr << GetVal(cat) << '\t' << weight[cat] << '\n';
+                for (int cat=0; cat<GetSize(); cat++)   {
+                    cerr << GetVal(cat) << '\t' << weight[cat] << '\t' << logp[cat] << '\t' << postprob[cat] << '\n';
                 }
+                cerr << tot << '\t' << log(tot) << '\t' << max << '\n';
                 exit(1);
             }
             return ret;
@@ -78,7 +86,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     // still numerically unstable
     void ComputeDiscBeta()   {
         for (int cat=0; cat<ncat; cat++)  {
-            (*this)[cat] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
+            (*this)[cat+1] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
         }
     }
 
@@ -92,9 +100,11 @@ class DiscBetaWithPos : public SimpleArray<double>  {
             exit(1);
         }
         for (int cat=0; cat<ncat; cat++)    {
-            weight[cat] = (1-posw)/ncat;
+            weight[cat+1] = w[1]*(1 - posw) / ncat;
         }
-        weight[ncat] = posw;
+        weight[0] = w[0]*(1 - posw);
+        weight[ncat+1] = w[2]*(1 - posw);
+        weight[ncat+2] = posw;
     }
 
     int ncat;
@@ -103,6 +113,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     double beta;
     double posw;
     double posom;
+    vector<double> w;
 };
 
 #endif

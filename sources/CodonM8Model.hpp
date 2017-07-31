@@ -46,6 +46,7 @@ class CodonM8Model	{
 	double alpha;
 	double beta;
 	double posw;
+    vector<double> w;
 
 	double dposom;
 	DiscBetaWithPos* componentomegaarray;
@@ -147,10 +148,11 @@ class CodonM8Model	{
             posw = 0;
         }
 		dposom = 0.5;
+        w.assign(3,1.0/3);
 
-		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1);
+		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1,w);
 		sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
-		sitepostprobarray.assign(GetNsite(),vector<double>(ncat+1,0));
+		sitepostprobarray.assign(GetNsite(),vector<double>(ncat+3,0));
 
 		nucrelrate.assign(Nrr,0);
 		double totrr = 0;
@@ -182,7 +184,7 @@ class CodonM8Model	{
 
 		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 		sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
-		componentpathsuffstatarray = new PathSuffStatArray(ncat+1);
+		componentpathsuffstatarray = new PathSuffStatArray(ncat+3);
 		siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
 	}
 
@@ -207,11 +209,25 @@ class CodonM8Model	{
     }
 
     void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom)    {
+        cerr << "error: in old set mixtureparams\n";
+        exit(1);
         alpha = inalpha;
         beta = inbeta;
         posw = inposw;
         dposom = indposom;
         componentomegaarray->SetAlphaBeta(alpha,beta);
+        componentomegaarray->SetPos(posw,dposom+1);
+    }
+
+    void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom, const vector<double>& inw)    {
+        alpha = inalpha;
+        beta = inbeta;
+        posw = inposw;
+        dposom = indposom;
+        w = inw;
+        componentomegaarray->SetAlphaBeta(alpha,beta);
+        componentomegaarray->SetPos(posw,dposom+1);
+        componentomegaarray->SetW(w);
     }
 
     void SetMixtureHyperParameters(double inaalpha, double inabeta, double inbalpha, double inbbeta, double inpi, double inposwalpha, double inposwbeta, double indposomalpha, double indposombeta)  {
@@ -385,6 +401,8 @@ class CodonM8Model	{
         if (withpos == 1)    {
             SwitchPosWeight(10);
         }
+		MoveW(0.3,1,10);
+		MoveW(0.1,1,10);
 		ResampleAlloc();
 	}
 
@@ -584,6 +602,31 @@ class CodonM8Model	{
 		return nacc/ntot;
 	}
 
+	double MoveW(double tuning, int n, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        vector<double> bkw;
+		for (int rep=0; rep<nrep; rep++)	{
+            bkw = w;
+			double deltalogprob = - OmegaSuffStatLogProb();
+			double loghastings = Random::ProfileProposeMove(w,3,tuning,n);
+			componentomegaarray->SetW(w);
+			deltalogprob += OmegaSuffStatLogProb();
+            deltalogprob += loghastings;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+                w = bkw;
+				componentomegaarray->SetW(w);
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
 	double MovePosWeight(double tuning, int nrep)	{
 
 		double nacc = 0;
@@ -653,8 +696,38 @@ class CodonM8Model	{
 	}
 
 	double GetLogLikelihood()	{
-		return phyloprocess->GetLogProb();
+        return GetIntegratedLogLikelihood();
+		// return phyloprocess->GetLogProb();
 	}
+
+    double GetIntegratedLogLikelihood() {
+
+        double total = 0;
+        double logp[ncat+3];
+        const vector<double>& w = componentomegaarray->GetWeights();
+        double max = 0;
+        for (int i=0; i<GetNsite(); i++) {
+            int bkalloc = sitealloc->GetVal(i);
+
+            for (int k=0; k<ncat+3; k++) {
+                (*sitealloc)[i] = k;
+                logp[k] = phyloprocess->SiteLogLikelihood(i);
+                if ((!k) || (max<logp[k]))  {
+                    max = logp[k];
+                }
+            }
+
+            double p = 0;
+            for (int k=0; k<ncat+3; k++) {
+                p += w[k] * exp(logp[k]-max);
+            }
+            double logl = log(p) + max;
+            total += logl;
+
+            (*sitealloc)[i] = bkalloc;
+        }
+        return total;
+    }
 
 	double GetTotalLength()	{
 		double tot = 0;
@@ -679,6 +752,7 @@ class CodonM8Model	{
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\t";
 		os << "meanomega\tposom\tposw\t";
+        os << "w0\tw1\t";
 		os << "alpha\tbeta\t";
 		os << "statent\t";
 		os << "rrent\n";
@@ -690,6 +764,7 @@ class CodonM8Model	{
 		os << GetTotalLength() << '\t';
 		os << GetMeanOmega() << '\t';
 		os << dposom+1 << '\t' << posw << '\t';
+        os << w[0] << '\t' << w[2] << '\t';
 		os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
@@ -697,7 +772,7 @@ class CodonM8Model	{
 
 	void TracePostProb(ostream& os) {
 		for (int i=0; i<GetNsite(); i++)    {
-			os << sitepostprobarray[i][ncat] << '\t';
+			os << sitepostprobarray[i][ncat+2] << '\t';
 		}
 		os << '\n';
 	}
