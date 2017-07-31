@@ -206,7 +206,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << GetNpos() << '\t';
         os << GetMeanPosFrac() << '\t';
         os << GetMeanPosOmega() << '\t';
-        os << purifcenter[0] << '\t' purifcenter[2] << '\t' << purifconcentration << '\t';
+        os << purifcenter[0] << '\t' << purifcenter[2] << '\t' << purifconcentration << '\t';
         os << aalpha << '\t' << abeta << '\t' << balpha << '\t' << bbeta << '\t';
         os << poswalpha << '\t' << poswbeta << '\t';
         os << dposomalpha << '\t' << dposombeta << '\t';
