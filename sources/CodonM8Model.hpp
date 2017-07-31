@@ -344,7 +344,7 @@ class CodonM8Model	{
 
 	void Move()	{
 
-		ResampleSub();
+		ResampleSub(1.0);
 
 		int nrep = 30;
 
@@ -361,9 +361,9 @@ class CodonM8Model	{
 		}
 	}
 
-    void ResampleSub()  {
+    void ResampleSub(double frac)  {
         UpdateMatrices();
-		phyloprocess->ResampleSub();
+		phyloprocess->Move(frac);
     }
 
     void CollectLengthSuffStat()    {
