@@ -75,38 +75,99 @@ void PhyloProcess::Unfold() {
 }
 
 void PhyloProcess::Cleanup() {
+    DeleteMissingMap();
     RecursiveDeleteTBL(GetRoot());
     RecursiveDelete(GetRoot());
     delete[] sitearray;
     delete[] sitelnL;
 }
 
-void PhyloProcess::CreateMissingMap() {
-    RecursiveCreateMissingMap(GetRoot());
-    for (int i = 0; i < GetNsite(); i++) {
-        FillMissingMap(GetRoot(), i);
-    }
+void PhyloProcess::CreateMissingMap()	{
+
+	missingmap = new int*[GetTree()->GetNnode()];
+	for (int j=0; j<GetTree()->GetNnode(); j++)	{
+		missingmap[j] = new int[GetNsite()];
+		for (int i=0; i<GetNsite(); i++)	{
+			missingmap[j][i] = -1;
+		}
+	}
 }
 
-void PhyloProcess::RecursiveCreateMissingMap(const Link *from) {
-    auto array = new bool[GetNsite()];
-    missingmap[from->GetNode()] = array;
-    for (const Link *link = from->Next(); link != from; link = link->Next()) {
-        RecursiveCreateMissingMap(link->Out());
-    }
+void PhyloProcess::DeleteMissingMap()	{
+
+	for (int j=0; j<GetTree()->GetNnode(); j++)	{
+		delete[] missingmap[j];
+	}
+	delete[] missingmap;
 }
 
-bool PhyloProcess::FillMissingMap(const Link *from, int i) {
-    if (from->isLeaf()) {
-        missingmap[from->GetNode()][i] = data->isMissing(from->GetNode()->GetIndex(), i);
-        return missingmap[from->GetNode()][i];
-    }
-    bool allmiss = true;
-    for (const Link *link = from->Next(); link != from; link = link->Next()) {
-        allmiss &= static_cast<int>(FillMissingMap(link->Out(), i));
-    }
-    missingmap[from->GetNode()][i] = allmiss;
-    return allmiss;
+void PhyloProcess::FillMissingMap()	{
+	BackwardFillMissingMap(GetRoot());
+	ForwardFillMissingMap(GetRoot(),GetRoot());
+}
+
+void PhyloProcess::BackwardFillMissingMap(const Link* from)	{
+
+	int index = from->GetNode()->GetIndex();
+    for (int i=0; i<GetNsite(); i++)    {
+        missingmap[index][i] = 0;
+	}
+	if (from->isLeaf())	{
+        for (int i=0; i<GetNsite(); i++)    {
+            int state = GetData(index,i);
+            if (state != -1)	{
+                missingmap[index][i] = 1;
+			}
+		}
+	}
+	else	{
+		for (const Link* link=from->Next(); link!=from; link=link->Next())	{
+			BackwardFillMissingMap(link->Out());
+			int j = link->Out()->GetNode()->GetIndex();
+            for (int i=0; i<GetNsite(); i++)    {
+                if (missingmap[j][i])	{
+                    missingmap[index][i] ++;
+                }
+			}
+		}
+	}
+}
+
+void PhyloProcess::ForwardFillMissingMap(const Link* from, const Link* up)	{
+
+	int index = from->GetNode()->GetIndex();
+	int upindex = up->GetNode()->GetIndex();
+
+	if (from->isRoot())	{
+        for (int i=0; i<GetNsite(); i++)    {
+            if (missingmap[index][i] <= 1)	{
+                missingmap[index][i] = 0;
+            }
+            else	{
+                missingmap[index][i] = 2;
+            }
+		}
+	}
+	else	{
+        for (int i=0; i<GetNsite(); i++)    {
+            if (missingmap[index][i] > 0)	{
+                if (missingmap[upindex][i])	{
+                    missingmap[index][i] = 1;
+                }
+                else	{
+                    if (from->isLeaf() || (missingmap[index][i] > 1))	{
+                        missingmap[index][i] = 2;
+                    }
+                    else	{
+                        missingmap[index][i] = 0;
+                    }
+                }
+            }
+		}
+	}
+	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
+		ForwardFillMissingMap(link->Out(),from);
+	}
 }
 
 void PhyloProcess::RecursiveCreate(const Link *from) {

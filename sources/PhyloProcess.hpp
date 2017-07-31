@@ -134,12 +134,6 @@ public:
 
 	bool isMissing(const Node *node, int site) const { 
         return false; 
-        map<const Node*, bool*>::const_iterator i = missingmap.find(node);
-        if (i == missingmap.end())  {
-            cerr << "error in PhyloProcess::isMissing\n";
-            exit(1);
-        }
-        return i->second[site];
     }
 
 	bool isMissing(const Link *link, int site) const {
@@ -148,8 +142,11 @@ public:
 	}
 
 	void CreateMissingMap();
+	void DeleteMissingMap();
 	void RecursiveCreateMissingMap(const Link *from);
-	bool FillMissingMap(const Link *from, int i);
+	void FillMissingMap();
+	void BackwardFillMissingMap(const Link *from);
+	void ForwardFillMissingMap(const Link *from, const Link* up);
 
 	double* GetCondLikelihood(const Link *from) const {
         map<const Link*, double*>::const_iterator i = condlmap.find(from); 
@@ -219,8 +216,9 @@ public:
 	std::map<const Link *, double *> condlmap;
 	std::map<const Node*, BranchSitePath **> pathmap;
 	std::map<const Node *, int *> statemap;
-	std::map<const Node *, bool *> missingmap;
 	std::map<const Node *, int> totmissingmap;
+
+    int** missingmap;
 
 	int maxtrial;
 	static const int unknown = -1;
