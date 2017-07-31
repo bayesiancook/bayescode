@@ -46,7 +46,14 @@ class CodonM8Model	{
 	double alpha;
 	double beta;
 	double posw;
-    vector<double> w;
+
+    // purifweight[0] : omega = 0
+    // purifweight[1] : 0<omega<1 (beta distribution)
+    // purifweight[2] : omega = 1
+    vector<double> purifweight;
+
+    vector<double> purifcenter;
+    double purifconcentration;
 
 	double dposom;
 	DiscBetaWithPos* componentomegaarray;
@@ -148,9 +155,11 @@ class CodonM8Model	{
             posw = 0;
         }
 		dposom = 0.5;
-        w.assign(3,1.0/3);
+        purifweight.assign(3,1.0/3);
+        purifcenter.assign(3,1.0/3);
+        purifconcentration = 3.0;
 
-		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1,w);
+		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1,purifweight);
 		sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
 		sitepostprobarray.assign(GetNsite(),vector<double>(ncat+3,0));
 
@@ -208,29 +217,18 @@ class CodonM8Model	{
         UpdateMatrices();
     }
 
-    void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom)    {
-        cerr << "error: in old set mixtureparams\n";
-        exit(1);
+    void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom, const vector<double>& inpurifweight)    {
         alpha = inalpha;
         beta = inbeta;
         posw = inposw;
         dposom = indposom;
+        purifweight = inpurifweight;
         componentomegaarray->SetAlphaBeta(alpha,beta);
         componentomegaarray->SetPos(posw,dposom+1);
+        componentomegaarray->SetPurifWeight(purifweight);
     }
 
-    void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom, const vector<double>& inw)    {
-        alpha = inalpha;
-        beta = inbeta;
-        posw = inposw;
-        dposom = indposom;
-        w = inw;
-        componentomegaarray->SetAlphaBeta(alpha,beta);
-        componentomegaarray->SetPos(posw,dposom+1);
-        componentomegaarray->SetW(w);
-    }
-
-    void SetMixtureHyperParameters(double inaalpha, double inabeta, double inbalpha, double inbbeta, double inpi, double inposwalpha, double inposwbeta, double indposomalpha, double indposombeta)  {
+    void SetMixtureHyperParameters(double inaalpha, double inabeta, double inbalpha, double inbbeta, double inpi, double inposwalpha, double inposwbeta, double indposomalpha, double indposombeta, const vector<double>& inpurifcenter, double inpurifconcentration)  {
         aalpha = inaalpha;
         abeta = inabeta;
         balpha = inbalpha;
@@ -240,6 +238,8 @@ class CodonM8Model	{
         poswbeta = inposwbeta;
         dposomalpha = indposomalpha;
         dposombeta = indposombeta;
+        purifcenter = inpurifcenter;
+        purifconcentration = inpurifconcentration;
     }
 
     double GetAlpha() {
@@ -256,6 +256,10 @@ class CodonM8Model	{
 
     double GetDPosOm()    {
         return dposom;
+    }
+
+    double GetPurifWeight(int k)    {
+        return purifweight[k];
     }
 
     const NucPathSuffStat& GetNucPathSuffStat() {
@@ -300,6 +304,16 @@ class CodonM8Model	{
             return log(1-pi);
         }
 	}
+
+    double PurifWeightLogProb() {
+
+        // Dirichlet 
+        double tot = Random::logGamma(purifconcentration);
+        for (unsigned int k=0; k<purifweight.size(); k++)    {
+            tot += -Random::logGamma(purifconcentration*purifcenter[k]) + (purifconcentration*purifcenter[k]-1)*log(purifweight[k]);
+        }
+        return tot;
+    }
 
     double PosSwitchLogProb()   {
         if (posw)   {
@@ -401,8 +415,8 @@ class CodonM8Model	{
         if (withpos == 1)    {
             SwitchPosWeight(10);
         }
-		MoveW(0.3,1,10);
-		MoveW(0.1,1,10);
+		MovePurifWeight(0.3,1,10);
+		MovePurifWeight(0.1,1,10);
 		ResampleAlloc();
 	}
 
@@ -602,25 +616,25 @@ class CodonM8Model	{
 		return nacc/ntot;
 	}
 
-	double MoveW(double tuning, int n, int nrep)	{
+	double MovePurifWeight(double tuning, int n, int nrep)	{
 
 		double nacc = 0;
 		double ntot = 0;
-        vector<double> bkw;
+        vector<double> bkw = purifweight;
 		for (int rep=0; rep<nrep; rep++)	{
-            bkw = w;
-			double deltalogprob = - OmegaSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(w,3,tuning,n);
-			componentomegaarray->SetW(w);
-			deltalogprob += OmegaSuffStatLogProb();
+            bkw = purifweight;
+			double deltalogprob = -PurifWeightLogProb() - OmegaSuffStatLogProb();
+			double loghastings = Random::ProfileProposeMove(purifweight,3,tuning,n);
+			componentomegaarray->SetPurifWeight(purifweight);
+			deltalogprob += PurifWeightLogProb() + OmegaSuffStatLogProb();
             deltalogprob += loghastings;
 			int accepted = (log(Random::Uniform()) < deltalogprob);
 			if (accepted)	{
 				nacc ++;
 			}
 			else	{
-                w = bkw;
-				componentomegaarray->SetW(w);
+                purifweight = bkw;
+				componentomegaarray->SetPurifWeight(purifweight);
 			}
 			ntot++;
 		}
@@ -764,7 +778,7 @@ class CodonM8Model	{
 		os << GetTotalLength() << '\t';
 		os << GetMeanOmega() << '\t';
 		os << dposom+1 << '\t' << posw << '\t';
-        os << w[0] << '\t' << w[2] << '\t';
+        os << purifweight[0] << '\t' << purifweight[2] << '\t';
 		os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';

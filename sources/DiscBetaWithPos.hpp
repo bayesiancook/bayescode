@@ -24,7 +24,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
         ComputeDiscBeta();
     }
     
-    void SetW(const vector<double>& inw)    {
+    void SetPurifWeight(const vector<double>& inw)    {
         w = inw;
         ComputeWeights();
     }
