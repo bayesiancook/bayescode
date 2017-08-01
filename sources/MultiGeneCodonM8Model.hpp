@@ -215,6 +215,15 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		os.flush();
     }
 
+    void TracePosWeight(ostream& os) {
+
+        for (int gene=0; gene<Ngene; gene++)    {
+            os << (*poswarray)[gene] << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
     int GetNpos()    {
         return GetNgene() - poswarray->GetNullSet();
     }

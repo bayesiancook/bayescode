@@ -40,12 +40,14 @@ int main(int argc, char* argv[])	{
     }
     model->Unfold();
     if (! myid) {
+        ofstream pos((name + ".posw").c_str());
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
         while(1)	{
             model->MasterMove();
             model->MasterTrace(os);
+            model->TracePosWeight(pos);
         }
     }
     else	{
