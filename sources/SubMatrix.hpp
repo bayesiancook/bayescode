@@ -1,40 +1,17 @@
-// SubMatrix:
-// this class implements
-// the instant rate matrix of a substitution process
-// but only the mathematical aspects of it
-//
-// RandomSubMatrix:
-// this class derives from SubMatrix and from Dnode
-// therefore, it knows everything about substitution processes (as a SubMatrix)
-// and at the same time, it can be inserted as a deterministic node in a
-// probabilistic model (as a
-// Dnode)
-//
-// If you need to define a new substitution process
-// - derive a new class deriving (directly or indirectly) from SubMatrix
-// in this class, implements the ComputeArray and ComputeStationary functions
-// (these are the functions that construct the instant rates and the stationary
-// probabilities of the
-// matrix)
-//
-// - derive a new class deriving both from RandomSubMatrix, and from your new
-// class
-// in this class, implement SetParameters
-// (this function is responsible for updating the internal parameters that the
-// SubMatrix uses in
-// ComputeArray And ComputeStationary,
-// based on the values stored by the parent nodes)
-//
-//
-
 #ifndef SUBMATRIX_H
 #define SUBMATRIX_H
 
+#include "Eigen/Dense"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include "Random.hpp"
 
+using Vector = double *;
+using ConstVect = const double *;
+using Matrix = double **;
+using EMatrix = Eigen::MatrixXd;
+using EVector = Eigen::VectorXd;
 
 class SubMatrix {
 
@@ -62,6 +39,7 @@ class SubMatrix {
 
     static int nuni;
     static int nunimax;
+    static int diagcount;
 
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
@@ -71,10 +49,19 @@ class SubMatrix {
     void Create();
 
     double operator()(int /*i*/, int /*j*/) const;
-    const double *GetRow(int i) const;
+    // const double *GetRow(int i) const;
+    EVector GetRow(int i) const;
 
-    const double *GetStationary() const;
     double Stationary(int i) const;
+
+    // const double *GetStationary() const;
+    const EVector &GetEigenStationary() const;
+    double *GetStationary() const {
+        if (!statflag) {
+            UpdateStationary();
+        }
+        return oldStationary;
+    }
 
     int GetNstate() const { return Nstate; }
 
@@ -92,10 +79,6 @@ class SubMatrix {
     double Power(int n, int i, int j) const;
     double GetUniformizationMu() const;
 
-    double *GetEigenVal() const;
-    double **GetEigenVect() const;
-    double **GetInvEigenVect() const;
-
     virtual void ToStream(std::ostream &os) const;
     void CheckReversibility() const;
 
@@ -105,10 +88,7 @@ class SubMatrix {
     void ForwardPropagate(const double *down, double *up, double length) const;
     // virtual void     FiniteTime(int i0, double* down, double length);
 
-    double **GetQ() const { return Q; }
-    void ComputeExponential(double range, double **expo) const;
-    void ApproachExponential(double range, double **expo, int prec = 1024) const;
-    void PowerOf2(double **y, int z) const;
+    // double **GetQ() const { return Q; }
 
     static double meanz;
     static double maxz;
@@ -155,10 +135,15 @@ class SubMatrix {
     double ***mPow;
 
     // Q : the infinitesimal generator matrix
-    mutable double **Q;
+    // mutable double **Q;
+    mutable EMatrix Q;            // Q : the infinitesimal generator matrix
 
     // the stationary probabilities of the matrix
-    mutable double *mStationary;
+    // mutable double *mStationary;
+    mutable EVector mStationary;  // the stationary probabilities of the matrix
+    double *oldStationary;
+
+    mutable Eigen::EigenSolver<EMatrix> solver;
 
     bool normalise;
 
@@ -166,15 +151,23 @@ class SubMatrix {
     mutable double **aux;
 
   protected:
+
     // v : eigenvalues
     // vi : imaginary part
     // u : the matrix of eigen vectors
     // invu : the inverse of u
 
+    /*
     mutable double **u;
     mutable double **invu;
     mutable double *v;
     mutable double *vi;
+    */
+
+    mutable EMatrix u;     // u : the matrix of eigen vectors
+    mutable EMatrix invu;  // invu : the inverse of u
+    mutable EVector v;     // v : eigenvalues
+    mutable EVector vi;    // vi : imaginary part
 
     mutable int ndiagfailed;
 };
@@ -187,17 +180,28 @@ inline double SubMatrix::operator()(int i, int j) const {
     if (!flagarray[i]) {
         UpdateRow(i);
     }
-    return Q[i][j];
+    return Q(i, j);
+    // return Q[i][j];
 }
 
+inline EVector SubMatrix::GetRow(int i) const {
+    if (!flagarray[i]) {
+        UpdateRow(i);
+    }
+    return Q.row(i);
+}
+
+/*
 inline const double *SubMatrix::GetRow(int i) const {
     if (!flagarray[i]) {
         UpdateRow(i);
     }
     return Q[i];
 }
+*/
 
-inline const double *SubMatrix::GetStationary() const {
+inline const EVector &SubMatrix::GetEigenStationary() const {
+// inline const double *SubMatrix::GetStationary() const {
     if (!statflag) {
         UpdateStationary();
     }
@@ -230,6 +234,9 @@ inline bool SubMatrix::ArrayUpdated() const {
 
 inline void SubMatrix::UpdateStationary() const {
     ComputeStationary();
+    for (int i = 0; i < Nstate; i++) {
+        oldStationary[i] = mStationary[i];
+    }
     statflag = true;
 }
 
@@ -246,9 +253,9 @@ inline void SubMatrix::UpdateRow(int state) const {
 }
 
 inline void SubMatrix::BackwardPropagate(const double *up, double *down, double length) const {
-    double **eigenvect = GetEigenVect();
-    double **inveigenvect = GetInvEigenVect();
-    double *eigenval = GetEigenVal();
+    if (! diagflag)  {
+        Diagonalise();
+    }
 
     int matSize = GetNstate();
 
@@ -259,12 +266,13 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
     }
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            aux[i] += inveigenvect[i][j] * up[j];
+            aux[i] += invu(i,j) * up[j];
+            // aux[i] += invu[i][j] * up[j];
         }
     }
 
     for (int i = 0; i < GetNstate(); i++) {
-        aux[i] *= exp(length * eigenval[i]);
+        aux[i] *= exp(length * v[i]);
     }
 
     for (int i = 0; i < GetNstate(); i++) {
@@ -273,7 +281,8 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            down[i] += eigenvect[i][j] * aux[j];
+            down[i] += u(i,j) * aux[j];
+            // down[i] += u[i][j] * aux[j];
         }
     }
 
@@ -323,9 +332,10 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
 }
 
 inline void SubMatrix::ForwardPropagate(const double *down, double *up, double length) const {
-    double **eigenvect = GetEigenVect();
-    double **inveigenvect = GetInvEigenVect();
-    double *eigenval = GetEigenVal();
+
+    if (! diagflag)  {
+        Diagonalise();
+    }
 
     auto aux = new double[GetNstate()];
 
@@ -335,12 +345,13 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            aux[i] += down[j] * eigenvect[j][i];
+            aux[i] += down[j] * u(j,i);
+            // aux[i] += down[j] * u[j][i];
         }
     }
 
     for (int i = 0; i < GetNstate(); i++) {
-        aux[i] *= exp(length * eigenval[i]);
+        aux[i] *= exp(length * v[i]);
     }
 
     for (int i = 0; i < GetNstate(); i++) {
@@ -349,7 +360,8 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            up[i] += aux[j] * inveigenvect[j][i];
+            up[i] += aux[j] * invu(j,i);
+            // up[i] += aux[j] * invu[j][i];
         }
     }
 
@@ -357,12 +369,15 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
 }
 
 inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength)	const {
-	double** invp = GetInvEigenVect();
-	double** p = GetEigenVect();
-	double* l = GetEigenVal();
+
+    if (! diagflag) {
+        Diagonalise();
+    }
+
 	double tot = 0;
 	for (int i=0; i<GetNstate(); i++)	{
-		tot += p[stateup][i] * exp(efflength * l[i]) * invp[i][statedown];
+		tot += invu(stateup,i) * exp(efflength * v[i]) * invu(i,statedown);
+		// tot += invu[stateup][i] * exp(efflength * v[i]) * invu[i][statedown];
 	}
 	return tot;
 }
@@ -379,13 +394,13 @@ inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double* p, double 
 	for (int k=0; k<GetNstate(); k++)	{
 		tot += p[k];
 	}
+	delete[] p1;
 	if (fabs(1 - tot) > 1e-5)	{
 		std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot) << '\n';
 		std::cerr << "eff length : " << efflength << '\n';
 		ToStream(std::cerr);
 		exit(1);
 	}
-	delete[] p1;
 }
 
 inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n)	const {
@@ -402,14 +417,13 @@ inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n)
 	while ((k<GetNstate()) && (s > p[k]))	{
 		k++;
 	}
+	delete[] p;
 	if (k == GetNstate())	{
 		std::cerr << "error in DrawUniformizedTransition: overflow\n";
 		throw;
 	}
-	delete[] p;
 	return k;
 }
-
 
 inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength)	const {
 
@@ -444,14 +458,15 @@ inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedo
 
 inline double SubMatrix::DrawWaitingTime(int state)	const {
 
-	const double* row = GetRow(state);
+    EVector row = GetRow(state);
+	// const double* row = GetRow(state);
 	double t = Random::sExpo() / (-row[state]);
 	return t;
 }
 
 inline int SubMatrix::DrawOneStep(int state)	const {
 
-	const double* row = GetRow(state);
+    EVector row = GetRow(state);
 	double p = -row[state] * Random::Uniform();
 	int k = -1;
 	double tot = 0;

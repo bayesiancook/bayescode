@@ -26,13 +26,10 @@ void GTRSubMatrix::ComputeArray(int i) const {
 	double total = 0;
 	for (int j = 0; j < Nstate; j++) {
 	    if (i != j) {
-		Q[i][j] = RelativeRate(i, j) * mStationary[j];
-		total += Q[i][j];
+            Q(i,j) = RelativeRate(i, j) * mStationary[j];
+            total += Q(i,j);
 	    }
 	}
 
-	// should always ensure that the diagonal entry of the matrix Q[i][i] is
-	// such that
-	// the sum over all entries of the row is equal to 0
-	Q[i][i] = -total;
+	Q(i,i) = -total;
 }

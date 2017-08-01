@@ -15,53 +15,35 @@ double SubMatrix::nz = 0;
 double SubMatrix::meanz = 0;
 double SubMatrix::maxz = 0;
 
-// ---------------------------------------------------------------------------
-//     SubMatrix()
-// ---------------------------------------------------------------------------
-SubMatrix::SubMatrix(int inNstate, bool innormalise) : Nstate(inNstate), normalise(innormalise) {
-    ndiagfailed = 0;
-    // discn = 10;
-    Create();
-}
-
 void SubMatrix::Create() {
+    // Q = new double *[Nstate];
+    // for (int i = 0; i < Nstate; i++) {
+    //     Q[i] = new double[Nstate];
+    // }
     Q = EMatrix(Nstate, Nstate);
-    /*
-    Q = new double *[Nstate];
-    for (int i = 0; i < Nstate; i++) {
-        Q[i] = new double[Nstate];
-    }
-    */
 
     u = EMatrix(Nstate, Nstate);
-    /*
-    u = new double *[Nstate];
-    for (int i = 0; i < Nstate; i++) {
-        u[i] = new double[Nstate];
-    }
-    */
+    // u = new double *[Nstate];
+    // for (int i = 0; i < Nstate; i++) {
+    //     u[i] = new double[Nstate];
+    // }
 
     invu = EMatrix(Nstate, Nstate);
-    /*
-    invu = new double *[Nstate];
-    for (int i = 0; i < Nstate; i++) {
-        invu[i] = new double[Nstate];
-    }
-    */
+    // invu = new double *[Nstate];
+    // for (int i = 0; i < Nstate; i++) {
+    //     invu[i] = new double[Nstate];
+    // }
 
     v = EVector(Nstate);
     vi = EVector(Nstate);
-    /*
-    v = new double[Nstate];
-    vi = new double[Nstate];
-    */
+    // v = new double[Nstate];
+    // vi = new double[Nstate];
 
     mStationary = EVector(Nstate);
     oldStationary = new double[Nstate];
-    // mStationary = new double[Nstate];
 
     UniMu = 1;
-    mPow = new double **[UniSubNmax];
+    mPow = new double**[UniSubNmax];
     for (int n = 0; n < UniSubNmax; n++) {
         mPow[n] = nullptr;
     }
@@ -74,12 +56,10 @@ void SubMatrix::Create() {
     }
     powflag = false;
 
-    /*
-    aux = new double *[Nstate];
-    for (int i = 0; i < Nstate; i++) {
-        aux[i] = new double[Nstate];
-    }
-    */
+    // aux = new double *[Nstate];
+    // for (int i = 0; i < Nstate; i++) {
+    //     aux[i] = new double[Nstate];
+    // }
 }
 
 // ---------------------------------------------------------------------------
@@ -87,17 +67,15 @@ void SubMatrix::Create() {
 // ---------------------------------------------------------------------------
 
 SubMatrix::~SubMatrix() {
-    /*
     for (int i = 0; i < Nstate; i++) {
-        delete[] Q[i];
-        delete[] u[i];
-        delete[] invu[i];
-        delete[] aux[i];
+        // delete[] Q[i];
+        // delete[] u[i];
+        // delete[] invu[i];
+        // delete[] aux[i];
     }
-    delete[] Q;
-    delete[] u;
-    delete[] invu;
-    */
+    // delete[] Q;
+    // delete[] u;
+    // delete[] invu;
 
     if (mPow != nullptr) {
         for (int n = 0; n < UniSubNmax; n++) {
@@ -113,18 +91,15 @@ SubMatrix::~SubMatrix() {
     // delete[] mStationary;
     delete[] oldStationary;
     delete[] flagarray;
-    /*
-    delete[] v;
-    delete[] vi;
+    // delete[] v;
+    // delete[] vi;
 
-    delete[] aux;
-    */
+    // delete[] aux;
 }
 
 // ---------------------------------------------------------------------------
 //     void ScalarMul()
 // ---------------------------------------------------------------------------
-
 void SubMatrix::ScalarMul(double e) {
     for (int i = 0; i < Nstate; i++) {
         v[i] *= e;
@@ -142,7 +117,7 @@ int SubMatrix::Diagonalise() const {
     }
 
     diagcount++;
-    auto& stat = GetEigenStationary();
+    auto& stat = GetStationary();
 
     EMatrix a(Nstate, Nstate);
 
@@ -173,75 +148,8 @@ int SubMatrix::Diagonalise() const {
 }
 
 // ---------------------------------------------------------------------------
-//     Diagonalise()
-// ---------------------------------------------------------------------------
-
-/*
-int SubMatrix::Diagonalise() const {
-    if (!ArrayUpdated()) {
-        UpdateMatrix();
-    }
-
-    int nmax = 1000;
-    double epsilon = 1e-20;
-    int n = LinAlg::DiagonalizeRateMatrix(Q, mStationary, Nstate, v, u, invu, nmax, epsilon);
-    bool failed = (n == nmax);
-    if (failed) {
-        cerr << "in submatrix: diag failed\n";
-        cerr << "n : " << n << '\t' << nmax << '\n';
-        ofstream os("mat");
-        ToStream(os);
-        exit(1);
-    }
-    diagflag = true;
-    return static_cast<int>(failed);
-}
-*/
-
-/*
-int SubMatrix::Diagonalise() const {
-    if (!ArrayUpdated()) {
-        UpdateMatrix();
-    }
-
-	// copy Q into aux
-	for (int i=0; i<Nstate; i++)	{
-		for (int j=0; j<Nstate; j++)	{
-			aux[i][j] = Q[i][j];
-		}
-	}
-
-	double * w = new double[Nstate];
-	int* iw = new int[Nstate];
-
-	// diagonalise a into v and u
-    cerr << "diag\n";
-	int success = EigenRealGeneral(Nstate, aux, v, vi, u, iw, w);
-    cerr << "diag ok\n";
-    cerr << success << '\n';
-
-	// copy u into aux
-	for (int i=0; i<Nstate; i++)	{
-		for (int j=0; j<Nstate; j++)	{
-			aux[i][j] = u[i][j];
-		}
-	}
-
-	// invert a into invu
-	InvertMatrix(aux, Nstate, w, iw, invu);
-
-	// CheckDiag();
-
-	delete[] w;
-	delete[] iw;
-	return success;
-}
-*/
-
-// ---------------------------------------------------------------------------
 //     ComputeRate()
 // ---------------------------------------------------------------------------
-
 double SubMatrix::GetRate() const {
     if (!ArrayUpdated()) {
         UpdateStationary();
@@ -255,11 +163,31 @@ double SubMatrix::GetRate() const {
     double norm = 0;
     for (int i = 0; i < Nstate - 1; i++) {
         for (int j = i + 1; j < Nstate; j++) {
-            norm += mStationary[i] * Q(i,j);
-            // norm += mStationary[i] * Q[i][j];
+            norm += mStationary[i] * Q(i, j);
         }
     }
     return 2 * norm;
+}
+
+const EVector& SubMatrix::GetEigenVal() const {
+    if (!diagflag) {
+        Diagonalise();
+    }
+    return v;
+}
+
+const EMatrix& SubMatrix::GetEigenVect() const {
+    if (!diagflag) {
+        Diagonalise();
+    }
+    return u;
+}
+
+const EMatrix& SubMatrix::GetInvEigenVect() const {
+    if (!diagflag) {
+        Diagonalise();
+    }
+    return invu;
 }
 
 // ---------------------------------------------------------------------------
@@ -289,7 +217,6 @@ void SubMatrix::Normalise() const {
     for (int i = 0; i < Nstate; i++) {
         for (int j = 0; j < Nstate; j++) {
             Q(i, j) /= norm;
-            // Q[i][j] /= norm;
         }
     }
 }
@@ -338,46 +265,6 @@ void SubMatrix::ActivatePowers() const {
     }
 }
 
-/*
-void SubMatrix::ActivatePowers() const {
-    if (!powflag) {
-        if (!ArrayUpdated()) {
-            UpdateMatrix();
-        }
-
-        UniMu = 0;
-        for (int i = 0; i < Nstate; i++) {
-            if (UniMu < fabs(Q[i][i])) {
-                UniMu = fabs(Q[i][i]);
-            }
-        }
-
-        CreatePowers(0);
-        for (int i = 0; i < Nstate; i++) {
-            for (int j = 0; j < Nstate; j++) {
-                mPow[0][i][j] = 0;
-            }
-        }
-        for (int i = 0; i < Nstate; i++) {
-            mPow[0][i][i] = 1;
-        }
-        for (int i = 0; i < Nstate; i++) {
-            for (int j = 0; j < Nstate; j++) {
-                mPow[0][i][j] += Q[i][j] / UniMu;
-                if (mPow[0][i][j] < 0) {
-                    cerr << "error in SubMatrix::ComputePowers: negative prob : ";
-                    cerr << i << '\t' << j << '\t' << mPow[0][i][j] << '\n';
-                    cerr << "Nstate : " << Nstate << '\n';
-                    exit(1);
-                }
-            }
-        }
-        npow = 1;
-        powflag = true;
-    }
-}
-*/
-
 void SubMatrix::InactivatePowers() const {
     if (powflag) {
         for (int n = 0; n < UniSubNmax; n++) {
@@ -399,7 +286,7 @@ void SubMatrix::InactivatePowers() const {
 
 void SubMatrix::CreatePowers(int n) const {
     if (mPow[n] == nullptr) {
-        mPow[n] = new double *[Nstate];
+        mPow[n] = new double*[Nstate];
         for (int i = 0; i < Nstate; i++) {
             mPow[n][i] = new double[Nstate];
         }
@@ -438,7 +325,7 @@ void SubMatrix::ComputePowers(int N) const {
             CreatePowers(n);
             for (int i = 0; i < Nstate; i++) {
                 for (int j = 0; j < Nstate; j++) {
-                    double &t = mPow[n][i][j];
+                    double& t = mPow[n][i][j];
                     t = 0;
                     for (int k = 0; k < Nstate; k++) {
                         t += mPow[n - 1][i][k] * mPow[0][k][j];
@@ -450,19 +337,18 @@ void SubMatrix::ComputePowers(int N) const {
     }
 }
 
-void SubMatrix::ToStream(ostream &os) const {
+void SubMatrix::ToStream(ostream& os) const {
     os << GetNstate() << '\n';
-    os << "stationaries: \n";
+    os << "stationaries:\n";
     for (int i = 0; i < GetNstate(); i++) {
         os << Stationary(i) << '\t';
     }
     os << '\n';
 
-    os << "rate matrix\n";
+    os << "rate matrix:\n";
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            os << Q(i,j) << '\t';
-            // os << Q[i][j] << '\t';
+            os << Q(i, j) << '\t';
         }
         os << '\n';
     }
@@ -474,25 +360,17 @@ void SubMatrix::ToStream(ostream &os) const {
     os << '\n';
 }
 
-void SubMatrix::CheckReversibility() const {
-    double max = 0;
-    int imax = 0;
-    int jmax = 0;
-    for (int i = 0; i < GetNstate(); i++) {
-        for (int j = i + 1; j < GetNstate(); j++) {
-            double tmp = fabs(Stationary(i) * Q(i,j) - Stationary(j) * Q(j,i));
-            if (max < tmp) {
-                max = tmp;
-                imax = i;
-                jmax = j;
-            }
-        }
+double SubMatrix::SuffStatLogProb(PathSuffStat* suffstat) {
+    double total = 0;
+    auto& stat = GetStationary();
+    for (auto i : suffstat->rootcount) {
+        total += i.second * log(stat[i.first]);
     }
-    if (max > 1e-6) {
-        cerr << "max irreversibility: " << max << '\n';
-        cerr << imax << '\t' << jmax << '\t' << Stationary(imax) << '\t' << Q(imax,jmax) << '\t'
-             << Stationary(jmax) << '\t' << Q(jmax,imax) << '\n';
-        exit(1);
+    for (auto i : suffstat->waitingtime) {
+        total += i.second * (*this)(i.first, i.first);
     }
+    for (auto i : suffstat->paircount) {
+        total += i.second * log((*this)(i.first.first, i.first.second));
+    }
+    return total;
 }
-
