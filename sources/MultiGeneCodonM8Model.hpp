@@ -432,11 +432,9 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void SlaveResampleSub()  {
 
-        double frac = 0.2;
-
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
-                geneprocess[gene]->ResampleSub(frac);
+                geneprocess[gene]->ResampleSub(1.0);
             }
         }
     }
