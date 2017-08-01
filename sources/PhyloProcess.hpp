@@ -86,8 +86,6 @@ public:
 	// probability, pruning, sampling
 	double GetLogProb();                        // likelihood Felsenstein 1981
 	double GetFastLogProb();                            // likelihood Felsenstein 1981
-	double GetPathLogProb();                            // probability of the entire mapping
-	double GetPathLogProb(const Link *from, int site);  // probability of the entire mapping
 
 	double Move(double fraction);
 	void DrawSites(double fraction); // draw a fraction of sites which will be resampled
@@ -96,20 +94,26 @@ public:
 
 	// basic building blocks for compiling suffstats...
 
+    /*
 	void AddRootSuffStat(int site, PathSuffStat& suffstat);
 	void AddPathSuffStat(const Link* link, int site, PathSuffStat& suffstat);
 	void AddLengthSuffStat(const Link* link, int site, PoissonSuffStat& suffstat);
+    */
 	// void AddPoissonSuffStat(const Link* link, int site, PoissonSuffStat& suffstat);
 
 	// ... which are then used for looping over branches and sites
+    //
+    // void PrintMissing(const Link* from, int site);
 
 	// homogeneous across sites and branches
 	void AddPathSuffStat(PathSuffStat& suffstat);
 	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
+	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
 
 	// heterogeneeous across sites, homogeneous across branches
 	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
 	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
+	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
 
 	// homogeneous across sites, heterogeneous across branches
 	// void AddSuffStat(BranchArray<PathSuffStat>& branchsuffstatarray, PathSuffStat& rootsuffstat);
@@ -120,6 +124,7 @@ public:
 	// homogeneous across sites
 	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
 	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
+	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat);
 
 	// homogeneous across branches
 	// void AddPoissonSuffStat(Array<PoissonSuffStat>& poissonsuffstatarray);
@@ -216,7 +221,7 @@ public:
 	std::map<const Link *, double *> condlmap;
 	std::map<const Node*, BranchSitePath **> pathmap;
 	std::map<const Node *, int *> statemap;
-	std::map<const Node *, int> totmissingmap;
+	// std::map<const Node *, int> totmissingmap;
 
     int** missingmap;
 
