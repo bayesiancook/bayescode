@@ -2,8 +2,14 @@
 #define RANDOM_H
 
 #include "Eigen/Dense"
-using EMatrix = Eigen::MatrixXd;
-using EVector = Eigen::VectorXd;
+//
+// c++11
+// using EMatrix = Eigen::MatrixXd;
+// using EVector = Eigen::VectorXd;
+
+typedef Eigen::MatrixXd EMatrix;
+typedef Eigen::VectorXd EVector;
+
 
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
