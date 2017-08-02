@@ -62,6 +62,7 @@ class SubMatrix {
 
     static int nuni;
     static int nunimax;
+    static double diagerr;
 
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
@@ -140,6 +141,7 @@ class SubMatrix {
     bool ArrayUpdated() const;
 
     int Diagonalise() const;
+    double CheckDiag() const;
 
     // data members
 

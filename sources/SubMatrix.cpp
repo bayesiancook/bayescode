@@ -10,6 +10,7 @@ using namespace std;
 int SubMatrix::nuni = 0;
 int SubMatrix::nunimax = 0;
 int SubMatrix::nunisubcount = 0;
+double SubMatrix::diagerr = 0;
 
 double SubMatrix::nz = 0;
 double SubMatrix::meanz = 0;
@@ -132,7 +133,58 @@ int SubMatrix::Diagonalise() const {
         exit(1);
     }
     diagflag = true;
+    double err = CheckDiag();
+    if (diagerr < err)  {
+        diagerr = err;
+    }
     return static_cast<int>(failed);
+}
+
+double SubMatrix::CheckDiag() const {
+
+    double aux[Nstate][Nstate];
+    double D[Nstate][Nstate];
+    double Q2[Nstate][Nstate];
+
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            D[i][j] = 0;
+        }
+    }
+    for (int i = 0; i < Nstate; i++) {
+        D[i][i] = v[i];
+    }
+
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            double tmp = 0;
+            for (int k=0; k<Nstate; k++)    {
+                tmp += D[i][k] * invu[k][j];
+            }
+            aux[i][j] = tmp;
+        }
+    }
+
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            double tmp = 0;
+            for (int k=0; k<Nstate; k++)    {
+                tmp += u[i][k] * aux[k][j];
+            }
+            Q2[i][j] = tmp;
+        }
+    }
+
+    double max = 0;
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            double temp = fabs(Q2[i][j] - Q[i][j]);
+            if (max < temp) {
+                max = temp;
+            }
+        }
+    }
+    return max;
 }
 
 /*
