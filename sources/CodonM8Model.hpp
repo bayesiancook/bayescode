@@ -770,6 +770,7 @@ class CodonM8Model	{
 		os << "alpha\tbeta\t";
 		os << "statent\t";
 		os << "rrent\n";
+        os << "diagerr\n";
 	}
 
 	void Trace(ostream& os) {	
@@ -781,7 +782,9 @@ class CodonM8Model	{
         os << purifweight[0] << '\t' << purifweight[2] << '\t';
 		os << alpha << '\t' << beta << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
-		os << GetEntropy(nucrelrate,Nrr) << '\n';
+		os << GetEntropy(nucrelrate,Nrr) << '\t';
+        os << SubMatrix::diagerr << '\n';
+        SubMatrix::diagerr = 0;
 	}
 
 	void TracePostProb(ostream& os) {

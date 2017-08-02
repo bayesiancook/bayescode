@@ -37,6 +37,7 @@ class SubMatrix {
     static int nuni;
     static int nunimax;
     static int diagcount;
+    static double diagerr;
 
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
@@ -110,6 +111,7 @@ class SubMatrix {
     bool ArrayUpdated() const;
 
     int Diagonalise() const;
+    double CheckDiag() const;
 
     // data members
 
@@ -384,7 +386,8 @@ inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double* p, double 
 	if (fabs(1 - tot) > 1e-5)	{
 		std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot) << '\n';
 		std::cerr << "eff length : " << efflength << '\n';
-		ToStream(std::cerr);
+        std::cerr << "diag error: " << CheckDiag() << '\n';
+		// ToStream(std::cerr);
 		exit(1);
 	}
 }
@@ -424,15 +427,16 @@ inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedo
 		m++;
 		fact *= mu * efflength / m;
 		total += Power(m,stateup,statedown) * fact;
-		if ((total-Z)>1e-12)	{
+		if ((total-Z)>1e-8)	{
 			std::cerr << "error in DrawUniformizedSubstitutionNumber: normalising constant\n";
 			std::cerr << total << '\t' << Z << '\n';
 			std::cerr << mu << '\n';
 			std::cerr << m << '\n';
 			std::cerr << stateup << '\t' << statedown << '\n';
 
-			ToStream(std::cerr);
 			CheckReversibility();
+            std::cerr << "diag error: " << CheckDiag() << '\n';
+			// ToStream(std::cerr);
 			throw;
 		}
 	}

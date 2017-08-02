@@ -10,6 +10,7 @@ int SubMatrix::nuni = 0;
 int SubMatrix::nunimax = 0;
 int SubMatrix::nunisubcount = 0;
 int SubMatrix::diagcount = 0;
+double SubMatrix::diagerr = 0;
 
 double SubMatrix::nz = 0;
 double SubMatrix::meanz = 0;
@@ -168,7 +169,41 @@ int SubMatrix::Diagonalise() const {
     }
 
     diagflag = true;
+    double err = CheckDiag();
+    if (diagerr < err)  {
+        diagerr = err;
+    }
     return 0;
+}
+
+double SubMatrix::CheckDiag() const {
+
+    EMatrix tmp(Nstate, Nstate);
+    EMatrix D(Nstate, Nstate);
+    EMatrix Q2(Nstate, Nstate);
+
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            D(i,j) = 0;
+        }
+    }
+    for (int i = 0; i < Nstate; i++) {
+        D(i,i) = v[i];
+    }
+
+    tmp = D * invu;
+    Q2 = u * tmp;
+
+    double max = 0;
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            double temp = fabs(Q2(i,j) - Q(i,j));
+            if (max < temp) {
+                max = temp;
+            }
+        }
+    }
+    return max;
 }
 
 // ---------------------------------------------------------------------------
