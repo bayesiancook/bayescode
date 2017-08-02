@@ -2,6 +2,7 @@
 #define CODONSTATESPACE_H
 
 #include <map>
+#include "Random.hpp"
 #include "StateSpace.hpp"
 
 class CodonStateSpace : public StateSpace {
@@ -111,6 +112,14 @@ class CodonStateSpace : public StateSpace {
     const int *GetStopPos3() const { return StopPos3; }
 
     // computes the sum of nuc stats over stop codons (S) and returns 1-S
+    double GetNormStat(const EVector& nucstat) const {
+        double stopstat = 0;
+        for (int i=0; i<Nstop; i++) {
+            stopstat += nucstat[StopPos1[i]] * nucstat[StopPos2[i]] * nucstat[StopPos3[i]];
+        }
+        return 1.0 - stopstat;
+    }
+
     double GetNormStat(const double* nucstat) const {
         double stopstat = 0;
         for (int i=0; i<Nstop; i++) {

@@ -85,7 +85,7 @@ class NucPathSuffStat : public SuffStat	{
         double total = 0;
 		// root part
         int nroot = 0;
-        const double* rootstat = mat.GetStationary();
+        auto rootstat = mat.GetStationary();
         for (int i=0; i<Nnuc; i++)	{
             total += rootcount[i] * log(rootstat[i]);
             nroot += rootcount[i];

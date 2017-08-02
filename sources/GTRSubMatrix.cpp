@@ -23,16 +23,24 @@ void GTRSubMatrix::CopyStationary(const std::vector<double>& instat) {
 // ---------------------------------------------------------------------------
 
 void GTRSubMatrix::ComputeArray(int i) const {
+
+    double tot = 0;
+	for (int j = 0; j < Nstate; j++) {
+        tot += mStationary[j];
+    }
+    if (fabs(tot-1) > 1e-4) {
+        cerr << "error in GTRSubMatrix::ComputeArray\n";
+        cerr << "stat not normalized\n";
+        exit(1);
+    }
+
 	double total = 0;
 	for (int j = 0; j < Nstate; j++) {
 	    if (i != j) {
-		Q[i][j] = RelativeRate(i, j) * mStationary[j];
-		total += Q[i][j];
+            Q(i,j) = RelativeRate(i, j) * mStationary[j];
+            total += Q(i,j);
 	    }
 	}
 
-	// should always ensure that the diagonal entry of the matrix Q[i][i] is
-	// such that
-	// the sum over all entries of the row is equal to 0
-	Q[i][i] = -total;
+	Q(i,i) = -total;
 }

@@ -249,7 +249,7 @@ double PhyloProcess::SiteLogLikelihood(int site) {
     Pruning(GetRoot(), site);
     double ret = 0;
     double *t = GetCondLikelihood(GetRoot());
-    const double *stat = GetRootFreq(site);
+    const EVector& stat = GetRootFreq(site);
 	
     for (int k = 0; k < GetNstate(); k++) {
         ret += t[k] * stat[k];
@@ -267,7 +267,7 @@ double PhyloProcess::SiteLogLikelihood(int site) {
 double PhyloProcess::FastSiteLogLikelihood(int site) {
     double ret = 0;
     double *t = GetCondLikelihood(GetRoot());
-    const double *stat = GetRootFreq(site);
+    const EVector& stat = GetRootFreq(site);
     for (int k = 0; k < GetNstate(); k++) {
         ret += t[k] * stat[k];
     }
@@ -379,7 +379,7 @@ void PhyloProcess::PruningAncestral(const Link *from, int site) {
         auto cumulaux = new double[GetNstate()];
         try {
             double *tbl = GetCondLikelihood(from);
-            const double *stat = GetRootFreq(site);
+            const EVector& stat = GetRootFreq(site);
             double tot = 0;
             for (int k = 0; k < GetNstate(); k++) {
                 aux[k] = stat[k] * tbl[k];
@@ -431,7 +431,7 @@ void PhyloProcess::PruningAncestral(const Link *from, int site) {
                     }
                 }
                 if (max == 0) {
-	  	    const double* stat = GetSubMatrix(link->GetBranch()->GetIndex(),site).GetStationary();
+	  	        auto stat = GetSubMatrix(link->GetBranch()->GetIndex(),site).GetStationary();
                     for (int k = 0; k < GetNstate(); k++) {
                         aux[k] = stat[k];
                     }
@@ -471,7 +471,7 @@ void PhyloProcess::PruningAncestral(const Link *from, int site) {
 void PhyloProcess::RootPosteriorDraw(int site) {
     auto aux = new double[GetNstate()];
     double *tbl = GetCondLikelihood(GetRoot());
-    const double* stat = GetRootFreq(site);
+    const EVector& stat = GetRootFreq(site);
     for (int k = 0; k < GetNstate(); k++) {
         aux[k] = stat[k] * tbl[k];
     }
@@ -485,6 +485,7 @@ void PhyloProcess::PriorSample(const Link *from, int site, bool rootprior) {
     if (from->isRoot()) {
         if (rootprior) {
             state = Random::DrawFromDiscreteDistribution(GetRootFreq(site),GetNstate());
+            // state = Random::DrawFromDiscreteDistribution(GetRootFreq(site),GetNstate());
         } else {
             RootPosteriorDraw(site);
         }

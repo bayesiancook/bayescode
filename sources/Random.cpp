@@ -191,6 +191,36 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double>& prob)    {
 // ---------------------------------------------------------------------------------
 //		¥ DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
+int Random::DrawFromDiscreteDistribution(const EVector& prob, int nstate) {
+    try {
+        double total = 0;
+        for (int k = 0; k < nstate; k++) {
+            total += prob[k];
+        }
+        double p = total * Random::Uniform();
+        double tot = 0;
+        int k = -1;
+        do {
+            k++;
+            tot += prob[k];
+        } while ((k < nstate) && (tot < p));
+        if (k == nstate) {
+            std::cerr << "finite discrete overflow\n";
+            for (int k = 0; k < nstate; k++) {
+                std::cerr << prob[k] << '\n';
+            }
+            throw;
+        }
+        return k;
+    } catch (...) {
+        std::cerr << "error in draw from \n";
+        throw;
+    }
+}
+
+// ---------------------------------------------------------------------------------
+//		¥ DrawFromDiscreteDistribution()
+// ---------------------------------------------------------------------------------
 int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
     try {
         double total = 0;
