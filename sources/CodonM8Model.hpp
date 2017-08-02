@@ -22,7 +22,6 @@ class CodonM8Model	{
 	CodonSequenceAlignment* codondata;
 
 	int ncat;
-	int withpos;
 
 	int Nsite;
 	int Ntaxa;
@@ -92,12 +91,12 @@ class CodonM8Model	{
 
 	public:
 
-	CodonM8Model(string datafile, string treefile, int inncat, int inwithpos)	{
+	CodonM8Model(string datafile, string treefile, int inncat, double inpi)	{
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
 		ncat = inncat;
-		withpos = inwithpos;
+        pi = inpi;
 
 		Nsite = codondata->GetNsite();    // # columns
 		Ntaxa = codondata->GetNtaxa();
@@ -145,14 +144,15 @@ class CodonM8Model	{
 
         aalpha = abeta = 1.0;
         balpha = bbeta = 1.0;
-        pi = 0.1;
         poswalpha = poswbeta = 1.0;
         dposomalpha = dposombeta = 1.0;
 
 		alpha = beta = 1.0;
-		posw = 0.1;
-        if (! withpos)  {
+        if (! pi)   {
             posw = 0;
+        }
+        else    {
+            posw = 0.1;
         }
 		dposom = 0.5;
         purifweight.assign(3,1.0/3);
@@ -411,8 +411,10 @@ class CodonM8Model	{
 		MoveAlpha(0.1,10);
 		MoveBeta(0.1,10);
 		MovePosOm(1,10);
-		MovePosWeight(1,10);
-        if (withpos == 1)    {
+        if (pi != 0)    {
+            MovePosWeight(1,10);
+        }
+        if ((pi != 0) && (pi != 1))    {
             SwitchPosWeight(10);
         }
 		MovePurifWeight(0.3,1,10);

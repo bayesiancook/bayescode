@@ -62,7 +62,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     double* lnL;
 
     int ncat;
-    int withpos;
+    int fixpi;
 
     public:
 
@@ -70,10 +70,11 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
-    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int inwithpos, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
+    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int infixpi, double inpi, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
 
         ncat = inncat;
-        withpos = inwithpos;
+        fixpi = infixpi;
+        pi = inpi;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -133,7 +134,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
         aalpha = abeta = 1.0;
         balpha = bbeta = 1.0;
-        pi = 0.1;
         poswalpha = poswbeta = 1.0;
         dposomalpha = dposombeta = 1.0;
 
@@ -157,7 +157,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
             for (int gene=0; gene<GetNgene(); gene++)   {
                 if (genealloc[gene] == myid)    {
-                    geneprocess[gene] = new CodonM8Model(genename[gene],treefile,ncat,withpos);
+                    geneprocess[gene] = new CodonM8Model(genename[gene],treefile,ncat,pi);
                 }
             }
         }
@@ -541,7 +541,10 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		HyperScalingMove(balpha,0.3,10);
 		HyperScalingMove(bbeta,0.3,10);
 
-        ResamplePi();
+        if (! fixpi)    {
+            ResamplePi();
+        }
+
 		HyperScalingMove(poswalpha,1.0,10);
 		HyperScalingMove(poswbeta,1.0,10);
 		HyperScalingMove(poswalpha,0.3,10);

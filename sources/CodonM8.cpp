@@ -8,10 +8,10 @@ int main(int argc, char* argv[])	{
 	string datafile = argv[1];
 	string treefile = argv[2];
 	int ncat = atoi(argv[3]);
-	int withpos = atoi(argv[4]);
+	double pi = atof(argv[4]);
 	string name = argv[5];
 
-	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,withpos);
+	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,pi);
     model->Unfold();
 	ofstream os((name + ".trace").c_str());
 	ofstream pos((name + ".sitepp").c_str());
