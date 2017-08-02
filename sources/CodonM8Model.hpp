@@ -769,7 +769,7 @@ class CodonM8Model	{
         os << "w0\tw1\t";
 		os << "alpha\tbeta\t";
 		os << "statent\t";
-		os << "rrent\n";
+		os << "rrent\t";
         os << "diagerr\n";
 	}
 
