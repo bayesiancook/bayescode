@@ -242,7 +242,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
                 totweight += poswarray->GetVal(gene);
             }
         }
-        return tot / totweight;
+        return tot / totweight + 1;
     }
 
     void SlaveTrace()   {
