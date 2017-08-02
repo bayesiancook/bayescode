@@ -46,7 +46,7 @@ public:
 		return submatrixarray->GetVal(branch,site);
 	}
 
-	const double* GetRootFreq(int site) const {
+	const EVector& GetRootFreq(int site) const {
 		return rootsubmatrixarray->GetVal(site).GetStationary();
 	}
 

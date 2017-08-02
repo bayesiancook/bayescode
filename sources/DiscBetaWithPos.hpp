@@ -10,7 +10,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom, vector<double>& inw) : SimpleArray<double>(inncat+3) , ncat(inncat), weight(inncat+3), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom), w(inw) {
             ComputeDiscBeta();
-            (*this)[0] = 1e-5;
+            (*this)[0] = 1e-3;
             (*this)[ncat+1] = 1;
             (*this)[ncat+2] = posom;
             ComputeWeights();

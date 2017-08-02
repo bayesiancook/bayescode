@@ -1,17 +1,14 @@
 #ifndef SUBMATRIX_H
 #define SUBMATRIX_H
 
-#include "Eigen/Dense"
+// #include "Eigen/Dense"
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include "Random.hpp"
 
-using Vector = double *;
-using ConstVect = const double *;
-using Matrix = double **;
-using EMatrix = Eigen::MatrixXd;
-using EVector = Eigen::VectorXd;
+// using EMatrix = Eigen::MatrixXd;
+// using EVector = Eigen::VectorXd;
 
 class SubMatrix {
 
@@ -54,14 +51,7 @@ class SubMatrix {
 
     double Stationary(int i) const;
 
-    // const double *GetStationary() const;
-    const EVector &GetEigenStationary() const;
-    double *GetStationary() const {
-        if (!statflag) {
-            UpdateStationary();
-        }
-        return oldStationary;
-    }
+    const EVector &GetStationary() const;
 
     int GetNstate() const { return Nstate; }
 
@@ -141,7 +131,6 @@ class SubMatrix {
     // the stationary probabilities of the matrix
     // mutable double *mStationary;
     mutable EVector mStationary;  // the stationary probabilities of the matrix
-    double *oldStationary;
 
     mutable Eigen::EigenSolver<EMatrix> solver;
 
@@ -200,7 +189,7 @@ inline const double *SubMatrix::GetRow(int i) const {
 }
 */
 
-inline const EVector &SubMatrix::GetEigenStationary() const {
+inline const EVector &SubMatrix::GetStationary() const {
 // inline const double *SubMatrix::GetStationary() const {
     if (!statflag) {
         UpdateStationary();
@@ -234,9 +223,6 @@ inline bool SubMatrix::ArrayUpdated() const {
 
 inline void SubMatrix::UpdateStationary() const {
     ComputeStationary();
-    for (int i = 0; i < Nstate; i++) {
-        oldStationary[i] = mStationary[i];
-    }
     statflag = true;
 }
 
@@ -376,7 +362,7 @@ inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown,
 
 	double tot = 0;
 	for (int i=0; i<GetNstate(); i++)	{
-		tot += invu(stateup,i) * exp(efflength * v[i]) * invu(i,statedown);
+		tot += u(stateup,i) * exp(efflength * v[i]) * invu(i,statedown);
 		// tot += invu[stateup][i] * exp(efflength * v[i]) * invu[i][statedown];
 	}
 	return tot;

@@ -79,7 +79,7 @@ class PathSuffStat : public SuffStat	{
 	
 	double GetLogProb(const SubMatrix& mat) const {
 		double total = 0;
-		const double* stat = mat.GetStationary();
+		auto stat = mat.GetStationary();
 		for (std::map<int,int>::const_iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
 			total += i->second * log(stat[i->first]);
 		}

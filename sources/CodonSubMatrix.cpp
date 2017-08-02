@@ -47,7 +47,7 @@ void MGCodonSubMatrix::ComputeNucArrays() {
             }
         }
     }
-    const double *stat = NucMatrix->GetStationary();
+    const EVector& stat = NucMatrix->GetStationary();
     const int *stoppos1 = GetCodonStateSpace()->GetStopPos1();
     const int *stoppos2 = GetCodonStateSpace()->GetStopPos2();
     const int *stoppos3 = GetCodonStateSpace()->GetStopPos3();

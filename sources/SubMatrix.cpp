@@ -57,7 +57,6 @@ void SubMatrix::Create() {
     */
 
     mStationary = EVector(Nstate);
-    oldStationary = new double[Nstate];
     // mStationary = new double[Nstate];
 
     UniMu = 1;
@@ -111,7 +110,6 @@ SubMatrix::~SubMatrix() {
         delete[] mPow;
     }
     // delete[] mStationary;
-    delete[] oldStationary;
     delete[] flagarray;
     /*
     delete[] v;
@@ -137,12 +135,13 @@ void SubMatrix::ScalarMul(double e) {
 //     Diagonalise()
 // ---------------------------------------------------------------------------
 int SubMatrix::Diagonalise() const {
+
     if (!ArrayUpdated()) {
         UpdateMatrix();
     }
 
     diagcount++;
-    auto& stat = GetEigenStationary();
+    auto& stat = GetStationary();
 
     EMatrix a(Nstate, Nstate);
 
@@ -494,5 +493,6 @@ void SubMatrix::CheckReversibility() const {
              << Stationary(jmax) << '\t' << Q(jmax,imax) << '\n';
         exit(1);
     }
+    cerr << "max rev: " << max << '\n';
 }
 
