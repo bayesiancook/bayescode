@@ -9,6 +9,8 @@
 
 // using EMatrix = Eigen::MatrixXd;
 // using EVector = Eigen::VectorXd;
+//
+
 
 class SubMatrix {
 
@@ -30,6 +32,8 @@ class SubMatrix {
     virtual void ComputeStationary() const = 0;
 
   public:
+
+
     static const int UniSubNmax = 500;
 	static int		nunisubcount;
 	static int		GetUniSubCount() {return nunisubcount;}
@@ -111,6 +115,8 @@ class SubMatrix {
     bool ArrayUpdated() const;
 
     int Diagonalise() const;
+    int EigenDiagonalise() const;
+    int OldDiagonalise() const;
     double CheckDiag() const;
 
     // data members
@@ -127,11 +133,11 @@ class SubMatrix {
     double ***mPow;
 
     // Q : the infinitesimal generator matrix
-    // mutable double **Q;
+    mutable double **ptrQ;
     mutable EMatrix Q;            // Q : the infinitesimal generator matrix
 
     // the stationary probabilities of the matrix
-    // mutable double *mStationary;
+    mutable double *ptrStationary;
     mutable EVector mStationary;  // the stationary probabilities of the matrix
 
     mutable Eigen::EigenSolver<EMatrix> solver;
@@ -143,17 +149,9 @@ class SubMatrix {
 
   protected:
 
-    // v : eigenvalues
-    // vi : imaginary part
-    // u : the matrix of eigen vectors
-    // invu : the inverse of u
-
-    /*
-    mutable double **u;
-    mutable double **invu;
-    mutable double *v;
-    mutable double *vi;
-    */
+    mutable double **ptru;
+    mutable double **ptrinvu;
+    mutable double *ptrv;
 
     mutable EMatrix u;     // u : the matrix of eigen vectors
     mutable EMatrix invu;  // invu : the inverse of u
