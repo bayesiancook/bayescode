@@ -30,9 +30,11 @@ int main(int argc, char* argv[])	{
 	int ncat = atoi(argv[3]);
 	int fixpi = atoi(argv[4]);
     double pi = atof(argv[5]);
-	string name = argv[6];
+    double pialpha = atof(argv[6]);
+    double pibeta = atof(argv[7]);
+	string name = argv[8];
 
-	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,fixpi,pi,myid,nprocs);
+	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,fixpi,pi,pialpha,pibeta,myid,nprocs);
     if (! myid) {
         cerr << " -- master unfold\n";
     }

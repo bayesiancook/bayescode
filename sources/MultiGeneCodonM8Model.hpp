@@ -41,6 +41,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     IIDBernoulliBeta* poswarray;
     BernoulliBetaSuffStat poswsuffstat;
 
+    double pialpha;
+    double pibeta;
     double dposomalpha;
     double dposombeta;
     IIDGamma* dposomarray;
@@ -70,11 +72,13 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
-    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int infixpi, double inpi, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
+    MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, int infixpi, double inpi, double inpialpha, double inpibeta, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
 
         ncat = inncat;
         fixpi = infixpi;
         pi = inpi;
+        pialpha = inpialpha;
+        pibeta = inpibeta;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -582,8 +586,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             cerr << "error in resample pi\n";
             exit(1);
         }
-        double a0 = Random::sGamma(1.0 + n0);
-        double a1 = Random::sGamma(1.0 + n1);
+        double a0 = Random::sGamma(pialpha + n0);
+        double a1 = Random::sGamma(pibeta + n1);
         pi = a1 / (a0 + a1);
     }
 
