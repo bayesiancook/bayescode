@@ -410,8 +410,8 @@ class CodonM8Model	{
 		CollectOmegaSuffStat();
 		MoveAlpha(0.1,10);
 		MoveBeta(0.1,10);
-		MovePosOm(1,10);
         if (pi != 0)    {
+            MovePosOm(1,10);
             MovePosWeight(1,10);
         }
         if ((pi != 0) && (pi != 1))    {
