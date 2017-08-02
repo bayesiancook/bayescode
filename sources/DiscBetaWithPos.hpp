@@ -85,8 +85,13 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     // still numerically unstable
     void ComputeDiscBeta()   {
-        for (int cat=0; cat<ncat; cat++)  {
-            (*this)[cat+1] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
+        if (ncat == 1)  {
+            (*this)[1] = alpha / (alpha+beta);
+        }
+        else    {
+            for (int cat=0; cat<ncat; cat++)  {
+                (*this)[cat+1] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
+            }
         }
     }
 
