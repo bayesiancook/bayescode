@@ -827,7 +827,6 @@ class CodonM8Model	{
 	}
 
 	void Trace(ostream& os) {	
-        cerr << pi << '\t' << posw << '\t' << poswhypermean << '\t' <<  poswhyperinvconc << '\n';
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
 		os << GetTotalLength() << '\t';

@@ -506,7 +506,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void SlaveReceiveHyperParameters()   {
 
-        int N = Nbranch + Nrr + Nnuc + 13;
+        int N = 13;
         double* array = new double[N];
         MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
         int i = 0;
