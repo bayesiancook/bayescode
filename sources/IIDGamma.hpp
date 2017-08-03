@@ -88,6 +88,22 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
+	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<double>& poswarray) const {
+		for (int i=0; i<GetSize(); i++)	{
+            if (poswarray.GetVal(i)) {
+                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
+            }
+		}
+	}
+
+    void PriorResample(const ConstArray<double>& poswarray) {
+		for (int i=0; i<GetSize(); i++)	{
+            if (poswarray.GetVal(i)) {
+                (*this)[i] = Random::Gamma(shape,scale);
+            }
+		}
+    }
+
     double GetMean() const {
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {

@@ -245,6 +245,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << "dposommean\tinvshape\t";
         os << "statent\t";
         os << "rrent\n";
+        timepercycle.Start();
     }
 
     void MasterTrace(ostream& os)    {
@@ -710,7 +711,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		poswsuffstat.Clear();
 		poswarray->AddSuffStat(poswsuffstat);
 		dposomsuffstat.Clear();
-		dposomarray->AddSuffStat(dposomsuffstat);
+		dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
         purifweightsuffstat.Clear();
         purifweightarray->AddSuffStat(purifweightsuffstat);
     }
@@ -731,6 +732,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         double dposombeta = dposomalpha / dposomhypermean;
         dposomarray->SetShape(dposomalpha);
         dposomarray->SetScale(dposombeta);
+        dposomarray->PriorResample(*poswarray);
 
         double poswalpha = poswhypermean / poswhyperinvconc;
         double poswbeta = (1-poswhypermean) / poswhyperinvconc;
