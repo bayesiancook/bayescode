@@ -30,37 +30,59 @@ class CodonM8Model	{
 	double lambda;
 	BranchIIDGamma* branchlength;
 	
-	double aalpha;
-    double abeta;
-    double balpha;
-    double bbeta;
+    //
+    // parameters of the distribution of omega across sites
+    //
 
-    double pi;
-    double poswalpha;
-    double poswbeta;
+    // mean and inverse concentration of the discretized Beta for 0 < omega < 1
+    double purifmean;
+    double purifinvconc;
 
-    double dposomalpha;
-    double dposombeta;
+    // positive selection component: omega_pos > 1
+    // here dposm = omega_pos - 1 
+	double dposom;
 
-	double alpha;
-	double beta;
-	double posw;
-
-    // purifweight[0] : omega = 0
-    // purifweight[1] : 0<omega<1 (beta distribution)
-    // purifweight[2] : omega = 1
+    // purifweight[0] : weight of point mass at omega = 0
+    // purifweight[1] : weight for 0<omega<1 (beta distribution)
+    // purifweight[2] : weight of point mass at omega = 1
     vector<double> purifweight;
 
-    vector<double> purifcenter;
-    double purifconcentration;
+    // weight of positive selection component
+	double posw;
 
-	double dposom;
 	DiscBetaWithPos* componentomegaarray;
-
 	MultinomialAllocationVector* sitealloc;
-
 	vector<vector<double> > sitepostprobarray;
 
+    // 
+    // hyperparameters of the priors over the mixture parameters
+    //
+
+    // prior probability for the gene to be under positive selection (i.e. prior prob that posw > 0)
+    double pi;
+
+    // Beta prior for purifmean (with hypermean and hyper inverse concentration)
+    double purifmeanhypermean;
+	double purifmeanhyperinvconc;
+
+    // Gamma prior for purifinvconc (with hyper mean and hyper inverse shape parameter)
+    double purifinvconchypermean;
+    double purifinvconchyperinvshape;
+
+    // Gamma prior for dposom = omega_pos - 1 (with hyper mean and inverse shape parameter)
+    double dposomhypermean;
+    double dposomhyperinvshape;
+
+    // Beta prior for posw (assuming posw>0)
+    double poswhypermean;
+    double poswhyperinvconc;
+
+    // Dirichlet prior for the weights for mass at 0, Beta and mass at 1
+    // (with hyper center and inverse concentration)
+    vector<double> purifweighthypercenter;
+    double purifweighthyperinvconc;
+
+    // nucleotide rate parameters
 	vector<double> nucrelrate;
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
@@ -118,7 +140,10 @@ class CodonM8Model	{
 		std::cerr << "number of branches : " << Nbranch << '\n';
 		std::cerr << "-- Tree and data fit together\n";
 
-		Allocate();
+        purifweight.assign(3,1.0/3);
+        purifweighthypercenter.assign(3,1.0/3);
+
+		// Allocate();
 	}
 
     void Unfold()   {
@@ -142,24 +167,38 @@ class CodonM8Model	{
 		lambda = 10.0;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
 
-        aalpha = abeta = 1.0;
-        balpha = bbeta = 1.0;
-        poswalpha = poswbeta = 1.0;
-        dposomalpha = dposombeta = 1.0;
+        purifmean = 0.5;
+        if (ncat == 0)  {
+            purifinvconc = 0.0;
+        }
+        else    {
+            purifinvconc = 2.0;
+        }
+        purifmeanhypermean = 0.5;
+        purifmeanhyperinvconc = 0.5;
+        purifinvconchypermean = 0.5;
+        purifinvconchyperinvshape = 1.0;
 
-		alpha = beta = 1.0;
+		dposom = 1.0;
+        dposomhypermean = 1.0;
+        dposomhyperinvshape = 1.0;
+
         if (! pi)   {
             posw = 0;
+            poswhypermean = 0;
+            poswhyperinvconc = 0;
         }
         else    {
             posw = 0.1;
+            poswhypermean = 0.1;
+            poswhyperinvconc = 1;
         }
-		dposom = 0.5;
-        purifweight.assign(3,1.0/3);
-        purifcenter.assign(3,1.0/3);
-        purifconcentration = 3.0;
 
-		componentomegaarray = new DiscBetaWithPos(ncat,alpha,beta,posw,dposom+1,purifweight);
+        purifweight.assign(3,1.0/3);
+        purifweighthypercenter.assign(3,1.0/3);
+        purifweighthyperinvconc = 1.0/3;
+
+		componentomegaarray = new DiscBetaWithPos(ncat,purifmean,purifinvconc,posw,dposom+1,purifweight);
 		sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
 		sitepostprobarray.assign(GetNsite(),vector<double>(ncat+3,0));
 
@@ -197,14 +236,30 @@ class CodonM8Model	{
 		siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
 	}
 
+    double GetPurifMean()   {
+        return purifmean;
+    }
+
+    double GetPurifInvConc()    {
+        return purifinvconc;
+    }
+
+    double GetPosW()    {
+        return posw;
+    }
+
+    double GetDPosOm()   {
+        return dposom;
+    }
+
+    double GetPurifWeight(int k)    {
+        return purifweight[k];
+    }
+
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
         for (int j=0; j<Nbranch; j++)   {
             (*branchlength)[j] = inbranchlength.GetVal(j);
         }
-    }
-
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
-        return lengthsuffstatarray;
     }
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
@@ -217,54 +272,33 @@ class CodonM8Model	{
         UpdateMatrices();
     }
 
-    void SetMixtureParameters(double inalpha, double inbeta, double inposw, double indposom, const vector<double>& inpurifweight)    {
-        alpha = inalpha;
-        beta = inbeta;
+    void SetMixtureParameters(double inpurifmean, double inpurifinvconc, double inposw, double indposom, const vector<double>& inpurifweight)    {
+        purifmean = inpurifmean;
+        purifinvconc = inpurifinvconc;
         posw = inposw;
         dposom = indposom;
         purifweight = inpurifweight;
-        componentomegaarray->SetAlphaBeta(alpha,beta);
-        componentomegaarray->SetPos(posw,dposom+1);
-        componentomegaarray->SetPurifWeight(purifweight);
+        componentomegaarray->SetParameters(purifmean,purifinvconc,posw,dposom+1,purifweight);
     }
 
-    void SetMixtureHyperParameters(double inaalpha, double inabeta, double inbalpha, double inbbeta, double inpi, double inposwalpha, double inposwbeta, double indposomalpha, double indposombeta, const vector<double>& inpurifcenter, double inpurifconcentration)  {
-        aalpha = inaalpha;
-        abeta = inabeta;
-        balpha = inbalpha;
-        bbeta = inbbeta;
+    void SetMixtureHyperParameters(double inpurifmeanhypermean, double inpurifmeanhyperinvconc, double inpurifinvconchypermean, double inpurifinvconchyperinvshape, double indposomhypermean, double indposomhyperinvshape, double inpi, double inposwhypermean, double inposwhyperinvconc, const vector<double>& inpurifweighthypercenter, double inpurifweighthyperinvconc)  {
+
+        purifmeanhypermean = inpurifmeanhypermean;
+        purifmeanhyperinvconc = inpurifmeanhyperinvconc;
+        purifinvconchypermean = inpurifinvconchypermean;
+        purifinvconchyperinvshape = inpurifinvconchyperinvshape;
+        dposomhypermean = indposomhypermean;
+        dposomhyperinvshape = indposomhyperinvshape;
         pi = inpi;
-        poswalpha = inposwalpha;
-        poswbeta = inposwbeta;
-        dposomalpha = indposomalpha;
-        dposombeta = indposombeta;
-        purifcenter = inpurifcenter;
-        purifconcentration = inpurifconcentration;
+        poswhypermean = inposwhypermean;
+        poswhyperinvconc = inposwhyperinvconc;
+        purifweighthypercenter = inpurifweighthypercenter;
+        purifweighthyperinvconc = inpurifweighthyperinvconc;
     }
 
-    double GetAlpha() {
-        return alpha;
-    }
-
-    double GetBeta()  {
-        return beta;
-    }
-
-    double GetPosW()  {
-        return posw;
-    }
-
-    double GetDPosOm()    {
-        return dposom;
-    }
-
-    double GetPurifWeight(int k)    {
-        return purifweight[k];
-    }
-
-    const NucPathSuffStat& GetNucPathSuffStat() {
-        return nucpathsuffstat;
-    }
+    // 
+    // Matrices
+    //
 
 	void UpdateNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
@@ -280,41 +314,161 @@ class CodonM8Model	{
 		UpdateCodonMatrices();
 	}
 
+    //
+    // Likelihood
+    //
+
+	double GetLogLikelihood()	{
+        return GetIntegratedLogLikelihood();
+		// return phyloprocess->GetLogProb();
+	}
+
+    double GetIntegratedLogLikelihood() {
+
+        double total = 0;
+        double logp[ncat+3];
+        const vector<double>& w = componentomegaarray->GetWeights();
+        double max = 0;
+        for (int i=0; i<GetNsite(); i++) {
+            int bkalloc = sitealloc->GetVal(i);
+
+            for (int k=0; k<ncat+3; k++) {
+                (*sitealloc)[i] = k;
+                logp[k] = phyloprocess->SiteLogLikelihood(i);
+                if ((!k) || (max<logp[k]))  {
+                    max = logp[k];
+                }
+            }
+
+            double p = 0;
+            for (int k=0; k<ncat+3; k++) {
+                p += w[k] * exp(logp[k]-max);
+            }
+            double logl = log(p) + max;
+            total += logl;
+
+            (*sitealloc)[i] = bkalloc;
+        }
+        return total;
+    }
+
+    //
+    // Suff Stat and suffstatlogprobs
+    //
+
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
+        return lengthsuffstatarray;
+    }
+
+	double LengthSuffStatLogProb()	{
+		return lambdasuffstat.GetLogProb(1.0,lambda);
+	}
+
+    const NucPathSuffStat& GetNucPathSuffStat() {
+        return nucpathsuffstat;
+    }
+
+    double NucPathSuffStatLogProb() {
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
 	double PathSuffStatLogProb()	{
 		return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
 	double OmegaSuffStatLogProb()    {
+        componentomegaarray->SetParameters(purifmean,purifinvconc,posw,dposom+1,purifweight);
 		return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
 	}
 
-	double PosOmegaLogProb()	{
-        return dposomalpha*log(dposombeta) - Random::logGamma(dposomalpha) + (dposomalpha-1)*log(dposom) - dposombeta*dposom;
+    //
+    // Priors
+    //
+
+	double GetLogPrior() {
+		double total = 0;
+		total += LengthLogProb();
+		total += LambdaLogProb();
+        total += OmegaHyperLogProb();
+        total += NucHyperLogProb();
+		return total;
 	}
 
+    double NucHyperLogProb()    {
+        return 0;
+    }
+
+	double LengthLogProb()	{
+		return branchlength->GetLogProb();
+	}
+
+    // Exponential prior for lambda
+	double LambdaLogProb()	{
+		return -lambda / 10;
+	}
+
+    //
+    // Hyper priors for omega mixture
+    //
+    
+    double OmegaHyperLogProb()  {
+        double total = 0;
+        total += PurifMeanLogProb();
+        total += PurifInvConcLogProb();
+        total += PosOmegaLogProb();
+        total += PosWeightLogProb();
+        total += PurifWeightLogProb();
+        return total;
+    }
+
+    // Beta prior for purifmean
+    double PurifMeanLogProb()   {
+        double alpha = purifmeanhypermean / purifmeanhyperinvconc;
+        double beta = (1-purifmeanhypermean) / purifmeanhyperinvconc;
+        return Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(purifmean) + (beta-1)*log(1.0-purifmean);
+	}
+
+    // Gamma prior for purifinvconc
+    double PurifInvConcLogProb() {
+        double alpha = 1.0 / purifinvconchyperinvshape;
+        double beta = alpha / purifinvconchypermean;
+        return alpha*log(beta) - Random::logGamma(alpha) + (alpha-1)*log(purifinvconc) - beta*purifinvconc;
+	}
+
+    // Gamma prior for dposom
+	double PosOmegaLogProb()	{
+        double alpha = 1.0 / dposomhyperinvshape;
+        double beta = alpha / dposomhypermean;
+        return alpha*log(beta) - Random::logGamma(alpha) + (alpha-1)*log(dposom) - beta*dposom;
+	}
+
+    // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
 	double PosWeightLogProb()   {
         if (posw)   {
             if (! pi)   {
                 cerr << "in PosWeightLogProb: pi == 0 and posw > 0\n";
                 exit(1);
             }
-            return log(pi) + Random::logGamma(poswalpha+poswbeta) - Random::logGamma(poswalpha) - Random::logGamma(poswbeta) + (poswalpha-1)*log(posw) + (poswbeta-1)*log(1.0-posw);
+
+            double alpha = poswhypermean / poswhyperinvconc;
+            double beta = (1 - poswhypermean) / poswhyperinvconc;
+            return log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(posw) + (beta-1)*log(1.0-posw);
         }
         else    {
             return log(1-pi);
         }
 	}
 
+    // Dirichlet prior for the weights associated with omega = 0, 0<omega<1 and omega=1
     double PurifWeightLogProb() {
-
-        // Dirichlet 
-        double tot = Random::logGamma(purifconcentration);
+        double tot = Random::logGamma(1.0 / purifweighthyperinvconc);
         for (unsigned int k=0; k<purifweight.size(); k++)    {
-            tot += -Random::logGamma(purifconcentration*purifcenter[k]) + (purifconcentration*purifcenter[k]-1)*log(purifweight[k]);
+            tot += -Random::logGamma(purifweighthypercenter[k]/purifweighthyperinvconc) + (purifweighthypercenter[k]/purifweighthyperinvconc-1)*log(purifweight[k]);
         }
         return tot;
     }
 
+    // Bernoulli for whether posw == 0 or > 0
     double PosSwitchLogProb()   {
         if (posw)   {
             return log(pi);
@@ -322,25 +476,9 @@ class CodonM8Model	{
         return log(1-pi);
     }
 
-	double AlphaLogProb()   {
-		return aalpha*log(abeta) - Random::logGamma(aalpha) + (aalpha-1)*log(alpha) - abeta*alpha;
-	}
-
-	double BetaLogProb()    {
-        return balpha*log(bbeta) - Random::logGamma(balpha) + (balpha-1)*log(beta) - bbeta*beta;
-	}
-
-	double LambdaLogProb()	{
-		return -lambda / 10;
-	}
-
-	double LengthSuffStatLogProb()	{
-		return lambdasuffstat.GetLogProb(1.0,lambda);
-	}
-
-	double LengthLogProb()	{
-		return branchlength->GetLogProb();
-	}
+    //
+    //  Moves 
+    //
 
 	void Move()	{
 
@@ -366,17 +504,21 @@ class CodonM8Model	{
 		phyloprocess->Move(frac);
     }
 
-    void CollectLengthSuffStat()    {
-
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
-    }
+    //
+    // Branch Lengths and hyperparam lambda
+    //
 
 	void ResampleBranchLengths()	{
 
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
+
+    void CollectLengthSuffStat()    {
+
+		lengthsuffstatarray->Clear();
+		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+    }
 
 	void MoveLambda()	{
 
@@ -386,6 +528,33 @@ class CodonM8Model	{
 		MoveLambda(0.3,10);
 		branchlength->SetScale(lambda);
 	}
+
+	double MoveLambda(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - LambdaLogProb() - LengthSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+			lambda *= e;
+			deltalogprob += LambdaLogProb() + LengthSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				lambda /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+    //
+    // Omega mixture 
+    //
 
 	void CollectPathSuffStat()	{
 
@@ -399,32 +568,153 @@ class CodonM8Model	{
 		sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
 	}
 
+	void MoveOmega() 	{
+
+		CollectOmegaSuffStat();
+
+        OmegaHyperSlidingMove(purifmean,0.1,10,0,1);
+        if (ncat > 1)   {
+            OmegaHyperScalingMove(purifinvconc,0.1,10);
+        }
+        if (pi != 0)    {
+            OmegaHyperScalingMove(dposom,1,10);
+            OmegaHyperSlidingMove(posw,1,10,0,1);
+        }
+        if ((pi != 0) && (pi != 1))    {
+            SwitchPosWeight(10);
+        }
+        OmegaHyperProfileMove(purifweight,0.3,1,10);
+        OmegaHyperProfileMove(purifweight,0.1,1,10);
+
+		ResampleAlloc();
+	}
+
 	void CollectOmegaSuffStat()	{
 
 		siteomegasuffstatarray->Clear();
 		siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
 	}
 
-	void MoveOmega() 	{
-
-		CollectOmegaSuffStat();
-		MoveAlpha(0.1,10);
-		MoveBeta(0.1,10);
-        if (pi != 0)    {
-            MovePosOm(1,10);
-            MovePosWeight(1,10);
-        }
-        if ((pi != 0) && (pi != 1))    {
-            SwitchPosWeight(10);
-        }
-		MovePurifWeight(0.3,1,10);
-		MovePurifWeight(0.1,1,10);
-		ResampleAlloc();
+	void ResampleAlloc()	{
+		OmegaSuffStatLogProb();
+		sitealloc->GibbsResample(sitepostprobarray);
 	}
 
-    double NucPathSuffStatLogProb() {
-        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+	double OmegaHyperScalingMove(double& x, double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - OmegaHyperLogProb() - OmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+		    x *= e;
+			deltalogprob += OmegaHyperLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double OmegaHyperSlidingMove(double& x, double tuning, int nrep, double min = 0, double max = 0)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - OmegaHyperLogProb() - OmegaSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+		    x += m;
+            if (max > min)  {
+                while ((x < min) && (x > max))  {
+                    if (x < min)    {
+                        x = 2*min - x;
+                    }
+                    if (x > max)    {
+                        x = 2*max - x;
+                    }
+                }
+            }
+			deltalogprob += OmegaHyperLogProb() + OmegaSuffStatLogProb();
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x -= m;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double OmegaHyperProfileMove(vector<double>& x, double tuning, int n, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        vector<double> bk(x.size(),0);
+		for (int rep=0; rep<nrep; rep++)	{
+            bk = x;
+			double deltalogprob = - OmegaHyperLogProb() - OmegaSuffStatLogProb();
+            double loghastings = Random::ProfileProposeMove(x,x.size(),tuning,n);
+			deltalogprob += OmegaHyperLogProb() + OmegaSuffStatLogProb();
+			deltalogprob += loghastings;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x = bk;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+    double DrawBetaPosWeight()    {
+        double alpha = poswhypermean / poswhyperinvconc;
+        double beta = (1-poswhypermean) / poswhyperinvconc;
+        double a = Random::sGamma(alpha);
+        double b = Random::sGamma(beta);
+        double ret = a / (a+b);
+        return ret;
     }
+
+	double SwitchPosWeight(int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double bkposw = posw;
+			double deltalogprob = - PosSwitchLogProb() - OmegaSuffStatLogProb();
+            if (posw)   {
+                posw = 0;
+            }
+            else    {
+                posw = DrawBetaPosWeight();
+            }
+			deltalogprob += PosSwitchLogProb() + OmegaSuffStatLogProb();
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+				posw = bkposw;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+    //
+    // nucleotide parameters
+    //
 
     void CollectNucPathSuffStat()   {
 		UpdateMatrices();
@@ -445,11 +735,6 @@ class CodonM8Model	{
 		MoveNucStat(0.01,1,3);
 
         UpdateMatrices();
-	}
-
-	void ResampleAlloc()	{
-		OmegaSuffStatLogProb();
-		sitealloc->GibbsResample(sitepostprobarray);
 	}
 
 	double MoveRR(double tuning, int n, int nrep)	{
@@ -508,242 +793,8 @@ class CodonM8Model	{
 		return nacc/ntot;
 	}
 
-	double MoveAlpha(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - AlphaLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			alpha *= e;
-			componentomegaarray->SetAlphaBeta(alpha,beta);
-			deltalogprob += AlphaLogProb() + OmegaSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				alpha /= e;
-				componentomegaarray->SetAlphaBeta(alpha,beta);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveBeta(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - BetaLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			beta *= e;
-			componentomegaarray->SetAlphaBeta(alpha,beta);
-			deltalogprob += BetaLogProb() + OmegaSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				beta /= e;
-				componentomegaarray->SetAlphaBeta(alpha,beta);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MovePosOm(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - PosOmegaLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			dposom *= e;
-			componentomegaarray->SetPos(posw,dposom+1);
-			deltalogprob += PosOmegaLogProb() + OmegaSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				dposom /= e;
-				componentomegaarray->SetPos(posw,dposom+1);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-    double DrawBetaPosWeight()    {
-        double a = Random::sGamma(poswalpha);
-        double b = Random::sGamma(poswbeta);
-        double ret = a / (a+b);
-        return ret;
-    }
-
-	double SwitchPosWeight(int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double bkposw = posw;
-			double deltalogprob = - PosSwitchLogProb() - OmegaSuffStatLogProb();
-            if (posw)   {
-                posw = 0;
-            }
-            else    {
-                posw = DrawBetaPosWeight();
-            }
-			componentomegaarray->SetPos(posw,dposom+1);
-			deltalogprob += PosSwitchLogProb() + OmegaSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				posw = bkposw;
-				componentomegaarray->SetPos(posw,dposom+1);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MovePurifWeight(double tuning, int n, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-        vector<double> bkw = purifweight;
-		for (int rep=0; rep<nrep; rep++)	{
-            bkw = purifweight;
-			double deltalogprob = -PurifWeightLogProb() - OmegaSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(purifweight,3,tuning,n);
-			componentomegaarray->SetPurifWeight(purifweight);
-			deltalogprob += PurifWeightLogProb() + OmegaSuffStatLogProb();
-            deltalogprob += loghastings;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-                purifweight = bkw;
-				componentomegaarray->SetPurifWeight(purifweight);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MovePosWeight(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double bkposw = posw;
-			double deltalogprob = - PosWeightLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			posw += m;
-			while ((posw<0) || (posw>1))    {
-				if (posw <0)    {
-					posw = -posw;
-				}
-				if (posw > 1)   {
-					posw = 2- posw;
-				}
-			}
-			componentomegaarray->SetPos(posw,dposom+1);
-			deltalogprob += PosWeightLogProb() + OmegaSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				posw = bkposw;
-				componentomegaarray->SetPos(posw,dposom+1);
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveLambda(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - LambdaLogProb() - LengthSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			lambda *= e;
-			deltalogprob += LambdaLogProb() + LengthSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				lambda /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
 
 	// summary statistics
-
-	double GetLogPrior() {
-		double total = 0;
-		total += LambdaLogProb();
-		total += LengthLogProb();
-		total += AlphaLogProb();
-		total += BetaLogProb();
-		total += PosOmegaLogProb();
-		total += PosWeightLogProb();
-		return total;
-	}
-
-	double GetLogLikelihood()	{
-        return GetIntegratedLogLikelihood();
-		// return phyloprocess->GetLogProb();
-	}
-
-    double GetIntegratedLogLikelihood() {
-
-        double total = 0;
-        double logp[ncat+3];
-        const vector<double>& w = componentomegaarray->GetWeights();
-        double max = 0;
-        for (int i=0; i<GetNsite(); i++) {
-            int bkalloc = sitealloc->GetVal(i);
-
-            for (int k=0; k<ncat+3; k++) {
-                (*sitealloc)[i] = k;
-                logp[k] = phyloprocess->SiteLogLikelihood(i);
-                if ((!k) || (max<logp[k]))  {
-                    max = logp[k];
-                }
-            }
-
-            double p = 0;
-            for (int k=0; k<ncat+3; k++) {
-                p += w[k] * exp(logp[k]-max);
-            }
-            double logl = log(p) + max;
-            total += logl;
-
-            (*sitealloc)[i] = bkalloc;
-        }
-        return total;
-    }
 
 	double GetTotalLength()	{
 		double tot = 0;
@@ -754,7 +805,7 @@ class CodonM8Model	{
 	}
 
 	double GetMeanOmega()   {
-		return (1-posw)*alpha/(alpha+beta) + posw*(1+dposom);
+		return posw*(1 + dposom) + (1-posw)*(purifweight[1]*purifmean + purifweight[2]);
 	}
 
 	double GetEntropy(const std::vector<double>& profile, int dim) const {
@@ -769,7 +820,7 @@ class CodonM8Model	{
 		os << "#logprior\tlnL\tlength\t";
 		os << "meanomega\tposom\tposw\t";
         os << "w0\tw1\t";
-		os << "alpha\tbeta\t";
+		os << "purifmean\tpurifinvconc\t";
 		os << "statent\t";
 		os << "rrent\t";
         os << "diagerr\n";
@@ -782,7 +833,7 @@ class CodonM8Model	{
 		os << GetMeanOmega() << '\t';
 		os << dposom+1 << '\t' << posw << '\t';
         os << purifweight[0] << '\t' << purifweight[2] << '\t';
-		os << alpha << '\t' << beta << '\t';
+		os << purifmean << '\t' << purifinvconc << '\t';
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\t';
         os << SubMatrix::diagerr << '\n';

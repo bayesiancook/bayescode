@@ -12,6 +12,7 @@ int main(int argc, char* argv[])	{
 	string name = argv[5];
 
 	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,pi);
+    model->Allocate();
     model->Unfold();
 	ofstream os((name + ".trace").c_str());
 	ofstream pos((name + ".sitepp").c_str());
