@@ -11,6 +11,8 @@
 #include "DiscBetaWithPos.hpp"
 #include "MultinomialAllocationVector.hpp"
 
+#include "Chrono.hpp"
+
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
@@ -482,21 +484,39 @@ class CodonM8Model	{
 
 	void Move()	{
 
-		ResampleSub(1.0);
+        Chrono mappingtime, reptime, lengthtime, collecttime, omegatime, nuctime;
+
+        mappingtime.Start();
+		ResampleSub(0.2);
+        mappingtime.Stop();
 
 		int nrep = 30;
 
+        reptime.Start();
 		for (int rep=0; rep<nrep; rep++)	{
 
+            lengthtime.Start();
 			ResampleBranchLengths();
 			MoveLambda();
+            lengthtime.Stop();
 
+
+            collecttime.Start();
 			CollectPathSuffStat();
+            collecttime.Stop();
 
+            omegatime.Start();
 			MoveOmega();
+            omegatime.Stop();
+
+            nuctime.Start();
 			UpdateMatrices();
 			MoveNuc();
+            nuctime.Stop();
 		}
+        reptime.Stop();
+
+        // cerr << mappingtime.GetTime() << '\t' << reptime.GetTime() << '\t' << lengthtime.GetTime() + collecttime.GetTime() + omegatime.GetTime() + nuctime.GetTime() << '\t' << lengthtime.GetTime() << '\t' << collecttime.GetTime() << '\t' << omegatime.GetTime() << '\t' << nuctime.GetTime() << '\n';
 	}
 
     void ResampleSub(double frac)  {

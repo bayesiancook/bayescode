@@ -73,6 +73,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     int burnin;
 
     Chrono timepercycle;
+    Chrono omegachrono,hyperchrono,mastersampling;
 
     public:
 
@@ -113,6 +114,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         std::cerr << "number of branches : " << Nbranch << '\n';
         std::cerr << "-- Tree and data fit together\n";
 
+        timepercycle.Reset();
+        mastersampling.Reset();
         // Allocate();
     }
 
@@ -247,6 +250,10 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     void MasterTrace(ostream& os)    {
         timepercycle.Stop();
         os << timepercycle.GetTime() << '\t';
+        // cerr << myid << '\t' << timepercycle.GetTime() << '\t' << mastersampling.GetTime() << '\t' << omegachrono.GetTime() << '\t' << hyperchrono.GetTime() << '\n';
+        mastersampling.Reset();
+        omegachrono.Reset();
+        hyperchrono.Reset();
         timepercycle.Reset();
         timepercycle.Start();
 		os << GetLogPrior() << '\t';
@@ -396,18 +403,28 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
 		for (int rep=0; rep<nrep; rep++)	{
 
+            if (rep)    {
+                mastersampling.Start();
+            }
             MasterReceiveLengthSuffStat();
             MasterResampleBranchLengths();
             MasterMoveLambda();
-            MasterSendGlobalParameters();
 
+            MasterSendGlobalParameters();
+            omegachrono.Start();
             MasterReceiveMixture();
+            omegachrono.Stop();
+            hyperchrono.Start();
             MasterMoveMixtureHyperParameters();
+            hyperchrono.Stop();
             MasterSendHyperParameters();
 
             MasterReceiveNucPathSuffStat();
             MasterMoveNuc();
             MasterSendGlobalParameters();
+            if (rep)    {
+                mastersampling.Stop();
+            }
         }
         burnin++;
     }
@@ -415,10 +432,15 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     // slave move
     void SlaveMove() {
 
+        Chrono mapping, sampling;
+
+        mapping.Start();
         SlaveResampleSub();
+        mapping.Stop();
 
 		int nrep = 30;
 
+        sampling.Start();
 		for (int rep=0; rep<nrep; rep++)	{
 
             SlaveSendLengthSuffStat();
@@ -433,6 +455,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             SlaveReceiveGlobalParameters();
 
         }
+        sampling.Stop();
+        // cerr << myid << '\t' << mapping.GetTime() + sampling.GetTime() << '\t' << mapping.GetTime() << '\t' << sampling.GetTime() << '\n';
         burnin++;
     }
 
@@ -557,9 +581,11 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     void SlaveResampleSub()  {
 
         double frac = 1.0;
+        /*
         if (burnin > 10)    {
             frac = 0.2;
         }
+        */
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
                 geneprocess[gene]->ResampleSub(frac);
