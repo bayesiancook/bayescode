@@ -8,7 +8,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     public:
 
-    DiscBetaWithPos(int inncat, double inalpha, double inbeta, double inposw, double inposom, vector<double>& inw) : SimpleArray<double>(inncat+3) , ncat(inncat), weight(inncat+3), alpha(inalpha), beta(inbeta), posw(inposw), posom(inposom), w(inw) {
+    DiscBetaWithPos(int inncat, double inpurifmean, double inpurifinvconc, double inposw, double inposom, vector<double>& inw) : SimpleArray<double>(inncat+3) , ncat(inncat), weight(inncat+3), purifmean(inpurifmean), purifinvconc(inpurifinvconc), posw(inposw), posom(inposom), w(inw) {
             ComputeDiscBeta();
             (*this)[0] = 1e-4;
             (*this)[ncat+1] = 1;
@@ -18,9 +18,23 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     ~DiscBetaWithPos() {}
 
-    void SetAlphaBeta(double inalpha, double inbeta)    {
-        alpha = inalpha;
-        beta = inbeta;
+    void SetParameters(double inpurifmean, double inpurifinvconc, double inposw, double inposom, vector<double>& inw)   {
+
+        if ((purifmean != inpurifmean) || (purifinvconc != inpurifinvconc))  {
+            purifmean = inpurifmean;
+            purifinvconc = inpurifinvconc;
+            ComputeDiscBeta();
+        }
+        posw = inposw;
+        posom = inposom;
+        w = inw;
+        ComputeWeights();
+    }
+
+    /*
+    void SetPurifBetaParameters(double inpurifmean, double inpurifinvconc)    {
+        purifmean = inpurifmean;
+        purifinvconc= inpurifinvconc;
         ComputeDiscBeta();
     }
     
@@ -35,6 +49,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
         (*this)[ncat+2] = posom;
         ComputeWeights();
     }
+    */
 
     const vector<double>& GetWeights() const {return weight;}
 
@@ -86,9 +101,11 @@ class DiscBetaWithPos : public SimpleArray<double>  {
     // still numerically unstable
     void ComputeDiscBeta()   {
         if (ncat == 1)  {
-            (*this)[1] = alpha / (alpha+beta);
+            (*this)[1] = purifmean;
         }
         else    {
+            double alpha = purifmean / purifinvconc;
+            double beta = (1-purifmean) / purifinvconc;
             for (int cat=0; cat<ncat; cat++)  {
                 (*this)[cat+1] = invbetaInc(alpha,beta,((double) (cat+0.5))/ncat);
             }
@@ -114,8 +131,8 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     int ncat;
     vector<double> weight;
-    double alpha;
-    double beta;
+    double purifmean;
+    double purifinvconc;
     double posw;
     double posom;
     vector<double> w;

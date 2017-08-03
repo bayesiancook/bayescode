@@ -28,19 +28,18 @@ int main(int argc, char* argv[])	{
 	string datafile = argv[1];
 	string treefile = argv[2];
 	int ncat = atoi(argv[3]);
-	int fixpi = atoi(argv[4]);
-    double pi = atof(argv[5]);
-    double pialpha = atof(argv[6]);
-    double pibeta = atof(argv[7]);
-	string name = argv[8];
+    double pihypermean = atof(argv[4]);
+    double pihyperinvconc = atof(argv[5]);
+	string name = argv[6];
 
-	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,fixpi,pi,pialpha,pibeta,myid,nprocs);
+	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,pihypermean,pihyperinvconc,myid,nprocs);
     if (! myid) {
         cerr << " -- master unfold\n";
     }
     if (! myid) {
         cerr << " -- start\n";
     }
+    model->Allocate();
     model->Unfold();
     if (! myid) {
         ofstream pos((name + ".posw").c_str());
