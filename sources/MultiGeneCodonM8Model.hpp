@@ -409,6 +409,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             MasterMoveNuc();
             MasterSendGlobalParameters();
         }
+        burnin++;
     }
 
     // slave move
@@ -432,6 +433,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             SlaveReceiveGlobalParameters();
 
         }
+        burnin++;
     }
 
     void MasterSendGlobalParameters() {
@@ -563,7 +565,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
                 geneprocess[gene]->ResampleSub(frac);
             }
         }
-        burnin++;
     }
 
     void SlaveSendLengthSuffStat()  {
