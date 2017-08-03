@@ -683,8 +683,13 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		HyperScalingMove(poswhyperinvconc,1.0,10);
 		HyperScalingMove(poswhyperinvconc,0.3,10);
 
+		HyperSlidingMove(dposomhypermean,3.0,10,0.5,10);
+		HyperSlidingMove(dposomhypermean,1.0,10,0.5,10);
+		HyperSlidingMove(dposomhypermean,0.3,10,0.5,10);
+        /*
 		HyperScalingMove(dposomhypermean,1.0,10);
 		HyperScalingMove(dposomhypermean,0.3,10);
+        */
 		HyperScalingMove(dposomhyperinvshape,1.0,10);
 		HyperScalingMove(dposomhyperinvshape,0.3,10);
 
