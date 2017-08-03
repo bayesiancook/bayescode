@@ -719,7 +719,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 			double m = tuning * (Random::Uniform() - 0.5);
 		    x += m;
             if (max > min)  {
-                while ((x < min) && (x > max))  {
+                while ((x < min) || (x > max))  {
                     if (x < min)    {
                         x = 2*min - x;
                     }

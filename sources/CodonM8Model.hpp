@@ -168,8 +168,8 @@ class CodonM8Model	{
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
 
         purifmean = 0.5;
-        if (ncat == 0)  {
-            purifinvconc = 0.0;
+        if (ncat == 1)  {
+            purifinvconc = 1.0;
         }
         else    {
             purifinvconc = 2.0;
@@ -180,8 +180,8 @@ class CodonM8Model	{
         purifinvconchyperinvshape = 1.0;
 
 		dposom = 1.0;
-        dposomhypermean = 1.0;
-        dposomhyperinvshape = 1.0;
+        dposomhypermean = 0.5;
+        dposomhyperinvshape = 0.5;
 
         if (! pi)   {
             posw = 0;
@@ -190,8 +190,8 @@ class CodonM8Model	{
         }
         else    {
             posw = 0.1;
-            poswhypermean = 0.1;
-            poswhyperinvconc = 1;
+            poswhypermean = 0.5;
+            poswhyperinvconc = 0.5;
         }
 
         purifweight.assign(3,1.0/3);
@@ -632,7 +632,7 @@ class CodonM8Model	{
 			double m = tuning * (Random::Uniform() - 0.5);
 		    x += m;
             if (max > min)  {
-                while ((x < min) && (x > max))  {
+                while ((x < min) || (x > max))  {
                     if (x < min)    {
                         x = 2*min - x;
                     }
@@ -827,6 +827,7 @@ class CodonM8Model	{
 	}
 
 	void Trace(ostream& os) {	
+        cerr << pi << '\t' << posw << '\t' << poswhypermean << '\t' <<  poswhyperinvconc << '\n';
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
 		os << GetTotalLength() << '\t';
