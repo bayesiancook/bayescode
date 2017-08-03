@@ -245,8 +245,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     }
 
     void MasterTrace(ostream& os)    {
-        os << timepercycle.GetTime() << '\t';
         timepercycle.Stop();
+        os << timepercycle.GetTime() << '\t';
         timepercycle.Reset();
         timepercycle.Start();
 		os << GetLogPrior() << '\t';
