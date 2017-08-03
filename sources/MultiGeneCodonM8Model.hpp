@@ -67,6 +67,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     int ncat;
 
+    int burnin;
+
     public:
 
 	CodonStateSpace* GetCodonStateSpace()   {
@@ -74,6 +76,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 	}
 
     MultiGeneCodonM8Model(string datafile, string intreefile, int inncat, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), purifweightsuffstat(3) {
+
+        burnin = 0;
 
         ncat = inncat;
         pihypermean = inpihypermean;
@@ -540,11 +544,16 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void SlaveResampleSub()  {
 
+        double frac = 1.0;
+        if (burnin > 10)    {
+            frac = 0.2;
+        }
         for (int gene=0; gene<Ngene; gene++)    {
             if (genealloc[gene] == myid)    {
-                geneprocess[gene]->ResampleSub(1.0);
+                geneprocess[gene]->ResampleSub(frac);
             }
         }
+        burnin++;
     }
 
     void SlaveSendLengthSuffStat()  {
