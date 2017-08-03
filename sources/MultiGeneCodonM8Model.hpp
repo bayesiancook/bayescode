@@ -334,9 +334,9 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         total -= purifmeanhyperinvconc;
         total -= purifinvconchypermean;
         total -= purifinvconchyperinvshape;
-        total -= poswhyperinvconc;
+        total -= 10*poswhyperinvconc;
         total -= dposomhypermean;
-        total -= dposomhyperinvshape;
+        total -= 10*dposomhyperinvshape;
         total -= purifweighthyperinvconc;
         return total;
     }
