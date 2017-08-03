@@ -6,6 +6,9 @@
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
 
+#include "Chrono.hpp"
+
+
 class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     private:
@@ -68,6 +71,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     int ncat;
 
     int burnin;
+
+    Chrono timepercycle;
 
     public:
 
@@ -225,7 +230,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 
     void TraceHeader(ostream& os)   {
 
-        os << "#logprior\tlnL\tlength\t";
+        os << "#time\t";
+        os << "logprior\tlnL\tlength\t";
         os << "pi\t";
         os << "nposfrac\t";
         os << "meanposfrac\t";
@@ -239,6 +245,10 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     }
 
     void MasterTrace(ostream& os)    {
+        os << timepercycle.GetTime() << '\t';
+        timepercycle.Stop();
+        timepercycle.Reset();
+        timepercycle.Start();
 		os << GetLogPrior() << '\t';
         MasterReceiveLogLikelihood();
 		os << GetLogLikelihood() << '\t';
@@ -640,10 +650,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		HyperScalingMove(purifinvconchyperinvshape,1.0,10);
 		HyperScalingMove(purifinvconchyperinvshape,0.3,10);
 
-        if (pihyperinvconc)    {
-            ResamplePi();
-        }
-
 		HyperSlidingMove(poswhypermean,1.0,10,0,1);
 		HyperSlidingMove(poswhypermean,0.3,10,0,1);
 		HyperScalingMove(poswhyperinvconc,1.0,10);
@@ -658,6 +664,12 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         HyperProfileMove(purifweighthypercenter,0.3,1,10);
         HyperScalingMove(purifweighthyperinvconc,1.0,10);
         HyperScalingMove(purifweighthyperinvconc,0.3,10);
+
+        if (burnin > 10)    {
+            if (pihyperinvconc)    {
+                ResamplePi();
+            }
+        }
 
         SetArrays();
     }

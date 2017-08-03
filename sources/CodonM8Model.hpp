@@ -319,8 +319,8 @@ class CodonM8Model	{
     //
 
 	double GetLogLikelihood()	{
-        return GetIntegratedLogLikelihood();
-		// return phyloprocess->GetLogProb();
+        // return GetIntegratedLogLikelihood();
+		return phyloprocess->GetLogProb();
 	}
 
     double GetIntegratedLogLikelihood() {
