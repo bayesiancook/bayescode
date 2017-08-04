@@ -59,11 +59,11 @@ int main(int argc, char* argv[])	{
         }
     }
     else	{
-        model->SlaveTracePostProbHeader(name);
+        // model->SlaveTracePostProbHeader(name);
         while(1)	{
             model->SlaveMove();
             model->SlaveTrace();
-            model->SlaveTracePostProb(name);
+            // model->SlaveTracePostProb(name);
         }
     }
 
