@@ -25,12 +25,69 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
-	string datafile = argv[1];
-	string treefile = argv[2];
-	int ncat = atoi(argv[3]);
-    double pihypermean = atof(argv[4]);
-    double pihyperinvconc = atof(argv[5]);
-	string name = argv[6];
+	string datafile = "";
+	string treefile = "";
+	int ncat = 1;
+    double pihypermean = 0.1;
+    double pihyperinvconc = 0.2;
+
+    int writegenedata = 0;
+
+	string name = "";
+
+    try	{
+
+        if (argc == 1)	{
+            throw(0);
+        }
+
+        int i = 1;
+        while (i < argc)	{
+            string s = argv[i];
+
+            if (s == "-d")	{
+                i++;
+                datafile = argv[i];
+            }
+            else if ((s == "-t") || (s == "-T"))	{
+                i++;
+                treefile = argv[i];
+            }
+            /*
+            else if (s == "-f")	{
+                force = 1;
+            }
+            */
+            else if (s == "-ncat")  {
+                i++;
+                ncat = atoi(argv[i]);
+            }
+            else if (s == "-pi")    {
+                i++;
+                pihypermean = atof(argv[i]);
+                i++;
+                pihyperinvconc = atof(argv[i]);
+            }
+            else if (s == "-g")  {
+                writegenedata = 1;
+            }
+            else	{
+                if (i != (argc -1))	{
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+        if ((datafile == "") || (treefile == "") || (name == ""))	{
+            throw(0);
+        }
+    }
+    catch(...)	{
+        cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper <hyperparamfile>] <chainname> \n";
+        cerr << '\n';
+        exit(1);
+    }
 
 	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,pihypermean,pihyperinvconc,myid,nprocs);
     if (! myid) {
@@ -59,11 +116,15 @@ int main(int argc, char* argv[])	{
         }
     }
     else	{
-        // model->SlaveTracePostProbHeader(name);
+        if (writegenedata)  {
+            model->SlaveTracePostProbHeader(name);
+        }
         while(1)	{
             model->SlaveMove();
             model->SlaveTrace();
-            // model->SlaveTracePostProb(name);
+            if (writegenedata)  {
+                model->SlaveTracePostProb(name);
+            }
         }
     }
 
