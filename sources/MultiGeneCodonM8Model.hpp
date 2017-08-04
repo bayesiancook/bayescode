@@ -14,7 +14,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     private:
 
 	Tree* tree;
-	FileSequenceAlignment* refdata;
 	CodonSequenceAlignment* refcodondata;
 	const TaxonSet* taxonset;
 
@@ -95,8 +94,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         // all datafiles have all taxa (with missing data if needed) in same order
         // makes it easier to register tree with data, etc.
 
-        string filename = genename[0];
-        refdata = new FileSequenceAlignment(filename);
 		refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
         Ntaxa = refdata->GetNtaxa();

@@ -271,6 +271,9 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
 
         statespace = new GenericStateSpace(Nstate, Alphabet, NAlphabetSet, AlphabetSet);
 
+        delete[] Alphabet;
+        delete[] AlphabetSet;
+
         Data.assign(Ntaxa,std::vector<int>(Nsite,0));
         std::vector<std::string> SpeciesNames(Ntaxa,"");
 

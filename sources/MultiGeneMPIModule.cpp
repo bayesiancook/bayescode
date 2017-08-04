@@ -2,7 +2,6 @@
 #include "MultiGeneMPIModule.hpp"
 
 #include <fstream>
-#include "SequenceAlignment.hpp"
 
 void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 
@@ -16,27 +15,17 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 	for (int gene=0; gene<Ngene; gene++)	{
 		is >> genename[gene];
 		SequenceAlignment* tmpdata = new FileSequenceAlignment(genename[gene]);
-        /*
-		if (! gene)	{
-			data = tmpdata;
-		}
-		else	{
-			if (nstate != data->GetNstate())	{
-				cerr << "error: all data files do not have the same alphabet\n";
-				cerr << nstate << '\t' << data->GetNstate() << '\n';
-				exit(1);
-			}
-		}
-        */
+
+        if (! gene) {
+            refdata = tmpdata;
+        }
 
 		genesize[gene] = tmpdata->GetNsite();
 		geneweight[gene] = tmpdata->GetNsite() * tmpdata->GetNtaxa();
-        delete tmpdata;
-        /*
-		if (gene)	{
-			delete tmpdata;
-		}
-        */
+
+        if (gene)   {
+            delete tmpdata;
+        }
 	}
 
 	// sort alignments by decreasing size

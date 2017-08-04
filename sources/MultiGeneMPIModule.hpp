@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 using namespace std;
+#include "SequenceAlignment.hpp"
 
 class MultiGeneMPIModule    {
 
@@ -12,15 +13,15 @@ class MultiGeneMPIModule    {
     MultiGeneMPIModule(int inmyid, int innprocs) : myid(inmyid), nprocs(innprocs) {}
     ~MultiGeneMPIModule() {}
 
-	int GetMyid() {
+	int GetMyid() const {
 		return myid;
 	}
 
-	int GetNprocs() {
+	int GetNprocs() const {
 		return nprocs;
 	}
 
-    int GetNgene()  {
+    int GetNgene() const {
         return Ngene;
     }
 
@@ -35,6 +36,8 @@ class MultiGeneMPIModule    {
     std::vector<int> genealloc;
     std::vector<int> genesize;
     std::vector<string> genename;
+
+    SequenceAlignment* refdata;
 };
 
 #endif

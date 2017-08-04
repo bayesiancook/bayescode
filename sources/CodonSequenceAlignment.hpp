@@ -7,8 +7,10 @@
 
 class CodonSequenceAlignment : public SequenceAlignment {
   public:
+      /*
     CodonSequenceAlignment(CodonSequenceAlignment *from)
         : SequenceAlignment((SequenceAlignment *)from) {}
+        */
 
     CodonSequenceAlignment(SequenceAlignment *from, bool force_stops = false,
                            GeneticCodeType type = Universal);

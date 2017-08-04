@@ -35,7 +35,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     private:
 
 	Tree* tree;
-	FileSequenceAlignment* refdata;
 	CodonSequenceAlignment* refcodondata;
 	const TaxonSet* taxonset;
 
@@ -79,7 +78,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         // makes it easier to register tree with data, etc.
 
         string filename = genename[0];
-        refdata = new FileSequenceAlignment(filename);
 		refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
         Ntaxa = refdata->GetNtaxa();

@@ -9,44 +9,13 @@
 // it does not do any job
 class SequenceAlignment {
   public:
+
     SequenceAlignment() {}
 
-    SequenceAlignment(SequenceAlignment *from) {
-        Ntaxa = from->Ntaxa;
-        Nsite = from->Nsite;
-        taxset = from->taxset;
-        statespace = from->statespace;
-
-        Data = from->Data;
+    virtual ~SequenceAlignment()    {
+        delete taxset;
+        delete statespace;
     }
-
-    double MissingFrac(int i) const {
-        double n = 0;
-        for (int k = 0; k < GetNtaxa(); k++) {
-            if (Data[k][i] != unknown) {
-                n++;
-            }
-        }
-        return n / GetNtaxa();
-    }
-
-    SequenceAlignment(const int **inData, const std::string *names, int inNsite, const StateSpace *instatespace,
-                      const TaxonSet *intaxset) {
-        Nsite = inNsite;
-        taxset = intaxset;
-        Ntaxa = taxset->GetNtaxa();
-        statespace = instatespace;
-
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
-        for (int i = 0; i < Ntaxa; i++) {
-            int mapi = taxset->GetTaxonIndex(names[i]);
-            for (int j = 0; j < Nsite; j++) {
-                Data[mapi][j] = inData[i][j];
-            }
-        }
-    }
-
-    virtual ~SequenceAlignment() = default;
 
     // the set of characters (A,C,G,T for nucleotides, etc..)
     const StateSpace *GetStateSpace() const { return statespace; }
