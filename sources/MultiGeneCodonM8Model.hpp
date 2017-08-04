@@ -283,6 +283,32 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os.flush();
     }
 
+    void TracePosOm(ostream& os) {
+
+        for (int gene=0; gene<Ngene; gene++)    {
+            os << 1 + (*dposomarray)[gene] << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
+    void SlaveTracePostProbHeader(string name)    {
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            if (genealloc[gene] == myid)    {
+                ofstream os((name + "_" + genename[gene] + ".sitepp").c_str());
+            }
+        }
+    }
+
+    void SlaveTracePostProb(string name)    {
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            if (genealloc[gene] == myid)    {
+                ofstream os((name + "_" + genename[gene] + ".sitepp").c_str(),ios::app);
+                geneprocess[gene]->TracePostProb(os);
+            }
+        }
+    }
+
     int GetNpos()    {
         return GetNgene() - poswarray->GetNullSet();
     }

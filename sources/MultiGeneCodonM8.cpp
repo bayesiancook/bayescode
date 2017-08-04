@@ -43,6 +43,7 @@ int main(int argc, char* argv[])	{
     model->Unfold();
     if (! myid) {
         ofstream pos((name + ".posw").c_str());
+        ofstream omos((name + ".posom").c_str());
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
@@ -50,12 +51,15 @@ int main(int argc, char* argv[])	{
             model->MasterMove();
             model->MasterTrace(os);
             model->TracePosWeight(pos);
+            model->TracePosOm(omos);
         }
     }
     else	{
+        model->SlaveTracePostProbHeader(name);
         while(1)	{
             model->SlaveMove();
             model->SlaveTrace();
+            model->SlaveTracePostProb(name);
         }
     }
 
