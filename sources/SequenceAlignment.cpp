@@ -14,57 +14,6 @@ int Int(string s) { return atoi(s.c_str()); }
 
 double Double(string s) { return atof(s.c_str()); }
 
-void SequenceAlignment::GetEmpiricalFreq(double *in) const {
-    int n = GetNstate();
-    for (int i = 0; i < GetNstate(); i++) {
-        in[i] = 1;
-    }
-    for (int i = 0; i < GetNtaxa(); i++) {
-        for (int j = 0; j < GetNsite(); j++) {
-            if (GetState(i, j) != unknown) {
-                in[GetState(i, j)]++;
-                n++;
-            }
-        }
-    }
-    for (int i = 0; i < GetNstate(); i++) {
-        in[i] /= n;
-    }
-}
-
-void SequenceAlignment::GetSiteEmpiricalFreq(double **in, double pseudocount) const {
-    if (pseudocount < 0) {
-        for (int j = 0; j < GetNsite(); j++) {
-            for (int i = 0; i < GetNstate(); i++) {
-                in[j][i] = -pseudocount * Random::sGamma(1.0);
-            }
-        }
-    } else {
-        for (int j = 0; j < GetNsite(); j++) {
-            for (int i = 0; i < GetNstate(); i++) {
-                in[j][i] = pseudocount;
-            }
-        }
-    }
-
-    for (int i = 0; i < GetNtaxa(); i++) {
-        for (int j = 0; j < GetNsite(); j++) {
-            if (GetState(i, j) != unknown) {
-                in[j][GetState(i, j)]++;
-            }
-        }
-    }
-    for (int j = 0; j < GetNsite(); j++) {
-        double total = 0;
-        for (int i = 0; i < GetNstate(); i++) {
-            total += in[j][i];
-        }
-        for (int i = 0; i < GetNstate(); i++) {
-            in[j][i] /= total;
-        }
-    }
-}
-
 void SequenceAlignment::ToFasta(ostream &os) const {
     for (int i = 0; i < Ntaxa; i++) {
         os << '>' << taxset->GetTaxon(i) << '\n';
@@ -73,56 +22,6 @@ void SequenceAlignment::ToFasta(ostream &os) const {
         }
         os << '\n';
     }
-}
-/*
-  void SequenceAlignment::ToStream(ostream& os)	{
-
-  os << Ntaxa << '\t' << Nsite << '\n';
-  int max = 0;
-  for (int i=0; i<Ntaxa; i++)	{
-  int l = taxset->GetTaxon(i).length();
-  if (max < l)	{
-  max = l;
-  }
-  }
-
-  for (int i=0; i<Ntaxa; i++)	{
-  os << taxset->GetTaxon(i);
-  for (unsigned int j=0; j< 5 + max - taxset->GetTaxon(i).length(); j++)
-  {
-  os << ' ';
-  }
-  for (int j=0; j<Nsite; j++)	{
-  os << statespace->GetState(GetState(i,j));
-  }
-  os << '\n';
-  }
-  os << '\n';
-  }
-*/
-
-void SequenceAlignment::ToStream(ostream &os) const {
-    // os << Ntaxa << '\t' << 876<< '\n';
-    os << Ntaxa << '\t' << Nsite << '\n';
-    int max = 0;
-    for (int i = 0; i < Ntaxa; i++) {
-        int l = taxset->GetTaxon(i).length();
-        if (max < l) {
-            max = l;
-        }
-    }
-
-    for (int i = 0; i < Ntaxa; i++) {
-        os << taxset->GetTaxon(i);
-        for (unsigned int j = 0; j < 5 + max - taxset->GetTaxon(i).length(); j++) {
-            os << ' ';
-        }
-        for (int j = 0; j < Nsite; j++) {
-            os << statespace->GetState(GetState(i, j));
-        }
-        os << '\n';
-    }
-    os << '\n';
 }
 
 int SequenceAlignment::GetNonMissingTriplet() const {
@@ -169,20 +68,8 @@ void SequenceAlignment::ToStreamTriplet(ostream &os) const {
     os << '\n';
 }
 
-FileSequenceAlignment::FileSequenceAlignment(string filename,
-                                             int /*unused*/) {  // FIXME unused parameter
-
-    SpeciesNames = nullptr;
-    // cerr << "read data from file : " << filename << "\n";
+FileSequenceAlignment::FileSequenceAlignment(string filename)   {
     ReadDataFromFile(filename, 0);
-    taxset = new TaxonSet(SpeciesNames, Ntaxa);
-    delete[] SpeciesNames;
-    /*
-      cerr << "number of taxa  : " << GetNtaxa() << '\n';
-      cerr << "number of sites : " << GetNsite() << '\n';
-      cerr << "number of states: " << GetNstate() << '\n';
-      cerr << "after delete\n";
-    */
 }
 
 int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleaved) {
@@ -257,18 +144,8 @@ int FileSequenceAlignment::ReadNexus(string filespec) {
             exit(1);
         }
 
-        if (Data != nullptr) {
-            for (int i = 0; i < Ntaxa; i++) {
-                delete Data[i];
-            }
-            delete[] Data;
-        }
-        Data = new int *[Ntaxa];
-        for (int i = 0; i < Ntaxa; i++) {
-            Data[i] = new int[Nsite];
-        }
-
-        SpeciesNames = new string[Ntaxa];
+        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         GoPastNextWord(theStream, "Matrix");
 
@@ -350,6 +227,7 @@ int FileSequenceAlignment::ReadNexus(string filespec) {
             }
             l = m;
         }
+        taxset = new TaxonSet(SpeciesNames);
     } catch (...) {
         cerr << "error while reading data file\n";
         return 0;
@@ -393,19 +271,8 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
 
         statespace = new GenericStateSpace(Nstate, Alphabet, NAlphabetSet, AlphabetSet);
 
-        if (Data != nullptr) {
-            for (int i = 0; i < Ntaxa; i++) {
-                delete Data[i];
-            }
-            delete[] Data;
-        }
-        Data = new int *[Ntaxa];
-        for (int i = 0; i < Ntaxa; i++) {
-            Data[i] = new int[Nsite];
-        }
-
-        delete[] SpeciesNames;
-        SpeciesNames = new string[Ntaxa];
+        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         int ntaxa = 0;
         string temp;
@@ -453,6 +320,7 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
             } while ((!theStream.eof()) && (nsite < Nsite));
             ntaxa++;
         }
+        taxset = new TaxonSet(SpeciesNames);
     } catch (...) {
         cerr << "error while reading data file\n";
         return 0;
@@ -493,8 +361,7 @@ int FileSequenceAlignment::TestPhylipSequential(string filespec) {
         }
         Nsite = atoi(temp.c_str());
 
-        delete[] SpeciesNames;
-        SpeciesNames = new string[Ntaxa];
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         int AAcomp = 1;
         int DNAcomp = 1;
@@ -606,11 +473,8 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
         }
         Nsite = Int(temp);
 
-        Data = new int *[Ntaxa];
-        for (int i = 0; i < Ntaxa; i++) {
-            Data[i] = new int[Nsite];
-        }
-        SpeciesNames = new string[Ntaxa];
+        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         int ntaxa = 0;
         while ((!theStream.eof()) && (ntaxa < Ntaxa)) {
@@ -642,6 +506,7 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
             } while ((!theStream.eof()) && (nsite < Nsite));
             ntaxa++;
         }
+        taxset = new TaxonSet(SpeciesNames);
     } catch (...) {
         cerr << "error while reading data file\n";
         exit(1);
@@ -677,8 +542,7 @@ int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
         }
         Nsite = Int(temp);
 
-        delete[] SpeciesNames;
-        SpeciesNames = new string[Ntaxa];
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         int AAcomp = 1;
         int DNAcomp = 1;
@@ -837,11 +701,8 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
         Nsite = Int(temp);
         // cerr << Ntaxa << '\t' << Nsite << '\n';
 
-        Data = new int *[Ntaxa];
-        for (int i = 0; i < Ntaxa; i++) {
-            Data[i] = new int[Nsite];
-        }
-        SpeciesNames = new string[Ntaxa];
+        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        std::vector<std::string> SpeciesNames(Ntaxa,"");
 
         int l = 0;
         int block = 0;
@@ -926,385 +787,9 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
             cerr << '\n';
             exit(1);
         }
+        taxset = new TaxonSet(SpeciesNames);
     } catch (...) {
         cerr << "error while reading data file\n";
     }
 }
 
-// ---------------------------------------------------------------------------
-//     EliminateUnnownColumns
-// ---------------------------------------------------------------------------
-
-/*
-  void FileSequenceAlignment::EliminateUnknownColumns()	{
-
-  cerr << "eliminate unknown columns\n";
-
-  // delete all the sites that are '-' for every species
-
-  int i=0;
-  int j=0;
-  int Eliminated = 0;
-  while (i<Nsite)	{
-  int k=0;
-  Boolean test = true;
-  while (test &&  k<Ntaxa)	{
-  test &= (Data[k][i] == unknown);
-  k++;
-  }
-  if (! test)	{
-  for (int k=0; k<Ntaxa; k++)	{
-  Data[k][j] = Data[k][i];
-  }
-  j++;
-  }
-  else	{
-  GeneSize[Gene[i]]--;
-  Eliminated ++;
-  }
-  i++;
-  }
-  Nsite -= Eliminated;
-  if (Eliminated)	{
-  cerr << Eliminated << " columns completely undetermined (full of gaps, or
-  unknown): eliminated\n";
-  }
-  }
-*/
-
-/*
-// ---------------------------------------------------------------------------
-//     EstimateEmpiricalFrequencies()
-// ---------------------------------------------------------------------------
-
-void FileSequenceAlignment::EstimateEmpiricalFrequencies()	{
-
-cerr << "estimate emp freq\n";
-for (int k=0; k<Nstate; k++)	{
-EmpiricalFreq[k] = 1;
-}
-for (int i=0; i<Ntaxa; i++)	{
-for (int j=0; j<Nsite; j++)	{
-if (Data[i][j] != unknown)	{
-if ( (Data[i][j] < 0 ) || (Data[i][j] >= Nstate) )	{
-cerr << "error in data matrix : " << Data[i][j] << '\n';
-exit(1);
-}
-EmpiricalFreq[Data[i][j]] += 1.0;
-}
-}
-}
-double total = 0;
-for (int k = 0; k<Nstate; k++)	{
-total += EmpiricalFreq[k];
-}
-for (int k=0; k<Nstate; k++)	{
-EmpiricalFreq[k] /= total;
-}
-}
-
-// ---------------------------------------------------------------------------
-//     ConstantColumns()
-// ---------------------------------------------------------------------------
-
-int FileSequenceAlignment::ConstantColumns()	{
-
-int n=0;
-for (int i=0; i<Nsite; i++)	{
-int j = 0;
-int test = 1;
-while ( (j<Ntaxa) && (Data[j][i] == unknown))	{
-j++;
-}
-if (j != Ntaxa)	{
-int k = j+1;
-while (k < Ntaxa)	{
-if (Data[k][i] != unknown)	{
-if (Data[j][i] != Data[k][i])	{
-test = 0;
-}
-}
-k++;
-}
-}
-if (test)	{
-n++;
-}
-}
-return n;
-}
-
-
-// ---------------------------------------------------------------------------
-//     EliminateConstantPositions()
-// ---------------------------------------------------------------------------
-
-void FileSequenceAlignment::EliminateConstantPositions()	{
-
-cerr << "eliminate constant positions\n";
-int i=0;
-int j=0;
-int Eliminated = 0;
-while (i<Nsite)	{
-int k = 0;
-while ((k<Ntaxa) && (Data[k][i] == unknown)) k++;
-if (k<Ntaxa)	{
-int a = Data[k][i];
-k++;
-while ((k<Ntaxa) && ((Data[k][i] == unknown) || (Data[k][i] == a))) k++;
-if (k==Ntaxa)	{
-Eliminated ++;
-GeneSize[Gene[i]]--;
-}
-else	{
-for (int k=0; k<Ntaxa; k++)	{
-Data[k][j] = Data[k][i];
-}
-j++;
-}
-}
-i++;
-}
-
-Nsite -= Eliminated;
-cout << "number of positions eliminated : " << Eliminated << '\n';
-WriteDataToFile("woconst.puz");
-}
-
-
-// ---------------------------------------------------------------------------
-//     RegisterWithData()
-// ---------------------------------------------------------------------------
-
-void FileSequenceAlignment::RegisterWithData()	{
-
-// test that no taxon name appears twice
-for (int i=0; i<Ntaxa; i++)     {
-for (int j=i+1; j<Ntaxa; j++)   {
-if (SpeciesNames[i] == SpeciesNames[j]) {
-cerr << "error: taxa " << i << " and " << j << " in datafile have same name\n";
-exit(1);
-}
-}
-}
-
-if (Ngene == 0)	{
-Ngene = 1;
-Gene = new int[Nsite];
-for (int i=0; i<Nsite; i++)	{
-Gene[i] =0;
-}
-GeneSize = new int[Ngene];
-GeneSize[0] = Nsite;
-GeneFirstSite = new int[Ngene];
-GeneFirstSite[0] = 0;
-}
-
-if (Recoding)	{
-RecodeData();
-}
-EliminateUnknownColumns();
-int total = 0;
-for (int i=0; i<Ngene; i++)	{
-GeneFirstSite[i] = total;
-int temp = GeneSize[i];
-for (int j=0; j<temp; j++)	{
-Gene[j+total] = i;
-}
-total += temp;
-}
-if (total != Nsite)	{
-cerr << "total number of sites does not match\n";
-exit(1);
-}
-if (DeleteConstant)	{
-EliminateConstantPositions();
-int total = 0;
-for (int i=0; i<Ngene; i++)	{
-GeneFirstSite[i] = total;
-int temp = GeneSize[i];
-for (int j=0; j<temp; j++)	{
-Gene[j+total] = i;
-}
-total += temp;
-}
-if (total != Nsite)	{
-cerr << "total number of sites does not match\n";
-exit(1);
-}
-}
-ComputeZipArrays();
-EstimateEmpiricalFrequencies();
-int nconst = 0;
-for (int i=0; i<Nsite; i++)	{
-if (OrbitSize[i] == 1)	{
-nconst ++;
-}
-}
-// cerr << "empirical proportion of invariable sites : " << ((double) nconst) /
-Nsite << '\n';
-}
-
-// ---------------------------------------------------------------------------
-//     ComputeZipArrays()
-// ---------------------------------------------------------------------------
-
-void FileSequenceAlignment::ComputeZipArrays()	{
-
-EmpiricalFreq = new double[Nstate];
-for (int i=0; i<Nstate; i++)	{
-EmpiricalFreq[i] = 1.0 / Nstate;
-}
-SiteEmpiricalCount = new int*[Nsite];
-for (int i=0; i<Nsite; i++)	{
-SiteEmpiricalCount[i] = new int[Nstate];
-for (int j=0; j<Nstate; j++)	{
-SiteEmpiricalCount[i][j] = 0;
-}
-for (int j=0; j<Ntaxa; j++)	{
-if (Data[j][i] != unknown)	{
-SiteEmpiricalCount[i][Data[j][i]]++;
-}
-}
-}
-
-Indices = new int*[Nsite];
-ZipIndices = new int*[Nsite];
-for (int i=0; i<Nsite; i++)	{
-Indices[i] = new int[Nstate];
-ZipIndices[i] = new int[Nstate];
-}
-
-ZipSize = new int[Nsite];
-
-OrbitSize = new int[Nsite];
-Orbit = new int *[Nsite];
-for (int i=0; i<Nsite; i++)	{
-Orbit[i] = new int[Nstate];
-}
-
-ZipData = new int*[Ntaxa];
-for (int i=0; i<Ntaxa; i++)	{
-ZipData[i] = new int[Nsite];
-}
-
-for (int i=0; i<Nsite; i++)	{
-
-OrbitSize[i] = 0;
-for (int k=0 ; k< Nstate; k++)	{
-Orbit[i][k]= false;
-}
-
-for (int j=0; j<Ntaxa; j++)	{
-int d = Data[j][i];
-if (d != unknown)	{
-if (! Orbit[i][d])	{
-Orbit[i][d] = true;
-Indices[i][OrbitSize[i]] = d;
-OrbitSize[i] ++;
-}
-}
-}
-
-// sort Indices[i]
-for (int j=0; j<OrbitSize[i]; j++)	{
-for (int k=OrbitSize[i]-1; k>j; k--)	{
-if (Indices[i][j] > Indices[i][k])	{
-int tmp = Indices[i][j];
-Indices[i][j] = Indices[i][k];
-Indices[i][k] = tmp;
-}
-}
-}
-
-// reverse translation table
-for (int j=0; j<OrbitSize[i]; j++)	{
-ZipIndices[i][Indices[i][j]] = j;
-}
-for (int j=0; j<Nstate; j++)	{
-if (! Orbit[i][j])	{
-ZipIndices[i][j] = OrbitSize[i];
-}
-}
-
-if (OrbitSize[i] == 0)	{
-cerr << "PhyloParameters::RegisterWithData : missing column";
-// exit(1);
-}
-
-if (OrbitSize[i] < Nstate)	{
-ZipSize[i] = OrbitSize[i] + 1;
-}
-else	{
-ZipSize[i] = OrbitSize[i];
-}
-
-for (int j=0; j<Ntaxa; j++)	{
-ZipData[j][i] = -2;
-int d = (Data)[j][i];
-if (d == unknown)	{
-ZipData[j][i] = unknown;
-}
-else	{
-for (int k=0; k<OrbitSize[i]; k++)	{
-if (Indices[i][k] == d)	{
-ZipData[j][i] = k;
-}
-}
-
-// Zip identity:
-// Indices[i][ZipData[j][i]] == mParam->Data[j][i] , for every i and j
-// within their respective range
-
-}
-
-// here, may be check that ZipData != -2
-
-if (ZipData[j][i] == -2)	{
-cerr << "PhyloParameters::RegisterWithData : error in zip data making\n";
-}
-}
-
-int observed[Nstate];
-int orbitsize= OrbitSize[i];
-for (int k=0; k<Nstate; k++)	{
-observed[k] = 0;
-}
-for (int k=0; k<orbitsize; k++)	{
-observed[Indices[i][k]] = 1;
-}
-for (int k=0; k<Nstate; k++)	{
-if (! observed[k])	{
-Indices[i][orbitsize++] = k;
-}
-}
-if (orbitsize != Nstate)	{
-cerr << "error in FileSequenceAlignment::RegisterWithData\n";
-cerr << "site : " << i << '\n';
-cerr << '\n';
-exit(1);
-}
-}
-
-double temp = 0;
-for (int i=0; i<Nsite; i++)	{
-temp += ((double) ZipSize[i] * ZipSize[i]) / Nstate / Nstate;
-}
-SpeedFactor =  temp / Nsite ;
-cerr << "speed factor : " << SpeedFactor << '\n';
-int nconst = 0;
-for (int i=0; i<Nsite; i++)	{
-if (OrbitSize[i] == 1)	{
-nconst++;
-}
-}
-cerr << "number of constant columns: " << nconst << " (" << ((double) nconst) /
-Nsite * 100 << ")"
-<< '\n';
-
-}
-
-
-
-
-*/

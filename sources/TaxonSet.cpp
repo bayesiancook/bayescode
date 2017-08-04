@@ -12,24 +12,20 @@ using namespace std;
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-TaxonSet::TaxonSet(const string *names, int ntaxa) {
-    Ntaxa = ntaxa;
-    taxlist = new string[ntaxa];
-    for (int i = 0; i < ntaxa; i++) {
+TaxonSet::TaxonSet(const std::vector<string>& names) : Ntaxa(names.size()), taxlist(names)  {
+
+    for (int i = 0; i < Ntaxa; i++) {
         if (taxmap[names[i]] != 0) {
             cerr << "found several taxa with same name : " << names[i] << '\n';
             exit(1);
         }
-        taxlist[i] = names[i];
         taxmap[names[i]] = i + 1;
     }
 }
 
-TaxonSet::~TaxonSet() { delete[] taxlist; }
-
 TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {
     Ntaxa = tree->GetSize(subgroup);
-    taxlist = new string[Ntaxa];
+    taxlist.assign(Ntaxa,"");
     if (subgroup == nullptr) {
         subgroup = tree->GetRoot();
     }
