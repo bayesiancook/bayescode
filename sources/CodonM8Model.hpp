@@ -490,7 +490,7 @@ class CodonM8Model	{
         Chrono mappingtime, reptime, lengthtime, collecttime, omegatime, nuctime;
 
         mappingtime.Start();
-		ResampleSub(0.2);
+		ResampleSub(1.0);
         mappingtime.Stop();
 
 		int nrep = 30;

@@ -5,18 +5,70 @@ using namespace std;
 
 int main(int argc, char* argv[])	{
 
-	string datafile = argv[1];
-	string treefile = argv[2];
-	int ncat = atoi(argv[3]);
-	double pi = atof(argv[4]);
-	string name = argv[5];
+    string datafile = "";
+    string treefile = "";
+    int ncat = 1;
+    double pi = 0.1;
     string paramname = "";
-    if (argc == 7)  {
-        paramname = argv[6];
-    }
     string hyperparamname = "";
-    if (argc == 8)  {
-        hyperparamname = argv[6];
+    string name = "";
+    // int force = 1;
+
+    try	{
+
+        if (argc == 1)	{
+            throw(0);
+        }
+
+        int i = 1;
+        while (i < argc)	{
+            string s = argv[i];
+
+            if (s == "-d")	{
+                i++;
+                datafile = argv[i];
+            }
+            else if ((s == "-t") || (s == "-T"))	{
+                i++;
+                treefile = argv[i];
+            }
+            /*
+            else if (s == "-f")	{
+                force = 1;
+            }
+            */
+            else if (s == "-ncat")  {
+                i++;
+                ncat = atoi(argv[i]);
+            }
+            else if (s == "-pi")    {
+                i++;
+                pi = atof(argv[i]);
+            }
+            else if (s == "-fixparam")  {
+                i++;
+                paramname = argv[i];
+            }
+            else if (s == "-fixhyper")  {
+                i++;
+                hyperparamname = argv[i];
+            }
+            else	{
+                if (i != (argc -1))	{
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+        if ((datafile == "") || (treefile == "") || (name == ""))	{
+            throw(0);
+        }
+    }
+    catch(...)	{
+        cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper <hyperparamfile>] <chainname> \n";
+        cerr << '\n';
+        exit(1);
     }
 
 	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,pi);
@@ -44,6 +96,4 @@ int main(int argc, char* argv[])	{
         pos.flush();
 	}
 }
-
-
 
