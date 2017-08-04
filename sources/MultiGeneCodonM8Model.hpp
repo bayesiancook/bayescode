@@ -274,6 +274,20 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		os.flush();
     }
 
+    void MasterTraceGlobalParameters(ostream& os)   {
+        for (int j=0; j<Nbranch; j++)   {
+            os << branchlength->GetVal(j) << '\t';
+        }
+        for (int j=0; j<Nrr; j++)   {
+            os << nucrelrate[j] << '\t';
+        }
+        for (int j=0; j<Nnuc; j++)  {
+            os << nucstat[j] << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
     void TracePosWeight(ostream& os) {
 
         for (int gene=0; gene<Ngene; gene++)    {

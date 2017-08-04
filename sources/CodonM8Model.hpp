@@ -113,10 +113,13 @@ class CodonM8Model	{
 
     NucPathSuffStat nucpathsuffstat;
 
+    int fixglobal;
+
 	public:
 
 	CodonM8Model(string datafile, string treefile, int inncat, double inpi)	{
 
+        fixglobal = 0;
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
 		ncat = inncat;
@@ -495,11 +498,12 @@ class CodonM8Model	{
         reptime.Start();
 		for (int rep=0; rep<nrep; rep++)	{
 
-            lengthtime.Start();
-			ResampleBranchLengths();
-			MoveLambda();
-            lengthtime.Stop();
-
+            if (! fixglobal)    {
+                lengthtime.Start();
+                ResampleBranchLengths();
+                MoveLambda();
+                lengthtime.Stop();
+            }
 
             collecttime.Start();
 			CollectPathSuffStat();
@@ -509,10 +513,12 @@ class CodonM8Model	{
 			MoveOmega();
             omegatime.Stop();
 
-            nuctime.Start();
-			UpdateMatrices();
-			MoveNuc();
-            nuctime.Stop();
+            if (! fixglobal)    {
+                nuctime.Start();
+                UpdateMatrices();
+                MoveNuc();
+                nuctime.Stop();
+            }
 		}
         reptime.Stop();
 
@@ -835,6 +841,23 @@ class CodonM8Model	{
 		}
 		return tot;
 	}
+
+    void FixGlobalParameters()  {
+        fixglobal = 1;
+    }
+
+    void GetGlobalParametersFromFile(istream& is)   {
+        for (int j=0; j<Nbranch; j++)   {
+            is >> (*branchlength)[j];
+        }
+        for (int j=0; j<Nrr; j++)   {
+            is >> nucrelrate[j];
+        }
+        for (int j=0; j<Nnuc; j++)  {
+            is >> nucstat[j];
+        }
+        UpdateMatrices();
+    }
 
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\t";

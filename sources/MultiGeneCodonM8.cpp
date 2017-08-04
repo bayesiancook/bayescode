@@ -42,6 +42,7 @@ int main(int argc, char* argv[])	{
     model->Allocate();
     model->Unfold();
     if (! myid) {
+        ofstream paramos((name + ".globalparam").c_str());
         ofstream pos((name + ".posw").c_str());
         ofstream omos((name + ".posom").c_str());
         ofstream os((name + ".trace").c_str());
@@ -49,6 +50,7 @@ int main(int argc, char* argv[])	{
         os.flush();
         while(1)	{
             model->MasterMove();
+            model->MasterTraceGlobalParameters(paramos);
             model->MasterTrace(os);
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
