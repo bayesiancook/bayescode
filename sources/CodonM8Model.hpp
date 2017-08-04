@@ -859,6 +859,22 @@ class CodonM8Model	{
         UpdateMatrices();
     }
 
+    void GetHyperParametersFromFile(istream& is)    {
+        is >> purifmeanhypermean;
+        is >> purifmeanhyperinvconc;
+        is >> purifinvconchypermean;
+        is >> purifinvconchyperinvshape;
+        is >> pi;
+        is >> poswhypermean;
+        is >> poswhyperinvconc;
+        is >> dposomhypermean;
+        is >> dposomhyperinvshape;
+        is >> purifweighthypercenter[0];
+        is >> purifweighthypercenter[1];
+        is >> purifweighthypercenter[2];
+        is >> purifweighthyperinvconc;
+    }
+
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\t";
 		os << "meanomega\tposom\tposw\t";

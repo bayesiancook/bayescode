@@ -288,6 +288,24 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os.flush();
     }
 
+    void MasterTraceHyperParameters(ostream& os)    {
+        os << purifmeanhypermean << '\t';
+        os << purifmeanhyperinvconc << '\t';
+        os << purifinvconchypermean << '\t';
+        os << purifinvconchyperinvshape << '\t';
+        os << pi << '\t';
+        os << poswhypermean << '\t';
+        os << poswhyperinvconc << '\t';
+        os << dposomhypermean << '\t';
+        os << dposomhyperinvshape << '\t';
+        os << purifweighthypercenter[0] << '\t';
+        os << purifweighthypercenter[1] << '\t';
+        os << purifweighthypercenter[2] << '\t';
+        os << purifweighthyperinvconc;
+        os << '\n';
+        os.flush();
+    }
+
     void TracePosWeight(ostream& os) {
 
         for (int gene=0; gene<Ngene; gene++)    {

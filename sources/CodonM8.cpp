@@ -14,6 +14,10 @@ int main(int argc, char* argv[])	{
     if (argc == 7)  {
         paramname = argv[6];
     }
+    string hyperparamname = "";
+    if (argc == 8)  {
+        hyperparamname = argv[6];
+    }
 
 	CodonM8Model* model = new CodonM8Model(datafile,treefile,ncat,pi);
     model->Allocate();
@@ -21,6 +25,11 @@ int main(int argc, char* argv[])	{
         ifstream is(paramname.c_str());
         model->GetGlobalParametersFromFile(is);
         model->FixGlobalParameters();
+        model->GetHyperParametersFromFile(is);
+    }
+    if (hyperparamname != "")    {
+        ifstream is(hyperparamname.c_str());
+        model->GetHyperParametersFromFile(is);
     }
     model->Unfold();
 	ofstream os((name + ".trace").c_str());
