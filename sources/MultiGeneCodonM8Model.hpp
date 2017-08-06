@@ -303,6 +303,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os.flush();
     }
 
+    /*
     void TracePosWeight(ostream& os) {
 
         for (int gene=0; gene<Ngene; gene++)    {
@@ -320,6 +321,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << '\n';
         os.flush();
     }
+    */
 
     void SlaveTracePostProbHeader(string name)    {
         for (int gene=0; gene<GetNgene(); gene++)   {

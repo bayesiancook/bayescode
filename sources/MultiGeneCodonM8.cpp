@@ -111,8 +111,10 @@ int main(int argc, char* argv[])	{
             model->MasterTraceGlobalParameters(paramos);
             model->MasterTraceHyperParameters(hyperos);
             model->MasterTrace(os);
+            /*
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
+            */
         }
     }
     else	{
