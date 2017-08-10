@@ -29,6 +29,14 @@ class MultiGeneMPIModule    {
         return LocalNgene;
     }
 
+    int GetSlaveNgene(int proc) const   {
+        if (myid)   {
+            cerr << "error: slave in GetSlaveNgene\n";
+            exit(1);
+        }
+        return SlaveNgene[proc];
+    }
+
     string GetLocalGeneName(int gene) const {
         return GeneName[gene];
     }
@@ -42,8 +50,8 @@ class MultiGeneMPIModule    {
 
 	int Ngene;
     int LocalNgene;
-    std::vector<int> genealloc;
-    // std::vector<int> genesize;
+    std::vector<int> SlaveNgene;
+    std::vector<int> GeneAlloc;
     std::vector<string> GeneName;
 
     SequenceAlignment* refdata;

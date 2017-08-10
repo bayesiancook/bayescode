@@ -101,20 +101,21 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 		}
 	}
 
+    SlaveNgene.assign(nprocs,0);
+    for (int gene=0; gene<Ngene; gene++)	{
+        SlaveNgene[genealloc[gene]]++;
+    }
+    
     if (! myid) {
         LocalNgene = Ngene;
         GeneName = genename;
+        GeneAlloc = genealloc;
     }
     else    {
-        int i = 0;
-        for (int gene=0; gene<Ngene; gene++)	{
-            if (genealloc[gene] == myid)    {
-                i++;
-            }
-        }
-        LocalNgene = i;
+        GeneAlloc.assign(0,0);
+        LocalNgene = SlaveNgene[myid];
         GeneName.assign(LocalNgene,"NoName");
-        i=0;
+        int i=0;
         for (int gene=0; gene<Ngene; gene++)	{
             if (genealloc[gene] == myid)    {
                 GeneName[i] = genename[gene];
