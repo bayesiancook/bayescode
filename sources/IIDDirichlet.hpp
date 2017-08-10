@@ -26,6 +26,21 @@ class DirichletSuffStat : public SuffStat	{
         n++;
     }
 
+    void AddSuffStat(const double* pi, int d)  {
+        for (unsigned int i=0; i<sumlog.size(); i++)    {
+            sumlog[i] += log(pi[i]);
+        }
+        n += d;
+    }
+
+    double GetSumLog(int i) const   {
+        return sumlog[i];
+    }
+
+    int GetN() const    {
+        return n;
+    }
+
 	double GetLogProb(const vector<double>& center, double concentration) const    {
         
         double tot = n * Random::logGamma(concentration);

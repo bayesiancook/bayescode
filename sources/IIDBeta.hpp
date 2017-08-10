@@ -14,33 +14,35 @@ class BetaSuffStat : public SuffStat	{
 	~BetaSuffStat() {}
 
 	void Clear()	{
-		sum0 = 0;
-		sum1 = 0;
+		sumlog0 = 0;
+		sumlog1 = 0;
         n = 0;
 	}
 
 	void AddSuffStat(double log0, double log1, int c = 1)	{
-		sum0 += log0;
-		sum1 += log1;
+		sumlog0 += log0;
+		sumlog1 += log1;
 		n += c;
 	}
 
-    double GetMeanInvConcLogProb(double mean, double invconc)   {
+    double GetMeanInvConcLogProb(double mean, double invconc) const {
         double alpha = mean / invconc;
         double beta = (1-mean) / invconc;
         return GetLogProb(alpha,beta);
     }
 
 	double GetLogProb(double alpha, double beta) const {
-        return n * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta)) + (alpha-1)*sum0 + (beta-1)*sum1;
+        return n * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta)) + (alpha-1)*sumlog0 + (beta-1)*sumlog1;
 	}
 	
-    int GetN() {return n;}
+    int GetN() const {return n;}
+    double GetSumLog0() const {return sumlog0;}
+    double GetSumLog1() const {return sumlog1;}
 
 	private:
 
-	double sum0;
-	double sum1;
+	double sumlog0;
+	double sumlog1;
 	int n;
 };
 

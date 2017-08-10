@@ -14,37 +14,39 @@ class BernoulliBetaSuffStat : public SuffStat	{
 	~BernoulliBetaSuffStat() {}
 
 	void Clear()	{
-		sum0 = 0;
-		sum1 = 0;
-        posn = 0;
-		nulln = 0;
+		sumlog0 = 0;
+		sumlog1 = 0;
+        n0 = 0;
+		n1 = 0;
 	}
 
     void AddNullSuffStat(int c = 1) {
-        nulln += c;
+        n0 += c;
     }
 
 	void AddPosSuffStat(double log0, double log1, int c = 1)	{
-		sum0 += log0;
-		sum1 += log1;
-		posn += c;
+		sumlog0 += log0;
+		sumlog1 += log1;
+		n1 += c;
 	}
 
 	double GetLogProb(double pi, double alpha, double beta) const {
-        double logbern = nulln * log(1-pi) + posn * log(pi);
-        double logbeta = posn * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta)) + (alpha-1)*sum0 + (beta-1)*sum1;
+        double logbern = n0 * log(1-pi) + n1 * log(pi);
+        double logbeta = n1 * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta)) + (alpha-1)*sumlog0 + (beta-1)*sumlog1;
         return logbern + logbeta;
 	}
 	
-    int GetN0() const {return nulln;}
-    int GetN1() const {return posn;}
+    int GetN0() const {return n0;}
+    int GetN1() const {return n1;}
+    int GetSumLog0() const {return sumlog0;}
+    int GetSumLog1() const {return sumlog1;}
 
 	private:
 
-	double sum0;
-	double sum1;
-	int nulln;
-	int posn;
+	double sumlog0;
+	double sumlog1;
+	int n0;
+	int n1;
 };
 
 class IIDBernoulliBeta : public SimpleArray<double> {

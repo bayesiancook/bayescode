@@ -25,10 +25,14 @@ class GammaSuffStat : public SuffStat	{
 		n += c;
 	}
 
-	double GetLogProb(double shape, double scale)	{
+	double GetLogProb(double shape, double scale) const {
 		return n*(shape*log(scale) - Random::logGamma(shape)) + (shape-1)*sumlog - scale*sum;
 	}
 	
+    double GetSum() const {return sum;}
+    double GetSumLog() const {return sumlog;}
+    int GetN() const {return n;}
+
 	private:
 
 	double sum;
