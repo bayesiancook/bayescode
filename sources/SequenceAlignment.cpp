@@ -90,23 +90,23 @@ int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleave
             ReadSpecial(filespec);
             return 1;
         } else {
-            cerr << "-- [SequenceAlignment] Alignment file uses Phylip format" << endl;
+            // cerr << "-- [SequenceAlignment] Alignment file uses Phylip format" << endl;
             if (forceinterleaved == 0) {
                 int returnvalue = TestPhylipSequential(filespec);
                 if (returnvalue != 0) {
-                    cerr << "-- [SequenceAlignment] Alignment file is sequential" << endl;
+                    // cerr << "-- [SequenceAlignment] Alignment file is sequential" << endl;
                     ReadPhylipSequential(filespec);
                     return 1;
                 }
             }
-            cerr << "-- [SequenceAlignment] Alignment file is interleaved";
+            // cerr << "-- [SequenceAlignment] Alignment file is interleaved";
             int returnvalue = TestPhylip(filespec, 1);
             if (returnvalue != 0) {
-                cerr << ", taxon names repeated" << endl;
+                // cerr << ", taxon names repeated" << endl;
                 ReadPhylip(filespec, 1);
                 return 1;
             }
-            cerr << ", taxon names not repeated" << endl;
+            // cerr << ", taxon names not repeated" << endl;
             TestPhylip(filespec, 0);
             ReadPhylip(filespec, 0);
             return 1;
@@ -249,19 +249,19 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
         theStream >> Ntaxa;
         theStream >> Nsite;
         theStream >> tmp;
-        cerr << tmp << '\n';
+        // cerr << tmp << '\n';
         int Nstate = tmp.length();
         auto Alphabet = new char[Nstate];
         int NAlphabetSet = Nstate + 5;
         auto AlphabetSet = new char[NAlphabetSet];
-        cerr << "alphabet size : " << Nstate << '\n';
-        cerr << "alphabet : ";
+        // cerr << "alphabet size : " << Nstate << '\n';
+        // cerr << "alphabet : ";
         for (int i = 0; i < Nstate; i++) {
             Alphabet[i] = tmp[i];
             AlphabetSet[i] = tmp[i];
-            cerr << Alphabet[i] << ' ';
+            // cerr << Alphabet[i] << ' ';
         }
-        cerr << '\n';
+        // cerr << '\n';
 
         AlphabetSet[Nstate] = '?';
         AlphabetSet[Nstate + 1] = '-';
