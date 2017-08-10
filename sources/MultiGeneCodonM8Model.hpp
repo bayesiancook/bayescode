@@ -520,7 +520,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         }
         burnin++;
         MasterReceiveLogLikelihood();
-        Trace(cerr);
     }
 
     // slave move
