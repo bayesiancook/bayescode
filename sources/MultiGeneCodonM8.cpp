@@ -91,26 +91,32 @@ int main(int argc, char* argv[])	{
 
 	MultiGeneCodonM8Model* model = new MultiGeneCodonM8Model(datafile,treefile,ncat,pihypermean,pihyperinvconc,myid,nprocs);
     if (! myid) {
-        cerr << " -- master unfold\n";
-    }
-    if (! myid) {
-        cerr << " -- start\n";
+        cerr << " -- master allocate\n";
     }
     model->Allocate();
+    if (! myid) {
+        cerr << " -- master unfold\n";
+    }
     model->Unfold();
+    if (! myid) {
+        cerr << " -- start\n";
+        model->Trace(cerr);
+    }
     if (! myid) {
         ofstream paramos((name + ".globalparam").c_str());
         ofstream hyperos((name + ".hyperparam").c_str());
+        /*
         ofstream pos((name + ".posw").c_str());
         ofstream omos((name + ".posom").c_str());
+        */
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
         while(1)	{
             model->MasterMove();
-            model->MasterTraceGlobalParameters(paramos);
-            model->MasterTraceHyperParameters(hyperos);
-            model->MasterTrace(os);
+            model->TraceGlobalParameters(paramos);
+            model->TraceHyperParameters(hyperos);
+            model->Trace(os);
             /*
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
@@ -123,7 +129,6 @@ int main(int argc, char* argv[])	{
         }
         while(1)	{
             model->SlaveMove();
-            model->SlaveTrace();
             if (writegenedata)  {
                 model->SlaveTracePostProb(name);
             }

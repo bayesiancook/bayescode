@@ -25,6 +25,14 @@ class MultiGeneMPIModule    {
         return Ngene;
     }
 
+    int GetLocalNgene() const   {
+        return LocalNgene;
+    }
+
+    string GetLocalGeneName(int gene) const {
+        return GeneName[gene];
+    }
+
     void AllocateAlignments(string datafile);
 
     protected:
@@ -33,9 +41,10 @@ class MultiGeneMPIModule    {
     int nprocs;
 
 	int Ngene;
+    int LocalNgene;
     std::vector<int> genealloc;
-    std::vector<int> genesize;
-    std::vector<string> genename;
+    // std::vector<int> genesize;
+    std::vector<string> GeneName;
 
     SequenceAlignment* refdata;
 };

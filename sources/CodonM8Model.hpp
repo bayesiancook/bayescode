@@ -128,7 +128,7 @@ class CodonM8Model	{
 		Nsite = codondata->GetNsite();    // # columns
 		Ntaxa = codondata->GetNtaxa();
 
-		std::cerr << "-- Number of sites: " << Nsite << std::endl;
+		// std::cerr << "-- Number of sites: " << Nsite << std::endl;
 
 		taxonset = codondata->GetTaxonSet();
 
@@ -141,9 +141,11 @@ class CodonM8Model	{
 		tree->SetIndices();
 		Nbranch = tree->GetNbranch();
 
+        /*
 		std::cerr << "number of taxa : " << Ntaxa << '\n';
 		std::cerr << "number of branches : " << Nbranch << '\n';
 		std::cerr << "-- Tree and data fit together\n";
+        */
 
         purifweight.assign(3,1.0/3);
         purifweighthypercenter.assign(3,1.0/3);
@@ -153,10 +155,10 @@ class CodonM8Model	{
 
     void Unfold()   {
 
-		cerr << "-- unfold\n";
+		// cerr << "-- unfold\n";
 		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogProb() << '\n';
-		std::cerr << "-- mapping substitutions\n";
+		// cerr << phyloprocess->GetLogProb() << '\n';
+		// std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
 		// Trace(cerr);
     }

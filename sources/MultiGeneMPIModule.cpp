@@ -7,9 +7,12 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 
 	ifstream is(datafile.c_str());
 	is >> Ngene;
-	genename.assign(Ngene,"NoName");
-	genesize.assign(Ngene,0);
-	genealloc.assign(Ngene,0);
+    vector<string> genename(Ngene,"NoName");
+	// genename.assign(Ngene,"NoName");
+    vector<int> genesize(Ngene,0);
+	// genesize.assign(Ngene,0);
+    vector<int> genealloc(Ngene,0);
+	// genealloc.assign(Ngene,0);
 	vector<int> geneweight(Ngene,0);
 
 	for (int gene=0; gene<Ngene; gene++)	{
@@ -97,4 +100,26 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 			exit(1);
 		}
 	}
+
+    if (! myid) {
+        LocalNgene = Ngene;
+        GeneName = genename;
+    }
+    else    {
+        int i = 0;
+        for (int gene=0; gene<Ngene; gene++)	{
+            if (genealloc[gene] == myid)    {
+                i++;
+            }
+        }
+        LocalNgene = i;
+        GeneName.assign(LocalNgene,"NoName");
+        i=0;
+        for (int gene=0; gene<Ngene; gene++)	{
+            if (genealloc[gene] == myid)    {
+                GeneName[i] = genename[gene];
+                i++;
+            }
+        }
+    }
 }
