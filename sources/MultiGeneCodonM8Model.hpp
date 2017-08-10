@@ -358,6 +358,9 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
                 totweight += poswarray->GetVal(gene);
             }
         }
+        if (! totweight)    {
+            return 1;
+        }
         return tot / totweight + 1;
     }
 
