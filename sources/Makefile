@@ -28,7 +28,8 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigenecodonm8 multigeneglobom codonm8 globom siteom
+ALL= multigenecodonm8 codonm8 
+# ALL= multigenecodonm8 multigeneglobom codonm8 globom siteom
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
