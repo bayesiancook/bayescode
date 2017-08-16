@@ -267,7 +267,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             SlaveReceiveMixture();
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->SetMixtureParameters((*purifmeanarray)[gene],(*purifinvconcarray)[gene],(*poswarray)[gene],(*dposomarray)[gene],(*purifweightarray)[gene]);
+                // geneprocess[gene]->SetMixtureParameters((*purifmeanarray)[gene],(*purifinvconcarray)[gene],(*poswarray)[gene],(*dposomarray)[gene],(*purifweightarray)[gene]);
                 geneprocess[gene]->UpdateMatrices();
                 geneprocess[gene]->Unfold();
             }
@@ -349,7 +349,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os.flush();
     }
 
-    /*
     void TracePosWeight(ostream& os) {
 
         for (int gene=0; gene<Ngene; gene++)    {
@@ -367,7 +366,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         os << '\n';
         os.flush();
     }
-    */
 
     void SlaveTracePostProbHeader(string name)    {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
@@ -383,19 +381,15 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     }
 
     int GetNpos()    {
-        return 0;
-        // return GetNgene() - poswarray->GetNullSet();
+        return GetNgene() - poswarray->GetNullSet();
     }
 
     double GetMeanPosFrac() {
-        return 0;
-        // return poswarray->GetPosMean();
+        return poswarray->GetPosMean();
     }
 
     double GetMeanPosOmega()    {
 
-        return 0;
-        /*
         double tot = 0;
         double totweight = 0;
         for (int gene=0; gene<Ngene; gene++)    {
@@ -408,7 +402,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             return 1;
         }
         return tot / totweight + 1;
-        */
     }
 
     double GetLogPrior()    {
@@ -451,20 +444,45 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         double purifmeanbeta = (1-purifmeanhypermean) / purifmeanhyperinvconc;
         total += purifmeansuffstat.GetLogProb(purifmeanalpha,purifmeanbeta);
 
+        if (isnan(total))   {
+            cerr << "nan1\n";
+            exit(1);
+        }
+
         double purifinvconcalpha = 1.0 / purifinvconchyperinvshape;
         double purifinvconcbeta = purifinvconcalpha / purifinvconchypermean;
         total += purifinvconcsuffstat.GetLogProb(purifinvconcalpha,purifinvconcbeta);
+
+        if (isnan(total))   {
+            cerr << "nan2\n";
+            exit(1);
+        }
 
         double dposomalpha = 1.0 / dposomhyperinvshape;
         double dposombeta = dposomalpha / dposomhypermean;
         total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
 
+        if (isnan(total))   {
+            cerr << "nan3\n";
+            exit(1);
+        }
+
         double poswalpha = poswhypermean / poswhyperinvconc;
         double poswbeta = (1-poswhypermean) / poswhyperinvconc;
         total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
 
+        if (isnan(total))   {
+            cerr << "nan4\n";
+            exit(1);
+        }
+
         double purifweighthyperconc = 1.0 / purifweighthyperinvconc;
         total += purifweightsuffstat.GetLogProb(purifweighthypercenter,purifweighthyperconc);
+
+        if (isnan(total))   {
+            cerr << "nan5\n";
+            exit(1);
+        }
 
         return total;
     }
@@ -561,14 +579,13 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             // SlaveSendMixture();
             SlaveSendMixtureHyperSuffStat();
             SlaveReceiveHyperParameters();
-            // SlaveSetArrays();
+            SlaveSetArrays();
 
             SlaveSendNucPathSuffStat();
             SlaveReceiveGlobalParameters();
 
         }
         sampling.Stop();
-        // cerr << myid << '\t' << mapping.GetTime() + sampling.GetTime() << '\t' << mapping.GetTime() << '\t' << sampling.GetTime() << '\n';
         burnin++;
         SlaveSendMixture();
         SlaveSendLogLikelihood();
@@ -1209,8 +1226,8 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         for (int proc=1; proc<GetNprocs(); proc++)  {
             int ngene = GetSlaveNgene(proc);
             double* array = new double[7*ngene];
+            int index = 0;
             for (int gene=0; gene<Ngene; gene++)    {
-                int index = 0;
                 if (GeneAlloc[gene] == proc)    {
                     array[index] = (*purifmeanarray)[gene];
                     array[ngene+index] = (*purifinvconcarray)[gene];

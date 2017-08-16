@@ -105,10 +105,8 @@ int main(int argc, char* argv[])	{
     if (! myid) {
         ofstream paramos((name + ".globalparam").c_str());
         ofstream hyperos((name + ".hyperparam").c_str());
-        /*
         ofstream pos((name + ".posw").c_str());
         ofstream omos((name + ".posom").c_str());
-        */
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
@@ -117,10 +115,8 @@ int main(int argc, char* argv[])	{
             model->TraceGlobalParameters(paramos);
             model->TraceHyperParameters(hyperos);
             model->Trace(os);
-            /*
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
-            */
         }
     }
     else	{
