@@ -21,14 +21,18 @@ class DirichletSuffStat : public SuffStat	{
 
     void AddSuffStat(const vector<double>& pi)  {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
+            if (pi[i] <= 0) {
+                cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
+                exit(1);
+            }
             sumlog[i] += log(pi[i]);
         }
         n++;
     }
 
-    void AddSuffStat(const double* pi, int d)  {
+    void AddSuffStat(const double* insumlog, int d)  {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
-            sumlog[i] += log(pi[i]);
+            sumlog[i] += insumlog[i];
         }
         n += d;
     }
