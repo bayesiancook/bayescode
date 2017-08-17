@@ -444,43 +444,23 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         double purifmeanbeta = (1-purifmeanhypermean) / purifmeanhyperinvconc;
         total += purifmeansuffstat.GetLogProb(purifmeanalpha,purifmeanbeta);
 
-        if (isnan(total))   {
-            cerr << "nan1\n";
-            exit(1);
-        }
-
         double purifinvconcalpha = 1.0 / purifinvconchyperinvshape;
         double purifinvconcbeta = purifinvconcalpha / purifinvconchypermean;
         total += purifinvconcsuffstat.GetLogProb(purifinvconcalpha,purifinvconcbeta);
-
-        if (isnan(total))   {
-            cerr << "nan2\n";
-            exit(1);
-        }
 
         double dposomalpha = 1.0 / dposomhyperinvshape;
         double dposombeta = dposomalpha / dposomhypermean;
         total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
 
-        if (isnan(total))   {
-            cerr << "nan3\n";
-            exit(1);
-        }
-
         double poswalpha = poswhypermean / poswhyperinvconc;
         double poswbeta = (1-poswhypermean) / poswhyperinvconc;
         total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
-
-        if (isnan(total))   {
-            cerr << "nan4\n";
-            exit(1);
-        }
 
         double purifweighthyperconc = 1.0 / purifweighthyperinvconc;
         total += purifweightsuffstat.GetLogProb(purifweighthypercenter,purifweighthyperconc);
 
         if (isnan(total))   {
-            cerr << "nan5\n";
+            cerr << "hyper suff stat log prob is nan\n";
             exit(1);
         }
 
