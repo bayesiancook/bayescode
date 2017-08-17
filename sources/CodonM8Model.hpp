@@ -288,6 +288,14 @@ class CodonM8Model	{
         componentomegaarray->SetParameters(purifmean,purifinvconc,posw,dposom+1,purifweight);
     }
 
+    void GetMixtureParameters(double& inpurifmean, double& inpurifinvconc, double& inposw, double& indposom, vector<double>& inpurifweight)    {
+        inpurifmean = purifmean;
+        inpurifinvconc = purifinvconc;
+        inposw = posw;
+        indposom = dposom;
+        inpurifweight = purifweight;
+    }
+
     void SetMixtureHyperParameters(double inpurifmeanhypermean, double inpurifmeanhyperinvconc, double inpurifinvconchypermean, double inpurifinvconchyperinvshape, double indposomhypermean, double indposomhyperinvshape, double inpi, double inposwhypermean, double inposwhyperinvconc, const vector<double>& inpurifweighthypercenter, double inpurifweighthyperinvconc)  {
 
         purifmeanhypermean = inpurifmeanhypermean;

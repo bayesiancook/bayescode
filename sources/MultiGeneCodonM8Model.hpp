@@ -170,63 +170,21 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         double purifmeanalpha = purifmeanhypermean / purifmeanhyperinvconc;
         double purifmeanbeta = (1-purifmeanhypermean) / purifmeanhyperinvconc;
         purifmeanarray = new IIDBeta(GetLocalNgene(),purifmeanalpha,purifmeanbeta);
-        /*
-        if (myid)   {
-            purifmeanarray = new IIDBeta(GetLocalNgene(),purifmeanalpha,purifmeanbeta);
-        }
-        else    {
-            purifmeanarray = 0;
-        }
-        */
 
         double purifinvconcalpha = 1.0 / purifinvconchyperinvshape;
         double purifinvconcbeta = purifinvconcalpha / purifinvconchypermean;
         purifinvconcarray = new IIDGamma(GetLocalNgene(),purifinvconcalpha,purifinvconcbeta);
-        /*
-        if (myid)   {
-            purifinvconcarray = new IIDGamma(GetLocalNgene(),purifinvconcalpha,purifinvconcbeta);
-        }
-        else    {
-            purifinvconcarray = 0;
-        }
-        */
 
         double dposomalpha = 1.0 / dposomhyperinvshape;
         double dposombeta = dposomalpha / dposomhypermean;
         dposomarray = new IIDGamma(GetLocalNgene(),dposomalpha,dposombeta);
-        /*
-        if (myid)   {
-            dposomarray = new IIDGamma(GetLocalNgene(),dposomalpha,dposombeta);
-        }
-        else    {
-            dposomarray = 0;
-            // dposomarray = new IIDGamma(GetNgene(),dposomalpha,dposombeta);
-        }
-        */
 
         double poswalpha = poswhypermean / poswhyperinvconc;
         double poswbeta = (1-poswhypermean) / poswhyperinvconc;
         poswarray = new IIDBernoulliBeta(GetLocalNgene(),pi,poswalpha,poswbeta);
-        /*
-        if (myid)   {
-            poswarray = new IIDBernoulliBeta(GetLocalNgene(),pi,poswalpha,poswbeta);
-        }
-        else    {
-            poswarray = 0;
-            // poswarray = new IIDBernoulliBeta(Ngene,pi,poswalpha,poswbeta);
-        }
-        */
 
         double purifweighthyperconc = 1.0 / purifweighthyperinvconc;
         purifweightarray = new IIDDirichlet(GetLocalNgene(),purifweighthypercenter,purifweighthyperconc);
-        /*
-        if (myid)   {
-            purifweightarray = new IIDDirichlet(GetLocalNgene(),purifweighthypercenter,purifweighthyperconc);
-        }
-        else    {
-            purifweightarray = 0;
-        }
-        */
 
         if (myid)   {
             lnL = new double[GetLocalNgene()];
@@ -465,6 +423,15 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
         }
 
         return total;
+    }
+
+    void PrintHyperSuffStat(ostream& os)   {
+
+            os << "purifmean      : " << purifmeansuffstat.GetN() << '\t' << purifmeansuffstat.GetSumLog0() << '\t' << purifmeansuffstat.GetSumLog1() << '\n';
+            os << "purifinvconc   : " << purifinvconcsuffstat.GetN() << '\t' << purifinvconcsuffstat.GetSum() << '\t' << purifinvconcsuffstat.GetSumLog() << '\n';
+            os << "posw           : " << poswsuffstat.GetN0() << '\t' << poswsuffstat.GetN1() << '\t' << poswsuffstat.GetSumLog0() << '\t' << poswsuffstat.GetSumLog1() << '\n';
+            os << "dposom         : " << dposomsuffstat.GetN() << '\t' << dposomsuffstat.GetSum() << '\t' << dposomsuffstat.GetSumLog() << '\n';
+            os << "purifweight    : " << purifweightsuffstat.GetN() << '\t' << purifweightsuffstat.GetSumLog(0) << '\t' << purifweightsuffstat.GetSumLog(1) << '\t' << purifweightsuffstat.GetSumLog(2) << '\n';
     }
 
 	double LengthLogProb()	{
@@ -847,7 +814,9 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
             dposomsuffstat.AddSuffStat(beta[d],beta[d+1],count[i++]);
             d+=2;
             purifweightsuffstat.AddSuffStat(beta+d,count[i++]);
+            d += 3;
         }
+
         delete[] count;
         delete[] beta;
     }
@@ -872,10 +841,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
 		HyperSlidingMove(dposomhypermean,3.0,10,0.5,10);
 		HyperSlidingMove(dposomhypermean,1.0,10,0.5,10);
 		HyperSlidingMove(dposomhypermean,0.3,10,0.5,10);
-        /*
-		HyperScalingMove(dposomhypermean,1.0,10);
-		HyperScalingMove(dposomhypermean,0.3,10);
-        */
 		HyperScalingMove(dposomhyperinvshape,1.0,10);
 		HyperScalingMove(dposomhyperinvshape,0.3,10);
 
@@ -889,8 +854,6 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
                 ResamplePi();
             }
         }
-
-        // SetArrays();
     }
 
     void SlaveSetArrays()    {
@@ -1137,6 +1100,7 @@ class MultiGeneCodonM8Model : public MultiGeneMPIModule	{
     void SlaveMoveOmega()  {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->MoveOmega();
+            geneprocess[gene]->GetMixtureParameters((*purifmeanarray)[gene],(*purifinvconcarray)[gene],(*poswarray)[gene],(*dposomarray)[gene],(*purifweightarray)[gene]);
         }
     }
 
