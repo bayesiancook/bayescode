@@ -38,8 +38,8 @@ class BernoulliBetaSuffStat : public SuffStat	{
 	
     int GetN0() const {return n0;}
     int GetN1() const {return n1;}
-    int GetSumLog0() const {return sumlog0;}
-    int GetSumLog1() const {return sumlog1;}
+    double GetSumLog0() const {return sumlog0;}
+    double GetSumLog1() const {return sumlog1;}
 
 	private:
 
