@@ -1008,8 +1008,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         MPI_Status stat;
         for (int proc=1; proc<GetNprocs(); proc++)  {
             int ngene = GetSlaveNgene(proc);
-            double* array = new double[3*ngene];
-            MPI_Recv(array,3*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            double* array = new double[4*ngene];
+            MPI_Recv(array,4*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
             int index = 0;
             for (int gene=0; gene<Ngene; gene++)    {
                 if (GeneAlloc[gene] == proc)    {
