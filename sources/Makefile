@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigenecodonm8 codonm8 
+ALL= codonm2a multigenecodonm8 codonm8 
 # ALL= multigenecodonm8 multigeneglobom codonm8 globom siteom
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -62,6 +62,10 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
+
+codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
+$(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
+	$(CC) CodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 codonm8$(EXEEXT): $(PROGSDIR)/codonm8$(EXEEXT)
 $(PROGSDIR)/codonm8$(EXEEXT): CodonM8.o $(OBJS)
