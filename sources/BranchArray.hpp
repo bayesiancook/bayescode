@@ -43,6 +43,7 @@ template<class T> class SimpleBranchArray : public BranchArray<T>	{
 
 	public:
 	SimpleBranchArray(const Tree& intree) : tree(intree), array(intree.GetNbranch()) {}
+	SimpleBranchArray(const Tree& intree, const T& initval) : tree(intree), array(intree.GetNbranch(),initval) {}
 	virtual ~SimpleBranchArray() {}
 
 	const Tree& GetTree() const /*override*/ {return tree;}

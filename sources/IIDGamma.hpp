@@ -40,6 +40,19 @@ class GammaSuffStat : public SuffStat	{
 	int n;
 };
 
+class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
+
+    public:
+	GammaSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
+    ~GammaSuffStatBranchArray() {}
+
+    void Clear()    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            (*this)[i].Clear();
+        }
+    }
+};
+
 class IIDGamma: public SimpleArray<double>	{
 
 	public: 
@@ -187,9 +200,78 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		}
 	}
 
+    /*
+    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray)   {
+		for (int i=0; i<GetNbranch(); i++)	{
+			suffstat[i].AddSuffStat((*this)[i],log((*this)[i]));
+		}
+    }
+    */
+
 	protected:
 	double shape;
 	double scale;
+};
+
+class GammaWhiteNoise: public SimpleBranchArray<double>	{
+
+	public: 
+
+	GammaWhiteNoise(const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape)	{
+		Sample();
+	}
+
+	~GammaWhiteNoise() {}
+
+	double GetShape() const {return shape;}
+
+	void SetShape(double inshape)	{
+		shape = inshape;
+	}
+
+	void Sample()	{
+		for (int i=0; i<GetNbranch(); i++)	{
+            double scale = shape / blmean.GetVal(i);
+			(*this)[i] = Random::Gamma(shape,scale);
+		}
+	}
+
+	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
+		for (int i=0; i<GetNbranch(); i++)	{
+			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
+            double scale = shape / blmean.GetVal(i);
+			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
+		}
+	}
+
+	double GetLogProb()	{
+		double total = 0;
+		for (int i=0; i<GetNbranch(); i++)	{
+			total += GetLogProb(i);
+		}
+		return total;
+	}
+
+	double GetLogProb(int index)	{
+        double scale = shape / blmean.GetVal(index);
+		return shape * log(scale) - Random::logGamma(shape) + (shape-1)*log((*this)[index]) - scale*(*this)[index];
+	}
+
+	void AddSuffStat(GammaSuffStat& suffstat)	{
+		for (int i=0; i<GetNbranch(); i++)	{
+			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
+		}
+	}
+
+    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray)   {
+		for (int i=0; i<GetNbranch(); i++)	{
+			suffstatarray[i].AddSuffStat((*this)[i],log((*this)[i]));
+		}
+    }
+
+	protected:
+    const ConstBranchArray<double>& blmean;
+	double shape;
 };
 
 #endif

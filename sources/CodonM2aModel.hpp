@@ -74,6 +74,12 @@ class CodonM2aModel	{
     double poswhypermean;
     double poswhyperinvconc;
 
+    // nucleotide rates hyperparameters
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+
     // nucleotide rate parameters
 	vector<double> nucrelrate;
 	vector<double> nucstat;
@@ -103,13 +109,15 @@ class CodonM2aModel	{
 
     NucPathSuffStat nucpathsuffstat;
 
-    int fixglobal;
+    int blmode;
+    int nucmode;
 
 	public:
 
 	CodonM2aModel(string datafile, string treefile, double inpi)	{
 
-        fixglobal = 0;
+        blmode = 2;
+        nucmode = 2;
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
         pi = inpi;
@@ -130,6 +138,11 @@ class CodonM2aModel	{
 		tree->SetIndices();
 		Nbranch = tree->GetNbranch();
 	}
+
+    void SetAcrossGenesModes(int inblmode, int innucmode)   {
+        blmode = inblmode;
+        nucmode = innucmode;
+    }
 
     void Unfold()   {
 
@@ -174,6 +187,12 @@ class CodonM2aModel	{
 		componentomegaarray = new M2aMix(purom,dposom+1,purw,posw);
 		sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
 		sitepostprobarray.assign(GetNsite(),vector<double>(3,0));
+
+        nucrelratehypercenter.assign(Nrr,1.0/Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc,1.0/Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
 
 		nucrelrate.assign(Nrr,0);
 		double totrr = 0;
@@ -231,17 +250,28 @@ class CodonM2aModel	{
         }
     }
 
+    void SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
+        cerr << "in codon m2: set bl hyperparams\n";
+        exit(1);
+    }
+
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
-        for (int j=0; j<Nrr; j++)   {
-            nucrelrate[j] = innucrelrate[j];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            nucstat[j] = innucstat[j];
-        }
+
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
         UpdateMatrices();
     }
 
+    void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc) {
+
+        nucrelratehypercenter = innucrelratehypercenter;
+        nucrelratehyperinvconc = innucrelratehyperinvconc;
+        nucstathypercenter = innucstathypercenter;
+        nucstathyperinvconc = innucstathyperinvconc;
+    }
+
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw)    {
+
         purom = inpurom;
         dposom = indposom;
         purw = inpurw;
@@ -250,6 +280,7 @@ class CodonM2aModel	{
     }
 
     void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw)    {
+
         inpurom = purom;
         indposom = dposom;
         inpurw = purw;
@@ -447,6 +478,9 @@ class CodonM2aModel	{
 
 	void Move()	{
 
+        cerr << "in CodonM2aModel::Move\n";
+        exit(1);
+
         Chrono mappingtime, reptime, lengthtime, collecttime, omegatime, nuctime;
 
         mappingtime.Start();
@@ -458,7 +492,7 @@ class CodonM2aModel	{
         reptime.Start();
 		for (int rep=0; rep<nrep; rep++)	{
 
-            if (! fixglobal)    {
+            if (blmode != 2)    {
                 lengthtime.Start();
                 ResampleBranchLengths();
                 MoveLambda();
@@ -473,10 +507,10 @@ class CodonM2aModel	{
 			MoveOmega();
             omegatime.Stop();
 
-            if (! fixglobal)    {
+            if (nucmode != 2)    {
                 nuctime.Start();
                 UpdateMatrices();
-                MoveNuc();
+                MoveNucRates();
                 nuctime.Stop();
             }
 		}
@@ -681,7 +715,7 @@ class CodonM2aModel	{
         nucpathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
     }
 
-	void MoveNuc()	{
+	void MoveNucRates()	{
 
 		CollectComponentPathSuffStat();
         CollectNucPathSuffStat();
@@ -774,10 +808,6 @@ class CodonM2aModel	{
 		}
 		return tot;
 	}
-
-    void FixGlobalParameters()  {
-        fixglobal = 1;
-    }
 
     void GetGlobalParametersFromFile(istream& is)   {
         for (int j=0; j<Nbranch; j++)   {

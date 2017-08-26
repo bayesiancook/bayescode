@@ -4,6 +4,7 @@
 #include "Parallel.hpp"
 #include "IIDBernoulliBeta.hpp"
 #include "IIDBeta.hpp"
+#include "IIDDirichlet.hpp"
 
 #include "Chrono.hpp"
 
@@ -23,9 +24,12 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
 	double lambda;
 	BranchIIDGamma* branchlength;
-	
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
 	GammaSuffStat lambdasuffstat;
+	
+    double blhyperinvshape;
+    vector<GammaWhiteNoise*> branchlengtharray;
+	PoissonSuffStatBranchArray* lengthsuffstatarray;
+    GammaSuffStatBranchArray* lengthhypersuffstatarray;
 
     double puromhypermean;
 	double puromhyperinvconc;
@@ -51,11 +55,20 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     double pihyperinvconc;
     double pi;
 
-	vector<double> nucrelrate;
-	vector<double> nucstat;
+    // shared nuc rates
 	GTRSubMatrix* nucmatrix;
-
     NucPathSuffStat nucpathsuffstat;
+
+    // gene-specific nuc rates
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    IIDDirichlet* nucrelratearray;
+    DirichletSuffStat nucrelratesuffstat;
+
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    IIDDirichlet* nucstatarray;
+    DirichletSuffStat nucstatsuffstat;
 
     std::vector<CodonM2aModel*> geneprocess;
 
@@ -63,6 +76,16 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     double* lnL;
 
     int burnin;
+
+    // 0: free (fixed hyper parameters)
+    // 1: free and shrinkage (free hyper parameters)
+    // 2: shared across genes
+    int blmode;
+    int nucmode;
+    int purommode;
+    int dposommode;
+    int purwmode;
+    int poswmode;
 
     Chrono timepercycle;
     Chrono omegachrono,hyperchrono,mastersampling;
@@ -73,7 +96,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
-    MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
+    MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
         burnin = 0;
 
@@ -110,50 +133,67 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         // Allocate();
     }
 
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode)  {
+        blmode = inblmode;
+        nucmode = innucmode;
+        purommode = inpurommode;
+        dposommode = indposommode;
+        purwmode = inpurwmode;
+        poswmode = inposwmode;
+    }
+
+    /*
+    void SetBLHyperParameters()  {
+    }
+
+    void SetNucRateHyperParameters() {
+    }
+    */
+
+    void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc)   {
+        puromhypermean = inpuromhypermean;
+        puromhyperinvconc = inpuromhyperinvconc;
+        dposomhypermean = indposomhypermean;
+        dposomhyperinvshape = indposomhyperinvshape;
+        purwhypermean = inpurwhypermean;
+        purwhyperinvconc = inpurwhyperinvconc;
+        poswhypermean = inposwhypermean;
+        poswhyperinvconc = inposwhyperinvconc;
+    }
+
     void Allocate() {
 
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-        lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-
-        nucrelrate.assign(Nrr,0);
-        double totrr = 0;
-        for (int k=0; k<Nrr; k++)	{
-            nucrelrate[k] = Random::sExpo();
-            totrr += nucrelrate[k];
-        }
-        for (int k=0; k<Nrr; k++)	{
-            nucrelrate[k] /= totrr;
-        }
-
-        nucstat.assign(Nnuc,0);
-        double totstat = 0;
-        for (int k=0; k<Nnuc; k++)	{
-            nucstat[k] = Random::sGamma(1.0);
-            totstat += nucstat[k];
-        }
-        for (int k=0; k<Nnuc; k++)	{
-            nucstat[k] /= totstat;
-        }
-        nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
-
-        puromhypermean = 0.5;
-        puromhyperinvconc = 0.5;
-
-        dposomhypermean = 1.0;
-        dposomhyperinvshape = 1.0;
-
-        purwhypermean = 0.5;
-        purwhyperinvconc = 0.5;
-
-        pi = pihypermean;
-        if (! pi)   {
-            poswhypermean = 0;
-            poswhyperinvconc = 0;
+        blhyperinvshape = 1.0;
+        if (blmode == 2)    {
+            lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+            lengthhypersuffstatarray = 0;
         }
         else    {
-            poswhypermean = 0.1;
-            poswhyperinvconc = 1;
+            branchlengtharray.assign(GetLocalNgene(),0);
+            for (int gene=0; gene<GetLocalNgene(); gene++)  {
+                branchlengtharray[gene] = new GammaWhiteNoise(*tree,*branchlength,1.0/blhyperinvshape);
+            }
+            lengthsuffstatarray = 0;
+            lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
+        }
+
+        nucrelratehypercenter.assign(Nrr,1.0/Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc,1.0/Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
+
+        if (nucmode == 2)   {
+            nucrelratearray = new IIDDirichlet(1,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+            nucstatarray = new IIDDirichlet(1,nucstathypercenter,1.0/nucstathyperinvconc);
+            nucmatrix = new GTRSubMatrix(Nnuc,(*nucrelratearray)[0],(*nucstatarray)[0],true);
+        }
+        else    {
+            nucrelratearray = new IIDDirichlet(GetLocalNgene(),nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+            nucstatarray = new IIDDirichlet(GetLocalNgene(),nucstathypercenter,1.0/nucstathyperinvconc);
+            nucmatrix = 0;
         }
 
         double puromalpha = puromhypermean / puromhyperinvconc;
@@ -179,7 +219,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
             lnL = 0;
         }
 
-
         if (! GetMyid())    {
             geneprocess.assign(0,(CodonM2aModel*) 0);
         }
@@ -195,24 +234,59 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void Unfold()   {
 
         if (! GetMyid())    {
-            MasterSendHyperParameters();
-            MasterSendGlobalParameters();
+
+            MasterSendBranchLengthsHyperParameters();
+            MasterSendNucRatesHyperParameters();
+            MasterSendMixtureHyperParameters();
+
+            if (blmode == 2)    {
+                MasterSendGlobalBranchLengths();
+            }
+            else    {
+                MasterSendGeneBranchLengths();
+            }
+
+            if (nucmode == 2)   {
+                MasterSendGlobalNucRates();
+            }
+            else    {
+                MasterSendGeneNucRates();
+            }
+
             MasterSendMixture();
             MasterReceiveLogLikelihood();
         }
         else    {
-            SlaveReceiveHyperParameters();
+
+            SlaveReceiveBranchLengthsHyperParameters();
+            SlaveReceiveNucRatesHyperParameters();
+            SlaveReceiveMixtureHyperParameters();
+
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene]->Allocate();
             }
 
-            SlaveReceiveGlobalParameters();
+            if (blmode == 2)    {
+                SlaveReceiveGlobalBranchLengths();
+            }
+            else    {
+                SlaveReceiveGeneBranchLengths();
+            }
+
+            if (nucmode == 2)   {
+                SlaveReceiveGlobalNucRates();
+            }
+            else    {
+                SlaveReceiveGeneNucRates();
+            }
+
             SlaveReceiveMixture();
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene]->UpdateMatrices();
                 geneprocess[gene]->Unfold();
             }
+
             SlaveSendLogLikelihood();
         }
     }
@@ -243,44 +317,16 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         timepercycle.Start();
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-		os << GetTotalLength() << '\t';
+		os << GetMeanTotalLength() << '\t';
         os << pi << '\t';
         os << GetNpos() << '\t';
         os << puromhypermean << '\t' << puromhyperinvconc << '\t';
         os << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
         os << purwhypermean << '\t' << purwhyperinvconc << '\t';
         os << poswhypermean << '\t' << poswhyperinvconc << '\t';
-		os << GetEntropy(nucstat,Nnuc) << '\t';
-		os << GetEntropy(nucrelrate,Nrr) << '\n';
+        os << nucstatarray->GetMeanEntropy() << '\t';
+		os << nucrelratearray->GetMeanEntropy() << '\n';
 		os.flush();
-    }
-
-    void TraceGlobalParameters(ostream& os)   {
-        for (int j=0; j<Nbranch; j++)   {
-            os << branchlength->GetVal(j) << '\t';
-        }
-        for (int j=0; j<Nrr; j++)   {
-            os << nucrelrate[j] << '\t';
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            os << nucstat[j] << '\t';
-        }
-        os << '\n';
-        os.flush();
-    }
-
-    void TraceHyperParameters(ostream& os)    {
-        os << puromhypermean << '\t';
-        os << puromhyperinvconc << '\t';
-        os << dposomhypermean << '\t';
-        os << dposomhyperinvshape << '\t';
-        os << purwhypermean << '\t';
-        os << purwhyperinvconc << '\t';
-        os << pi << '\t';
-        os << poswhypermean << '\t';
-        os << poswhyperinvconc << '\t';
-        os << '\n';
-        os.flush();
     }
 
     void TracePosWeight(ostream& os) {
@@ -320,7 +366,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     double GetLogPrior()    {
 		double total = 0;
-		total += LambdaLogProb();
+		// total += LambdaLogProb();
+        // total += LengthHyperLogPrior);
 		total += LengthLogProb();
 		total += HyperLogPrior();
         total += NucLogPrior();
@@ -385,18 +432,10 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         return totlnL;
     }
 
-	double GetTotalLength()	{
+	double GetMeanTotalLength()	{
 		double tot = 0;
 		for (int j=1; j<Nbranch; j++)	{
 			tot += branchlength->GetVal(j);
-		}
-		return tot;
-	}
-
-	double GetEntropy(const std::vector<double>& profile, int dim) const {
-		double tot = 0;
-		for (int i=0; i<dim; i++)	{
-			tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
 		}
 		return tot;
 	}
@@ -414,27 +453,52 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
             if (rep)    {
                 mastersampling.Start();
             }
-            MasterReceiveLengthSuffStat();
-            MasterResampleBranchLengths();
-            MasterMoveLambda();
 
-            MasterSendGlobalParameters();
+            if (blmode == 2)    {
+                MasterReceiveBranchLengthsSuffStat();
+                MasterResampleBranchLengths();
+                MasterMoveLambda();
+                MasterSendGlobalBranchLengths();
+            }
+            else    {
+                if (blmode == 0)    {
+                    MasterReceiveBranchLengthsHyperSuffStat();
+                    MasterMoveBranchLengthsHyperParameters();
+                    MasterSendBranchLengthsHyperParameters();
+                }
+            }
+
             omegachrono.Start();
             MasterReceiveMixtureHyperSuffStat();
             omegachrono.Stop();
             hyperchrono.Start();
             MasterMoveMixtureHyperParameters();
             hyperchrono.Stop();
-            MasterSendHyperParameters();
+            MasterSendMixtureHyperParameters();
 
-            MasterReceiveNucPathSuffStat();
-            MasterMoveNuc();
-            MasterSendGlobalParameters();
+            if (nucmode == 2)   {
+                MasterReceiveNucPathSuffStat();
+                MasterMoveNucRates();
+                MasterSendGlobalNucRates();
+            }
+            else    {
+                if (nucmode == 0)  {
+                    MasterReceiveNucRatesHyperSuffStat();
+                    MasterMoveNucRatesHyperParameters();
+                    MasterSendNucRatesHyperParameters();
+                }
+            }
             if (rep)    {
                 mastersampling.Stop();
             }
         }
         burnin++;
+        if (nucmode != 2)   {
+            MasterReceiveGeneNucRates();
+        }
+        if (blmode != 2)    {
+            MasterReceiveGeneBranchLengths();
+        }
         MasterReceiveMixture();
         MasterReceiveLogLikelihood();
     }
@@ -453,38 +517,192 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         sampling.Start();
 		for (int rep=0; rep<nrep; rep++)	{
 
-            SlaveSendLengthSuffStat();
-            SlaveReceiveGlobalParameters();
+            if (blmode == 2)    {
+                SlaveSendBranchLengthsSuffStat();
+                SlaveReceiveGlobalBranchLengths();
+            }
+            else    {
+                SlaveMoveBranchLengths();
+
+                if (blmode == 0)    {
+                    SlaveSendBranchLengthsHyperSuffStat();
+                    SlaveReceiveBranchLengthsHyperParameters();
+                }
+            }
 
             SlaveCollectPathSuffStat();
             SlaveMoveOmega();
             SlaveSendMixtureHyperSuffStat();
-            SlaveReceiveHyperParameters();
+            SlaveReceiveMixtureHyperParameters();
             SlaveSetArrays();
 
-            SlaveSendNucPathSuffStat();
-            SlaveReceiveGlobalParameters();
+            if (nucmode == 2)   {
+                SlaveSendNucPathSuffStat();
+                SlaveReceiveGlobalNucRates();
+            }
+            else    {
+                SlaveMoveNucRates();
+
+                if (nucmode == 0)   {
+                    SlaveSendNucRatesHyperSuffStat();
+                    SlaveReceiveNucRatesHyperParameters();
+                }
+            }
 
         }
         sampling.Stop();
         burnin++;
+
+        if (blmode != 2)    {
+            SlaveSendGeneBranchLengths();
+        }
+        if (nucmode != 2)   {
+            SlaveSendGeneNucRates();
+        }
         SlaveSendMixture();
         SlaveSendLogLikelihood();
     }
 
-    void MasterSendGlobalParameters() {
+    void MasterSendGlobalBranchLengths() {
 
-        int N = Nbranch + Nrr + Nnuc;
+        double* array = new double[Nbranch];
+        for (int j=0; j<Nbranch; j++)   {
+            array[j] = branchlength->GetVal(j);
+        }
+        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveGlobalBranchLengths()   {
+
+        double* array = new double[Nbranch];
+        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for (int j=0; j<Nbranch; j++)   {
+            (*branchlength)[j] = array[j];
+        }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetBranchLengths(*branchlength);
+        }
+        delete[] array;
+    }
+
+    void MasterSendBranchLengthsHyperParameters() {
+
+        double* array = new double[Nbranch+1];
+        for (int j=0; j<Nbranch; j++)   {
+            array[j] = branchlength->GetVal(j);
+        }
+        array[Nbranch] = blhyperinvshape;
+
+        MPI_Bcast(array,Nbranch+1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveBranchLengthsHyperParameters()   {
+
+        double* array = new double[Nbranch+1];
+        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for (int j=0; j<Nbranch; j++)   {
+            (*branchlength)[j] = array[j];
+        }
+        blhyperinvshape = array[Nbranch];
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength,blhyperinvshape);
+        }
+        delete[] array;
+    }
+
+    void MasterSendGeneBranchLengths()    {
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[Nbranch*ngene];
+            int index = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (GeneAlloc[gene] == proc)    {
+                    for (int j=0; j<Nbranch; j++)   {
+                        array[index++] = branchlengtharray[gene]->GetVal(j);
+                    }
+                }
+            }
+            if (index != Nbranch*ngene) {
+                cerr << "error when sending gene nuc rates: non matching vector size\n";
+                exit(1);
+            }
+
+            MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
+            delete[] array;
+        }
+    }
+
+    void SlaveReceiveGeneBranchLengths()   {
+
+        int ngene = GetLocalNgene();
+        double* array = new double[Nbranch*ngene];
+        MPI_Status stat;
+        MPI_Recv(array,Nbranch*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
+
+        int index = 0;
+        for (int gene=0; gene<ngene; gene++)    {
+            for (int j=0; j<Nbranch; j++)   {
+                (*branchlengtharray[gene])[j] = array[index++];
+            }
+            geneprocess[gene]->SetBranchLengths(*branchlengtharray[gene]);
+        }
+        delete[] array;
+    }
+
+    void SlaveSendGeneBranchLengths()    {
+
+        int ngene = GetLocalNgene();
+        double* array = new double[Nbranch*ngene];
+
+        int index = 0;
+        for (int gene=0; gene<ngene; gene++)    {
+            for (int j=0; j<Nrr; j++)   {
+                array[index++] = branchlengtharray[gene]->GetVal(j);
+            }
+        }
+        MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void MasterReceiveGeneBranchLengths()    {
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[Nbranch*ngene];
+
+            MPI_Status stat;
+            MPI_Recv(array,Nbranch*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+            int index = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (GeneAlloc[gene] == proc)    {
+                    for (int j=0; j<Nrr; j++)   {
+                        (*branchlengtharray[gene])[j] = array[index++];
+                    }
+                }
+            }
+            if (index != Nbranch*ngene) {
+                cerr << "error when sending gene nuc rates: non matching vector size\n";
+                exit(1);
+            }
+            delete[] array;
+        }
+    }
+
+    void MasterSendGlobalNucRates()   {
+
+        int N = Nrr + Nnuc;
         double* array = new double[N];
         int i = 0;
-        for (int j=0; j<Nbranch; j++)   {
-            array[i++] = branchlength->GetVal(j);
-        }
         for (int j=0; j<Nrr; j++)   {
-            array[i++] = nucrelrate[j];
+            array[i++] = (*nucrelratearray)[0][j];
         }
         for (int j=0; j<Nnuc; j++)  {
-            array[i++] = nucstat[j];
+            array[i++] = (*nucstatarray)[0][j];
         }
         if (i != N) {
             cerr << "error when sending global params: non matching vector size\n";
@@ -496,20 +714,17 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] array;
     }
 
-    void SlaveReceiveGlobalParameters()   {
+    void SlaveReceiveGlobalNucRates()   {
 
-        int N = Nbranch + Nrr + Nnuc;
+        int N = Nrr + Nnuc;
         double* array = new double[N];
         MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
         int i = 0;
-        for (int j=0; j<Nbranch; j++)   {
-            (*branchlength)[j] = array[i++];
-        }
         for (int j=0; j<Nrr; j++)   {
-            nucrelrate[j] = array[i++];
+            (*nucrelratearray)[0][j] = array[i++];
         }
         for (int j=0; j<Nnuc; j++)  {
-            nucstat[j] = array[i++];
+            (*nucstatarray)[0][j] = array[i++];
         }
 
         if (i != N) {
@@ -519,13 +734,108 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         }
 
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->SetBranchLengths(*branchlength);
-            geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
+            geneprocess[gene]->SetNucRates((*nucrelratearray)[0],(*nucstatarray)[0]);
         }
         delete[] array;
     }
 
-    void MasterSendHyperParameters() {
+    void MasterSendGeneNucRates()    {
+
+        int N = Nrr + Nnuc;
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[N*ngene];
+            int index = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (GeneAlloc[gene] == proc)    {
+                    for (int j=0; j<Nrr; j++)   {
+                        array[index++] = (*nucrelratearray)[gene][j];
+                    }
+                    for (int j=0; j<Nnuc; j++)  {
+                        array[index++] = (*nucstatarray)[gene][j];
+                    }
+                }
+            }
+            if (index != N*ngene) {
+                cerr << "error when sending gene nuc rates: non matching vector size\n";
+                exit(1);
+            }
+
+            MPI_Send(array,N*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
+            delete[] array;
+        }
+    }
+
+    void SlaveReceiveGeneNucRates()   {
+
+        int N = Nrr + Nnuc;
+        int ngene = GetLocalNgene();
+        double* array = new double[N*ngene];
+        MPI_Status stat;
+        MPI_Recv(array,N*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
+
+        int index = 0;
+        for (int gene=0; gene<ngene; gene++)    {
+            for (int j=0; j<Nrr; j++)   {
+                (*nucrelratearray)[gene][j] = array[index++];
+            }
+            for (int j=0; j<Nnuc; j++)  {
+                (*nucstatarray)[gene][j] = array[index++];
+            }
+            geneprocess[gene]->SetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
+        }
+        delete[] array;
+    }
+
+    void SlaveSendGeneNucRates()    {
+
+        int N = Nrr + Nnuc;
+        int ngene = GetLocalNgene();
+        double* array = new double[N*ngene];
+
+        int index = 0;
+        for (int gene=0; gene<ngene; gene++)    {
+            for (int j=0; j<Nrr; j++)   {
+                array[index++] = (*nucrelratearray)[gene][j];
+            }
+            for (int j=0; j<Nnuc; j++)  {
+                array[index++] = (*nucstatarray)[gene][j];
+            }
+        }
+        MPI_Send(array,N*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void MasterReceiveGeneNucRates()    {
+
+        int N = Nrr + Nnuc;
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[N*ngene];
+
+            MPI_Status stat;
+            MPI_Recv(array,N*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+            int index = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (GeneAlloc[gene] == proc)    {
+                    for (int j=0; j<Nrr; j++)   {
+                        (*nucrelratearray)[gene][j] = array[index++];
+                    }
+                    for (int j=0; j<Nnuc; j++)  {
+                        (*nucstatarray)[gene][j] = array[index++];
+                    }
+                }
+            }
+            if (index != N*ngene) {
+                cerr << "error when sending gene nuc rates: non matching vector size\n";
+                exit(1);
+            }
+            delete[] array;
+        }
+    }
+
+    void MasterSendMixtureHyperParameters() {
 
         int N = 9;
         double* array = new double[N];
@@ -550,7 +860,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] array;
     }
 
-    void SlaveReceiveHyperParameters()   {
+    void SlaveReceiveMixtureHyperParameters()   {
 
         int N = 9;
         double* array = new double[N];
@@ -578,6 +888,56 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] array;
     }
 
+    void MasterSendNucRatesHyperParameters()   {
+
+        int N = Nrr + Nnuc + 2;
+        double* array = new double[N];
+        int i = 0;
+        for (int j=0; j<Nrr; j++)   {
+            array[i++] = nucrelratehypercenter[j];
+        }
+        array[i++] = nucrelratehyperinvconc;
+        for (int j=0; j<Nnuc; j++)  {
+            array[i++] = nucstathypercenter[j];
+        }
+        array[i++] = nucstathyperinvconc;
+        if (i != N) {
+            cerr << "error when sending global params: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
+
+        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveNucRatesHyperParameters()   {
+
+        int N = Nrr + Nnuc + 2;
+        double* array = new double[N];
+        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        int i = 0;
+        for (int j=0; j<Nrr; j++)   {
+            nucrelratehypercenter[j] = array[i++];
+        }
+        nucrelratehyperinvconc = array[i++];
+        for (int j=0; j<Nnuc; j++)  {
+            nucstathypercenter[j] = array[i++];
+        }
+        nucstathyperinvconc = array[i++];
+
+        if (i != N) {
+            cerr << "error when sending global params: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,nucrelratehyperinvconc,nucstathypercenter,nucstathyperinvconc);
+        }
+        delete[] array;
+    }
+
     void SlaveResampleSub()  {
 
         double frac = 1.0;
@@ -591,7 +951,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         }
     }
 
-    void SlaveSendLengthSuffStat()  {
+    void SlaveSendBranchLengthsSuffStat()  {
 
         lengthsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
@@ -608,7 +968,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] beta;
     }
 
-    void MasterReceiveLengthSuffStat()  {
+    void MasterReceiveBranchLengthsSuffStat()  {
 
         int* count = new int[Nbranch];
         double* beta = new double[Nbranch];
@@ -658,6 +1018,109 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 		}
 		return nacc/ntot;
 	}
+
+    void SlaveSendBranchLengthsHyperSuffStat()   {
+
+        int* count = new int[Nbranch];
+        double* beta = new double[2*Nbranch];
+
+        lengthhypersuffstatarray->Clear();
+        for (int gene=0; gene<GetLocalNgene(); gene++)  {
+            branchlengtharray[gene]->AddSuffStat(*lengthhypersuffstatarray);
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            count[j] = lengthhypersuffstatarray->GetVal(j).GetN();
+            beta[j] = lengthhypersuffstatarray->GetVal(j).GetSum();
+            beta[Nbranch+j] = lengthhypersuffstatarray->GetVal(j).GetSumLog();
+        }
+
+        MPI_Send(count,Nbranch,MPI_INT,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(beta,2*Nbranch,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+
+        delete[] count;
+        delete[] beta;
+    }
+
+    void MasterReceiveBranchLengthsHyperSuffStat()   {
+
+        lengthhypersuffstatarray->Clear();
+
+        int* count = new int[Nbranch];
+        double* beta = new double[2*Nbranch];
+
+        MPI_Status stat;
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            MPI_Recv(count,Nbranch,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPI_Recv(beta,2*Nbranch,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+            for (int j=0; j<Nbranch; j++)   {
+                (*lengthhypersuffstatarray)[j].AddSuffStat(beta[j],beta[Nbranch+j],count[j]);
+            }
+        }
+
+        delete[] count;
+        delete[] beta;
+    }
+
+    void SlaveSendNucRatesHyperSuffStat()   {
+
+        int Nint = 2;
+        int Ndouble = Nrr + Nnuc;
+        int* count = new int[Nint];
+        double* beta = new double[Ndouble];
+
+        int i = 0;
+        int d = 0;
+
+        nucrelratesuffstat.Clear();
+        nucrelratearray->AddSuffStat(nucrelratesuffstat);
+        count[i++] = nucrelratesuffstat.GetN();
+        for (int j=0; j<Nrr; j++)   {
+            beta[d++] = nucrelratesuffstat.GetSumLog(j);
+        }
+
+        nucstatsuffstat.Clear();
+        nucstatarray->AddSuffStat(nucstatsuffstat);
+        count[i++] = nucstatsuffstat.GetN();
+        for (int j=0; j<Nrr; j++)   {
+            beta[d++] = nucstatsuffstat.GetSumLog(j);
+        }
+
+        MPI_Send(count,Nint,MPI_INT,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(beta,Ndouble,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+
+        delete[] count;
+        delete[] beta;
+    }
+
+    void MasterReceiveNucRatesHyperSuffStat()   {
+
+        nucrelratesuffstat.Clear();
+        nucpathsuffstat.Clear();
+
+        int Nint = 2;
+        int Ndouble = Nrr + Nnuc;
+        int* count = new int[Nint];
+        double* beta = new double[Ndouble];
+
+        MPI_Status stat;
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            MPI_Recv(count,Nint,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPI_Recv(beta,Ndouble,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+            int i = 0;
+            int d = 0;
+
+            nucrelratesuffstat.AddSuffStat(beta+d,count[i++]);
+            d+=Nrr;
+
+            nucstatsuffstat.AddSuffStat(beta+d,count[i++]);
+            d+=Nnuc;
+        }
+
+        delete[] count;
+        delete[] beta;
+    }
 
     void SlaveSendMixtureHyperSuffStat()  {
 
@@ -737,28 +1200,127 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] beta;
     }
 
+	double NucRatesHyperProfileMove(vector<double>& x, double tuning, int n, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        vector<double> bk(x.size(),0);
+		for (int rep=0; rep<nrep; rep++)	{
+            bk = x;
+			double deltalogprob = - NucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
+            double loghastings = Random::ProfileProposeMove(x,x.size(),tuning,n);
+			deltalogprob += NucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+			deltalogprob += loghastings;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x = bk;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+	double NucRatesHyperScalingMove(double& x, double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+		for (int rep=0; rep<nrep; rep++)	{
+			double deltalogprob = - NucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
+			double m = tuning * (Random::Uniform() - 0.5);
+			double e = exp(m);
+		    x *= e;
+			deltalogprob += NucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+			deltalogprob += m;
+			int accepted = (log(Random::Uniform()) < deltalogprob);
+			if (accepted)	{
+				nacc ++;
+			}
+			else	{
+			    x /= e;
+			}
+			ntot++;
+		}
+		return nacc/ntot;
+	}
+
+    double NucRatesHyperLogPrior()  {
+
+        return -nucrelratehyperinvconc - nucstathyperinvconc;
+    }
+
+    double NucRatesHyperSuffStatLogProb()   {
+
+        double total = 0;
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
+        return total;
+    }
+
+    void MasterMoveBranchLengthsHyperParameters()   {
+
+    }
+
+    void SlaveMoveBranchLengthsHyperParameters()    {
+
+    }
+
+    void SlaveMoveBranchLengths() {}
+
+    void MasterMoveNucRatesHyperParameters()    {
+
+        NucRatesHyperProfileMove(nucrelratehypercenter,1.0,1,10);
+        NucRatesHyperProfileMove(nucrelratehypercenter,0.3,1,10);
+        NucRatesHyperProfileMove(nucrelratehypercenter,0.1,3,10);
+        NucRatesHyperScalingMove(nucrelratehyperinvconc,1.0,10);
+        NucRatesHyperScalingMove(nucrelratehyperinvconc,0.3,10);
+
+        NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
+        NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
+        NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
+        NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
+        NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
+    }
+
+    void SlaveMoveNucRates()    {
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)  {
+            geneprocess[gene]->MoveNucRates();
+        }
+    }
+
     void MasterMoveMixtureHyperParameters()  {
 
-		HyperSlidingMove(puromhypermean,1.0,10,0,1);
-		HyperSlidingMove(puromhypermean,0.3,10,0,1);
-		HyperScalingMove(puromhyperinvconc,1.0,10);
-		HyperScalingMove(puromhyperinvconc,0.3,10);
+        if (purommode == 1) {
+            HyperSlidingMove(puromhypermean,1.0,10,0,1);
+            HyperSlidingMove(puromhypermean,0.3,10,0,1);
+            HyperScalingMove(puromhyperinvconc,1.0,10);
+            HyperScalingMove(puromhyperinvconc,0.3,10);
+        }
 
-		HyperSlidingMove(dposomhypermean,3.0,10,0.5,10);
-		HyperSlidingMove(dposomhypermean,1.0,10,0.5,10);
-		HyperSlidingMove(dposomhypermean,0.3,10,0.5,10);
-		HyperScalingMove(dposomhyperinvshape,1.0,10);
-		HyperScalingMove(dposomhyperinvshape,0.3,10);
+        if (dposommode == 1)    {
+            HyperSlidingMove(dposomhypermean,3.0,10,0.5,10);
+            HyperSlidingMove(dposomhypermean,1.0,10,0.5,10);
+            HyperSlidingMove(dposomhypermean,0.3,10,0.5,10);
+            HyperScalingMove(dposomhyperinvshape,1.0,10);
+            HyperScalingMove(dposomhyperinvshape,0.3,10);
+        }
 
-		HyperSlidingMove(poswhypermean,1.0,10,0,1);
-		HyperSlidingMove(poswhypermean,0.3,10,0,1);
-		HyperScalingMove(poswhyperinvconc,1.0,10);
-		HyperScalingMove(poswhyperinvconc,0.3,10);
+        if (poswmode == 1)  {
+            HyperSlidingMove(poswhypermean,1.0,10,0,1);
+            HyperSlidingMove(poswhypermean,0.3,10,0,1);
+            HyperScalingMove(poswhyperinvconc,1.0,10);
+            HyperScalingMove(poswhyperinvconc,0.3,10);
+        }
 
-		HyperSlidingMove(purwhypermean,1.0,10,0,1);
-		HyperSlidingMove(purwhypermean,0.3,10,0,1);
-		HyperScalingMove(purwhyperinvconc,1.0,10);
-		HyperScalingMove(purwhyperinvconc,0.3,10);
+        if (purwmode == 1)  {
+            HyperSlidingMove(purwhypermean,1.0,10,0,1);
+            HyperSlidingMove(purwhypermean,0.3,10,0,1);
+            HyperScalingMove(purwhyperinvconc,1.0,10);
+            HyperScalingMove(purwhyperinvconc,0.3,10);
+        }
 
         if (burnin > 10)    {
             if (pihyperinvconc)    {
@@ -907,7 +1469,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
         delete[] beta;
     }
 
-    void MasterMoveNuc()    {
+    void MasterMoveNucRates()    {
 
 		MoveRR(0.1,1,3);
 		MoveRR(0.03,3,3);
@@ -922,11 +1484,14 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     }
 
 	void UpdateNucMatrix()	{
-		nucmatrix->CopyStationary(nucstat);
+		nucmatrix->CopyStationary((*nucstatarray)[0]);
 		nucmatrix->CorruptMatrix();
 	}
 
 	double MoveRR(double tuning, int n, int nrep)	{
+
+        vector<double>& nucrelrate = (*nucrelratearray)[0];
+
 		double nacc = 0;
 		double ntot = 0;
 		double bk[Nrr];
@@ -955,6 +1520,9 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 	}
 
 	double MoveNucStat(double tuning, int n, int nrep)	{
+
+        vector<double>& nucstat = (*nucstatarray)[0];
+
 		double nacc = 0;
 		double ntot = 0;
 		double bk[Nnuc];
