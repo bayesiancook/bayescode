@@ -75,30 +75,42 @@ int main(int argc, char* argv[])	{
             else if (s == "-purom")   {
                 purommode = 0;
                 i++;
-                puromhypermean = atof(argv[i]);
-                i++;
-                puromhyperinvconc = atof(argv[i]);
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    puromhypermean = atof(argv[i]);
+                    i++;
+                    puromhyperinvconc = atof(argv[i]);
+                }
             }
             else if (s == "-dposom")    {
                 dposommode = 0;
                 i++;
-                dposomhypermean = atof(argv[i]);
-                i++;
-                dposomhyperinvshape = atof(argv[i]);
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                }
             }
             else if (s == "-purw")  {
                 purwmode = 0;
                 i++;
-                purwhypermean = atof(argv[i]);
-                i++;
-                purwhyperinvconc = atof(argv[i]);
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    purwhypermean = atof(argv[i]);
+                    i++;
+                    purwhyperinvconc = atof(argv[i]);
+                }
             }
             else if (s == "-posw")  {
                 poswmode = 0;
                 i++;
-                poswhypermean = atof(argv[i]);
-                i++;
-                poswhyperinvconc = atof(argv[i]);
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    poswhypermean = atof(argv[i]);
+                    i++;
+                    poswhyperinvconc = atof(argv[i]);
+                }
             }
             else if (s == "-nucrates")  {
                 i++;
