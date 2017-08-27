@@ -51,6 +51,17 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
             (*this)[i].Clear();
         }
     }
+
+    double GetLogProb(const ConstBranchArray<double>& blmean, double invshape) const {
+
+        double total = 0;
+        for (int i=0; i<GetNbranch(); i++)  {
+            double shape = 1.0 / invshape;
+            double scale = 1.0 / blmean.GetVal(i);
+            total += GetVal(i).GetLogProb(shape,scale);
+        }
+        return total;
+    }
 };
 
 class IIDGamma: public SimpleArray<double>	{
@@ -167,6 +178,12 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 
 	void SetScale(double inscale)	{
 		scale = inscale;
+	}
+
+	void SetAllBranches(double inval)	{
+		for (int i=0; i<GetNbranch(); i++)	{
+			(*this)[i] = inval;
+		}
 	}
 
 	void Sample()	{
