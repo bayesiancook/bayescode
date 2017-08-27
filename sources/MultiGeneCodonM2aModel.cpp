@@ -1060,9 +1060,10 @@ void MultiGeneCodonM2aModel::MasterSendGeneBranchLengths()    {
             }
         }
         if (index != Nbranch*ngene) {
-            cerr << "error when sending gene nuc rates: non matching vector size\n";
+            cerr << "error when sending gene branch lengths (master): non matching vector size\n";
             exit(1);
         }
+        // cerr << "master: " << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
 
         MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
         delete[] array;
@@ -1083,6 +1084,11 @@ void MultiGeneCodonM2aModel::SlaveReceiveGeneBranchLengths()   {
         }
         geneprocess[gene]->SetBranchLengths(*branchlengtharray[gene]);
     }
+    if (index != Nbranch*ngene) {
+        cerr << "error when receiving gene branch lengths (slave): non matching vector size\n";
+        cerr << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
+        exit(1);
+    }
     delete[] array;
 }
 
@@ -1093,9 +1099,14 @@ void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
-        for (int j=0; j<Nrr; j++)   {
+        for (int j=0; j<Nbranch; j++)   {
             array[index++] = branchlengtharray[gene]->GetVal(j);
         }
+    }
+    if (index != Nbranch*ngene) {
+        cerr << "error when sending gene branch lengths (slave): non matching vector size\n";
+        cerr << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
+        exit(1);
     }
     MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
     delete[] array;
@@ -1113,13 +1124,13 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengths()    {
         int index = 0;
         for (int gene=0; gene<Ngene; gene++)    {
             if (GeneAlloc[gene] == proc)    {
-                for (int j=0; j<Nrr; j++)   {
+                for (int j=0; j<Nbranch; j++)   {
                     (*branchlengtharray[gene])[j] = array[index++];
                 }
             }
         }
         if (index != Nbranch*ngene) {
-            cerr << "error when sending gene nuc rates: non matching vector size\n";
+            cerr << "error when receiving gene branch lengths (master): non matching vector size\n";
             exit(1);
         }
         delete[] array;
@@ -1138,7 +1149,7 @@ void MultiGeneCodonM2aModel::MasterSendGlobalNucRates()   {
         array[i++] = (*nucstatarray)[0][j];
     }
     if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
+        cerr << "error when sending global nuc rates: non matching vector size\n";
         cerr << i << '\t' << N << '\n';
         exit(1);
     }
@@ -1161,7 +1172,7 @@ void MultiGeneCodonM2aModel::SlaveReceiveGlobalNucRates()   {
     }
 
     if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
+        cerr << "error when receiving global nuc rates: non matching vector size\n";
         cerr << i << '\t' << N << '\n';
         exit(1);
     }
@@ -1190,7 +1201,7 @@ void MultiGeneCodonM2aModel::MasterSendGeneNucRates()    {
             }
         }
         if (index != N*ngene) {
-            cerr << "error when sending gene nuc rates: non matching vector size\n";
+            cerr << "error when sending gene nuc rates (master): non matching vector size\n";
             exit(1);
         }
 
@@ -1217,6 +1228,10 @@ void MultiGeneCodonM2aModel::SlaveReceiveGeneNucRates()   {
         }
         geneprocess[gene]->SetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
     }
+    if (index != N*ngene) {
+        cerr << "error when receiving gene nuc rates (slave): non matching vector size\n";
+        exit(1);
+    }
     delete[] array;
 }
 
@@ -1234,6 +1249,10 @@ void MultiGeneCodonM2aModel::SlaveSendGeneNucRates()    {
         for (int j=0; j<Nnuc; j++)  {
             array[index++] = (*nucstatarray)[gene][j];
         }
+    }
+    if (index != N*ngene) {
+        cerr << "error when sending gene nuc rates (slaves): non matching vector size\n";
+        exit(1);
     }
     MPI_Send(array,N*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
     delete[] array;
@@ -1261,7 +1280,7 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneNucRates()    {
             }
         }
         if (index != N*ngene) {
-            cerr << "error when sending gene nuc rates: non matching vector size\n";
+            cerr << "error when receiving gene nuc rates (master): non matching vector size\n";
             exit(1);
         }
         delete[] array;
