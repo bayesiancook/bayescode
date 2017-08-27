@@ -12,6 +12,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
 
     pihypermean = inpihypermean;
     pihyperinvconc = inpihyperinvconc;
+    pi = pihypermean;
 
     AllocateAlignments(datafile);
     treefile = intreefile;
@@ -140,13 +141,13 @@ void MultiGeneCodonM2aModel::Unfold()   {
     }
     else    {
 
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
-        SlaveReceiveMixtureHyperParameters();
-
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->Allocate();
         }
+
+        SlaveReceiveBranchLengthsHyperParameters();
+        SlaveReceiveNucRatesHyperParameters();
+        SlaveReceiveMixtureHyperParameters();
 
         if (blmode == 2)    {
             SlaveReceiveGlobalBranchLengths();
@@ -487,6 +488,11 @@ double MultiGeneCodonM2aModel::MixtureHyperSuffStatLogProb()   {
 
     if (isnan(total))   {
         cerr << "hyper suff stat log prob is nan\n";
+        cerr << puromsuffstat.GetLogProb(puromalpha,purombeta) << '\n';
+        cerr << dposomsuffstat.GetLogProb(dposomalpha,dposombeta) << '\n';
+        cerr << purwsuffstat.GetLogProb(purwalpha,purwbeta) << '\n';
+        cerr << poswsuffstat.GetLogProb(pi,poswalpha,poswbeta) << '\n';
+        cerr << pi << '\t' << poswalpha << '\t' << poswbeta << '\n';
         exit(1);
     }
 
@@ -1028,7 +1034,7 @@ void MultiGeneCodonM2aModel::MasterSendBranchLengthsHyperParameters() {
 void MultiGeneCodonM2aModel::SlaveReceiveBranchLengthsHyperParameters()   {
 
     double* array = new double[Nbranch+1];
-    MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(array,Nbranch+1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     for (int j=0; j<Nbranch; j++)   {
         (*branchlength)[j] = array[j];
     }
