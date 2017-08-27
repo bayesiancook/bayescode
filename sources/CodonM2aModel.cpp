@@ -5,8 +5,8 @@
 
 CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi)	{
 
-    blmode = 2;
-    nucmode = 2;
+    blmode = 0;
+    nucmode = 0;
     data = new FileSequenceAlignment(datafile);
     codondata = new CodonSequenceAlignment(data, true);
     pi = inpi;
@@ -370,9 +370,6 @@ double CodonM2aModel::PosSwitchLogProb()   {
 //
 
 void CodonM2aModel::Move()	{
-
-    cerr << "in CodonM2aModel::Move\n";
-    exit(1);
 
     Chrono mappingtime, reptime, lengthtime, collecttime, omegatime, nuctime;
 
