@@ -247,39 +247,56 @@ void MultiGeneCodonM2aModel::SlaveSetMixtureArrays()    {
 
 void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
 
-    os << "#time\t";
-    os << "logprior\tlnL\tlength\t";
-    os << "pi\t";
-    os << "nposfrac\t";
-    os << "purommean\tinvconc\t";
-    os << "dposommean\tinvshape\t";
-    os << "purwmean\tinvconc\t";
-    os << "poswmean\tinvconc\t";
-    os << "statent\t";
-    os << "rrent\n";
+    os << "#time";
+    os << "\tlogprior\tlnL\tlength";
+    if (blmode != 2)    {
+        os << "\tvarlength\thyperinvconc";
+    }
+    os << "\tpi";
+    os << "\tnposfrac";
+    os << "\tpurommean\tinvconc";
+    os << "\tdposommean\tinvshape";
+    os << "\tpurwmean\tinvconc";
+    os << "\tposwmean\tinvconc";
+    os << "\tstatent";
+    os << "\trrent";
+    if (nucmode != 2)   {
+        os << "\tvarrr\thyperinvconc";
+        os << "\tvarstat\thyperinvconc";
+    }
+    os << '\n';
     timepercycle.Start();
 }
 
 void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     timepercycle.Stop();
-    os << timepercycle.GetTime() << '\t';
+    os << timepercycle.GetTime();
     // cerr << myid << '\t' << timepercycle.GetTime() << '\t' << mastersampling.GetTime() << '\t' << omegachrono.GetTime() << '\t' << hyperchrono.GetTime() << '\n';
     mastersampling.Reset();
     omegachrono.Reset();
     hyperchrono.Reset();
     timepercycle.Reset();
     timepercycle.Start();
-    os << GetLogPrior() << '\t';
-    os << GetLogLikelihood() << '\t';
-    os << GetMeanTotalLength() << '\t';
-    os << pi << '\t';
-    os << GetNpos() << '\t';
-    os << puromhypermean << '\t' << puromhyperinvconc << '\t';
-    os << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
-    os << purwhypermean << '\t' << purwhyperinvconc << '\t';
-    os << poswhypermean << '\t' << poswhyperinvconc << '\t';
-    os << nucstatarray->GetMeanEntropy() << '\t';
-    os << nucrelratearray->GetMeanEntropy() << '\n';
+    os << GetLogPrior();
+    os << '\t' << GetLogLikelihood();
+    os << '\t' << GetMeanTotalLength();
+    if (blmode != 2)    {
+        os << '\t' << GetVarLength();
+        os << '\t' << blhyperinvshape;
+    }
+    os << '\t' << pi;
+    os << '\t' << GetNpos();
+    os << '\t' << puromhypermean << '\t' << puromhyperinvconc;
+    os << '\t' << dposomhypermean << '\t' << dposomhyperinvshape;
+    os << '\t' << purwhypermean << '\t' << purwhyperinvconc;
+    os << '\t' << poswhypermean << '\t' << poswhyperinvconc;
+    os << '\t' << nucstatarray->GetMeanEntropy();
+    os << '\t' << nucrelratearray->GetMeanEntropy();
+    if (nucmode != 2)   {
+        os << '\t' << GetVarNucRelRate() << '\t' << nucrelratehyperinvconc;
+        os << '\t' << GetVarNucStat() << '\t' << nucstathyperinvconc;
+    }
+    os << '\n';
     os.flush();
 }
 
@@ -323,6 +340,81 @@ double MultiGeneCodonM2aModel::GetMeanTotalLength()	{
     for (int j=1; j<Nbranch; j++)	{
         tot += branchlength->GetVal(j);
     }
+    return tot;
+}
+
+double MultiGeneCodonM2aModel::GetVarLength()   {
+
+    if (blmode == 2)    {
+        cerr << "error: in getvarlength\n";
+        exit(1);
+    }
+
+    double tot = 0;
+    for (int j=0; j<Nbranch; j++)   {
+        double mean = 0;
+        double var = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = branchlengtharray[g]->GetVal(j);
+            mean += tmp;
+            var += tmp*tmp;
+        }
+        mean /= Ngene;
+        var /= Ngene;
+        var -= mean*mean;
+        tot += var;
+    }
+    tot /= Nbranch;
+    return tot;
+}
+
+double MultiGeneCodonM2aModel::GetVarNucRelRate()   {
+
+    if (nucmode == 2)   {
+        cerr << "error in getvarnucrelrate\n";
+        exit(1);
+    }
+
+    double tot = 0;
+    for (int j=0; j<Nrr; j++)   {
+        double mean = 0;
+        double var = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = (*nucrelratearray)[g][j];
+            mean += tmp;
+            var += tmp*tmp;
+        }
+        mean /= Ngene;
+        var /= Ngene;
+        var -= mean*mean;
+        tot += var;
+    }
+    tot /= Nrr;
+    return tot;
+}
+
+double MultiGeneCodonM2aModel::GetVarNucStat()  {
+
+    if (nucmode == 2)   {
+        cerr << "error in getvarnucstat\n";
+        exit(1);
+    }
+
+    double tot = 0;
+    for (int j=0; j<Nnuc; j++)   {
+        double mean = 0;
+        double var = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = (*nucstatarray)[g][j];
+            mean += tmp;
+            var += tmp*tmp;
+        }
+        mean /= Ngene;
+        var /= Ngene;
+        var -= mean*mean;
+        tot += var;
+    }
+    tot /= Nnuc;
     return tot;
 }
 
