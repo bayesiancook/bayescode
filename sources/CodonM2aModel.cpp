@@ -124,6 +124,12 @@ void CodonM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlen
     }
 }
 
+void CodonM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) const   {
+    for (int j=0; j<Nbranch; j++)   {
+        inbranchlength[j] = branchlength->GetVal(j);
+    }
+}
+
 void CodonM2aModel::SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
     for (int j=0; j<Nbranch; j++)   {
         (*blhypermean)[j] = inblmean.GetVal(j);
@@ -137,6 +143,12 @@ void CodonM2aModel::SetNucRates(const std::vector<double>& innucrelrate, const s
     nucrelrate = innucrelrate;
     nucstat = innucstat;
     UpdateMatrices();
+}
+
+void CodonM2aModel::GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const {
+
+    innucrelrate = nucrelrate;
+    innucstat = nucstat;
 }
 
 void CodonM2aModel::SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc) {

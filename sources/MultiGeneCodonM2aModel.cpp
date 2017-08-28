@@ -110,6 +110,7 @@ void MultiGeneCodonM2aModel::Allocate() {
 
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene] = new CodonM2aModel(GetLocalGeneName(gene),treefile,pi);
+            geneprocess[gene]->SetAcrossGenesModes(blmode,nucmode);
         }
     }
 }
@@ -248,7 +249,10 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     os << "#time";
     os << "\tlogprior\tlnL\tlength";
     if (blmode != 2)    {
-        os << "\tvarlength\thyperinvconc";
+        os << "\tmeanlength\tstdev";
+        if (blmode == 1)    {
+            os << "\thyperinvconc";
+        }
     }
     os << "\tpi";
     os << "\tnposfrac";
@@ -259,8 +263,8 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     os << "\tstatent";
     os << "\trrent";
     if (nucmode != 2)   {
-        os << "\tvarrr\thyperinvconc";
-        os << "\tvarstat\thyperinvconc";
+        os << "\tstdevrr\thyperinvconc";
+        os << "\tstdevstat\thyperinvconc";
     }
     os << '\n';
     timepercycle.Start();
@@ -279,8 +283,11 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     os << '\t' << GetLogLikelihood();
     os << '\t' << GetMeanTotalLength();
     if (blmode != 2)    {
-        os << '\t' << GetVarLength();
-        os << '\t' << blhyperinvshape;
+        os << '\t' << GetMeanLength();
+        os << '\t' << sqrt(GetVarLength());
+        if (blmode == 1)    {
+            os << '\t' << blhyperinvshape;
+        }
     }
     os << '\t' << pi;
     os << '\t' << GetNpos();
@@ -291,8 +298,8 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     os << '\t' << nucstatarray->GetMeanEntropy();
     os << '\t' << nucrelratearray->GetMeanEntropy();
     if (nucmode != 2)   {
-        os << '\t' << GetVarNucRelRate() << '\t' << nucrelratehyperinvconc;
-        os << '\t' << GetVarNucStat() << '\t' << nucstathyperinvconc;
+        os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << nucrelratehyperinvconc;
+        os << '\t' << sqrt(GetVarNucStat()) << '\t' << nucstathyperinvconc;
     }
     os << '\n';
     os.flush();
@@ -337,6 +344,26 @@ double MultiGeneCodonM2aModel::GetMeanTotalLength()	{
     double tot = 0;
     for (int j=1; j<Nbranch; j++)	{
         tot += branchlength->GetVal(j);
+    }
+    return tot;
+}
+
+double MultiGeneCodonM2aModel::GetMeanLength()   {
+
+    if (blmode == 2)    {
+        cerr << "error: in getvarlength\n";
+        exit(1);
+    }
+
+    double tot = 0;
+    for (int j=0; j<Nbranch; j++)   {
+        double mean = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = branchlengtharray[g]->GetVal(j);
+            mean += tmp;
+        }
+        mean /= Ngene;
+        tot += mean;
     }
     return tot;
 }
@@ -1189,6 +1216,7 @@ void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
+        geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
         for (int j=0; j<Nbranch; j++)   {
             array[index++] = branchlengtharray[gene]->GetVal(j);
         }
@@ -1333,6 +1361,7 @@ void MultiGeneCodonM2aModel::SlaveSendGeneNucRates()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
+        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
         for (int j=0; j<Nrr; j++)   {
             array[index++] = (*nucrelratearray)[gene][j];
         }

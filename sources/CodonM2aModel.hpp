@@ -61,9 +61,13 @@ class CodonM2aModel	{
     void SetAcrossGenesModes(int inblmode, int innucmode);
 
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength);
+    void GetBranchLengths(BranchArray<double>& inbranchlength) const;
+
     void SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape);
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat);
+    void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const;
+
     void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc);
 
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);

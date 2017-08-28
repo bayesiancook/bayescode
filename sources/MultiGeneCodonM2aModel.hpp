@@ -62,6 +62,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     int GetNpos();
 	double GetMeanTotalLength();
+    double GetMeanLength();
     double GetVarLength();
     double GetVarNucRelRate();
     double GetVarNucStat();
