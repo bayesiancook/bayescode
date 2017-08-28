@@ -54,7 +54,7 @@ void MultiGeneCodonM2aModel::Allocate() {
         lengthhypersuffstatarray = 0;
     }
     else    {
-        branchlengtharray.assign(GetLocalNgene(),0);
+        branchlengtharray.assign(GetLocalNgene(),(GammaWhiteNoise*) 0);
         for (int gene=0; gene<GetLocalNgene(); gene++)  {
             branchlengtharray[gene] = new GammaWhiteNoise(*tree,*branchlength,1.0/blhyperinvshape);
         }
