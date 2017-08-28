@@ -521,7 +521,7 @@ void MultiGeneCodonM2aModel::MasterMove() {
             MasterSendGlobalBranchLengths();
         }
         else    {
-            if (blmode == 0)    {
+            if (blmode == 1)    {
                 MasterReceiveBranchLengthsHyperSuffStat();
                 MasterMoveBranchLengthsHyperParameters();
                 MasterSendBranchLengthsHyperParameters();
@@ -542,7 +542,7 @@ void MultiGeneCodonM2aModel::MasterMove() {
             MasterSendGlobalNucRates();
         }
         else    {
-            if (nucmode == 0)  {
+            if (nucmode == 1)  {
                 MasterReceiveNucRatesHyperSuffStat();
                 MasterMoveNucRatesHyperParameters();
                 MasterSendNucRatesHyperParameters();
@@ -584,7 +584,7 @@ void MultiGeneCodonM2aModel::SlaveMove() {
         else    {
             SlaveMoveBranchLengths();
 
-            if (blmode == 0)    {
+            if (blmode == 1)    {
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
             }
@@ -603,12 +603,11 @@ void MultiGeneCodonM2aModel::SlaveMove() {
         else    {
             SlaveMoveNucRates();
 
-            if (nucmode == 0)   {
+            if (nucmode == 1)   {
                 SlaveSendNucRatesHyperSuffStat();
                 SlaveReceiveNucRatesHyperParameters();
             }
         }
-
     }
     sampling.Stop();
     burnin++;
@@ -1485,7 +1484,7 @@ void MultiGeneCodonM2aModel::SlaveSendNucRatesHyperSuffStat()   {
     nucstatsuffstat.Clear();
     nucstatarray->AddSuffStat(nucstatsuffstat);
     count[i++] = nucstatsuffstat.GetN();
-    for (int j=0; j<Nrr; j++)   {
+    for (int j=0; j<Nnuc; j++)   {
         beta[d++] = nucstatsuffstat.GetSumLog(j);
     }
 
