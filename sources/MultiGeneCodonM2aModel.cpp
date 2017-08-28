@@ -640,16 +640,17 @@ void MultiGeneCodonM2aModel::MasterMove() {
                 MasterSendNucRatesHyperParameters();
             }
         }
+
         if (rep)    {
             mastersampling.Stop();
         }
     }
     burnin++;
-    if (nucmode != 2)   {
-        MasterReceiveGeneNucRates();
-    }
     if (blmode != 2)    {
         MasterReceiveGeneBranchLengths();
+    }
+    if (nucmode != 2)   {
+        MasterReceiveGeneNucRates();
     }
     MasterReceiveMixture();
     MasterReceiveLogLikelihood();
