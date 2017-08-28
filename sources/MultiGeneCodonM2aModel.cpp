@@ -218,13 +218,11 @@ void MultiGeneCodonM2aModel::SlaveSetMixtureArrays()    {
     double dposombeta = dposomalpha / dposomhypermean;
     dposomarray->SetShape(dposomalpha);
     dposomarray->SetScale(dposombeta);
-    // dposomarray->PriorResample(*poswarray);
+    dposomarray->PriorResample(*poswarray);
     // necessary after changing some dposom values
-    /*
     for (int gene=0; gene<GetLocalNgene(); gene++)    {
         geneprocess[gene]->SetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
     }
-    */
 
     double purwalpha = purwhypermean / purwhyperinvconc;
     double purwbeta = (1-purwhypermean) / purwhyperinvconc;
@@ -277,7 +275,7 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     hyperchrono.Reset();
     timepercycle.Reset();
     timepercycle.Start();
-    os << GetLogPrior();
+    os << '\t' << GetLogPrior();
     os << '\t' << GetLogLikelihood();
     os << '\t' << GetMeanTotalLength();
     if (blmode != 2)    {
@@ -1634,8 +1632,8 @@ void MultiGeneCodonM2aModel::SlaveSendMixtureHyperSuffStat()  {
     beta[d++] = puromsuffstat.GetSumLog1();
 
     dposomsuffstat.Clear();
-    dposomarray->AddSuffStat(dposomsuffstat);
-    // dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
+    // dposomarray->AddSuffStat(dposomsuffstat);
+    dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
     count[i++] = dposomsuffstat.GetN();
     beta[d++] = dposomsuffstat.GetSum();
     beta[d++] = dposomsuffstat.GetSumLog();
