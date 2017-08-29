@@ -168,7 +168,7 @@ void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
 }
 
-void CodonM2aModel::GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw)    {
+void CodonM2aModel::GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw)  const {
 
     inpurom = purom;
     indposom = dposom;
@@ -255,7 +255,7 @@ const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray()  {
     return lengthsuffstatarray;
 }
 
-double CodonM2aModel::LambdaHyperSuffStatLogProb()	{
+double CodonM2aModel::LambdaHyperSuffStatLogProb() {
     return lambdasuffstat.GetLogProb(1.0,lambda);
 }
 
@@ -280,7 +280,7 @@ double CodonM2aModel::OmegaSuffStatLogProb()    {
 // Priors
 //
 
-double CodonM2aModel::GetLogPrior() {
+double CodonM2aModel::GetLogPrior() const {
     double total = 0;
     total += BranchLengthsLogPrior();
     total += NucRatesLogPrior();
@@ -288,11 +288,11 @@ double CodonM2aModel::GetLogPrior() {
     return total;
 }
 
-double CodonM2aModel::LambdaHyperLogPrior()	{
+double CodonM2aModel::LambdaHyperLogPrior()	 const {
     return -lambda / 10;
 }
 
-double CodonM2aModel::BranchLengthsLogPrior()   {
+double CodonM2aModel::BranchLengthsLogPrior() const  {
 
     double total = 0;
     if (blmode == 0)    {
@@ -302,7 +302,7 @@ double CodonM2aModel::BranchLengthsLogPrior()   {
     return total;
 }
 
-double CodonM2aModel::NucRatesLogPrior()    {
+double CodonM2aModel::NucRatesLogPrior() const {
 
     double total = 0;
     double rrconc = 1.0 / nucrelratehyperinvconc;
@@ -322,7 +322,7 @@ double CodonM2aModel::NucRatesLogPrior()    {
 // Hyper priors for omega mixture
 //
 
-double CodonM2aModel::OmegaLogPrior()  {
+double CodonM2aModel::OmegaLogPrior() const {
     double total = 0;
     total += PurOmegaLogProb();
     total += PosOmegaLogProb();
@@ -332,28 +332,28 @@ double CodonM2aModel::OmegaLogPrior()  {
 }
 
 // Beta prior for purifmean
-double CodonM2aModel::PurOmegaLogProb()   {
+double CodonM2aModel::PurOmegaLogProb()  const {
     double alpha = puromhypermean / puromhyperinvconc;
     double beta = (1-puromhypermean) / puromhyperinvconc;
     return Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(purom) + (beta-1)*log(1.0-purom);
 }
 
 // Gamma prior for dposom
-double CodonM2aModel::PosOmegaLogProb()	{
+double CodonM2aModel::PosOmegaLogProb() const {
     double alpha = 1.0 / dposomhyperinvshape;
     double beta = alpha / dposomhypermean;
     return alpha*log(beta) - Random::logGamma(alpha) + (alpha-1)*log(dposom) - beta*dposom;
 }
 
 // Beta prior for purw
-double CodonM2aModel::PurWeightLogProb()   {
+double CodonM2aModel::PurWeightLogProb() const {
     double alpha = purwhypermean / purwhyperinvconc;
     double beta = (1 - purwhypermean) / purwhyperinvconc;
     return Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(purw) + (beta-1)*log(1.0-purw);
 }
 
 // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
-double CodonM2aModel::PosWeightLogProb()   {
+double CodonM2aModel::PosWeightLogProb() const {
     if (posw)   {
         if (! pi)   {
             cerr << "in PosWeightLogProb: pi == 0 and posw > 0\n";
@@ -370,7 +370,7 @@ double CodonM2aModel::PosWeightLogProb()   {
 }
 
 // Bernoulli for whether posw == 0 or > 0
-double CodonM2aModel::PosSwitchLogProb()   {
+double CodonM2aModel::PosSwitchLogProb() const {
     if (posw)   {
         return log(pi);
     }
@@ -697,7 +697,7 @@ double CodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
 
 // summary statistics
 
-double CodonM2aModel::GetTotalLength()	{
+double CodonM2aModel::GetTotalLength() const {
     double tot = 0;
     for (int j=1; j<Nbranch; j++)	{
         tot += branchlength->GetVal(j);
@@ -705,7 +705,7 @@ double CodonM2aModel::GetTotalLength()	{
     return tot;
 }
 
-double CodonM2aModel::GetMeanOmega()   {
+double CodonM2aModel::GetMeanOmega() const {
     return posw*(1 + dposom) + (1-posw)*(purw*purom + (1-purw));
 }
 
@@ -717,14 +717,14 @@ double CodonM2aModel::GetEntropy(const std::vector<double>& profile, int dim) co
     return tot;
 }
 
-void CodonM2aModel::TraceHeader(std::ostream& os)  {
+void CodonM2aModel::TraceHeader(std::ostream& os) {
     os << "#logprior\tlnL\tlength\t";
     os << "purom\tposom\tpurw\tposw\t";
     os << "statent\t";
     os << "rrent\n";
 }
 
-void CodonM2aModel::Trace(ostream& os) {	
+void CodonM2aModel::Trace(ostream& os)  {	
     os << GetLogPrior() << '\t';
     os << GetLogLikelihood() << '\t';
     os << GetTotalLength() << '\t';
@@ -739,5 +739,15 @@ void CodonM2aModel::TracePostProb(ostream& os) {
         os << sitepostprobarray[i][2] << '\t';
     }
     os << '\n';
+}
+
+void CodonM2aModel::GetSitesPostProb(double* array) const {
+    for (int i=0; i<GetNsite(); i++)    {
+        array[i] = sitepostprobarray[i][2];
+        if (sitepostprobarray[i][2] < 0)    {
+            cerr << "error in CodonM2aModel::GetSitesPostProb: negative prob\n";
+            exit(1);
+        }
+    }
 }
 

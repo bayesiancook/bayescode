@@ -29,6 +29,10 @@ class MultiGeneMPIModule    {
         return LocalNgene;
     }
 
+    int GetLocalTotNsite() const    {
+        return SlaveTotNsite[myid];
+    }
+
     int GetSlaveNgene(int proc) const   {
         if (myid)   {
             cerr << "error: slave in GetSlaveNgene\n";
@@ -43,6 +47,10 @@ class MultiGeneMPIModule    {
 
     int GetLocalGeneNsite(int gene) const   {
         return GeneNsite[gene];
+    }
+
+    int GetSlaveTotNsite(int proc) const    {
+        return SlaveTotNsite[proc];
     }
 
     void AllocateAlignments(string datafile);

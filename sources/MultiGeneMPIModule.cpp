@@ -20,7 +20,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
             refdata = tmpdata;
         }
 
-		genesize[gene] = tmpdata->GetNsite();
+		genesize[gene] = tmpdata->GetNsite() / 3;
 		geneweight[gene] = tmpdata->GetNsite() * tmpdata->GetNtaxa();
 
         if (gene)   {
@@ -113,6 +113,8 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
         GeneNsite.assign(Ngene,0);
         GeneAlloc.assign(Ngene,0);
         int i = 0;
+        cerr << '\n';
+        cerr << "proc\tngene\ttotnsite\n";
         for (int proc=1; proc<nprocs; proc++)   {
             cerr << proc << '\t' << SlaveNgene[proc] << '\t' << SlaveTotNsite[proc] << '\n';
             for (int gene=0; gene<Ngene; gene++)    {
@@ -124,6 +126,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
                 }
             }
         }
+        cerr << '\n';
         if (i != Ngene) {
             cerr << "error in mpimodule: non matching number of genes\n";
         }
@@ -152,6 +155,6 @@ void MultiGeneMPIModule::PrintGeneList(ostream& os) const {
     }
     os << Ngene << '\n';
     for (int gene=0; gene<Ngene; gene++)    {
-        os << GeneName[gene] << '\n';
+        os << GeneName[gene] << '\t' << GeneNsite[gene] << '\n';
     }
 }

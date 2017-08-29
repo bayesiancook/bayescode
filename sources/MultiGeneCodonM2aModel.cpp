@@ -322,18 +322,6 @@ void MultiGeneCodonM2aModel::TracePosOm(ostream& os) {
     os.flush();
 }
 
-void MultiGeneCodonM2aModel::SlaveTracePostProbHeader(string name)    {
-    for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
-    }
-}
-
-void MultiGeneCodonM2aModel::SlaveTracePostProb(string name)    {
-    for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
-        geneprocess[gene]->TracePostProb(os);
-    }
-}
 
 int MultiGeneCodonM2aModel::GetNpos()    {
     return GetNgene() - poswarray->GetNullSet();
@@ -1882,3 +1870,75 @@ void MultiGeneCodonM2aModel::MasterReceiveLogLikelihood()    {
     }
 }
 
+/*
+void MultiGeneCodonM2aModel::SlaveTracePostProbHeader(string name)    {
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
+    }
+}
+
+void MultiGeneCodonM2aModel::SlaveTracePostProb(string name)    {
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
+        geneprocess[gene]->TracePostProb(os);
+    }
+}
+*/
+
+void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
+
+    for (int proc=1; proc<GetNprocs(); proc++)  {
+        int totnsite = GetSlaveTotNsite(proc);
+        double* array = new double[totnsite];
+        MPI_Status stat;
+        MPI_Recv(array,totnsite,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+        int i = 0;
+        for (int gene=0; gene<Ngene; gene++)    {
+            if (GeneAlloc[gene] == proc)    {
+                os << GeneName[gene] << '\t';
+                int nsite = GeneNsite[gene];
+                for (int k=0; k<nsite; k++) {
+                    if (array[i] < 0)   {
+                        cerr << "error: negative post prob\n";
+                        cerr << GeneName[gene] << '\n';
+                        cerr << GeneNsite[gene] << '\n';
+                        cerr << i << '\n';
+                        exit(1);
+                    }
+                    os << array[i++] << '\t';
+                }
+            }
+        }
+        if (i != totnsite)  {
+            cerr << "error in MultiGeneCodonM2aModel::MasterTraceSitesPostProb: non matching number of sites\n";
+            exit(1);
+        }
+    }
+}
+
+void MultiGeneCodonM2aModel::SlaveTraceSitesPostProb()  {
+
+    int ngene = GetLocalNgene();
+    int totnsite = GetLocalTotNsite();
+    double* array = new double[totnsite];
+    int i = 0;
+    for (int gene=0; gene<ngene; gene++)    {
+        geneprocess[gene]->GetSitesPostProb(array+i);
+        for (int j=0; j<GeneNsite[gene]; j++)   {
+            if (array[i+j] < 0) {
+                cerr << "error in slave\n";
+                cerr << i << '\t' << j << '\t' << GeneName[gene] << '\t' << GeneNsite[gene] << '\t' << geneprocess[gene]->GetNsite() << '\n';
+                exit(1);
+            }
+        }
+        i += GetLocalGeneNsite(gene);
+    }
+    if (i != totnsite)  {
+        cerr << "error in MultiGeneCodonM2aModel::SlaveTraceSitesPostProb: non matching number of sites\n";
+        exit(1);
+    }
+
+    MPI_Send(array,totnsite,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+    delete[] array;
+}

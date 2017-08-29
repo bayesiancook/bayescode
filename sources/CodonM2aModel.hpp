@@ -32,25 +32,25 @@ class CodonM2aModel	{
     // Accessors
     //
 
-	int GetNsite() {return codondata->GetNsite();}
+	int GetNsite() const {return codondata->GetNsite();}
 
-    CodonStateSpace* GetCodonStateSpace()   {
+    CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
     }
 
-    double GetPurOm()   {
+    double GetPurOm() const {
         return purom;
     }
 
-    double GetDPosOm()   {
+    double GetDPosOm() const {
         return dposom;
     }
 
-    double GetPurW()    {
+    double GetPurW() const {
         return purw;
     }
 
-    double GetPosW()    {
+    double GetPosW() const {
         return posw;
     }
 
@@ -71,7 +71,7 @@ class CodonM2aModel	{
     void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc);
 
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
-    void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw);
+    void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw) const;
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     // 
@@ -105,24 +105,24 @@ class CodonM2aModel	{
     // Priors
     //
 
-	double GetLogPrior();
+	double GetLogPrior() const;
 
-	double LambdaHyperLogPrior();
-	double BranchLengthsLogPrior();
-    double NucRatesLogPrior();
+	double LambdaHyperLogPrior() const;
+	double BranchLengthsLogPrior() const;
+    double NucRatesLogPrior() const;
 
-    double OmegaLogPrior();
+    double OmegaLogPrior() const;
 
     // Beta prior for purifmean
-    double PurOmegaLogProb();
+    double PurOmegaLogProb() const;
     // Gamma prior for dposom
-	double PosOmegaLogProb();
+	double PosOmegaLogProb() const;
     // Beta prior for purw
-	double PurWeightLogProb();
+	double PurWeightLogProb() const;
     // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
-	double PosWeightLogProb();
+	double PosWeightLogProb() const;
     // Bernoulli for whether posw == 0 or > 0
-    double PosSwitchLogProb();
+    double PosSwitchLogProb() const;
 
     //
     //  Moves 
@@ -169,8 +169,8 @@ class CodonM2aModel	{
 	// summary statistics
     //
 
-	double GetTotalLength();
-	double GetMeanOmega();
+	double GetTotalLength() const;
+	double GetMeanOmega() const;
 	double GetEntropy(const std::vector<double>& profile, int dim) const;
 
     /*
@@ -181,6 +181,7 @@ class CodonM2aModel	{
 	void TraceHeader(std::ostream& os);
 	void Trace(ostream& os);
 	void TracePostProb(ostream& os);
+    void GetSitesPostProb(double* array) const;
 
 	void Monitor(ostream& os) {}
 	void FromStream(istream& is) {}

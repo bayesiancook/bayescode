@@ -194,10 +194,15 @@ int main(int argc, char* argv[])	{
         model->Trace(cerr);
     }
     if (! myid) {
+        ofstream nameos((name + ".genelist").c_str());
+        model->PrintGeneList(nameos);
+        nameos.close();
+
         ofstream paramos((name + ".globalparam").c_str());
         ofstream hyperos((name + ".hyperparam").c_str());
         ofstream pos((name + ".posw").c_str());
         ofstream omos((name + ".posom").c_str());
+        ofstream siteos((name + ".sitepp").c_str());
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
@@ -206,16 +211,21 @@ int main(int argc, char* argv[])	{
             model->Trace(os);
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
+            if (writegenedata)  {
+                model->MasterTraceSitesPostProb(siteos);
+            }
         }
     }
     else	{
+        /*
         if (writegenedata)  {
             model->SlaveTracePostProbHeader(name);
         }
+        */
         while(1)	{
             model->SlaveMove();
             if (writegenedata)  {
-                model->SlaveTracePostProb(name);
+                model->SlaveTraceSitesPostProb();
             }
         }
     }
