@@ -247,12 +247,12 @@ void MultiGeneCodonM2aModel::SlaveSetMixtureArrays()    {
 void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
 
     os << "#time";
-    os << "\tlogprior\tlnL\tlength";
-    if (blmode != 2)    {
+    os << "\tlogprior\tlnL";
+    if (blmode == 2)    {
+        os << "\tlength";
+    }
+    else    {
         os << "\tmeanlength\tstdev";
-        if (blmode == 1)    {
-            os << "\thyperinvconc";
-        }
     }
     os << "\tpi";
     os << "\tnposfrac";
@@ -281,13 +281,12 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     timepercycle.Start();
     os << '\t' << GetLogPrior();
     os << '\t' << GetLogLikelihood();
-    os << '\t' << GetMeanTotalLength();
-    if (blmode != 2)    {
+    if (blmode == 2)    {
+        os << '\t' << GetMeanTotalLength();
+    }
+    else    {
         os << '\t' << GetMeanLength();
         os << '\t' << sqrt(GetVarLength());
-        if (blmode == 1)    {
-            os << '\t' << blhyperinvshape;
-        }
     }
     os << '\t' << pi;
     os << '\t' << GetNpos();
@@ -479,8 +478,11 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperInvShapeLogPrior()    {
 double MultiGeneCodonM2aModel::BranchLengthsHyperLogPrior()	{
 
     // exponential prior on scale parameter
+    if (blmode == 0)    {
+        return 0;
+    }
     double total = LambdaHyperLogPrior();
-    if (blmode != 2)    {
+    if (blmode == 1)    {
         // exponential hyper prior on inverse shape parameter
         total += BranchLengthsHyperInvShapeLogPrior();
         // iid gamma over branch-specific means across genes
@@ -506,9 +508,17 @@ double MultiGeneCodonM2aModel::BranchLengthsLogPrior()	{
 double MultiGeneCodonM2aModel::NucRatesHyperLogPrior()  {
 
     double total = 0;
-    if (nucmode != 2)   {
+    if (nucmode == 1)   {
         total -= nucrelratehyperinvconc;
         total -= nucstathyperinvconc;
+    }
+    if (isnan(total))   {
+        cerr << "error in NucRatesHyperLogPrior: nan\n";
+        exit(1);
+    }
+    if (isinf(total))   {
+        cerr << "error in NucRatesHyperLogPrior: inf\n";
+        exit(1);
     }
     return total;
 }
@@ -519,6 +529,14 @@ double MultiGeneCodonM2aModel::NucRatesLogPrior()    {
     // Dirichlet prior on relrates and stationaries
     total += nucrelratearray->GetLogProb();
     total += nucstatarray->GetLogProb();
+    if (isnan(total))   {
+        cerr << "error in NucRatesLogPrior: nan\n";
+        exit(1);
+    }
+    if (isinf(total))   {
+        cerr << "error in NucRatesLogPrior: inf\n";
+        exit(1);
+    }
     return total;
 }
 
@@ -580,6 +598,14 @@ double MultiGeneCodonM2aModel::NucRatesHyperSuffStatLogProb()   {
     double total = 0;
     total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
     total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
+    if (isnan(total))   {
+        cerr << "error in NucRatesHyperSuffStatLogProb: nan\n";
+        exit(1);
+    }
+    if (isinf(total))   {
+        cerr << "error in NucRatesHyperSuffStatLogProb: inf\n";
+        exit(1);
+    }
     return total;
 }
 
@@ -852,6 +878,7 @@ void MultiGeneCodonM2aModel::SlaveMoveBranchLengths() {
 
     for (int gene=0; gene<GetLocalNgene(); gene++)  {
         geneprocess[gene]->MoveBranchLengths();
+        geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
     }
 }
 
@@ -920,6 +947,7 @@ void MultiGeneCodonM2aModel::SlaveMoveNucRates()    {
 
     for (int gene=0; gene<GetLocalNgene(); gene++)  {
         geneprocess[gene]->MoveNucRates();
+        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
     }
 }
 
@@ -1216,7 +1244,7 @@ void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
-        geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
+        // geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
         for (int j=0; j<Nbranch; j++)   {
             array[index++] = branchlengtharray[gene]->GetVal(j);
         }
@@ -1361,7 +1389,7 @@ void MultiGeneCodonM2aModel::SlaveSendGeneNucRates()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
-        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
+        // geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
         for (int j=0; j<Nrr; j++)   {
             array[index++] = (*nucrelratearray)[gene][j];
         }
