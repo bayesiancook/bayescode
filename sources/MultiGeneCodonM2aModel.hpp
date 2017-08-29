@@ -285,6 +285,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     Chrono timepercycle;
     Chrono omegachrono,hyperchrono,mastersampling;
 
-    double nucacc1, nucacc2, nuctot1, nuctot2;
+    double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;
+    double nucstatacc1, nucstatacc2, nucstatacc3, nucstattot1, nucstattot2, nucstattot3;
 };
 
