@@ -259,8 +259,8 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     os << "\tstatent";
     os << "\trrent";
     if (nucmode != 2)   {
-        os << "\tstdevrr\thyperinvconc";
-        os << "\tstdevstat\thyperinvconc";
+        os << "\tstdevrr\tcenter\thyperinvconc";
+        os << "\tstdevstat\tcenter\thyperinvconc";
         if (nucmode == 1)   {
             os << "\tnucrracc1\tnucrracc2\tnucrracc3";
             os << "\tnucstatacc1\tnucstatacc2\tnucstatacc3";
@@ -270,6 +270,14 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     }
     os << '\n';
     timepercycle.Start();
+}
+
+double GetEntropy(const std::vector<double>& profile, int dim) {
+    double tot = 0;
+    for (int i=0; i<dim; i++)	{
+        tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
+    }
+    return tot;
 }
 
 void MultiGeneCodonM2aModel::Trace(ostream& os)    {
@@ -299,8 +307,8 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     os << '\t' << nucstatarray->GetMeanEntropy();
     os << '\t' << nucrelratearray->GetMeanEntropy();
     if (nucmode != 2)   {
-        os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << nucrelratehyperinvconc;
-        os << '\t' << sqrt(GetVarNucStat()) << '\t' << nucstathyperinvconc;
+        os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << GetEntropy(nucrelratehypercenter,Nrr) << '\t' << nucrelratehyperinvconc;
+        os << '\t' << sqrt(GetVarNucStat()) << '\t' << GetEntropy(nucstathypercenter,Nnuc) << '\t' << nucstathyperinvconc;
         if (nucmode == 1)   {
             os << '\t' << 100*((double) nucrracc1) / nucrrtot1;
             os << '\t' << 100*((double) nucrracc2) / nucrrtot2;
