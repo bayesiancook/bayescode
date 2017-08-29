@@ -121,7 +121,7 @@ int main(int argc, char* argv[])	{
                 else if (tmp == "shrunken")   {
                     nucmode = 1;
                 }
-                else if (tmp == "independent")  {
+                else if ((tmp == "ind") || (tmp == "independent"))  {
                     nucmode = 0;
                 }
                 else    {
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])	{
                 else if (tmp == "shrunken")   {
                     blmode = 1;
                 }
-                else if (tmp == "independent")  {
+                else if ((tmp == "ind") || (tmp == "independent"))  {
                     blmode = 0;
                 }
                 else    {
