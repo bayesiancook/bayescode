@@ -264,6 +264,7 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
         if (nucmode == 1)   {
             os << "\tnucrracc1\tnucrracc2\tnucrracc3";
             os << "\tnucstatacc1\tnucstatacc2\tnucstatacc3";
+            os << "\tnucrrlogprob\tnucstatlogprob";
         }
     }
     os << '\n';
@@ -308,6 +309,8 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
             os << '\t' << 100*((double) nucstatacc3) / nucstattot3;
             nucrracc1 = nucrracc2 = nucrracc3 = nucrrtot1 = nucrrtot2 = nucrrtot3 = 0;
             nucstatacc1 = nucstatacc2 = nucstatacc3 = nucstattot1 = nucstattot2 = nucstattot3 = 0;
+            os << '\t' << nucrelratearray->GetLogProb();
+            os << '\t' << nucstatarray->GetLogProb();
         }
     }
     os << '\n';
