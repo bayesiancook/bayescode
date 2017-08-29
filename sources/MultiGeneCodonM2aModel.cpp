@@ -265,6 +265,7 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
             os << "\tnucrracc1\tnucrracc2\tnucrracc3";
             os << "\tnucstatacc1\tnucstatacc2\tnucstatacc3";
             os << "\tnucrrlogprob\tnucstatlogprob";
+            os << "\tnucrrsuffstatlogprob\tnucstatsuffstatlogprob";
         }
     }
     os << '\n';
@@ -311,6 +312,8 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
             nucstatacc1 = nucstatacc2 = nucstatacc3 = nucstattot1 = nucstattot2 = nucstattot3 = 0;
             os << '\t' << nucrelratearray->GetLogProb();
             os << '\t' << nucstatarray->GetLogProb();
+            os << '\t' << nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+            os << '\t' << nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
         }
     }
     os << '\n';
@@ -824,6 +827,9 @@ void MultiGeneCodonM2aModel::MasterMoveBranchLengthsHyperParameters()   {
     }
     BranchLengthsHyperInvShapeMove(1.0,10);
     BranchLengthsHyperInvShapeMove(0.3,10);
+    for (int gene=0; gene<Ngene; gene++)  {
+        branchlengtharray[gene]->SetShape(1.0 / blhyperinvshape);
+    }
     MasterMoveLambda();
 }
 
@@ -941,6 +947,8 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     nucrrtot2++;
     nucrrtot3++;
 
+    nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
+
     NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
@@ -950,6 +958,8 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     nucstattot1 ++;
     nucstattot2 ++;
     nucstattot3 ++;
+
+    nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 }
 
 void MultiGeneCodonM2aModel::SlaveMoveNucRates()    {
