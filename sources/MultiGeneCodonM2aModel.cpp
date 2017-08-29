@@ -56,6 +56,7 @@ void MultiGeneCodonM2aModel::Allocate() {
         lengthhypersuffstatarray = 0;
     }
     else    {
+        branchlength->SetAllBranches(1.0/lambda);
         branchlengtharray.assign(GetLocalNgene(),(GammaWhiteNoise*) 0);
         for (int gene=0; gene<GetLocalNgene(); gene++)  {
             branchlengtharray[gene] = new GammaWhiteNoise(*tree,*branchlength,1.0/blhyperinvshape);
@@ -185,14 +186,6 @@ void MultiGeneCodonM2aModel::SetAcrossGenesModes(int inblmode, int innucmode, in
     purwmode = inpurwmode;
     poswmode = inposwmode;
 }
-
-/*
-void MultiGeneCodonM2aModel::SetBranchLengthsHyperParameters()  {
-}
-
-void MultiGeneCodonM2aModel::SetNucRateHyperParameters() {
-}
-*/
 
 void MultiGeneCodonM2aModel::SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc)   {
     puromhypermean = inpuromhypermean;

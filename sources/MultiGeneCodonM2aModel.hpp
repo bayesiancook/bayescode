@@ -34,10 +34,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     // ------------------
 
     void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode);
-    /*
-    void SetBranchLengthsHyperParameters();
-    void SetNucRateHyperParameters();
-    */
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
