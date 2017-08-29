@@ -41,7 +41,13 @@ class MultiGeneMPIModule    {
         return GeneName[gene];
     }
 
+    int GetLocalGeneNsite(int gene) const   {
+        return GeneNsite[gene];
+    }
+
     void AllocateAlignments(string datafile);
+
+    void PrintGeneList(ostream& os) const;
 
     protected:
 
@@ -51,8 +57,10 @@ class MultiGeneMPIModule    {
 	int Ngene;
     int LocalNgene;
     std::vector<int> SlaveNgene;
+    std::vector<int> SlaveTotNsite;
     std::vector<int> GeneAlloc;
     std::vector<string> GeneName;
+    std::vector<int> GeneNsite;
 
     SequenceAlignment* refdata;
 };

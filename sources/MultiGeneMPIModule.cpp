@@ -8,11 +8,8 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 	ifstream is(datafile.c_str());
 	is >> Ngene;
     vector<string> genename(Ngene,"NoName");
-	// genename.assign(Ngene,"NoName");
     vector<int> genesize(Ngene,0);
-	// genesize.assign(Ngene,0);
     vector<int> genealloc(Ngene,0);
-	// genealloc.assign(Ngene,0);
 	vector<int> geneweight(Ngene,0);
 
 	for (int gene=0; gene<Ngene; gene++)	{
@@ -102,25 +99,59 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
 	}
 
     SlaveNgene.assign(nprocs,0);
+    SlaveTotNsite.assign(nprocs,0);
     for (int gene=0; gene<Ngene; gene++)	{
         SlaveNgene[genealloc[gene]]++;
+        SlaveTotNsite[genealloc[gene]] += genesize[gene];
     }
+
     
     if (! myid) {
+
         LocalNgene = Ngene;
-        GeneName = genename;
-        GeneAlloc = genealloc;
+        GeneName.assign(Ngene,"noname");
+        GeneNsite.assign(Ngene,0);
+        GeneAlloc.assign(Ngene,0);
+        int i = 0;
+        for (int proc=1; proc<nprocs; proc++)   {
+            cerr << proc << '\t' << SlaveNgene[proc] << '\t' << SlaveTotNsite[proc] << '\n';
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (genealloc[gene] == proc)    {
+                    GeneAlloc[i] = proc;
+                    GeneName[i] = genename[gene];
+                    GeneNsite[i] = genesize[gene];
+                    i++;
+                }
+            }
+        }
+        if (i != Ngene) {
+            cerr << "error in mpimodule: non matching number of genes\n";
+        }
     }
     else    {
         GeneAlloc.assign(0,0);
         LocalNgene = SlaveNgene[myid];
         GeneName.assign(LocalNgene,"NoName");
+        GeneNsite.assign(LocalNgene,0);
         int i=0;
         for (int gene=0; gene<Ngene; gene++)	{
             if (genealloc[gene] == myid)    {
                 GeneName[i] = genename[gene];
+                GeneNsite[i] = genesize[gene];
                 i++;
             }
         }
+    }
+}
+
+void MultiGeneMPIModule::PrintGeneList(ostream& os) const {
+
+    if (myid)   {
+        cerr << "error: slave in MultiGeneMPIModule::PrintGeneList\n";
+        exit(1);
+    }
+    os << Ngene << '\n';
+    for (int gene=0; gene<Ngene; gene++)    {
+        os << GeneName[gene] << '\n';
     }
 }
