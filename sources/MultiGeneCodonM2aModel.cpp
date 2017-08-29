@@ -1915,6 +1915,7 @@ void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
             exit(1);
         }
     }
+    os << '\n';
     os.flush();
 }
 
