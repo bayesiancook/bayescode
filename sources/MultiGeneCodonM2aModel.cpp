@@ -46,6 +46,8 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
 
 void MultiGeneCodonM2aModel::Allocate() {
 
+    nucacc1 = nucacc2 = nuctot1 = nuctot2 = 0;
+
     lambda = 10;
     branchlength = new BranchIIDGamma(*tree,1.0,lambda);
     blhyperinvshape = 1.0;
@@ -265,6 +267,9 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     if (nucmode != 2)   {
         os << "\tstdevrr\thyperinvconc";
         os << "\tstdevstat\thyperinvconc";
+        if (nucmode == 1)   {
+            os << "\tnucacc1\tnucacc2";
+        }
     }
     os << '\n';
     timepercycle.Start();
@@ -299,6 +304,11 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     if (nucmode != 2)   {
         os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << nucrelratehyperinvconc;
         os << '\t' << sqrt(GetVarNucStat()) << '\t' << nucstathyperinvconc;
+        if (nucmode == 1)   {
+            os << '\t' << 100*((double) nucacc1) / nuctot1;
+            os << '\t' << 100*((double) nucacc2) / nuctot2;
+            nucacc1 = nucacc2 = nuctot1 = nuctot2 = 0;
+        }
     }
     os << '\n';
     os.flush();
@@ -927,8 +937,10 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
-    NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
-    NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
+    nucacc1 += NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
+    nucacc2 += NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
+    nuctot1 ++;
+    nuctot2 ++;
 }
 
 void MultiGeneCodonM2aModel::SlaveMoveNucRates()    {
