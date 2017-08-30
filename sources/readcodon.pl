@@ -4,6 +4,7 @@ use strict;
 my $basename = shift;
 my $burnin = shift;
 my $cutoff = shift;
+my $codemlfile = shift;
 my $outfile = shift;
 
 open (LISTFILE, $basename.'.genelist') or die "input error for gene list\n";
@@ -111,9 +112,29 @@ for (my $i=0; $i<$totnsite; $i++)	{
 	$sitepp[$i] /= $n-$burnin;
 }
 
+open(CODEMLFILE, $codemlfile) or die "input error: codeml\n";
+
+my %gene2delta;
+my %gene2pval;
+my %gene2fdr;
+
+foreach my $line (<CODEMLFILE>) {
+
+    chomp $line;
+    my @a = split('\t',$line);
+    my $name = $a[0];
+    my $delta = $a[1];
+    my $p = $a[2];
+    my $q = $a[3];
+    $gene2delta{$name} = $delta;
+    $gene2pval{$name} = $p;
+    $gene2fdr{$name} = $q;
+}
+
+
 open (OUTFILE, '>'.$outfile) or die "output error\n";
 
-print OUTFILE "fdr\tgene\tpp\tnsite\tsites\n";
+print OUTFILE "fdr\tgene\tpp\tcodemldeltalnL\tpval\tfdr\tnsite\tsites\n";
 my $totpp = 0;
 my $count = 0;
 foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
@@ -121,7 +142,13 @@ foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
 	$totpp += $gene2pp{$gene};
 	my $fdr = 100 - int(100 * $totpp / $count);
     my $pp = int(100*$gene2pp{$gene});
-	print OUTFILE "$fdr\t$gene\t$pp\t";
+	print OUTFILE "$pp\t$gene\t$fdr\t";
+    if (exists $gene2pval{$gene})   {
+        print OUTFILE "$gene2fdr{$gene}\t$gene2delta{$gene}\t$gene2pval{$gene}\t";
+    }
+    else    {
+        print OUTFILE "-\t-\t-\t";
+    }
     my $offset = $gene2offset{$gene};
     my $count = 0;
     for (my $j=0; $j<$gene2nsite{$gene}; $j++)	{
