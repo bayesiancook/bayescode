@@ -404,6 +404,34 @@ double MultiGeneCodonM2aModel::GetVarLength()   {
     return tot;
 }
 
+void MultiGeneCodonM2aModel::SetNucRelRateCenterToMean()   {
+
+    for (int j=0; j<Nrr; j++)   {
+        double mean = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = (*nucrelratearray)[g][j];
+            mean += tmp;
+        }
+        mean /= Ngene;
+        nucrelratehypercenter[j] = mean;
+    }
+    nucrelratehyperinvconc = GetVarNucRelRate();
+}
+
+void MultiGeneCodonM2aModel::SetNucStatCenterToMean()   {
+
+    for (int j=0; j<Nnuc; j++)   {
+        double mean = 0;
+        for (int g=0; g<Ngene; g++) {
+            double tmp = (*nucstatarray)[g][j];
+            mean += tmp;
+        }
+        mean /= Ngene;
+        nucstathypercenter[j] = mean;
+    }
+    nucstathyperinvconc = GetVarNucStat();
+}
+
 double MultiGeneCodonM2aModel::GetVarNucRelRate()   {
 
     if (nucmode == 2)   {
@@ -945,6 +973,13 @@ double MultiGeneCodonM2aModel::NucRatesHyperScalingMove(double& x, double tuning
 
 void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
 
+    if (burnin < 10)    {
+
+        SetNucRelRateCenterToMean();
+        SetNucStatCenterToMean();
+    }
+    else    {
+
     NucRatesHyperProfileMove(nucrelratehypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucrelratehypercenter,0.3,1,10);
     NucRatesHyperProfileMove(nucrelratehypercenter,0.1,3,10);
@@ -955,18 +990,28 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     nucrrtot2++;
     nucrrtot3++;
 
-    nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
 
     NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
+    nucstatacc1 += NucRatesHyperProfileMove(nucstathypercenter,GetVarNucStat(),0,10);
+    nucstatacc2 += NucRatesHyperProfileMove(nucstathypercenter,0.3*GetVarNucStat(),0,10);
+    nucstatacc3 += NucRatesHyperProfileMove(nucstathypercenter,0.1*GetVarNucStat(),0,10);
+    NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
+    NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
+    NucRatesHyperScalingMove(nucstathyperinvconc,0.03,10);
+    /*
     nucstatacc1 += NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
     nucstatacc2 += NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
     nucstatacc3 += NucRatesHyperScalingMove(nucstathyperinvconc,0.03,10);
+    */
     nucstattot1 ++;
     nucstattot2 ++;
     nucstattot3 ++;
 
+    }
+
+    nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
     nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 }
 

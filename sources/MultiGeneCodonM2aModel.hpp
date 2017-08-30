@@ -119,6 +119,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     void SlaveMoveBranchLengths();
 
+    void SetNucRelRateCenterToMean();
+    void SetNucStatCenterToMean();
     void MasterMoveNucRatesHyperParameters();
     void SlaveMoveNucRates();
 
