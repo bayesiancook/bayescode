@@ -1,30 +1,3 @@
-/*
-simple model: gene-specific omegas, iid from a gamma distribution
-shared nuc rates and branch lengths across all genes
-each slave allocates a small number of gene-specific models
-master deals with branch lengths, nuc stat and shape and scale params of gamma distribution of omega's across genes
-
-starting:
-master broadcasts global params / slaves receive global params and update phyloprocess
-
-move schedule:
-
-slave resample sub
-
-for i=1..Nrep
-
-    slaves compile branch length suff stats and send them to master
-    master collects branch length suff stat, resamples branch lengths (and hyperparams) and broadcasts new branch lengths
-
-    slaves compile pathsuffstat, move omega and send to master 
-    master moves alpha beta sends back to slaves
-
-    slave compile nuc suff stats and send them to master
-    master collects nuc suffstat across genes, resamples nuc rates and broadcasts them to slaves
-
-
-- use SingleOmegaModel as a single class, usable under all conditions (with flags indicating which aspects are dependent / independent)
-*/
 
 #include "SingleOmegaModel.hpp"
 #include "MultiGeneMPIModule.hpp"
@@ -61,6 +34,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     NucPathSuffStat nucpathsuffstat;
     std::vector<SingleOmegaModel*> geneprocess;
 
+    double totlnL;
     double* lnL;
 
     public:
@@ -74,11 +48,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         AllocateAlignments(datafile);
         treefile = intreefile;
 
-        // all datafiles have all taxa (with missing data if needed) in same order
-        // makes it easier to register tree with data, etc.
-
-        string filename = genename[0];
-		refcodondata = new CodonSequenceAlignment(refdata, true);
+        refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
         Ntaxa = refdata->GetNtaxa();
 
@@ -91,16 +61,15 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
 
-        std::cerr << "number of taxa : " << Ntaxa << '\n';
-        std::cerr << "number of branches : " << Nbranch << '\n';
-        std::cerr << "-- Tree and data fit together\n";
-
-        Allocate();
+        if (! myid) {
+            std::cerr << "number of taxa : " << Ntaxa << '\n';
+            std::cerr << "number of branches : " << Nbranch << '\n';
+            std::cerr << "-- Tree and data fit together\n";
+        }
     }
 
     void Allocate() {
 
-        
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
         lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
@@ -127,21 +96,24 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
         alpha = beta = 1.0;
-		omegaarray = new IIDGamma(GetNgene(),alpha,beta);
+		omegaarray = new IIDGamma(GetLocalNgene(),alpha,beta);
 
-        lnL = new double[Ngene];
+        if (myid)   {
+            lnL = new double[GetLocalNgene()];
+        }
+        else    {
+            lnL = 0;
+        }
 
         cerr << "gene processes\n";
         if (! GetMyid())    {
             geneprocess.assign(0,(SingleOmegaModel*) 0);
         }
         else    {
-            geneprocess.assign(Ngene,(SingleOmegaModel*) 0);
+            geneprocess.assign(GetLocalNgene(),(SingleOmegaModel*) 0);
 
-            for (int gene=0; gene<GetNgene(); gene++)   {
-                if (genealloc[gene] == myid)    {
-                    geneprocess[gene] = new SingleOmegaModel(genename[gene],treefile);
-                }
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
+                geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene),treefile);
             }
         }
     }
@@ -149,19 +121,23 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void Unfold()   {
 
         if (! GetMyid())    {
-            MasterSendGlobalParameters();
+            MasterSendGlobalBranchLengths();
+            MasterSendGlobalNucRates();
+            MasterSendOmegaHyperParameters();
             MasterSendOmega();
+            MasterReceiveLogLikelihood();
         }
         else    {
-            SlaveReceiveGlobalParameters();
+            SlaveReceiveGlobalBranchLengths();
+            SlaveReceiveGlobalNucRates();
+            SlaveReceiveOmegaHyperParameters();
             SlaveReceiveOmega();
 
-            for (int gene=0; gene<GetNgene(); gene++)   {
-                if (genealloc[gene] == myid)    {
-                    geneprocess[gene]->UpdateMatrices();
-                    geneprocess[gene]->Unfold();
-                }
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
+                geneprocess[gene]->UpdateMatrices();
+                geneprocess[gene]->Unfold();
             }
+            SlaveSendLogLikelihood();
         }
     }
 
@@ -176,9 +152,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
         os << "rrent\n";
     }
 
-    void MasterTrace(ostream& os)    {
+    void Trace(ostream& os)    {
 		os << GetLogPrior() << '\t';
-        MasterReceiveLogLikelihood();
 		os << GetLogLikelihood() << '\t';
 		os << GetTotalLength() << '\t';
         os << omegaarray->GetMean() << '\t';
@@ -187,10 +162,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		os << GetEntropy(nucstat,Nnuc) << '\t';
 		os << GetEntropy(nucrelrate,Nrr) << '\n';
 		os.flush();
-    }
-
-    void SlaveTrace()   {
-        SlaveSendLogLikelihood();
     }
 
     double GetLogPrior()    {
@@ -228,20 +199,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     }
 
     double OmegaLogProb()   {
-        double tot = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            double omega = omegaarray->GetVal(gene);
-            tot += alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
-        }
-        return tot;
+        return omegaarray->GetLogProb();
     }
 
     double GetLogLikelihood()   {
-        double tot = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            tot += lnL[gene];
-        }
-        return tot;
+        return totlnL;
     }
 
 	double GetTotalLength()	{
@@ -273,16 +235,19 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
             MasterReceiveLengthSuffStat();
             MasterResampleBranchLengths();
             MasterMoveLambda();
-            MasterSendGlobalParameters();
+            MasterSendGlobalBranchLengths();
 
             MasterReceiveOmega();
             MasterMoveAlphaBeta();
-            MasterSendGlobalParameters();
+            MasterSendOmegaHyperParameters();
 
             MasterReceiveNucPathSuffStat();
             MasterMoveNuc();
-            MasterSendGlobalParameters();
+            MasterSendGlobalNucRates();
         }
+
+        MasterReceiveOmega();
+        MasterReceiveLogLikelihood();
     }
 
     // slave move
@@ -295,89 +260,57 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		for (int rep=0; rep<nrep; rep++)	{
 
             SlaveSendLengthSuffStat();
-            SlaveReceiveGlobalParameters();
+            SlaveReceiveGlobalBranchLengths();
 
             SlaveCollectPathSuffStat();
             SlaveMoveOmega();
             SlaveSendOmega();
-            SlaveReceiveGlobalParameters();
+            SlaveReceiveOmegaHyperParameters();
 
             SlaveSendNucPathSuffStat();
-            SlaveReceiveGlobalParameters();
+            SlaveReceiveGlobalNucRates();
+        }
 
-        }
-    }
-
-    void MasterSendGlobalParameters() {
-
-        // alpha
-        // beta
-        // branch lengths
-        // nuc relrate
-        // nucstat
-
-        int N = 2 + Nbranch + Nrr + Nnuc;
-        double* array = new double[N];
-        int i = 0;
-        array[i++] = alpha;
-        array[i++] = beta;
-        for (int j=0; j<Nbranch; j++)   {
-            array[i++] = branchlength->GetVal(j);
-        }
-        for (int j=0; j<Nrr; j++)   {
-            array[i++] = nucrelrate[j];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            array[i++] = nucstat[j];
-        }
-        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        delete[] array;
-    }
-
-    void SlaveReceiveGlobalParameters()   {
-
-        int N = 2 + Nbranch + Nrr + Nnuc;
-        double* array = new double[N];
-        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        int i = 0;
-        alpha = array[i++];
-        beta = array[i++];
-        for (int j=0; j<Nbranch; j++)   {
-            (*branchlength)[j] = array[i++];
-        }
-        for (int j=0; j<Nrr; j++)   {
-            nucrelrate[j] = array[i++];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            nucstat[j] = array[i++];
-        }
-        for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->SetBranchLengths(*branchlength);
-                geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
-                geneprocess[gene]->SetAlphaBeta(alpha,beta);
-            }
-        }
-        delete[] array;
+        SlaveSendOmega();
+        SlaveSendLogLikelihood();
     }
 
     void SlaveResampleSub()  {
 
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->ResampleSub();
-            }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->ResampleSub();
         }
+    }
+
+    void MasterSendGlobalBranchLengths() {
+
+        double* array = new double[Nbranch];
+        for (int j=0; j<Nbranch; j++)   {
+            array[j] = branchlength->GetVal(j);
+        }
+        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveGlobalBranchLengths()   {
+
+        double* array = new double[Nbranch];
+        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for (int j=0; j<Nbranch; j++)   {
+            (*branchlength)[j] = array[j];
+        }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetBranchLengths(*branchlength);
+        }
+        delete[] array;
     }
 
     void SlaveSendLengthSuffStat()  {
 
         lengthsuffstatarray->Clear();
-        for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->CollectLengthSuffStat();
-                lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
-            }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->CollectLengthSuffStat();
+            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
         }
 
         int* count = new int[Nbranch];
@@ -499,21 +432,17 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	}
 
     void SlaveCollectPathSuffStat() {
-        for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->CollectPathSuffStat();
-            }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->CollectPathSuffStat();
         }
     }
 
     void SlaveSendNucPathSuffStat()  {
 
         nucpathsuffstat.Clear();
-        for (int gene=0; gene<GetNgene(); gene++)   {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->CollectNucPathSuffStat();
-                nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
-            }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->CollectNucPathSuffStat();
+            nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
         }
 
         int* count = new int[Nnuc+Nnuc*Nnuc];
@@ -615,100 +544,169 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 		return nacc/ntot;
 	}
 
+
+    void MasterSendGlobalNucRates()   {
+
+        int N = Nrr + Nnuc;
+        double* array = new double[N];
+        int i = 0;
+        for (int j=0; j<Nrr; j++)   {
+            array[i++] = nucrelrate[j];
+        }
+        for (int j=0; j<Nnuc; j++)  {
+            array[i++] = nucstat[j];
+        }
+        if (i != N) {
+            cerr << "error when sending global nuc rates: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
+
+        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveGlobalNucRates()   {
+
+        int N = Nrr + Nnuc;
+        double* array = new double[N];
+        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        int i = 0;
+        for (int j=0; j<Nrr; j++)   {
+            nucrelrate[j] = array[i++];
+        }
+        for (int j=0; j<Nnuc; j++)  {
+            nucstat[j] = array[i++];
+        }
+
+        if (i != N) {
+            cerr << "error when receiving global nuc rates: non matching vector size\n";
+            cerr << i << '\t' << N << '\n';
+            exit(1);
+        }
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
+        }
+        delete[] array;
+    }
+
     void SlaveMoveOmega()  {
 
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->MoveOmega();
-            }
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->MoveOmega();
+            (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
         }
     }
 
     void SlaveSendOmega()   {
 
-        double* array = new double[Ngene];
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene] == myid)    {
-                array[gene] = geneprocess[gene]->GetOmega();
-            }
-            else    {
-                array[gene] = -1;
-            }
+        int ngene = GetLocalNgene();
+        double* array = new double[ngene];
+        for (int gene=0; gene<ngene; gene++)   {
+            array[gene] = (*omegaarray)[gene];
         }
-        MPI_Send(array,Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(array,ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
         delete[] array;
     }
 
     void MasterReceiveOmega()    {
 
-        double* array = new double[Ngene];
         MPI_Status stat;
         for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(array,Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[ngene];
+            MPI_Recv(array,ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            int index = 0;
             for (int gene=0; gene<Ngene; gene++)    {
-                if (array[gene] != -1)    {
-                    (*omegaarray)[gene] = array[gene];
+                if (GeneAlloc[gene] == proc)    {
+                    (*omegaarray)[gene] = array[index++];
                 }
             }
+            if (index != ngene) {
+                cerr << "error: non matching number of genes in master receive omega\n";
+                exit(1);
+            }
+            delete[] array;
         }
-        delete[] array;
     }
 
     void MasterSendOmega()  {
 
-        double* array = new double[Ngene];
-        for (int gene=0; gene<Ngene; gene++)    {
-            array[gene] = (*omegaarray)[gene];
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int ngene = GetSlaveNgene(proc);
+            double* array = new double[4*ngene];
+            int index = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                if (GeneAlloc[gene] == proc)    {
+                    array[index++] = (*omegaarray)[gene];
+                }
+            }
+            if (index != ngene) {
+                cerr << "error: non matching number of genes in master send omega\n";
+                exit(1);
+            }
+            MPI_Send(array,ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
+            delete[] array;
         }
-        MPI_Bcast(array,Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        delete[] array;
     }
 
     void SlaveReceiveOmega()    {
 
-        double* array = new double[Ngene];
-        MPI_Bcast(array,Ngene,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        int ngene = GetLocalNgene();
+        double* array = new double[ngene];
+        MPI_Status stat;
+        MPI_Recv(array,ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
 
-        // this is not useful
-        for (int gene=0; gene<Ngene; gene++)    {
+        for (int gene=0; gene<ngene; gene++)    {
             (*omegaarray)[gene] = array[gene];
-        }
-
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene] == myid)    {
-                geneprocess[gene]->SetOmega(array[gene]);
-            }
+            geneprocess[gene]->SetOmega(array[gene]);
         }
         delete[] array;
+    }
+
+    void MasterSendOmegaHyperParameters()   {
+
+        double* array = new double[2];
+        array[0] = alpha;
+        array[1] = beta;
+        MPI_Bcast(array,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        delete[] array;
+    }
+
+    void SlaveReceiveOmegaHyperParameters() {
+
+        double* array = new double[Ngene];
+        MPI_Bcast(array,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        alpha = array[0];
+        beta = array[1];
+        delete[] array;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
+        for (int gene=0; gene<GetLocalNgene(); gene++)    {
+            geneprocess[gene]->SetAlphaBeta(alpha,beta);
+        }
     }
 
     void SlaveSendLogLikelihood()   {
 
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (genealloc[gene] == myid)    {
-                lnL[gene] = geneprocess[gene]->GetLogLikelihood();
-            }
-            else    {
-                lnL[gene] = 0;
-            }
+        totlnL = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            lnL[gene] = geneprocess[gene]->GetLogLikelihood();
+            totlnL += lnL[gene];
         }
-        MPI_Send(lnL,Ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(&totlnL,1,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
     }
 
     void MasterReceiveLogLikelihood()    {
 
-        double* array = new double[Ngene];
         MPI_Status stat;
+        totlnL = 0;
         for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(array,Ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            for (int gene=0; gene<Ngene; gene++)    {
-                if (array[gene])    {
-                    lnL[gene] = array[gene];
-                }
-            }
+            double tmp;
+            MPI_Recv(&tmp,1,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            totlnL += tmp;
         }
-        delete[] array;
     }
-
 };
 

@@ -66,11 +66,7 @@ class SingleOmegaModel {
 		tree->SetIndices();
 		Nbranch = tree->GetNbranch();
 
-		std::cerr << "number of taxa : " << Ntaxa << '\n';
-		std::cerr << "number of branches : " << Nbranch << '\n';
-		std::cerr << "-- Tree and data fit together\n";
-
-		Allocate();
+		// Allocate();
 	}
 
     void Unfold()   {

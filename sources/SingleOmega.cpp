@@ -10,6 +10,7 @@ int main(int argc, char* argv[])	{
 	string name = argv[3];
 
 	SingleOmegaModel* model = new SingleOmegaModel(datafile,treefile);
+    model->Allocate();
 	model->Unfold();
 	ofstream os((name + ".trace").c_str());
 	model->TraceHeader(os);

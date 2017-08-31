@@ -31,25 +31,28 @@ int main(int argc, char* argv[])	{
 
 	MultiGeneSingleOmegaModel* model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
     if (! myid) {
+        cerr << " -- master allocate\n";
+    }
+    model->Allocate();
+    if (! myid) {
         cerr << " -- master unfold\n";
     }
+    model->Unfold();
     if (! myid) {
         cerr << " -- start\n";
     }
-    model->Unfold();
     if (! myid) {
         ofstream os((name + ".trace").c_str());
         model->TraceHeader(os);
         os.flush();
         while(1)	{
             model->MasterMove();
-            model->MasterTrace(os);
+            model->Trace(os);
         }
     }
     else	{
         while(1)	{
             model->SlaveMove();
-            model->SlaveTrace();
         }
     }
 
