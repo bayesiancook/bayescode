@@ -140,6 +140,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 // with an omgea = dN/dS parameter
 // look at how ComputeArray and ComputeStationary are implemented in
 // CodonSubMatrix.cpp
+
 class MGOmegaCodonSubMatrix : public MGCodonSubMatrix {
   public:
     MGOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, double inomega,
