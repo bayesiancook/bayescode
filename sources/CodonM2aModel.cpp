@@ -281,15 +281,17 @@ double CodonM2aModel::OmegaSuffStatLogProb()    {
 //
 
 double CodonM2aModel::GetLogPrior() const {
+
     double total = 0;
-    total += BranchLengthsLogPrior();
-    total += NucRatesLogPrior();
+
+    if (! FixedBranchLengths()) {
+        total += BranchLengthsLogPrior();
+    }
+    if (! FixedNucRates())  {
+        total += NucRatesLogPrior();
+    }
     total += OmegaLogPrior();
     return total;
-}
-
-double CodonM2aModel::LambdaHyperLogPrior()	 const {
-    return -lambda / 10;
 }
 
 double CodonM2aModel::BranchLengthsLogPrior() const  {
@@ -300,6 +302,10 @@ double CodonM2aModel::BranchLengthsLogPrior() const  {
     }
     total += branchlength->GetLogProb();
     return total;
+}
+
+double CodonM2aModel::LambdaHyperLogPrior()	 const {
+    return -lambda / 10;
 }
 
 double CodonM2aModel::NucRatesLogPrior() const {
@@ -383,41 +389,25 @@ double CodonM2aModel::PosSwitchLogProb() const {
 
 void CodonM2aModel::Move()	{
 
-    Chrono mappingtime, reptime, lengthtime, collecttime, omegatime, nuctime;
-
-    mappingtime.Start();
     ResampleSub(1.0);
-    mappingtime.Stop();
 
     int nrep = 30;
 
-    reptime.Start();
     for (int rep=0; rep<nrep; rep++)	{
 
-        if (blmode != 2)    {
-            lengthtime.Start();
+        if (! FixedBranchLengths()) {
             MoveBranchLengths();
-            lengthtime.Stop();
         }
 
-        collecttime.Start();
         CollectPathSuffStat();
-        collecttime.Stop();
 
-        omegatime.Start();
         MoveOmega();
-        omegatime.Stop();
 
-        if (nucmode != 2)    {
-            nuctime.Start();
+        if (! FixedNucRates())  {
             UpdateMatrices();
             MoveNucRates();
-            nuctime.Stop();
         }
     }
-    reptime.Stop();
-
-    // cerr << mappingtime.GetTime() << '\t' << reptime.GetTime() << '\t' << lengthtime.GetTime() + collecttime.GetTime() + omegatime.GetTime() + nuctime.GetTime() << '\t' << lengthtime.GetTime() << '\t' << collecttime.GetTime() << '\t' << omegatime.GetTime() << '\t' << nuctime.GetTime() << '\n';
 }
 
 void CodonM2aModel::ResampleSub(double frac)  {
@@ -709,14 +699,6 @@ double CodonM2aModel::GetMeanOmega() const {
     return posw*(1 + dposom) + (1-posw)*(purw*purom + (1-purw));
 }
 
-double CodonM2aModel::GetEntropy(const std::vector<double>& profile, int dim) const {
-    double tot = 0;
-    for (int i=0; i<dim; i++)	{
-        tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
-    }
-    return tot;
-}
-
 void CodonM2aModel::TraceHeader(std::ostream& os) {
     os << "#logprior\tlnL\tlength\t";
     os << "purom\tposom\tpurw\tposw\t";
@@ -729,8 +711,8 @@ void CodonM2aModel::Trace(ostream& os)  {
     os << GetLogLikelihood() << '\t';
     os << GetTotalLength() << '\t';
     os << purom << '\t' << dposom+1 << '\t' << purw << '\t' << posw << '\t';
-    os << GetEntropy(nucstat,Nnuc) << '\t';
-    os << GetEntropy(nucrelrate,Nrr) << '\n';
+    os << Random::GetEntropy(nucstat) << '\t';
+    os << Random::GetEntropy(nucrelrate) << '\n';
     SubMatrix::diagerr = 0;
 }
 

@@ -11,8 +11,6 @@
 #include "M2aMix.hpp"
 #include "MultinomialAllocationVector.hpp"
 
-#include "Chrono.hpp"
-
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
@@ -52,6 +50,14 @@ class CodonM2aModel	{
 
     double GetPosW() const {
         return posw;
+    }
+
+    bool FixedBranchLengths() const    {
+        return blmode == 2;
+    }
+
+    bool FixedNucRates() const  {
+        return nucmode == 2;
     }
 
     // 
@@ -171,7 +177,6 @@ class CodonM2aModel	{
 
 	double GetTotalLength() const;
 	double GetMeanOmega() const;
-	double GetEntropy(const std::vector<double>& profile, int dim) const;
 
 	void TraceHeader(std::ostream& os);
 	void Trace(ostream& os);
