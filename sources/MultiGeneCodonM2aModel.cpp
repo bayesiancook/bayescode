@@ -58,10 +58,7 @@ void MultiGeneCodonM2aModel::Allocate() {
     }
     else    {
         branchlength->SetAllBranches(1.0/lambda);
-        branchlengtharray.assign(GetLocalNgene(),(GammaWhiteNoise*) 0);
-        for (int gene=0; gene<GetLocalNgene(); gene++)  {
-            branchlengtharray[gene] = new GammaWhiteNoise(*tree,*branchlength,1.0/blhyperinvshape);
-        }
+        branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
         lengthsuffstatarray = 0;
         lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
     }
@@ -366,17 +363,7 @@ double MultiGeneCodonM2aModel::GetMeanLength()   {
         exit(1);
     }
 
-    double tot = 0;
-    for (int j=0; j<Nbranch; j++)   {
-        double mean = 0;
-        for (int g=0; g<Ngene; g++) {
-            double tmp = branchlengtharray[g]->GetVal(j);
-            mean += tmp;
-        }
-        mean /= Ngene;
-        tot += mean;
-    }
-    return tot;
+    return branchlengtharray->GetMeanLength();
 }
 
 double MultiGeneCodonM2aModel::GetVarLength()   {
@@ -386,22 +373,7 @@ double MultiGeneCodonM2aModel::GetVarLength()   {
         exit(1);
     }
 
-    double tot = 0;
-    for (int j=0; j<Nbranch; j++)   {
-        double mean = 0;
-        double var = 0;
-        for (int g=0; g<Ngene; g++) {
-            double tmp = branchlengtharray[g]->GetVal(j);
-            mean += tmp;
-            var += tmp*tmp;
-        }
-        mean /= Ngene;
-        var /= Ngene;
-        var -= mean*mean;
-        tot += var;
-    }
-    tot /= Nbranch;
-    return tot;
+    return branchlengtharray->GetVarLength();
 }
 
 void MultiGeneCodonM2aModel::SetNucRelRateCenterToMean()   {
@@ -538,9 +510,7 @@ double MultiGeneCodonM2aModel::BranchLengthsLogPrior()	{
         total += branchlength->GetLogProb();
     }
     else    {
-        for (int gene=0; gene<GetLocalNgene(); gene++)  {
-            total += branchlengtharray[gene]->GetLogProb();
-        }
+        total += branchlengtharray->GetLogProb();
     }
     return total;
 }
@@ -863,9 +833,7 @@ void MultiGeneCodonM2aModel::MasterMoveBranchLengthsHyperParameters()   {
     }
     BranchLengthsHyperInvShapeMove(1.0,10);
     BranchLengthsHyperInvShapeMove(0.3,10);
-    for (int gene=0; gene<Ngene; gene++)  {
-        branchlengtharray[gene]->SetShape(1.0 / blhyperinvshape);
-    }
+    branchlengtharray->SetShape(1.0 / blhyperinvshape);
     MasterMoveLambda();
 }
 
@@ -921,7 +889,7 @@ void MultiGeneCodonM2aModel::SlaveMoveBranchLengths() {
 
     for (int gene=0; gene<GetLocalNgene(); gene++)  {
         geneprocess[gene]->MoveBranchLengths();
-        geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
+        geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
     }
 }
 
@@ -1272,7 +1240,7 @@ void MultiGeneCodonM2aModel::MasterSendGeneBranchLengths()    {
         for (int gene=0; gene<Ngene; gene++)    {
             if (GeneAlloc[gene] == proc)    {
                 for (int j=0; j<Nbranch; j++)   {
-                    array[index++] = branchlengtharray[gene]->GetVal(j);
+                    array[index++] = branchlengtharray->GetVal(gene).GetVal(j);
                 }
             }
         }
@@ -1297,9 +1265,9 @@ void MultiGeneCodonM2aModel::SlaveReceiveGeneBranchLengths()   {
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
         for (int j=0; j<Nbranch; j++)   {
-            (*branchlengtharray[gene])[j] = array[index++];
+            (*branchlengtharray)[gene][j] = array[index++];
         }
-        geneprocess[gene]->SetBranchLengths(*branchlengtharray[gene]);
+        geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
     }
     if (index != Nbranch*ngene) {
         cerr << "error when receiving gene branch lengths (slave): non matching vector size\n";
@@ -1316,9 +1284,8 @@ void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths()    {
 
     int index = 0;
     for (int gene=0; gene<ngene; gene++)    {
-        // geneprocess[gene]->GetBranchLengths(*branchlengtharray[gene]);
         for (int j=0; j<Nbranch; j++)   {
-            array[index++] = branchlengtharray[gene]->GetVal(j);
+            array[index++] = branchlengtharray->GetVal(gene).GetVal(j);
         }
     }
     if (index != Nbranch*ngene) {
@@ -1343,7 +1310,7 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengths()    {
         for (int gene=0; gene<Ngene; gene++)    {
             if (GeneAlloc[gene] == proc)    {
                 for (int j=0; j<Nbranch; j++)   {
-                    (*branchlengtharray[gene])[j] = array[index++];
+                    (*branchlengtharray)[gene][j] = array[index++];
                 }
             }
         }
@@ -1647,9 +1614,7 @@ void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat()   {
     double* beta = new double[2*Nbranch];
 
     lengthhypersuffstatarray->Clear();
-    for (int gene=0; gene<GetLocalNgene(); gene++)  {
-        branchlengtharray[gene]->AddSuffStat(*lengthhypersuffstatarray);
-    }
+    branchlengtharray->AddSuffStat(*lengthhypersuffstatarray);
     for (int j=0; j<Nbranch; j++)   {
         count[j] = lengthhypersuffstatarray->GetVal(j).GetN();
         beta[j] = lengthhypersuffstatarray->GetVal(j).GetSum();

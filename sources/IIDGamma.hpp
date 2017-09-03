@@ -291,4 +291,104 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 	double shape;
 };
 
+class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
+
+    public:
+
+    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*) 0)    {
+        
+        for (int gene=0; gene<Ngene; gene++)    {
+            blarray[gene] = new GammaWhiteNoise(tree,blmean,shape);
+        }
+    }
+
+    ~GammaWhiteNoiseArray()  {
+        for (int gene=0; gene<Ngene; gene++)    {
+            delete blarray[gene];
+        }
+    }
+
+    void SetShape(double inshape)   {
+        shape = inshape;
+        for (int gene=0; gene<Ngene; gene++)    {
+            blarray[gene]->SetShape(shape);
+        }
+    }
+
+    int GetSize() const {
+        return Ngene;
+    }
+
+    const GammaWhiteNoise& GetVal(int gene) const {
+        return *blarray[gene];
+    }
+
+    GammaWhiteNoise& operator[](int gene)  {
+        return *blarray[gene];
+    }
+
+    int GetNgene() const {
+        return Ngene;
+    }
+
+    int GetNbranch() const {
+        return blarray[0]->GetNbranch();
+    }
+
+    double GetMeanLength() const {
+        double tot = 0;
+        for (int j=0; j<GetNbranch(); j++)   {
+            double mean = 0;
+            for (int g=0; g<GetNgene(); g++) {
+                double tmp = blarray[g]->GetVal(j);
+                mean += tmp;
+            }
+            mean /= GetNgene();
+            tot += mean;
+        }
+        return tot;
+    }
+
+    double GetVarLength() const {
+        double tot = 0;
+        for (int j=0; j<GetNbranch(); j++)   {
+            double mean = 0;
+            double var = 0;
+            for (int g=0; g<GetNgene(); g++) {
+                double tmp = blarray[g]->GetVal(j);
+                mean += tmp;
+                var += tmp*tmp;
+            }
+            mean /= GetNgene();
+            var /= GetNgene();
+            var -= mean*mean;
+            tot += var;
+        }
+        tot /= GetNbranch();
+        return tot;
+    }
+
+    double GetLogProb() const {
+        double total = 0;
+        for (int gene=0; gene<GetNgene(); gene++)  {
+            total += blarray[gene]->GetLogProb();
+        }
+        return total;
+    }
+
+    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray) const    {
+        for (int gene=0; gene<GetNgene(); gene++)  {
+            blarray[gene]->AddSuffStat(suffstatarray);
+        }
+    }
+
+    private:
+
+    int Ngene;
+    const Tree& tree;
+    const ConstBranchArray<double>& blmean;
+	double shape;
+    vector<GammaWhiteNoise*> blarray;
+};
+
 #endif

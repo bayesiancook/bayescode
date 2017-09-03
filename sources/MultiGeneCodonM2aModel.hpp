@@ -224,7 +224,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 	GammaSuffStat lambdasuffstat;
 	
     double blhyperinvshape;
-    vector<GammaWhiteNoise*> branchlengtharray;
+    GammaWhiteNoiseArray* branchlengtharray;
 	PoissonSuffStatBranchArray* lengthsuffstatarray;
     GammaSuffStatBranchArray* lengthhypersuffstatarray;
 

@@ -173,11 +173,6 @@ class CodonM2aModel	{
 	double GetMeanOmega() const;
 	double GetEntropy(const std::vector<double>& profile, int dim) const;
 
-    /*
-    void GetGlobalParametersFromFile(istream& is);
-    void GetHyperParametersFromFile(istream& is);
-    */
-
 	void TraceHeader(std::ostream& os);
 	void Trace(ostream& os);
 	void TracePostProb(ostream& os);
