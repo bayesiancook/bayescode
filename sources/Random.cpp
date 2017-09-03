@@ -575,3 +575,11 @@ double Random::RealVectorProposeMove(std::vector<double>& x, int dim, double tun
 	return 0;
 }
 	
+
+double Random::GetEntropy(const std::vector<double>& profile) {
+    double tot = 0;
+    for (unsigned int i=0; i<profile.size(); i++)	{
+        tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
+    }
+    return tot;
+}
