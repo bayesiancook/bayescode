@@ -130,19 +130,11 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
-	double GetEntropy(const std::vector<double>& profile) const {
-		double tot = 0;
-		for (unsigned int i=0; i<profile.size(); i++)	{
-			tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
-		}
-		return tot;
-	}
-
     double GetMeanEntropy() const   {
 
         double mean = 0;
         for (int i=0; i<GetSize(); i++) {
-            mean += GetEntropy(GetVal(i));
+            mean += Random::GetEntropy(GetVal(i));
         }
         mean /= GetSize();
         return mean;

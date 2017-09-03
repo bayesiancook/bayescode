@@ -38,7 +38,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
 	void UpdateNucMatrix();
-    void SlaveSetMixtureArrays();
+    void SetMixtureArrays();
 
     //-------------------
     // Traces and Monitors

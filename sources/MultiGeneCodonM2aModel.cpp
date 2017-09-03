@@ -201,7 +201,7 @@ void MultiGeneCodonM2aModel::UpdateNucMatrix()	{
     nucmatrix->CorruptMatrix();
 }
 
-void MultiGeneCodonM2aModel::SlaveSetMixtureArrays()    {
+void MultiGeneCodonM2aModel::SetMixtureArrays()    {
 
     double puromalpha = puromhypermean / puromhyperinvconc;
     double purombeta = (1-puromhypermean) / puromhyperinvconc;
@@ -269,14 +269,6 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     timepercycle.Start();
 }
 
-double GetEntropy(const std::vector<double>& profile, int dim) {
-    double tot = 0;
-    for (int i=0; i<dim; i++)	{
-        tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
-    }
-    return tot;
-}
-
 void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     timepercycle.Stop();
     os << timepercycle.GetTime();
@@ -304,8 +296,8 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     os << '\t' << nucstatarray->GetMeanEntropy();
     os << '\t' << nucrelratearray->GetMeanEntropy();
     if (nucmode != 2)   {
-        os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << GetEntropy(nucrelratehypercenter,Nrr) << '\t' << nucrelratehyperinvconc;
-        os << '\t' << sqrt(GetVarNucStat()) << '\t' << GetEntropy(nucstathypercenter,Nnuc) << '\t' << nucstathyperinvconc;
+        os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc;
+        os << '\t' << sqrt(GetVarNucStat()) << '\t' << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc;
         if (nucmode == 1)   {
             os << '\t' << 100*((double) nucrracc1) / nucrrtot1;
             os << '\t' << 100*((double) nucrracc2) / nucrrtot2;
@@ -748,7 +740,7 @@ void MultiGeneCodonM2aModel::SlaveMove() {
         SlaveMoveOmega();
         SlaveSendMixtureHyperSuffStat();
         SlaveReceiveMixtureHyperParameters();
-        SlaveSetMixtureArrays();
+        SetMixtureArrays();
 
         if (nucmode == 2)   {
             SlaveSendNucPathSuffStat();

@@ -372,14 +372,6 @@ class SingleOmegaModel {
 		return phyloprocess->GetLogProb();
 	}
 
-	double GetEntropy(const std::vector<double>& profile, int dim) const {
-		double tot = 0;
-		for (int i=0; i<dim; i++)	{
-			tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
-		}
-		return tot;
-	}
-
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\tlambda\t";
 		os << "omega\t";
@@ -393,8 +385,8 @@ class SingleOmegaModel {
 		os << GetTotalLength() << '\t';
 		os << lambda << '\t';
 		os << omega << '\t';
-		os << GetEntropy(nucstat,Nnuc) << '\t';
-		os << GetEntropy(nucrelrate,Nrr) << '\n';
+		os << Random::GetEntropy(nucstat) << '\t';
+		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
 
 	void Monitor(ostream& os) {}
