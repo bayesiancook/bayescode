@@ -49,10 +49,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     void TracePosWeight(ostream& os);
     void TracePosOm(ostream& os);
-    /*
-    void SlaveTracePostProbHeader(string name);
-    void SlaveTracePostProb(string name);
-    */
 
     void MasterTraceSitesPostProb(ostream& os);
     void SlaveTraceSitesPostProb();
@@ -85,7 +81,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     double GeneNucRatesHyperLogPrior();
 
     double MixtureHyperLogPrior();
-    // double MixtureLogPrior();
 
     // likelihood
     double GetLogLikelihood()   {

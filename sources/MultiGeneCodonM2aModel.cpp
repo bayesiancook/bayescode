@@ -540,18 +540,6 @@ double MultiGeneCodonM2aModel::MixtureHyperLogPrior()   {
     return total;
 }
 
-/*
-double MultiGeneCodonM2aModel::MixtureLogPrior()    {
-
-    double total = 0;
-    total += puromarray->GetLogProb();
-    total += dposomarray->GetLogProb();
-    total += purwarray->GetLogProb();
-    total += poswarray->GetLogProb();
-    return total;
-}
-*/
-
 //-------------------
 // SuffStatLogProbs
 // ------------------
