@@ -6,7 +6,7 @@
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
 
-#include "Chrono.hpp"
+// #include "Chrono.hpp"
 
 
 class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
@@ -75,20 +75,22 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     // priors
     double GetLogPrior();
 
+    double GlobalBranchLengthsLogPrior();
+    double GeneBranchLengthsHyperLogPrior();
+
     double LambdaHyperLogPrior();
     double BranchLengthsHyperInvShapeLogPrior();
 
-    double BranchLengthsHyperLogPrior();
-    double BranchLengthsLogPrior();
-
-    double NucRatesHyperLogPrior();
-    double NucRatesLogPrior();
+    double GlobalNucRatesLogPrior();
+    double GeneNucRatesHyperLogPrior();
 
     double MixtureHyperLogPrior();
-    double MixtureLogPrior();
+    // double MixtureLogPrior();
 
     // likelihood
-    double GetLogLikelihood();
+    double GetLogLikelihood()   {
+        return lnL;
+    }
 
     // hyper suffstatlogprob
 	double LambdaHyperSuffStatLogProb();
@@ -107,7 +109,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void MasterMove();
     void SlaveMove();
 
-    void SlaveResampleSub();
+    void SlaveResampleSub(double frac);
+    void SlaveMoveGeneParameters(int nrep);
 
     void MasterResampleBranchLengths();
 	void MasterMoveLambda();
@@ -117,12 +120,9 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     double BranchLengthsHyperScalingMove(double tuning, int nrep);
     double BranchLengthsHyperInvShapeMove(double tuning, int nrep);
 
-    void SlaveMoveBranchLengths();
-
     void SetNucRelRateCenterToMean();
     void SetNucStatCenterToMean();
     void MasterMoveNucRatesHyperParameters();
-    void SlaveMoveNucRates();
 
     void MasterMoveMixtureHyperParameters() ;
 
@@ -138,8 +138,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
 	double MoveRR(double tuning, int n, int nrep);
 	double MoveNucStat(double tuning, int n, int nrep);
-
-    void SlaveMoveOmega();
 
     //-------------------
     // MPI send/receive
@@ -205,8 +203,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     // log likelihoods
     
-    void SlaveSendLogLikelihood();
-    void MasterReceiveLogLikelihood();
+    void SlaveSendLogProbs();
+    void MasterReceiveLogProbs();
 
     private:
 
@@ -269,8 +267,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     std::vector<CodonM2aModel*> geneprocess;
 
-    double totlnL;
-    double* lnL;
+    double lnL;
+    double GeneLogPrior;
 
     int burnin;
 
@@ -283,9 +281,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     int dposommode;
     int purwmode;
     int poswmode;
-
-    Chrono timepercycle;
-    Chrono omegachrono,hyperchrono,mastersampling;
 
     double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;
     double nucstatacc1, nucstatacc2, nucstatacc3, nucstattot1, nucstattot2, nucstattot3;

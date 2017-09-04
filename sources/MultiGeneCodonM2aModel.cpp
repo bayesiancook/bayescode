@@ -38,10 +38,6 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
         std::cerr << "number of branches : " << Nbranch << '\n';
         std::cerr << "-- Tree and data fit together\n";
     }
-
-    timepercycle.Reset();
-    mastersampling.Reset();
-    // Allocate();
 }
 
 void MultiGeneCodonM2aModel::Allocate() {
@@ -96,13 +92,6 @@ void MultiGeneCodonM2aModel::Allocate() {
     double poswbeta = (1-poswhypermean) / poswhyperinvconc;
     poswarray = new IIDBernoulliBeta(GetLocalNgene(),pi,poswalpha,poswbeta);
 
-    if (myid)   {
-        lnL = new double[GetLocalNgene()];
-    }
-    else    {
-        lnL = 0;
-    }
-
     if (! GetMyid())    {
         geneprocess.assign(0,(CodonM2aModel*) 0);
     }
@@ -139,7 +128,7 @@ void MultiGeneCodonM2aModel::Unfold()   {
         }
 
         MasterSendMixture();
-        MasterReceiveLogLikelihood();
+        MasterReceiveLogProbs();
     }
     else    {
 
@@ -172,7 +161,7 @@ void MultiGeneCodonM2aModel::Unfold()   {
             geneprocess[gene]->Unfold();
         }
 
-        SlaveSendLogLikelihood();
+        SlaveSendLogProbs();
     }
 }
 
@@ -228,7 +217,6 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
     poswarray->SetPi(pi);
     poswarray->SetAlpha(poswalpha);
     poswarray->SetBeta(poswbeta);
-
 }
 
 
@@ -239,8 +227,7 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
 
 void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
 
-    os << "#time";
-    os << "\tlogprior\tlnL";
+    os << "#logprior\tlnL";
     if (blmode == 2)    {
         os << "\tlength";
     }
@@ -266,19 +253,10 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
         }
     }
     os << '\n';
-    timepercycle.Start();
 }
 
 void MultiGeneCodonM2aModel::Trace(ostream& os)    {
-    timepercycle.Stop();
-    os << timepercycle.GetTime();
-    // cerr << myid << '\t' << timepercycle.GetTime() << '\t' << mastersampling.GetTime() << '\t' << omegachrono.GetTime() << '\t' << hyperchrono.GetTime() << '\n';
-    mastersampling.Reset();
-    omegachrono.Reset();
-    hyperchrono.Reset();
-    timepercycle.Reset();
-    timepercycle.Start();
-    os << '\t' << GetLogPrior();
+    os << GetLogPrior();
     os << '\t' << GetLogLikelihood();
     if (blmode == 2)    {
         os << '\t' << GetMeanTotalLength();
@@ -453,20 +431,52 @@ double MultiGeneCodonM2aModel::GetVarNucStat()  {
 
 double MultiGeneCodonM2aModel::GetLogPrior()    {
 
-    double total = 0;
+    // gene contributions
+    double total = GeneLogPrior;
 
     // branch lengths
-    total += BranchLengthsHyperLogPrior();
-    total += BranchLengthsLogPrior();
+    if (blmode == 2)    {
+        total += GlobalBranchLengthsLogPrior();
+    }
+    else if (blmode == 1)   {
+        total += GeneBranchLengthsHyperLogPrior();
+    }
+    else    {
+        // nothing: everything accounted for by gene component
+    }
 
     // nuc rates
-    total += NucRatesHyperLogPrior();
-    total += NucRatesLogPrior();
+    if (nucmode == 2)   {
+        total += GlobalNucRatesLogPrior();
+    }
+    else if (nucmode == 1)  {
+        total += GeneNucRatesHyperLogPrior();
+    }
+    else    {
+        // nothing: everything accounted for by gene component
+    }
 
     // mixture
     total += MixtureHyperLogPrior();
-    total += MixtureLogPrior();
+    // already accounted for by gene component
+    // total += MixtureLogPrior();
 
+    return total;
+}
+
+double MultiGeneCodonM2aModel::GlobalBranchLengthsLogPrior()    {
+
+    double total = 0;
+    total += LambdaHyperLogPrior();
+    total += branchlength->GetLogProb();
+    return total;
+}
+
+double MultiGeneCodonM2aModel::GeneBranchLengthsHyperLogPrior() {
+
+    double total = 0;
+    total += BranchLengthsHyperInvShapeLogPrior();
+    total += branchlength->GetLogProb();
     return total;
 }
 
@@ -479,35 +489,7 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperInvShapeLogPrior()    {
     return -blhyperinvshape;
 }
 
-double MultiGeneCodonM2aModel::BranchLengthsHyperLogPrior()	{
-
-    // exponential prior on scale parameter
-    if (blmode == 0)    {
-        return 0;
-    }
-    double total = LambdaHyperLogPrior();
-    if (blmode == 1)    {
-        // exponential hyper prior on inverse shape parameter
-        total += BranchLengthsHyperInvShapeLogPrior();
-        // iid gamma over branch-specific means across genes
-        total += branchlength->GetLogProb();
-    }
-    return total;
-}
-
-double MultiGeneCodonM2aModel::BranchLengthsLogPrior()	{
-
-    double total = 0;
-    if (blmode == 2)    {
-        total += branchlength->GetLogProb();
-    }
-    else    {
-        total += branchlengtharray->GetLogProb();
-    }
-    return total;
-}
-
-double MultiGeneCodonM2aModel::NucRatesHyperLogPrior()  {
+double MultiGeneCodonM2aModel::GeneNucRatesHyperLogPrior()  {
 
     double total = 0;
     if (nucmode == 1)   {
@@ -525,7 +507,7 @@ double MultiGeneCodonM2aModel::NucRatesHyperLogPrior()  {
     return total;
 }
 
-double MultiGeneCodonM2aModel::NucRatesLogPrior()    {
+double MultiGeneCodonM2aModel::GlobalNucRatesLogPrior()    {
 
     double total = 0;
     // Dirichlet prior on relrates and stationaries
@@ -558,6 +540,7 @@ double MultiGeneCodonM2aModel::MixtureHyperLogPrior()   {
     return total;
 }
 
+/*
 double MultiGeneCodonM2aModel::MixtureLogPrior()    {
 
     double total = 0;
@@ -567,10 +550,7 @@ double MultiGeneCodonM2aModel::MixtureLogPrior()    {
     total += poswarray->GetLogProb();
     return total;
 }
-
-double MultiGeneCodonM2aModel::GetLogLikelihood()   {
-    return totlnL;
-}
+*/
 
 //-------------------
 // SuffStatLogProbs
@@ -655,47 +635,34 @@ void MultiGeneCodonM2aModel::MasterMove() {
 
     for (int rep=0; rep<nrep; rep++)	{
 
-        if (rep)    {
-            mastersampling.Start();
-        }
+        // mixture hyperparameters
+        MasterReceiveMixtureHyperSuffStat();
+        MasterMoveMixtureHyperParameters();
+        MasterSendMixtureHyperParameters();
 
+        // global branch lengths, or gene branch lengths hyperparameters
         if (blmode == 2)    {
             MasterReceiveBranchLengthsSuffStat();
             MasterResampleBranchLengths();
             MasterMoveLambda();
             MasterSendGlobalBranchLengths();
         }
-        else    {
-            if (blmode == 1)    {
-                MasterReceiveBranchLengthsHyperSuffStat();
-                MasterMoveBranchLengthsHyperParameters();
-                MasterSendBranchLengthsHyperParameters();
-            }
+        else if (blmode == 1)    {
+            MasterReceiveBranchLengthsHyperSuffStat();
+            MasterMoveBranchLengthsHyperParameters();
+            MasterSendBranchLengthsHyperParameters();
         }
 
-        omegachrono.Start();
-        MasterReceiveMixtureHyperSuffStat();
-        omegachrono.Stop();
-        hyperchrono.Start();
-        MasterMoveMixtureHyperParameters();
-        hyperchrono.Stop();
-        MasterSendMixtureHyperParameters();
-
+        // global nucrates, or gene nucrates hyperparameters
         if (nucmode == 2)   {
             MasterReceiveNucPathSuffStat();
             MasterMoveNucRates();
             MasterSendGlobalNucRates();
         }
-        else    {
-            if (nucmode == 1)  {
-                MasterReceiveNucRatesHyperSuffStat();
-                MasterMoveNucRatesHyperParameters();
-                MasterSendNucRatesHyperParameters();
-            }
-        }
-
-        if (rep)    {
-            mastersampling.Stop();
+        else if (nucmode == 1)  {
+            MasterReceiveNucRatesHyperSuffStat();
+            MasterMoveNucRatesHyperParameters();
+            MasterSendNucRatesHyperParameters();
         }
     }
     burnin++;
@@ -706,58 +673,50 @@ void MultiGeneCodonM2aModel::MasterMove() {
         MasterReceiveGeneNucRates();
     }
     MasterReceiveMixture();
-    MasterReceiveLogLikelihood();
+    MasterReceiveLogProbs();
 }
 
 // slave move
 void MultiGeneCodonM2aModel::SlaveMove() {
 
-    Chrono mapping, sampling;
-
-    mapping.Start();
-    SlaveResampleSub();
-    mapping.Stop();
+    SlaveResampleSub(1.0);
 
     int nrep = 30;
 
-    sampling.Start();
     for (int rep=0; rep<nrep; rep++)	{
 
-        if (blmode == 2)    {
-            SlaveSendBranchLengthsSuffStat();
-            SlaveReceiveGlobalBranchLengths();
-        }
-        else    {
-            SlaveMoveBranchLengths();
+        // gene specific mixture parameters
+        // possibly branch lengths and nuc rates (if mode == 1 or 2)
+        SlaveMoveGeneParameters(1.0);
 
-            if (blmode == 1)    {
-                SlaveSendBranchLengthsHyperSuffStat();
-                SlaveReceiveBranchLengthsHyperParameters();
-            }
-        }
-
-        SlaveCollectPathSuffStat();
-        SlaveMoveOmega();
+        // mixture hyperparameters
         SlaveSendMixtureHyperSuffStat();
         SlaveReceiveMixtureHyperParameters();
         SetMixtureArrays();
 
+        // global branch lengths, or gene branch lengths hyperparameters
+        if (blmode == 2)    {
+            SlaveSendBranchLengthsSuffStat();
+            SlaveReceiveGlobalBranchLengths();
+        }
+        else if (blmode == 1)   {
+            SlaveSendBranchLengthsHyperSuffStat();
+            SlaveReceiveBranchLengthsHyperParameters();
+        }
+
+        // global nucrates, or gene nucrates hyperparameters
         if (nucmode == 2)   {
             SlaveSendNucPathSuffStat();
             SlaveReceiveGlobalNucRates();
         }
-        else    {
-            SlaveMoveNucRates();
-
-            if (nucmode == 1)   {
-                SlaveSendNucRatesHyperSuffStat();
-                SlaveReceiveNucRatesHyperParameters();
-            }
+        else if (nucmode == 1)  {
+            SlaveSendNucRatesHyperSuffStat();
+            SlaveReceiveNucRatesHyperParameters();
         }
     }
-    sampling.Stop();
     burnin++;
 
+    // collect current state 
     if (blmode != 2)    {
         SlaveSendGeneBranchLengths();
     }
@@ -765,19 +724,25 @@ void MultiGeneCodonM2aModel::SlaveMove() {
         SlaveSendGeneNucRates();
     }
     SlaveSendMixture();
-    SlaveSendLogLikelihood();
+    SlaveSendLogProbs();
 }
 
-void MultiGeneCodonM2aModel::SlaveResampleSub()  {
-
-    double frac = 1.0;
-    /*
-    if (burnin > 10)    {
-        frac = 0.2;
-    }
-    */
+void MultiGeneCodonM2aModel::SlaveResampleSub(double frac)  {
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->ResampleSub(frac);
+    }
+}
+
+void MultiGeneCodonM2aModel::SlaveMoveGeneParameters(int nrep)  {
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        geneprocess[gene]->MoveParameters(nrep);
+        geneprocess[gene]->GetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
+        if (blmode != 2) {
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+        }
+        if (nucmode != 2)    {
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
+        }
     }
 }
 
@@ -877,14 +842,6 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperInvShapeMove(double tuning, int
     return nacc/ntot;
 }
 
-void MultiGeneCodonM2aModel::SlaveMoveBranchLengths() {
-
-    for (int gene=0; gene<GetLocalNgene(); gene++)  {
-        geneprocess[gene]->MoveBranchLengths();
-        geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-    }
-}
-
 double MultiGeneCodonM2aModel::NucRatesHyperProfileMove(vector<double>& x, double tuning, int n, int nrep)	{
 
     double nacc = 0;
@@ -892,9 +849,9 @@ double MultiGeneCodonM2aModel::NucRatesHyperProfileMove(vector<double>& x, doubl
     vector<double> bk(x.size(),0);
     for (int rep=0; rep<nrep; rep++)	{
         bk = x;
-        double deltalogprob = - NucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
+        double deltalogprob = - GeneNucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
         double loghastings = Random::ProfileProposeMove(x,x.size(),tuning,n);
-        deltalogprob += NucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+        deltalogprob += GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
         deltalogprob += loghastings;
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
@@ -913,11 +870,11 @@ double MultiGeneCodonM2aModel::NucRatesHyperScalingMove(double& x, double tuning
     double nacc = 0;
     double ntot = 0;
     for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - NucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
+        double deltalogprob = - GeneNucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
         double m = tuning * (Random::Uniform() - 0.5);
         double e = exp(m);
         x *= e;
-        deltalogprob += NucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+        deltalogprob += GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
         deltalogprob += m;
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
@@ -933,12 +890,14 @@ double MultiGeneCodonM2aModel::NucRatesHyperScalingMove(double& x, double tuning
 
 void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
 
+    /*
     if (burnin < 10)    {
 
         SetNucRelRateCenterToMean();
         SetNucStatCenterToMean();
     }
     else    {
+    */
 
     NucRatesHyperProfileMove(nucrelratehypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucrelratehypercenter,0.3,1,10);
@@ -954,9 +913,11 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
     NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
+    /*
     nucstatacc1 += NucRatesHyperProfileMove(nucstathypercenter,GetVarNucStat(),0,10);
     nucstatacc2 += NucRatesHyperProfileMove(nucstathypercenter,0.3*GetVarNucStat(),0,10);
     nucstatacc3 += NucRatesHyperProfileMove(nucstathypercenter,0.1*GetVarNucStat(),0,10);
+    */
     NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
     NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
     NucRatesHyperScalingMove(nucstathyperinvconc,0.03,10);
@@ -969,18 +930,10 @@ void MultiGeneCodonM2aModel::MasterMoveNucRatesHyperParameters()    {
     nucstattot2 ++;
     nucstattot3 ++;
 
-    }
+    // }
 
     nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
     nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-}
-
-void MultiGeneCodonM2aModel::SlaveMoveNucRates()    {
-
-    for (int gene=0; gene<GetLocalNgene(); gene++)  {
-        geneprocess[gene]->MoveNucRates();
-        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
-    }
 }
 
 void MultiGeneCodonM2aModel::MasterMoveMixtureHyperParameters()  {
@@ -1111,11 +1064,11 @@ double MultiGeneCodonM2aModel::MoveRR(double tuning, int n, int nrep)	{
         for (int l=0; l<Nrr; l++)	{
             bk[l] = nucrelrate[l];
         }
-        double deltalogprob = -NucRatesLogPrior() -NucRatesSuffStatLogProb();
+        double deltalogprob = -GlobalNucRatesLogPrior() -NucRatesSuffStatLogProb();
         double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
         deltalogprob += loghastings;
         UpdateNucMatrix();
-        deltalogprob += NucRatesLogPrior() + NucRatesSuffStatLogProb();
+        deltalogprob += GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;
@@ -1142,11 +1095,11 @@ double MultiGeneCodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
         for (int l=0; l<Nnuc; l++)	{
             bk[l] = nucstat[l];
         }
-        double deltalogprob = -NucRatesLogPrior() -NucRatesSuffStatLogProb();
+        double deltalogprob = -GlobalNucRatesLogPrior() -NucRatesSuffStatLogProb();
         double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
         deltalogprob += loghastings;
         UpdateNucMatrix();
-        deltalogprob += NucRatesLogPrior() + NucRatesSuffStatLogProb();
+        deltalogprob += GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;
@@ -1160,13 +1113,6 @@ double MultiGeneCodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
         ntot++;
     }
     return nacc/ntot;
-}
-
-void MultiGeneCodonM2aModel::SlaveMoveOmega()  {
-    for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        geneprocess[gene]->MoveOmega();
-        geneprocess[gene]->GetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
-    }
 }
 
 //-------------------
@@ -1890,41 +1836,33 @@ void MultiGeneCodonM2aModel::MasterSendMixture()    {
     }
 }
 
-void MultiGeneCodonM2aModel::SlaveSendLogLikelihood()   {
+void MultiGeneCodonM2aModel::SlaveSendLogProbs()   {
 
-    totlnL = 0;
+    GeneLogPrior = 0;
+    lnL = 0;
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        lnL[gene] = geneprocess[gene]->GetLogLikelihood();
-        totlnL += lnL[gene];
+        GeneLogPrior += geneprocess[gene]->GetLogPrior();
+        lnL += geneprocess[gene]->GetLogLikelihood();
     }
-    MPI_Send(&totlnL,1,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+    double* array = new double[2];
+    array[0] = GeneLogPrior;
+    array[1] = lnL;
+    MPI_Send(array,2,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+    delete[] array;
 }
 
-void MultiGeneCodonM2aModel::MasterReceiveLogLikelihood()    {
+void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
 
     MPI_Status stat;
-    totlnL = 0;
+    double* array = new double[2];
+    GeneLogPrior = 0;
+    lnL = 0;
     for (int proc=1; proc<GetNprocs(); proc++)  {
-        double tmp;
-        MPI_Recv(&tmp,1,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        totlnL += tmp;
+        MPI_Recv(array,2,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+        GeneLogPrior += array[0];
+        lnL += array[1];
     }
 }
-
-/*
-void MultiGeneCodonM2aModel::SlaveTracePostProbHeader(string name)    {
-    for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
-    }
-}
-
-void MultiGeneCodonM2aModel::SlaveTracePostProb(string name)    {
-    for (int gene=0; gene<GetLocalNgene(); gene++)   {
-        ofstream os((name + "_" + GetLocalGeneName(gene) + ".sitepp").c_str());
-        geneprocess[gene]->TracePostProb(os);
-    }
-}
-*/
 
 void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
 

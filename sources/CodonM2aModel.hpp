@@ -136,6 +136,7 @@ class CodonM2aModel	{
 
 	void Move();
     void ResampleSub(double frac);
+    void MoveParameters(int nrep);
 
     //
     // Branch Lengths and hyperparam lambda
