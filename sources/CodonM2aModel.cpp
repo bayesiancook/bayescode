@@ -77,24 +77,11 @@ void CodonM2aModel::Allocate()	{
     nucstathyperinvconc = 1.0 / Nnuc;
 
     nucrelrate.assign(Nrr,0);
-    double totrr = 0;
-    for (int k=0; k<Nrr; k++)	{
-        nucrelrate[k] = Random::sExpo();
-        totrr += nucrelrate[k];
-    }
-    for (int k=0; k<Nrr; k++)	{
-        nucrelrate[k] /= totrr;
-    }
+    Random::DirichletSample(nucrelrate,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
 
     nucstat.assign(Nnuc,0);
-    double totstat = 0;
-    for (int k=0; k<Nnuc; k++)	{
-        nucstat[k] = Random::sGamma(1.0);
-        totstat += nucstat[k];
-    }
-    for (int k=0; k<Nnuc; k++)	{
-        nucstat[k] /= totstat;
-    }
+    Random::DirichletSample(nucstat,nucstathypercenter,1.0/nucstathyperinvconc);
+
     nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
     componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
@@ -311,16 +298,8 @@ double CodonM2aModel::LambdaHyperLogPrior()	 const {
 double CodonM2aModel::NucRatesLogPrior() const {
 
     double total = 0;
-    double rrconc = 1.0 / nucrelratehyperinvconc;
-    total += Random::logGamma(rrconc);
-    for (int i=0; i<Nrr; i++)   {
-        total += -Random::logGamma(rrconc * nucrelratehypercenter[i]) + (rrconc*nucrelratehypercenter[i] -1)*log(nucrelrate[i]);
-    }
-    double statconc = 1.0 / nucstathyperinvconc;
-    total += Random::logGamma(statconc);
-    for (int i=0; i<Nnuc; i++)  {
-        total += -Random::logGamma(statconc * nucstathypercenter[i]) + (statconc*nucstathypercenter[i]-1)*log(nucstat[i]);
-    }
+    total += Random::logDirichletDensity(nucrelrate,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+    total += Random::logDirichletDensity(nucstat,nucstathypercenter,1.0/nucstathyperinvconc);
     return total;
 }
 
@@ -341,21 +320,21 @@ double CodonM2aModel::OmegaLogPrior() const {
 double CodonM2aModel::PurOmegaLogProb()  const {
     double alpha = puromhypermean / puromhyperinvconc;
     double beta = (1-puromhypermean) / puromhyperinvconc;
-    return Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(purom) + (beta-1)*log(1.0-purom);
+    return Random::logBetaDensity(purom,alpha,beta);
 }
 
 // Gamma prior for dposom
 double CodonM2aModel::PosOmegaLogProb() const {
     double alpha = 1.0 / dposomhyperinvshape;
     double beta = alpha / dposomhypermean;
-    return alpha*log(beta) - Random::logGamma(alpha) + (alpha-1)*log(dposom) - beta*dposom;
+    return Random::logGammaDensity(dposom,alpha,beta);
 }
 
 // Beta prior for purw
 double CodonM2aModel::PurWeightLogProb() const {
     double alpha = purwhypermean / purwhyperinvconc;
     double beta = (1 - purwhypermean) / purwhyperinvconc;
-    return Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(purw) + (beta-1)*log(1.0-purw);
+    return Random::logBetaDensity(purw,alpha,beta);
 }
 
 // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
@@ -368,7 +347,7 @@ double CodonM2aModel::PosWeightLogProb() const {
 
         double alpha = poswhypermean / poswhyperinvconc;
         double beta = (1 - poswhypermean) / poswhyperinvconc;
-        return log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(posw) + (beta-1)*log(1.0-posw);
+        return log(pi) + Random::logBetaDensity(posw,alpha,beta);
     }
     else    {
         return log(1-pi);
@@ -573,10 +552,7 @@ double CodonM2aModel::OmegaHyperSlidingMove(double& x, double tuning, int nrep, 
 double CodonM2aModel::DrawBetaPosWeight()    {
     double alpha = poswhypermean / poswhyperinvconc;
     double beta = (1-poswhypermean) / poswhyperinvconc;
-    double a = Random::sGamma(alpha);
-    double b = Random::sGamma(beta);
-    double ret = a / (a+b);
-    return ret;
+    return Random::BetaSample(alpha,beta);
 }
 
 double CodonM2aModel::SwitchPosWeight(int nrep)	{

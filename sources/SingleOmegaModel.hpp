@@ -90,24 +90,11 @@ class SingleOmegaModel {
 		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
-		double totrr = 0;
-		for (int k=0; k<Nrr; k++)	{
-			nucrelrate[k] = Random::sExpo();
-			totrr += nucrelrate[k];
-		}
-		for (int k=0; k<Nrr; k++)	{
-			nucrelrate[k] /= totrr;
-		}
+        Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
 
 		nucstat.assign(Nnuc,0);
-		double totstat = 0;
-		for (int k=0; k<Nnuc; k++)	{
-			nucstat[k] = Random::sGamma(1.0);
-			totstat += nucstat[k];
-		}
-		for (int k=0; k<Nnuc; k++)	{
-			nucstat[k] /= totstat;
-		}
+        Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
+
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
         alpha = beta = 1.0;
@@ -176,7 +163,7 @@ class SingleOmegaModel {
 
 	// exponential of mean 1
 	double OmegaLogProb()	{
-		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
+        return Random::logGammaDensity(omega,alpha,beta);
 	}
 
 	double LambdaLogProb()	{
@@ -243,7 +230,7 @@ class SingleOmegaModel {
 
 		omegasuffstat.Clear();
 		omegasuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
-		omega = Random::Gamma(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
+		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
 		UpdateCodonMatrix();
 	}
 

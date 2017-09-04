@@ -70,9 +70,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
             if (Random::Uniform() < pi) {
-                double a = Random::sGamma(alpha);
-                double b = Random::sGamma(beta);
-                (*this)[i] = a / (a+b);
+                (*this)[i] = Random::BetaSample(alpha,beta);
             }
             else    {
                 (*this)[i] = 0;
@@ -105,7 +103,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
         }
         else    {
             ret += log(pi);
-            ret += Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(GetVal(i)) + (beta-1)*log(1.0 - GetVal(i));
+            ret += Random::logBetaDensity(GetVal(i),alpha,beta);
         }
         return ret;
 	}

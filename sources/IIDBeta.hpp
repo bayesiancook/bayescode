@@ -74,9 +74,7 @@ class IIDBeta : public SimpleArray<double> {
 
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
-            double a = Random::sGamma(alpha);
-            double b = Random::sGamma(beta);
-            (*this)[i] = a / (a+b);
+            (*this)[i] = Random::BetaSample(alpha,beta);
 		}
 	}
 
@@ -89,7 +87,7 @@ class IIDBeta : public SimpleArray<double> {
 	}
 
 	double GetLogProb(int i)	{
-        return Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta) + (alpha-1)*log(GetVal(i)) + (beta-1)*log(1.0 - GetVal(i));
+        return Random::logBetaDensity(GetVal(i),alpha,beta);
 	}
 
 	void AddSuffStat(BetaSuffStat& suffstat)	{

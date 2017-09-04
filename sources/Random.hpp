@@ -10,6 +10,7 @@
 typedef Eigen::MatrixXd EMatrix;
 typedef Eigen::VectorXd EVector;
 
+using namespace std;
 
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
@@ -51,6 +52,14 @@ class Random {
     static double RealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n);
 
     static double GetEntropy(const std::vector<double>& profile);
+
+    static double GammaSample(double alpha, double beta);
+    static double BetaSample(double alpha, double beta);
+    static void DirichletSample(vector<double>& x, const vector<double>& center, double concentration);
+
+    static double logGammaDensity(double x, double alpha, double beta);
+    static double logBetaDensity(double x, double alpha, double beta);
+    static double logDirichletDensity(const vector<double>& x, const vector<double>& center, double concentration);
 
   private:
     static int Seed;

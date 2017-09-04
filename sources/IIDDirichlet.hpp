@@ -87,26 +87,9 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
-            double total = 0;
-            for (int k=0; k<GetDim(); k++)  {
-                (*this)[i][k] = Random::sGamma(concentration*center[k]);
-                total += (*this)[i][k];
-            }
-            for (int k=0; k<GetDim(); k++)  {
-                (*this)[i][k] /= total;
-            }
+            Random::DirichletSample((*this)[i],center,concentration);
 		}
 	}
-
-    // to be rewritten: multinomial suffstat given as argument
-    /*
-	void GibbsResample(const ConstArray<MultinomialSuffStat>& suffstatarray)	{
-		for (int i=0; i<GetSize(); i++)	{
-			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
-			(*this)[i] = Random::Gamma(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
-		}
-	}
-    */
 
 	double GetLogProb()	const {
 		double total = 0;
@@ -117,11 +100,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 	}
 
 	double GetLogProb(int i) const {
-        double tot = Random::logGamma(concentration);
-        for (int k=0; k<GetDim(); k++)  {
-            tot += -Random::logGamma(concentration*center[k]) + (concentration*center[k]-1)*log(GetVal(i)[k]);
-        }
-        return tot;
+        return Random::logDirichletDensity(GetVal(i),center,concentration);
 	}
 
 	void AddSuffStat(DirichletSuffStat& suffstat) const {

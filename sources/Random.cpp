@@ -583,3 +583,56 @@ double Random::GetEntropy(const std::vector<double>& profile) {
     }
     return tot;
 }
+
+double Random::BetaSample(double alpha, double beta)  {
+
+    double a = Random::sGamma(alpha);
+    double b = Random::sGamma(beta);
+    double ret = a / (a+b);
+    return ret;
+}
+
+double Random::GammaSample(double alpha, double beta) {
+
+    return Gamma(alpha,beta);
+}
+
+void Random::DirichletSample(vector<double>& x, const vector<double>& center, double concentration) {
+
+    if (x.size() != center.size())  {
+        cerr << "error in Random::DirichletSample: non matching vector size\n";
+        exit(1);
+    }
+    double tot = 0;
+    for (unsigned int k=0; k<x.size(); k++)    {
+        x[k] = Random::sGamma(concentration * center[k]);
+        tot += x[k];
+    }
+    for (unsigned int k=0; k<x.size(); k++)    {
+        x[k] /= tot;
+    }
+}
+
+double Random::logBetaDensity(double x, double alpha, double beta) {
+
+    return logGamma(alpha + beta) - logGamma(alpha) - logGamma(beta) + (alpha-1)*log(x) + (beta-1)*log(1-x);
+}
+
+double Random::logGammaDensity(double x, double alpha, double beta)    {
+
+    return alpha*log(beta) - logGamma(alpha) + (alpha-1)*log(x) - beta*x;
+}
+
+double Random::logDirichletDensity(const vector<double>& x, const vector<double>& center, double concentration) {
+
+    if (x.size() != center.size())  {
+        cerr << "error in Random::logDirichletDensity: non matching vector size\n";
+        exit(1);
+    }
+    double tot = logGamma(concentration);
+    for (unsigned int k=0; k<x.size(); k++)  {
+        tot += -logGamma(concentration*center[k]) + (concentration*center[k]-1)*log(x[k]);
+    }
+    return tot;
+}
+
