@@ -3,6 +3,7 @@
 #define ARRAY_H
 
 #include <vector>
+#include "MPIBuffer.hpp"
 
 template<class T> class ConstArray	{
 
@@ -11,6 +12,14 @@ template<class T> class ConstArray	{
 
 	virtual int GetSize() const = 0;
 	virtual const T& GetVal(int index) const = 0;
+
+    unsigned int GetMPISize() const {return this->GetSize() * MPISize(this->GetVal(0));}
+
+    void MPIPut(MPIBuffer& buffer) const {
+        for (int i=0; i<this->GetSize(); i++)  {
+            buffer << this->GetVal(i);
+        }
+    }
 };
 
 template<class T> class Array : public ConstArray<T>	{
@@ -19,6 +28,12 @@ template<class T> class Array : public ConstArray<T>	{
 	virtual ~Array() {}
 
 	virtual T& operator[](int index) = 0;
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        for (int i=0; i<this->GetSize(); i++)  {
+            buffer >> (*this)[i];
+        }
+    }
 };
 
 template<class T> class HomogeneousArray : public ConstArray<T>	{

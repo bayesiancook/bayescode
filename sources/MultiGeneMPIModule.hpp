@@ -85,6 +85,44 @@ class MultiGeneMPIModule    {
         buffer >> t >> u;
     }
 
+    template<class T> void MasterSendGlobalArray(const ConstArray<T>& array) const   {
+
+        MPIBuffer buffer(array.GetSize() * MPISize(array.GetVal(0)));
+        for (int i=0; i<array.GetSize(); i++)   {
+            buffer << array.GetVal(i);
+        }
+        MPI_Bcast(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+    }
+
+    template<class T> void SlaveReceiveGlobalArray(Array<T>& array)  {
+        MPIBuffer buffer(array.GetSize() * MPISize(array.GetVal(0)));
+        MPI_Bcast(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for (int i=0; i<array.GetSize(); i++)   {
+            buffer >> array[i];
+        }
+    }
+
+    /*
+    template<class T> void MasterSendGlobal(const ConstBranchArray<T>& array) const   {
+    // template<class T> void MasterSendGlobalBranchArray(const ConstBranchArray<T>& array) const   {
+
+        MPIBuffer buffer(array.GetNbranch() * MPISize(array.GetVal(0)));
+        for (int i=0; i<array.GetNbranch(); i++)   {
+            buffer << array.GetVal(i);
+        }
+        MPI_Bcast(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+    }
+
+    template<class T> void SlaveReceiveGlobal(BranchArray<T>& array)  {
+    // template<class T> void SlaveReceiveGlobalBranchArray(BranchArray<T>& array)  {
+        MPIBuffer buffer(array.GetNbranch() * MPISize(array.GetVal(0)));
+        MPI_Bcast(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for (int i=0; i<array.GetNbranch(); i++)   {
+            buffer >> array[i];
+        }
+    }
+    */
+
     template<class T> void MasterSendGeneArray(const ConstArray<T>& array) const    {
 
         int thusfar = 0;

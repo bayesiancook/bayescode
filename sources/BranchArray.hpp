@@ -5,6 +5,8 @@
 #include "Tree.hpp"
 #include <vector>
 
+#include "MPIBuffer.hpp"
+
 template<class T> class ConstBranchArray	{
 
 	public:
@@ -15,6 +17,13 @@ template<class T> class ConstBranchArray	{
 	virtual const Tree& GetTree() const = 0;
 	virtual const T& GetVal(int index) const = 0;
 
+    unsigned int GetMPISize() const {return this->GetNbranch() * MPISize(this->GetVal(0));}
+
+    void MPIPut(MPIBuffer& buffer) const {
+        for (int i=0; i<this->GetNbranch(); i++)  {
+            buffer << this->GetVal(i);
+        }
+    }
 };
 
 template<class T> class BranchArray : public ConstBranchArray<T>	{
@@ -23,6 +32,12 @@ template<class T> class BranchArray : public ConstBranchArray<T>	{
 	virtual ~BranchArray() {}
 
 	virtual T& operator[](int index) = 0;
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        for (int i=0; i<this->GetNbranch(); i++)  {
+            buffer >> (*this)[i];
+        }
+    }
 };
 
 template<class T> class HomogeneousBranchArray : public ConstBranchArray<T>	{

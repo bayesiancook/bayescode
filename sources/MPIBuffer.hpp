@@ -100,7 +100,7 @@ template<> MPIBuffer& operator<<(MPIBuffer& buffer, const int& t);
 template<> const MPIBuffer& operator>>(const MPIBuffer& buffer, int& t);
 
 template<class T> unsigned int MPISize(const T& t)  {
-    return T::GetMPISize();
+    return t.GetMPISize();
 }
 
 template<> unsigned int MPISize(const double& d);

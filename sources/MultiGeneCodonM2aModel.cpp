@@ -1122,143 +1122,51 @@ double MultiGeneCodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
 
 void MultiGeneCodonM2aModel::MasterSendGlobalBranchLengths() {
 
-    double* array = new double[Nbranch];
-    for (int j=0; j<Nbranch; j++)   {
-        array[j] = branchlength->GetVal(j);
-    }
-    MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    delete[] array;
+    MasterSendGlobal(*branchlength);
 }
 
 void MultiGeneCodonM2aModel::SlaveReceiveGlobalBranchLengths()   {
 
-    double* array = new double[Nbranch];
-    MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    for (int j=0; j<Nbranch; j++)   {
-        (*branchlength)[j] = array[j];
-    }
+    SlaveReceiveGlobal(*branchlength);
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->SetBranchLengths(*branchlength);
     }
-    delete[] array;
 }
 
 void MultiGeneCodonM2aModel::MasterSendBranchLengthsHyperParameters() {
 
-    double* array = new double[Nbranch+1];
-    for (int j=0; j<Nbranch; j++)   {
-        array[j] = branchlength->GetVal(j);
-    }
-    array[Nbranch] = blhyperinvshape;
-
-    MPI_Bcast(array,Nbranch+1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    delete[] array;
+    MasterSendGlobal(*branchlength,blhyperinvshape);
 }
 
 void MultiGeneCodonM2aModel::SlaveReceiveBranchLengthsHyperParameters()   {
 
-    double* array = new double[Nbranch+1];
-    MPI_Bcast(array,Nbranch+1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    for (int j=0; j<Nbranch; j++)   {
-        (*branchlength)[j] = array[j];
-    }
-    blhyperinvshape = array[Nbranch];
-
+    SlaveReceiveGlobal(*branchlength,blhyperinvshape);
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength,blhyperinvshape);
     }
-    delete[] array;
 }
 
 void MultiGeneCodonM2aModel::MasterSendGeneBranchLengths()    {
 
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        int ngene = GetSlaveNgene(proc);
-        double* array = new double[Nbranch*ngene];
-        int index = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (GeneAlloc[gene] == proc)    {
-                for (int j=0; j<Nbranch; j++)   {
-                    array[index++] = branchlengtharray->GetVal(gene).GetVal(j);
-                }
-            }
-        }
-        if (index != Nbranch*ngene) {
-            cerr << "error when sending gene branch lengths (master): non matching vector size\n";
-            exit(1);
-        }
-        // cerr << "master: " << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
-
-        MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
-        delete[] array;
-    }
+    MasterSendGeneArray(*branchlengtharray);
 }
 
 void MultiGeneCodonM2aModel::SlaveReceiveGeneBranchLengths()   {
 
-    int ngene = GetLocalNgene();
-    double* array = new double[Nbranch*ngene];
-    MPI_Status stat;
-    MPI_Recv(array,Nbranch*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
-
-    int index = 0;
-    for (int gene=0; gene<ngene; gene++)    {
-        for (int j=0; j<Nbranch; j++)   {
-            (*branchlengtharray)[gene][j] = array[index++];
-        }
+    SlaveReceiveGeneArray(*branchlengtharray);
+    for (int gene=0; gene<GetLocalNgene(); gene++)    {
         geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
     }
-    if (index != Nbranch*ngene) {
-        cerr << "error when receiving gene branch lengths (slave): non matching vector size\n";
-        cerr << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
-        exit(1);
-    }
-    delete[] array;
 }
 
 void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths()    {
 
-    int ngene = GetLocalNgene();
-    double* array = new double[Nbranch*ngene];
-
-    int index = 0;
-    for (int gene=0; gene<ngene; gene++)    {
-        for (int j=0; j<Nbranch; j++)   {
-            array[index++] = branchlengtharray->GetVal(gene).GetVal(j);
-        }
-    }
-    if (index != Nbranch*ngene) {
-        cerr << "error when sending gene branch lengths (slave): non matching vector size\n";
-        cerr << Nbranch << '\t' << ngene << '\t' << Nbranch*ngene << '\t' << index << '\n';
-        exit(1);
-    }
-    MPI_Send(array,Nbranch*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-    delete[] array;
+    SlaveSendGeneArray(*branchlengtharray);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengths()    {
 
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        int ngene = GetSlaveNgene(proc);
-        double* array = new double[Nbranch*ngene];
-
-        MPI_Status stat;
-        MPI_Recv(array,Nbranch*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-
-        int index = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (GeneAlloc[gene] == proc)    {
-                for (int j=0; j<Nbranch; j++)   {
-                    (*branchlengtharray)[gene][j] = array[index++];
-                }
-            }
-        }
-        if (index != Nbranch*ngene) {
-            cerr << "error when receiving gene branch lengths (master): non matching vector size\n";
-            exit(1);
-        }
-        delete[] array;
-    }
+    MasterReceiveGeneArray(*branchlengtharray);
 }
 
 void MultiGeneCodonM2aModel::MasterSendGlobalNucRates()   {
@@ -1269,6 +1177,10 @@ void MultiGeneCodonM2aModel::MasterSendGlobalNucRates()   {
 void MultiGeneCodonM2aModel::SlaveReceiveGlobalNucRates()   {
 
     SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
+
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        geneprocess[gene]->SetNucRates((*nucrelratearray)[0],(*nucstatarray)[0]);
+    }
 }
 
 void MultiGeneCodonM2aModel::MasterSendGeneNucRates()    {
@@ -1279,6 +1191,10 @@ void MultiGeneCodonM2aModel::MasterSendGeneNucRates()    {
 void MultiGeneCodonM2aModel::SlaveReceiveGeneNucRates()   {
 
     SlaveReceiveGeneArray(*nucrelratearray,*nucstatarray);
+
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        geneprocess[gene]->SetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
+    }
 }
 
 void MultiGeneCodonM2aModel::SlaveSendGeneNucRates()    {
@@ -1294,112 +1210,31 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneNucRates()    {
 void MultiGeneCodonM2aModel::MasterSendMixtureHyperParameters() {
 
     MasterSendGlobal(mixhyperparam);
-
-    /*
-    int N = 9;
-    double* array = new double[N];
-    int i = 0;
-    array[i++] = puromhypermean;
-    array[i++] = puromhyperinvconc;
-    array[i++] = dposomhypermean;
-    array[i++] = dposomhyperinvshape;
-    array[i++] = purwhypermean;
-    array[i++] = purwhyperinvconc;
-    array[i++] = pi;
-    array[i++] = poswhypermean;
-    array[i++] = poswhyperinvconc;
-
-    if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
-        cerr << i << '\t' << N << '\n';
-        exit(1);
-    }
-
-    MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    delete[] array;
-    */
 }
 
 void MultiGeneCodonM2aModel::SlaveReceiveMixtureHyperParameters()   {
 
     SlaveReceiveGlobal(mixhyperparam);
 
-    /*
-    int N = 9;
-    double* array = new double[N];
-    MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    int i = 0;
-    puromhypermean = array[i++];
-    puromhyperinvconc = array[i++];
-    dposomhypermean = array[i++];
-    dposomhyperinvshape = array[i++];
-    purwhypermean = array[i++];
-    purwhyperinvconc = array[i++];
-    pi = array[i++];
-    poswhypermean = array[i++];
-    poswhyperinvconc = array[i++];
-
-    if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
-        cerr << i << '\t' << N << '\n';
-        exit(1);
-    }
-    */
-
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,pi,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
     }
-    // delete[] array;
 }
 
 void MultiGeneCodonM2aModel::MasterSendNucRatesHyperParameters()   {
 
-    int N = Nrr + Nnuc + 2;
-    double* array = new double[N];
-    int i = 0;
-    for (int j=0; j<Nrr; j++)   {
-        array[i++] = nucrelratehypercenter[j];
-    }
-    array[i++] = nucrelratehyperinvconc;
-    for (int j=0; j<Nnuc; j++)  {
-        array[i++] = nucstathypercenter[j];
-    }
-    array[i++] = nucstathyperinvconc;
-    if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
-        cerr << i << '\t' << N << '\n';
-        exit(1);
-    }
-
-    MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    delete[] array;
+    MasterSendGlobal(nucrelratehypercenter,nucrelratehyperinvconc);
+    MasterSendGlobal(nucstathypercenter,nucstathyperinvconc);
 }
 
 void MultiGeneCodonM2aModel::SlaveReceiveNucRatesHyperParameters()   {
 
-    int N = Nrr + Nnuc + 2;
-    double* array = new double[N];
-    MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    int i = 0;
-    for (int j=0; j<Nrr; j++)   {
-        nucrelratehypercenter[j] = array[i++];
-    }
-    nucrelratehyperinvconc = array[i++];
-    for (int j=0; j<Nnuc; j++)  {
-        nucstathypercenter[j] = array[i++];
-    }
-    nucstathyperinvconc = array[i++];
-
-    if (i != N) {
-        cerr << "error when sending global params: non matching vector size\n";
-        cerr << i << '\t' << N << '\n';
-        exit(1);
-    }
+    SlaveReceiveGlobal(nucrelratehypercenter,nucrelratehyperinvconc);
+    SlaveReceiveGlobal(nucstathypercenter,nucstathyperinvconc);
 
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,nucrelratehyperinvconc,nucstathypercenter,nucstathyperinvconc);
     }
-    delete[] array;
 }
 
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsSuffStat()  {
@@ -1654,73 +1489,29 @@ void MultiGeneCodonM2aModel::MasterReceiveNucPathSuffStat()  {
 
 void MultiGeneCodonM2aModel::SlaveSendMixture()   {
 
-    int ngene = GetLocalNgene();
-    double* array = new double[4*ngene];
-    for (int gene=0; gene<ngene; gene++)    {
-        array[gene] = geneprocess[gene]->GetPurOm();
-        array[1*ngene+gene] = geneprocess[gene]->GetDPosOm();
-        array[2*ngene+gene] = geneprocess[gene]->GetPurW();
-        array[3*ngene+gene] = geneprocess[gene]->GetPosW();
-    }
-    MPI_Send(array,4*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-    delete[] array;
+    SlaveSendGeneArray(*puromarray,*dposomarray);
+    SlaveSendGeneArray(*purwarray,*poswarray);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveMixture()    {
 
-    MPI_Status stat;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        int ngene = GetSlaveNgene(proc);
-        double* array = new double[4*ngene];
-        MPI_Recv(array,4*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        int index = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (GeneAlloc[gene] == proc)    {
-                (*puromarray)[gene] = array[index];
-                (*dposomarray)[gene] = array[1*ngene+index];
-                (*purwarray)[gene] = array[2*ngene+index];
-                (*poswarray)[gene] = array[3*ngene+index];
-                index++;
-            }
-        }
-        delete[] array;
-    }
-}
-
-void MultiGeneCodonM2aModel::SlaveReceiveMixture()   {
-
-    int ngene = GetLocalNgene();
-    double* array = new double[4*ngene];
-    MPI_Status stat;
-    MPI_Recv(array,4*ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
-
-    for (int gene=0; gene<ngene; gene++)    {
-        (*puromarray)[gene] = array[gene];
-        (*dposomarray)[gene] = array[1*ngene+gene];
-        (*purwarray)[gene] = array[2*ngene+gene];
-        (*poswarray)[gene] = array[3*ngene+gene];
-        geneprocess[gene]->SetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
-    }
-    delete[] array;
+    MasterReceiveGeneArray(*puromarray,*dposomarray);
+    MasterReceiveGeneArray(*purwarray,*poswarray);
 }
 
 void MultiGeneCodonM2aModel::MasterSendMixture()    {
 
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        int ngene = GetSlaveNgene(proc);
-        double* array = new double[4*ngene];
-        int index = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (GeneAlloc[gene] == proc)    {
-                array[index] = (*puromarray)[gene];
-                array[1*ngene+index] = (*dposomarray)[gene];
-                array[2*ngene+index] = (*purwarray)[gene];
-                array[3*ngene+index] = (*poswarray)[gene];
-                index++;
-            }
-        }
-        MPI_Send(array,4*ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
-        delete[] array;
+    MasterSendGeneArray(*puromarray,*dposomarray);
+    MasterSendGeneArray(*purwarray,*poswarray);
+}
+
+void MultiGeneCodonM2aModel::SlaveReceiveMixture()   {
+
+    SlaveReceiveGeneArray(*puromarray,*dposomarray);
+    SlaveReceiveGeneArray(*purwarray,*poswarray);
+
+    for (int gene=0; gene<GetLocalNgene(); gene++)    {
+        geneprocess[gene]->SetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
     }
 }
 
