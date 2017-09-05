@@ -221,29 +221,31 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 	PoissonSuffStatBranchArray* lengthsuffstatarray;
     GammaSuffStatBranchArray* lengthhypersuffstatarray;
 
-    double puromhypermean;
-	double puromhyperinvconc;
+    vector<double> mixhyperparam;
+
+    double& puromhypermean;
+	double& puromhyperinvconc;
 	IIDBeta* puromarray;
 	BetaSuffStat puromsuffstat;
 
-    double dposomhypermean;
-    double dposomhyperinvshape;
+    double& dposomhypermean;
+    double& dposomhyperinvshape;
     IIDGamma* dposomarray;
     GammaSuffStat dposomsuffstat;
 
-    double purwhypermean;
-    double purwhyperinvconc;
+    double& purwhypermean;
+    double& purwhyperinvconc;
     IIDBeta* purwarray;
     BetaSuffStat purwsuffstat;
 
-    double poswhypermean;
-    double poswhyperinvconc;
+    double& poswhypermean;
+    double& poswhyperinvconc;
     IIDBernoulliBeta* poswarray;
     BernoulliBetaSuffStat poswsuffstat;
 
     double pihypermean;
     double pihyperinvconc;
-    double pi;
+    double& pi;
 
     // shared nuc rates
 	GTRSubMatrix* nucmatrix;
