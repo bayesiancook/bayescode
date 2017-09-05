@@ -5,6 +5,7 @@
 #include "Array.hpp"
 #include "Random.hpp"
 #include "SuffStat.hpp"
+#include "MPIBuffer.hpp"
 
 class DirichletSuffStat : public SuffStat	{
 
@@ -37,6 +38,18 @@ class DirichletSuffStat : public SuffStat	{
         n += d;
     }
 
+    void Add(const DirichletSuffStat& from) {
+        for (unsigned int i=0; i<sumlog.size(); i++)    {
+            sumlog[i] += from.GetSumLog(i);
+        }
+        n += from.GetN();
+    }
+
+    DirichletSuffStat& operator+=(const DirichletSuffStat& from)    {
+        Add(from);
+        return *this;
+    }
+
     double GetSumLog(int i) const   {
         return sumlog[i];
     }
@@ -52,6 +65,33 @@ class DirichletSuffStat : public SuffStat	{
             tot += - n * Random::logGamma(concentration*center[i]) + (concentration*center[i]-1)*sumlog[i];
         }
         return tot;
+    }
+
+    unsigned int GetMPISize() const {return sumlog.size() + 1;}
+
+    void MPIPut(MPIBuffer& buffer) const {
+        for (unsigned int i=0; i<sumlog.size(); i++)    {
+            buffer << sumlog[i];
+        }
+        buffer << n;
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        for (unsigned int i=0; i<sumlog.size(); i++)    {
+            buffer >> sumlog[i];
+        }
+        buffer >> n;
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+        double tmp;
+        for (unsigned int i=0; i<sumlog.size(); i++)    {
+            buffer >> tmp;
+            sumlog[i] += tmp;
+        }
+        int temp;
+        buffer >> temp;
+        n += temp;
     }
 
 	private:

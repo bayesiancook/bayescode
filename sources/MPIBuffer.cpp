@@ -11,15 +11,15 @@ template<> const MPIBuffer& operator>>(const MPIBuffer& buffer, double& t)  {
     return buffer;
 }
 
-/*
-template<> unsigned int MPISize<double>() {
-    return 1;
+template<> MPIBuffer& operator<<(MPIBuffer& buffer, const int& t)    {
+    buffer.PutInt(t);
+    return buffer;
 };
 
-template<> unsigned int MPISize<int>() {
-    return 1;
-};
-*/
+template<> const MPIBuffer& operator>>(const MPIBuffer& buffer, int& t)  {
+    buffer.GetInt(t);
+    return buffer;
+}
 
 template<> unsigned int MPISize(const double& d)    {
     return 1;
@@ -27,5 +27,19 @@ template<> unsigned int MPISize(const double& d)    {
 
 template<> unsigned int MPISize(const int& i)   {
     return 1;
+}
+
+template<> double& operator+=(double& d, const MPIBuffer& buffer)   {
+    double c;
+    buffer >> c;
+    d += c;
+    return d;
+}
+
+template<> int& operator+=(int& i, const MPIBuffer& buffer) {
+    int j;
+    buffer >> j;
+    i += j;
+    return i;
 }
 

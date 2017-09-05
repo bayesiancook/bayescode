@@ -6,6 +6,7 @@
 #include "BranchArray.hpp"
 #include "Random.hpp"
 #include "PoissonSuffStat.hpp"
+#include "MPIBuffer.hpp"
 
 class GammaSuffStat : public SuffStat	{
 
@@ -24,6 +25,39 @@ class GammaSuffStat : public SuffStat	{
 		sumlog += logx;
 		n += c;
 	}
+
+    void Add(const GammaSuffStat& from) {
+        sum += from.GetSum();
+        sumlog += from.GetSumLog();
+        n += from.GetN();
+    }
+
+    GammaSuffStat& operator+=(const GammaSuffStat& from)    {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 3;}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+        buffer << sum << sumlog << n;
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        buffer >> sum >> sumlog >> n;
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+        double temp;
+        buffer >> temp;
+        sum += temp;
+        buffer >> temp;
+        sumlog += temp;
+
+        int tmp;
+        buffer >> tmp;
+        n += tmp;
+    }
 
 	double GetLogProb(double shape, double scale) const {
 		return n*(shape*log(scale) - Random::logGamma(shape)) + (shape-1)*sumlog - scale*sum;
@@ -45,6 +79,37 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
     public:
 	GammaSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
     ~GammaSuffStatBranchArray() {}
+
+    void Add(const GammaSuffStatBranchArray& from)  {
+        for (int i=0; i<GetNbranch(); i++)  {
+            (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
+    GammaSuffStatBranchArray& operator+=(const GammaSuffStatBranchArray& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 3*GetNbranch();}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            buffer << GetVal(i);
+        }
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            buffer >> (*this)[i];
+        }
+    }
+
+    void Add(const MPIBuffer& buffer)    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            (*this)[i].Add(buffer);
+        }
+    }
 
     void Clear()    {
         for (int i=0; i<GetNbranch(); i++)  {

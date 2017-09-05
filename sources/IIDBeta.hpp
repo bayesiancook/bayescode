@@ -6,6 +6,7 @@
 #include "Random.hpp"
 #include "PoissonSuffStat.hpp"
 #include "CodonSuffStat.hpp"
+#include "MPIBuffer.hpp"
 
 class BetaSuffStat : public SuffStat	{
 
@@ -24,6 +25,39 @@ class BetaSuffStat : public SuffStat	{
 		sumlog1 += log1;
 		n += c;
 	}
+
+    void Add(const BetaSuffStat& from)  {
+        sumlog0 += from.GetSumLog0();
+        sumlog1 += from.GetSumLog1();
+        n += from.GetN();
+    }
+
+    BetaSuffStat& operator+=(const BetaSuffStat& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 3;}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+        buffer << sumlog0 << sumlog1 << n;
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        buffer >> sumlog0 >> sumlog1 >> n;
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+        double temp;
+        buffer >> temp;
+        sumlog0 += temp;
+        buffer >> temp;
+        sumlog1 += temp;
+
+        int tmp;
+        buffer >> tmp;
+        n += tmp;
+    }
 
     double GetMeanInvConcLogProb(double mean, double invconc) const {
         double alpha = mean / invconc;

@@ -6,6 +6,7 @@
 #include "CodonSubMatrixArray.hpp"
 #include "PoissonSuffStat.hpp"
 #include <typeinfo>
+#include "MPIBuffer.hpp"
 
 class NucPathSuffStat : public SuffStat	{
 
@@ -105,6 +106,11 @@ class NucPathSuffStat : public SuffStat	{
 		return total;
 	}
 
+    NucPathSuffStat& operator+=(const NucPathSuffStat& from)    {
+        Add(from);
+        return *this;
+    }
+
     void Add(const NucPathSuffStat& from)   {
 
         for (int i=0; i<Nnuc; i++)  {
@@ -150,6 +156,62 @@ class NucPathSuffStat : public SuffStat	{
         for (int i=0; i<Nnuc; i++)  {
             for (int j=0; j<Nnuc; j++)  {
                 pairbeta[i][j] += inbeta[index++];
+            }
+        }
+    }
+
+    unsigned int GetMPISize() const {return Nnuc + 2*Nnuc*Nnuc;}
+
+    void MPIPut(MPIBuffer& buffer) const {
+        for (int i=0; i<Nnuc; i++)  {
+            buffer << rootcount[i];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer << paircount[i][j];
+            }
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer << pairbeta[i][j];
+            }
+        }
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        for (int i=0; i<Nnuc; i++)  {
+            buffer >> rootcount[i];
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer >> paircount[i][j];
+            }
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer >> pairbeta[i][j];
+            }
+        }
+    }
+
+    void Add(const MPIBuffer& buffer)    {
+        int a;
+        for (int i=0; i<Nnuc; i++)  {
+            buffer >> a;
+            rootcount[i] += a;
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer >> a;
+                paircount[i][j] += a;
+            }
+        }
+
+        double d;
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                buffer >> d;
+                pairbeta[i][j] += d;
             }
         }
     }

@@ -102,13 +102,16 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile)	{
     SlaveNgene.assign(nprocs,0);
     SlaveTotNsite.assign(nprocs,0);
     for (int gene=0; gene<Ngene; gene++)	{
+        if (! genealloc[gene])  {
+            cerr << "error: gene allocated to master\n";
+            exit(1);
+        }
         SlaveNgene[genealloc[gene]]++;
         SlaveTotNsite[genealloc[gene]] += genesize[gene];
+        SlaveTotNsite[0] += genesize[gene];
     }
-
     
     if (! myid) {
-
         LocalNgene = Ngene;
         GeneName.assign(Ngene,"noname");
         GeneNsite.assign(Ngene,0);

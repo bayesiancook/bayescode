@@ -1244,208 +1244,77 @@ void MultiGeneCodonM2aModel::SlaveSendBranchLengthsSuffStat()  {
         geneprocess[gene]->CollectLengthSuffStat();
         lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
     }
-
-    int* count = new int[Nbranch];
-    double* beta = new double[Nbranch];
-    lengthsuffstatarray->Push(count,beta);
-    MPI_Send(count,Nbranch,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-    MPI_Send(beta,Nbranch,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-    delete[] count;
-    delete[] beta;
+    SlaveSendAdditive(*lengthsuffstatarray);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveBranchLengthsSuffStat()  {
 
-    int* count = new int[Nbranch];
-    double* beta = new double[Nbranch];
     lengthsuffstatarray->Clear();
-    MPI_Status stat;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPI_Recv(count,Nbranch,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-        MPI_Recv(beta,Nbranch,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        lengthsuffstatarray->Add(count,beta);
-    }
-    delete[] count;
-    delete[] beta;
+    MasterReceiveAdditive(*lengthsuffstatarray);
 }
 
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat()   {
 
-    int* count = new int[Nbranch];
-    double* beta = new double[2*Nbranch];
-
     lengthhypersuffstatarray->Clear();
     branchlengtharray->AddSuffStat(*lengthhypersuffstatarray);
-    for (int j=0; j<Nbranch; j++)   {
-        count[j] = lengthhypersuffstatarray->GetVal(j).GetN();
-        beta[j] = lengthhypersuffstatarray->GetVal(j).GetSum();
-        beta[Nbranch+j] = lengthhypersuffstatarray->GetVal(j).GetSumLog();
-    }
-
-    MPI_Send(count,Nbranch,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-    MPI_Send(beta,2*Nbranch,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-
-    delete[] count;
-    delete[] beta;
+    SlaveSendAdditive(*lengthhypersuffstatarray);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveBranchLengthsHyperSuffStat()   {
 
     lengthhypersuffstatarray->Clear();
-
-    int* count = new int[Nbranch];
-    double* beta = new double[2*Nbranch];
-
-    MPI_Status stat;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPI_Recv(count,Nbranch,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-        MPI_Recv(beta,2*Nbranch,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-
-        for (int j=0; j<Nbranch; j++)   {
-            (*lengthhypersuffstatarray)[j].AddSuffStat(beta[j],beta[Nbranch+j],count[j]);
-        }
-    }
-
-    delete[] count;
-    delete[] beta;
+    MasterReceiveAdditive(*lengthhypersuffstatarray);
 }
 
 void MultiGeneCodonM2aModel::SlaveSendNucRatesHyperSuffStat()   {
 
-    int Nint = 2;
-    int Ndouble = Nrr + Nnuc;
-    int* count = new int[Nint];
-    double* beta = new double[Ndouble];
-
-    int i = 0;
-    int d = 0;
-
     nucrelratesuffstat.Clear();
     nucrelratearray->AddSuffStat(nucrelratesuffstat);
-    count[i++] = nucrelratesuffstat.GetN();
-    for (int j=0; j<Nrr; j++)   {
-        beta[d++] = nucrelratesuffstat.GetSumLog(j);
-    }
+    SlaveSendAdditive(nucrelratesuffstat);
 
     nucstatsuffstat.Clear();
     nucstatarray->AddSuffStat(nucstatsuffstat);
-    count[i++] = nucstatsuffstat.GetN();
-    for (int j=0; j<Nnuc; j++)   {
-        beta[d++] = nucstatsuffstat.GetSumLog(j);
-    }
-
-    MPI_Send(count,Nint,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-    MPI_Send(beta,Ndouble,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-
-    delete[] count;
-    delete[] beta;
+    SlaveSendAdditive(nucstatsuffstat);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveNucRatesHyperSuffStat()   {
 
-        nucrelratesuffstat.Clear();
-        nucpathsuffstat.Clear();
+    nucrelratesuffstat.Clear();
+    MasterReceiveAdditive(nucrelratesuffstat);
 
-        int Nint = 2;
-        int Ndouble = Nrr + Nnuc;
-        int* count = new int[Nint];
-        double* beta = new double[Ndouble];
-
-        MPI_Status stat;
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(count,Nint,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-            MPI_Recv(beta,Ndouble,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-
-            int i = 0;
-            int d = 0;
-
-            nucrelratesuffstat.AddSuffStat(beta+d,count[i++]);
-            d+=Nrr;
-
-            nucstatsuffstat.AddSuffStat(beta+d,count[i++]);
-            d+=Nnuc;
-        }
-
-        delete[] count;
-        delete[] beta;
+    nucstatsuffstat.Clear();
+    MasterReceiveAdditive(nucstatsuffstat);
 }
 
 void MultiGeneCodonM2aModel::SlaveSendMixtureHyperSuffStat()  {
 
-    int Nint = 1 + 1 + 1 + 2;
-    int Ndouble = 2 + 2 + 2 + 2;
-    int* count = new int[Nint];
-    double* beta = new double[Ndouble];
-
-    int i = 0;
-    int d = 0;
-
     puromsuffstat.Clear();
     puromarray->AddSuffStat(puromsuffstat);
-    count[i++] = puromsuffstat.GetN();
-    beta[d++] = puromsuffstat.GetSumLog0();
-    beta[d++] = puromsuffstat.GetSumLog1();
+    SlaveSendAdditive(puromsuffstat);
 
     dposomsuffstat.Clear();
-    // dposomarray->AddSuffStat(dposomsuffstat);
     dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
-    count[i++] = dposomsuffstat.GetN();
-    beta[d++] = dposomsuffstat.GetSum();
-    beta[d++] = dposomsuffstat.GetSumLog();
+    SlaveSendAdditive(dposomsuffstat);
 
     purwsuffstat.Clear();
     purwarray->AddSuffStat(purwsuffstat);
-    count[i++] = purwsuffstat.GetN();
-    beta[d++] = purwsuffstat.GetSumLog0();
-    beta[d++] = purwsuffstat.GetSumLog1();
+    SlaveSendAdditive(purwsuffstat);
 
     poswsuffstat.Clear();
     poswarray->AddSuffStat(poswsuffstat);
-    count[i++] = poswsuffstat.GetN0();
-    count[i++] = poswsuffstat.GetN1();
-    beta[d++] = poswsuffstat.GetSumLog0();
-    beta[d++] = poswsuffstat.GetSumLog1();
-
-    MPI_Send(count,Nint,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-    MPI_Send(beta,Ndouble,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-
-    delete[] count;
-    delete[] beta;
+    SlaveSendAdditive(poswsuffstat);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveMixtureHyperSuffStat()  {
 
     puromsuffstat.Clear();
+    MasterReceiveAdditive(puromsuffstat);
     dposomsuffstat.Clear();
+    MasterReceiveAdditive(dposomsuffstat);
     purwsuffstat.Clear();
+    MasterReceiveAdditive(purwsuffstat);
     poswsuffstat.Clear();
-
-    int Nint = 1 + 1 + 1 + 2;
-    int Ndouble = 2 + 2 + 2 + 2;
-    int* count = new int[Nint];
-    double* beta = new double[Ndouble];
-
-    MPI_Status stat;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPI_Recv(count,Nint,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-        MPI_Recv(beta,Ndouble,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-
-        int i = 0;
-        int d = 0;
-
-        puromsuffstat.AddSuffStat(beta[d],beta[d+1],count[i++]);
-        d+=2;
-        dposomsuffstat.AddSuffStat(beta[d],beta[d+1],count[i++]);
-        d+=2;
-        purwsuffstat.AddSuffStat(beta[d],beta[d+1],count[i++]);
-        d+=2;
-        poswsuffstat.AddNullSuffStat(count[i++]);
-        poswsuffstat.AddPosSuffStat(beta[d],beta[d+1],count[i++]);
-        d+=2;
-    }
-
-    delete[] count;
-    delete[] beta;
+    MasterReceiveAdditive(poswsuffstat);
 }
 
 void MultiGeneCodonM2aModel::SlaveCollectPathSuffStat() {
@@ -1460,31 +1329,16 @@ void MultiGeneCodonM2aModel::SlaveSendNucPathSuffStat()  {
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->CollectComponentPathSuffStat();
         geneprocess[gene]->CollectNucPathSuffStat();
-        nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
+        nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
     }
 
-    int* count = new int[Nnuc+Nnuc*Nnuc];
-    double* beta = new double[Nnuc*Nnuc];
-    nucpathsuffstat.Push(count,beta);
-    MPI_Send(count,Nnuc+Nnuc*Nnuc,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-    MPI_Send(beta,Nnuc*Nnuc,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-    delete[] count;
-    delete[] beta;
+    SlaveSendAdditive(nucpathsuffstat);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveNucPathSuffStat()  {
 
-    int* count = new int[Nnuc+Nnuc*Nnuc];
-    double* beta = new double[Nnuc*Nnuc];
     nucpathsuffstat.Clear();
-    MPI_Status stat;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPI_Recv(count,Nnuc+Nnuc*Nnuc,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-        MPI_Recv(beta,Nnuc*Nnuc,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        nucpathsuffstat.Add(count,beta);
-    }
-    delete[] count;
-    delete[] beta;
+    MasterReceiveAdditive(nucpathsuffstat);
 }
 
 void MultiGeneCodonM2aModel::SlaveSendMixture()   {
@@ -1523,25 +1377,48 @@ void MultiGeneCodonM2aModel::SlaveSendLogProbs()   {
         GeneLogPrior += geneprocess[gene]->GetLogPrior();
         lnL += geneprocess[gene]->GetLogLikelihood();
     }
-    double* array = new double[2];
-    array[0] = GeneLogPrior;
-    array[1] = lnL;
-    MPI_Send(array,2,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-    delete[] array;
+    SlaveSendAdditive(GeneLogPrior);
+    SlaveSendAdditive(lnL);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
 
-    MPI_Status stat;
-    double* array = new double[2];
     GeneLogPrior = 0;
+    MasterReceiveAdditive(GeneLogPrior);
     lnL = 0;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPI_Recv(array,2,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        GeneLogPrior += array[0];
-        lnL += array[1];
+    MasterReceiveAdditive(lnL);
+}
+
+/*
+void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
+    vector<double> array(GetTotNsite());
+    MasterReceiveGene(array);
+    int i = 0;
+    for (int gene=0; gene<Ngene; gene++)    {
+            os << GeneName[gene] << '\t';
+            int nsite = GeneNsite[gene];
+            for (int k=0; k<nsite; k++) {
+                if (array[i] < 0)   {
+                    cerr << "error: negative post prob\n";
+                    cerr << GeneName[gene] << '\n';
+                    cerr << GeneNsite[gene] << '\n';
+                    cerr << i << '\n';
+                    exit(1);
+                }
+                os << array[i++] << '\t';
+            }
+        }
+    }
+    if (i != totnsite)  {
+        cerr << "error in MultiGeneCodonM2aModel::MasterTraceSitesPostProb: non matching number of sites\n";
+        exit(1);
     }
 }
+
+void MultiGeneCodonM2aModel::SlaveTraceSitesPostProb()  {
+
+}
+*/
 
 void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
 

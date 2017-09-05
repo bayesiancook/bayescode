@@ -6,6 +6,7 @@
 #include "Array.hpp"
 #include "BranchArray.hpp"
 #include <cmath>
+#include "MPIBuffer.hpp"
 
 class PoissonSuffStat : public SuffStat	{
 
@@ -34,6 +35,36 @@ class PoissonSuffStat : public SuffStat	{
 		count += incount;
 		beta += inbeta;
 	}
+
+    void Add(const PoissonSuffStat& from)   {
+        count += from.GetCount();
+        beta += from.GetBeta();
+    }
+
+    PoissonSuffStat& operator+=(const PoissonSuffStat& from)    {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 2;}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+        buffer << beta << count;
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        buffer >> beta >> count;
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+        double temp;
+        buffer >> temp;
+        beta += temp;
+
+        int tmp;
+        buffer >> tmp;
+        count += tmp;
+    }
 
 	int GetCount() const {
 		return count;
@@ -69,6 +100,37 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat>	{
 			(*this)[i].Clear();
 		}
 	}
+
+    void Add(const PoissonSuffStatArray& from)    {
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
+    PoissonSuffStatArray& operator+=(const PoissonSuffStatArray& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 2 * GetSize();}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+		for (int i=0; i<GetSize(); i++)	{
+            buffer << GetVal(i);
+        }
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+		for (int i=0; i<GetSize(); i++)	{
+            buffer >> (*this)[i];
+        }
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i] += buffer;
+        }
+    }
 
 	double GetLogProb(const Array<double>& ratearray) const{
 		double total = 0;
@@ -117,6 +179,37 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 		return total;
 	}
 
+    void Add(const PoissonSuffStatBranchArray& from)    {
+		for (int i=0; i<GetNbranch(); i++)	{
+            (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
+    PoissonSuffStatBranchArray& operator+=(const PoissonSuffStatBranchArray& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 2 * GetNbranch();}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+		for (int i=0; i<GetNbranch(); i++)	{
+            buffer << GetVal(i);
+        }
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+		for (int i=0; i<GetNbranch(); i++)	{
+            buffer >> (*this)[i];
+        }
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+		for (int i=0; i<GetNbranch(); i++)	{
+            (*this)[i] += buffer;
+        }
+    }
+
 	double GetMarginalLogProb(double shape, double scale)	const {
 		double total = 0;
 		for (int i=0; i<GetNbranch(); i++)	{
@@ -127,13 +220,6 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 		total += GetNbranch() * (shape*log(scale) - Random::logGamma(shape));
 		return total;
 	}
-
-    void Add(const PoissonSuffStatBranchArray& from)    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].AddCount(from.GetVal(i).GetCount());
-            (*this)[i].AddBeta(from.GetVal(i).GetBeta());
-        }
-    }
 
     void Push(int* count, double* beta) const   {
         for (int i=0; i<GetNbranch(); i++)  {

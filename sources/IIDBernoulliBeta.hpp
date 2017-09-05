@@ -6,6 +6,7 @@
 #include "Random.hpp"
 #include "PoissonSuffStat.hpp"
 #include "CodonSuffStat.hpp"
+#include "MPIBuffer.hpp"
 
 class BernoulliBetaSuffStat : public SuffStat	{
 
@@ -29,6 +30,42 @@ class BernoulliBetaSuffStat : public SuffStat	{
 		sumlog1 += log1;
 		n1 += c;
 	}
+
+    void Add(const BernoulliBetaSuffStat& from)  {
+        sumlog0 += from.GetSumLog0();
+        sumlog1 += from.GetSumLog1();
+        n0 += from.GetN0();
+        n1 += from.GetN1();
+    }
+
+    BernoulliBetaSuffStat& operator+=(const BernoulliBetaSuffStat& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return 4;}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+        buffer << sumlog0 << sumlog1 << n0 << n1;
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+        buffer >> sumlog0 >> sumlog1 >> n0 >> n1;
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+        double temp;
+        buffer >> temp;
+        sumlog0 += temp;
+        buffer >> temp;
+        sumlog1 += temp;
+
+        int tmp;
+        buffer >> tmp;
+        n0 += tmp;
+        buffer >> tmp;
+        n1 += tmp;
+    }
 
 	double GetLogProb(double pi, double alpha, double beta) const {
         double logbern = n0 * log(1-pi) + n1 * log(pi);
