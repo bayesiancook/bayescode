@@ -31,6 +31,17 @@ template<class T> class BranchArray : public ConstBranchArray<T>	{
 	public:
 	virtual ~BranchArray() {}
 
+    void Copy(const ConstBranchArray<T>& from)  {
+
+        if (this->GetNbranch() != from.GetNbranch())    {
+            cerr << "error: branch arrays do not have same size\n";
+            exit(1);
+        }
+        for (int i=0; i<this->GetNbranch(); i++)  {
+            (*this)[i] = from.GetVal(i);
+        }
+    }
+
 	virtual T& operator[](int index) = 0;
 
     void MPIGet(const MPIBuffer& buffer)    {

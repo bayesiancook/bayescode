@@ -106,40 +106,30 @@ void CodonM2aModel::SetAcrossGenesModes(int inblmode, int innucmode)   {
 }
 
 void CodonM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
-    for (int j=0; j<Nbranch; j++)   {
-        (*branchlength)[j] = inbranchlength.GetVal(j);
-    }
+    branchlength->Copy(inbranchlength);
 }
 
 void CodonM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) const   {
-    for (int j=0; j<Nbranch; j++)   {
-        inbranchlength[j] = branchlength->GetVal(j);
-    }
+    inbranchlength.Copy(*branchlength);
 }
 
 void CodonM2aModel::SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
-    for (int j=0; j<Nbranch; j++)   {
-        (*blhypermean)[j] = inblmean.GetVal(j);
-    }
-    blhyperinvshape = inblinvshape;
+    blhypermean->Copy(inblmean);
     branchlength->SetShape(1.0 / blhyperinvshape);
 }
 
 void CodonM2aModel::SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
-
     nucrelrate = innucrelrate;
     nucstat = innucstat;
     UpdateMatrices();
 }
 
 void CodonM2aModel::GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const {
-
     innucrelrate = nucrelrate;
     innucstat = nucstat;
 }
 
 void CodonM2aModel::SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc) {
-
     nucrelratehypercenter = innucrelratehypercenter;
     nucrelratehyperinvconc = innucrelratehyperinvconc;
     nucstathypercenter = innucstathypercenter;
@@ -147,7 +137,6 @@ void CodonM2aModel::SetNucRatesHyperParameters(const std::vector<double>& innucr
 }
 
 void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw)    {
-
     purom = inpurom;
     dposom = indposom;
     purw = inpurw;
@@ -156,7 +145,6 @@ void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double
 }
 
 void CodonM2aModel::GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw)  const {
-
     inpurom = purom;
     indposom = dposom;
     inpurw = purw;
@@ -164,7 +152,6 @@ void CodonM2aModel::GetMixtureParameters(double& inpurom, double& indposom, doub
 }
 
 void CodonM2aModel::SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc)  {
-
     puromhypermean = inpuromhypermean;
     puromhyperinvconc = inpuromhyperinvconc;
     dposomhypermean = indposomhypermean;
@@ -665,14 +652,6 @@ double CodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
 
 // summary statistics
 
-double CodonM2aModel::GetTotalLength() const {
-    double tot = 0;
-    for (int j=1; j<Nbranch; j++)	{
-        tot += branchlength->GetVal(j);
-    }
-    return tot;
-}
-
 double CodonM2aModel::GetMeanOmega() const {
     return posw*(1 + dposom) + (1-posw)*(purw*purom + (1-purw));
 }
@@ -687,7 +666,7 @@ void CodonM2aModel::TraceHeader(std::ostream& os) {
 void CodonM2aModel::Trace(ostream& os)  {	
     os << GetLogPrior() << '\t';
     os << GetLogLikelihood() << '\t';
-    os << GetTotalLength() << '\t';
+    os << branchlength->GetTotalLength() << '\t';
     os << purom << '\t' << dposom+1 << '\t' << purw << '\t' << posw << '\t';
     os << Random::GetEntropy(nucstat) << '\t';
     os << Random::GetEntropy(nucrelrate) << '\n';
