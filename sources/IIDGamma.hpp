@@ -282,13 +282,27 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		}
 	}
 
-    /*
-    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray)   {
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstat[i].AddSuffStat((*this)[i],log((*this)[i]));
-		}
+    double GetMean() const {
+        double m1 = 0;
+        for (int i=0; i<GetNbranch(); i++) {
+            m1 += GetVal(i);
+        }
+        m1 /= GetNbranch();
+        return m1;
     }
-    */
+
+    double GetVar() const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i=0; i<GetNbranch(); i++) {
+            m1 += GetVal(i);
+            m2 += GetVal(i) * GetVal(i);
+        }
+        m1 /= GetNbranch();
+        m2 /= GetNbranch();
+        m2 -= m1*m1;
+        return m2;
+    }
 
 	protected:
 	double shape;
@@ -349,6 +363,14 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			suffstatarray[i].AddSuffStat((*this)[i],log((*this)[i]));
 		}
+    }
+
+    double GetTotalLength() const {
+        double m1 = 0;
+        for (int i=0; i<GetNbranch(); i++) {
+            m1 += GetVal(i);
+        }
+        return m1;
     }
 
 	protected:

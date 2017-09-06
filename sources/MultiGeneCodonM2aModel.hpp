@@ -6,9 +6,6 @@
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
 
-// #include "Chrono.hpp"
-
-
 class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 
     public:
@@ -104,22 +101,24 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void MasterMove();
     void SlaveMove();
 
-    void SlaveResampleSub(double frac);
-    void SlaveMoveGeneParameters(int nrep);
+    void GeneResampleSub(double frac);
+    void MoveGeneParameters(int nrep);
 
-    void MasterResampleBranchLengths();
-	void MasterMoveLambda();
+    void ResampleBranchLengths();
+	void MoveLambda();
 	double MoveLambda(double tuning, int nrep);
 
-    void MasterMoveBranchLengthsHyperParameters();
+    void MoveBranchLengthsHyperParameters();
     double BranchLengthsHyperScalingMove(double tuning, int nrep);
     double BranchLengthsHyperInvShapeMove(double tuning, int nrep);
 
+    /*
     void SetNucRelRateCenterToMean();
     void SetNucStatCenterToMean();
-    void MasterMoveNucRatesHyperParameters();
+    */
+    void MoveNucRatesHyperParameters();
 
-    void MasterMoveMixtureHyperParameters() ;
+    void MoveMixtureHyperParameters() ;
 
 	double NucRatesHyperProfileMove(vector<double>& x, double tuning, int n, int nrep);
 	double NucRatesHyperScalingMove(double& x, double tuning, int nrep);
@@ -129,7 +128,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 	double MixtureHyperSlidingMove(double& x, double tuning, int nrep, double min = 0, double max = 0);
 	double MixtureHyperScalingMove(double& x, double tuning, int nrep);
 
-    void MasterMoveNucRates();
+    void MoveNucRates();
 
 	double MoveRR(double tuning, int n, int nrep);
 	double MoveNucStat(double tuning, int n, int nrep);
@@ -180,8 +179,6 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void SlaveSendBranchLengthsSuffStat();
     void MasterReceiveBranchLengthsSuffStat();
     
-    void SlaveCollectPathSuffStat();
-
     void SlaveSendNucPathSuffStat();
     void MasterReceiveNucPathSuffStat();
 
@@ -279,7 +276,9 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     int purwmode;
     int poswmode;
 
+    /*
     double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;
     double nucstatacc1, nucstatacc2, nucstatacc3, nucstattot1, nucstattot2, nucstattot3;
+    */
 };
 

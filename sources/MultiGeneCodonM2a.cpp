@@ -146,11 +146,6 @@ int main(int argc, char* argv[])	{
                     exit(1);
                 }
             }
-            /*
-            else if (s == "-f")	{
-                force = 1;
-            }
-            */
             else if (s == "-pi")    {
                 i++;
                 pihypermean = atof(argv[i]);
@@ -217,11 +212,6 @@ int main(int argc, char* argv[])	{
         }
     }
     else	{
-        /*
-        if (writegenedata)  {
-            model->SlaveTracePostProbHeader(name);
-        }
-        */
         while(1)	{
             model->SlaveMove();
             if (writegenedata)  {

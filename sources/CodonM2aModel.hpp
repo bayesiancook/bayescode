@@ -78,6 +78,7 @@ class CodonM2aModel	{
 
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
     void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw) const;
+
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     // 
@@ -176,7 +177,6 @@ class CodonM2aModel	{
 	// summary statistics
     //
 
-	double GetTotalLength() const;
 	double GetMeanOmega() const;
 
 	void TraceHeader(std::ostream& os);
