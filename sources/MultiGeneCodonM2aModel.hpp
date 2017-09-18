@@ -5,9 +5,9 @@
 #include "IIDBernoulliBeta.hpp"
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
-#include "Model.hpp"
+#include "ProbModel.hpp"
 
-class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public Model	{
+class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
 
     public:
 

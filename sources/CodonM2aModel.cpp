@@ -348,10 +348,11 @@ double CodonM2aModel::PosSwitchLogProb() const {
 //  Moves 
 //
 
-void CodonM2aModel::Move()	{
+double CodonM2aModel::Move()	{
 
     ResampleSub(1.0);
     MoveParameters(30);
+    return 1;
 }
 
 void CodonM2aModel::MoveParameters(int nrep)    {
