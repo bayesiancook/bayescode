@@ -55,11 +55,6 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
 
 void MultiGeneCodonM2aModel::Allocate() {
 
-    /*
-    nucstatacc1 = nucstatacc2 = nucstattot1 = nucstattot2 = 0;
-    nucrracc1 = nucrracc2 = nucrrtot1 = nucrrtot2 = 0;
-    */
-
     lambda = 10;
     branchlength = new BranchIIDGamma(*tree,1.0,lambda);
     blhyperinvshape = 1.0;
@@ -365,36 +360,6 @@ double MultiGeneCodonM2aModel::GetVarLength()   {
     return branchlengtharray->GetVarLength();
 }
 
-/*
-void MultiGeneCodonM2aModel::SetNucRelRateCenterToMean()   {
-
-    for (int j=0; j<Nrr; j++)   {
-        double mean = 0;
-        for (int g=0; g<Ngene; g++) {
-            double tmp = (*nucrelratearray)[g][j];
-            mean += tmp;
-        }
-        mean /= Ngene;
-        nucrelratehypercenter[j] = mean;
-    }
-    nucrelratehyperinvconc = GetVarNucRelRate();
-}
-
-void MultiGeneCodonM2aModel::SetNucStatCenterToMean()   {
-
-    for (int j=0; j<Nnuc; j++)   {
-        double mean = 0;
-        for (int g=0; g<Ngene; g++) {
-            double tmp = (*nucstatarray)[g][j];
-            mean += tmp;
-        }
-        mean /= Ngene;
-        nucstathypercenter[j] = mean;
-    }
-    nucstathyperinvconc = GetVarNucStat();
-}
-*/
-
 double MultiGeneCodonM2aModel::GetVarNucRelRate()   {
 
     if (nucmode == 2)   {
@@ -481,154 +446,6 @@ double MultiGeneCodonM2aModel::GetLogPrior()    {
     total += MixtureHyperLogPrior();
     // already accounted for by gene component
     // total += MixtureLogPrior();
-
-    return total;
-}
-
-double MultiGeneCodonM2aModel::GlobalBranchLengthsLogPrior()    {
-
-    double total = 0;
-    total += LambdaHyperLogPrior();
-    total += branchlength->GetLogProb();
-    return total;
-}
-
-double MultiGeneCodonM2aModel::GeneBranchLengthsHyperLogPrior() {
-
-    double total = 0;
-    total += BranchLengthsHyperInvShapeLogPrior();
-    total += branchlength->GetLogProb();
-    return total;
-}
-
-double MultiGeneCodonM2aModel::LambdaHyperLogPrior()    {
-    return -lambda/10;
-}
-
-double MultiGeneCodonM2aModel::BranchLengthsHyperInvShapeLogPrior()    {
-
-    return -blhyperinvshape;
-}
-
-double MultiGeneCodonM2aModel::GeneNucRatesHyperLogPrior()  {
-
-    double total = 0;
-    if (nucmode == 1)   {
-        total -= nucrelratehyperinvconc;
-        total -= nucstathyperinvconc;
-    }
-    if (isnan(total))   {
-        cerr << "error in NucRatesHyperLogPrior: nan\n";
-        exit(1);
-    }
-    if (isinf(total))   {
-        cerr << "error in NucRatesHyperLogPrior: inf\n";
-        exit(1);
-    }
-    return total;
-}
-
-double MultiGeneCodonM2aModel::GlobalNucRatesLogPrior()    {
-
-    double total = 0;
-    // Dirichlet prior on relrates and stationaries
-    total += nucrelratearray->GetLogProb();
-    total += nucstatarray->GetLogProb();
-    if (isnan(total))   {
-        cerr << "error in NucRatesLogPrior: nan\n";
-        exit(1);
-    }
-    if (isinf(total))   {
-        cerr << "error in NucRatesLogPrior: inf\n";
-        exit(1);
-    }
-    return total;
-}
-
-double MultiGeneCodonM2aModel::MixtureHyperLogPrior()   {
-
-    double total = 0;
-    if (pi) {
-        double pialpha = pihypermean / pihyperinvconc;
-        double pibeta = (1-pihypermean) / pihyperinvconc;
-        total += (pialpha-1) * log(1.0 - pi) + (pibeta-1) * log(pi);
-    }
-    total -= puromhyperinvconc;
-    total -= purwhyperinvconc;
-    total -= 10*poswhyperinvconc;
-    total -= dposomhypermean;
-    total -= 10*dposomhyperinvshape;
-    return total;
-}
-
-//-------------------
-// SuffStatLogProbs
-// ------------------
-
-double MultiGeneCodonM2aModel::NucRatesSuffStatLogProb() {
-
-    return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
-}
-
-//-------------------
-// Hyper SuffStatLogProbs
-// ------------------
-
-double MultiGeneCodonM2aModel::LambdaHyperSuffStatLogProb()	{
-
-    return lambdasuffstat.GetLogProb(1.0,lambda);
-}
-
-double MultiGeneCodonM2aModel::BranchLengthsHyperSuffStatLogProb()   {
-
-    return lengthhypersuffstatarray->GetLogProb(*branchlength,blhyperinvshape);
-}
-
-double MultiGeneCodonM2aModel::NucRatesHyperSuffStatLogProb()   {
-
-    double total = 0;
-    total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
-    total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
-    if (isnan(total))   {
-        cerr << "error in NucRatesHyperSuffStatLogProb: nan\n";
-        exit(1);
-    }
-    if (isinf(total))   {
-        cerr << "error in NucRatesHyperSuffStatLogProb: inf\n";
-        exit(1);
-    }
-    return total;
-}
-
-double MultiGeneCodonM2aModel::MixtureHyperSuffStatLogProb()   {
-
-    double total = 0;
-
-    double puromalpha = puromhypermean / puromhyperinvconc;
-    double purombeta = (1-puromhypermean) / puromhyperinvconc;
-    total += puromsuffstat.GetLogProb(puromalpha,purombeta);
-
-    double dposomalpha = 1.0 / dposomhyperinvshape;
-    double dposombeta = dposomalpha / dposomhypermean;
-    total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
-
-    double purwalpha = purwhypermean / purwhyperinvconc;
-    double purwbeta = (1-purwhypermean) / purwhyperinvconc;
-    total += purwsuffstat.GetLogProb(purwalpha,purwbeta);
-
-    double poswalpha = poswhypermean / poswhyperinvconc;
-    double poswbeta = (1-poswhypermean) / poswhyperinvconc;
-    total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
-
-    if (isnan(total))   {
-        cerr << "hyper suff stat log prob is nan\n";
-        cerr << puromsuffstat.GetLogProb(puromalpha,purombeta) << '\n';
-        cerr << dposomsuffstat.GetLogProb(dposomalpha,dposombeta) << '\n';
-        cerr << purwsuffstat.GetLogProb(purwalpha,purwbeta) << '\n';
-        cerr << poswsuffstat.GetLogProb(pi,poswalpha,poswbeta) << '\n';
-        cerr << pi << '\t' << poswalpha << '\t' << poswbeta << '\n';
-        exit(1);
-    }
 
     return total;
 }
@@ -763,32 +580,11 @@ void MultiGeneCodonM2aModel::MoveLambda()	{
 
     lambdasuffstat.Clear();
     branchlength->AddSuffStat(lambdasuffstat);
-    MoveLambda(1.0,10);
-    MoveLambda(0.3,10);
+
+    ScalingMove(lambda,1.0,10,&MultiGeneCodonM2aModel::LambdaHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(lambda,0.3,10,&MultiGeneCodonM2aModel::LambdaHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+
     branchlength->SetScale(lambda);
-}
-
-double MultiGeneCodonM2aModel::MoveLambda(double tuning, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - LambdaHyperLogPrior() - LambdaHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        lambda *= e;
-        deltalogprob += LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            lambda /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
 }
 
 void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParameters()   {
@@ -797,8 +593,10 @@ void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParameters()   {
         BranchLengthsHyperScalingMove(1.0,10);
         BranchLengthsHyperScalingMove(0.3,10);
     }
-    BranchLengthsHyperInvShapeMove(1.0,10);
-    BranchLengthsHyperInvShapeMove(0.3,10);
+
+    ScalingMove(blhyperinvshape,1.0,10,&MultiGeneCodonM2aModel::BranchLengthsHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(blhyperinvshape,0.3,10,&MultiGeneCodonM2aModel::BranchLengthsHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+
     branchlengtharray->SetShape(1.0 / blhyperinvshape);
     MoveLambda();
 }
@@ -828,123 +626,21 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperScalingMove(double tuning, int 
     return nacc/ntot;
 }
 
-double MultiGeneCodonM2aModel::BranchLengthsHyperInvShapeMove(double tuning, int nrep)    {
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - BranchLengthsHyperInvShapeLogPrior() - BranchLengthsHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        blhyperinvshape *= e;
-        deltalogprob += BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            blhyperinvshape /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double MultiGeneCodonM2aModel::NucRatesHyperProfileMove(vector<double>& x, double tuning, int n, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    vector<double> bk(x.size(),0);
-    for (int rep=0; rep<nrep; rep++)	{
-        bk = x;
-        double deltalogprob = - GeneNucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
-        double loghastings = Random::ProfileProposeMove(x,x.size(),tuning,n);
-        deltalogprob += GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
-        deltalogprob += loghastings;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x = bk;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double MultiGeneCodonM2aModel::NucRatesHyperScalingMove(double& x, double tuning, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - GeneNucRatesHyperLogPrior() - NucRatesHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        x *= e;
-        deltalogprob += GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
 void MultiGeneCodonM2aModel::MoveNucRatesHyperParameters()    {
 
-    /*
-    if (burnin < 10)    {
+    ProfileMove(nucrelratehypercenter,1.0,1,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ProfileMove(nucrelratehypercenter,0.3,1,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ProfileMove(nucrelratehypercenter,0.1,3,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucrelratehyperinvconc,1.0,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucrelratehyperinvconc,0.3,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucrelratehyperinvconc,0.03,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
 
-        SetNucRelRateCenterToMean();
-        SetNucStatCenterToMean();
-    }
-    else    {
-    */
-
-    NucRatesHyperProfileMove(nucrelratehypercenter,1.0,1,10);
-    NucRatesHyperProfileMove(nucrelratehypercenter,0.3,1,10);
-    NucRatesHyperProfileMove(nucrelratehypercenter,0.1,3,10);
-    NucRatesHyperScalingMove(nucrelratehyperinvconc,1.0,10);
-    NucRatesHyperScalingMove(nucrelratehyperinvconc,0.3,10);
-    NucRatesHyperScalingMove(nucrelratehyperinvconc,0.03,10);
-    /*
-    nucrracc1 += NucRatesHyperScalingMove(nucrelratehyperinvconc,1.0,10);
-    nucrracc2 += NucRatesHyperScalingMove(nucrelratehyperinvconc,0.3,10);
-    nucrracc3 += NucRatesHyperScalingMove(nucrelratehyperinvconc,0.03,10);
-    nucrrtot1++;
-    nucrrtot2++;
-    nucrrtot3++;
-    */
-
-
-    NucRatesHyperProfileMove(nucstathypercenter,1.0,1,10);
-    NucRatesHyperProfileMove(nucstathypercenter,0.3,1,10);
-    NucRatesHyperProfileMove(nucstathypercenter,0.1,2,10);
-    /*
-    nucstatacc1 += NucRatesHyperProfileMove(nucstathypercenter,GetVarNucStat(),0,10);
-    nucstatacc2 += NucRatesHyperProfileMove(nucstathypercenter,0.3*GetVarNucStat(),0,10);
-    nucstatacc3 += NucRatesHyperProfileMove(nucstathypercenter,0.1*GetVarNucStat(),0,10);
-    */
-    NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
-    NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
-    NucRatesHyperScalingMove(nucstathyperinvconc,0.03,10);
-    /*
-    nucstatacc1 += NucRatesHyperScalingMove(nucstathyperinvconc,1.0,10);
-    nucstatacc2 += NucRatesHyperScalingMove(nucstathyperinvconc,0.3,10);
-    nucstatacc3 += NucRatesHyperScalingMove(nucstathyperinvconc,0.03,10);
-    nucstattot1 ++;
-    nucstattot2 ++;
-    nucstattot3 ++;
-    */
-
-    // }
+    ProfileMove(nucstathypercenter,1.0,1,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ProfileMove(nucstathypercenter,0.3,1,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ProfileMove(nucstathypercenter,0.1,2,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucstathyperinvconc,1.0,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucstathyperinvconc,0.3,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+    ScalingMove(nucstathyperinvconc,0.03,10,&MultiGeneCodonM2aModel::NucRatesHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
 
     nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
     nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
@@ -953,32 +649,32 @@ void MultiGeneCodonM2aModel::MoveNucRatesHyperParameters()    {
 void MultiGeneCodonM2aModel::MoveMixtureHyperParameters()  {
 
     if (purommode == 1) {
-        MixtureHyperSlidingMove(puromhypermean,1.0,10,0,1);
-        MixtureHyperSlidingMove(puromhypermean,0.3,10,0,1);
-        MixtureHyperScalingMove(puromhyperinvconc,1.0,10);
-        MixtureHyperScalingMove(puromhyperinvconc,0.3,10);
+        SlidingMove(puromhypermean,1.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        SlidingMove(puromhypermean,0.3,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(puromhyperinvconc,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(puromhyperinvconc,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     }
 
     if (dposommode == 1)    {
-        MixtureHyperSlidingMove(dposomhypermean,3.0,10,0.5,10);
-        MixtureHyperSlidingMove(dposomhypermean,1.0,10,0.5,10);
-        MixtureHyperSlidingMove(dposomhypermean,0.3,10,0.5,10);
-        MixtureHyperScalingMove(dposomhyperinvshape,1.0,10);
-        MixtureHyperScalingMove(dposomhyperinvshape,0.3,10);
+        SlidingMove(dposomhypermean,3.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        SlidingMove(dposomhypermean,1.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        SlidingMove(dposomhypermean,0.3,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(dposomhyperinvshape,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(dposomhyperinvshape,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     }
 
     if (poswmode == 1)  {
-        MixtureHyperSlidingMove(poswhypermean,1.0,10,0,1);
-        MixtureHyperSlidingMove(poswhypermean,0.3,10,0,1);
-        MixtureHyperScalingMove(poswhyperinvconc,1.0,10);
-        MixtureHyperScalingMove(poswhyperinvconc,0.3,10);
+        SlidingMove(poswhypermean,1.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        SlidingMove(poswhypermean,0.3,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(poswhyperinvconc,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(poswhyperinvconc,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     }
 
     if (purwmode == 1)  {
-        MixtureHyperSlidingMove(purwhypermean,1.0,10,0,1);
-        MixtureHyperSlidingMove(purwhypermean,0.3,10,0,1);
-        MixtureHyperScalingMove(purwhyperinvconc,1.0,10);
-        MixtureHyperScalingMove(purwhyperinvconc,0.3,10);
+        SlidingMove(purwhypermean,1.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        SlidingMove(purwhypermean,0.3,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(purwhyperinvconc,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(purwhyperinvconc,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     }
 
     if (burnin > 10)    {
@@ -1003,130 +699,16 @@ void MultiGeneCodonM2aModel::ResamplePi()   {
     pi = a1 / (a0 + a1);
 }
 
-double MultiGeneCodonM2aModel::MixtureHyperSlidingMove(double& x, double tuning, int nrep, double min, double max)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - MixtureHyperLogPrior() - MixtureHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        x += m;
-        if (max > min)  {
-            while ((x < min) || (x > max))  {
-                if (x < min)    {
-                    x = 2*min - x;
-                }
-                if (x > max)    {
-                    x = 2*max - x;
-                }
-            }
-        }
-        deltalogprob += MixtureHyperLogPrior() + MixtureHyperSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x -= m;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double MultiGeneCodonM2aModel::MixtureHyperScalingMove(double& x, double tuning, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - MixtureHyperLogPrior() - MixtureHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        x *= e;
-        deltalogprob += MixtureHyperLogPrior() + MixtureHyperSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
 void MultiGeneCodonM2aModel::MoveNucRates()    {
 
-    MoveRR(0.1,1,3);
-    MoveRR(0.03,3,3);
-    MoveRR(0.01,3,3);
-
-    MoveNucStat(0.1,1,3);
-    MoveNucStat(0.01,1,3);
-}
-
-double MultiGeneCodonM2aModel::MoveRR(double tuning, int n, int nrep)	{
-
     vector<double>& nucrelrate = (*nucrelratearray)[0];
-
-    double nacc = 0;
-    double ntot = 0;
-    double bk[Nrr];
-    for (int rep=0; rep<nrep; rep++)	{
-        for (int l=0; l<Nrr; l++)	{
-            bk[l] = nucrelrate[l];
-        }
-        double deltalogprob = -GlobalNucRatesLogPrior() -NucRatesSuffStatLogProb();
-        double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
-        deltalogprob += loghastings;
-        UpdateNucMatrix();
-        deltalogprob += GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            for (int l=0; l<Nrr; l++)	{
-                nucrelrate[l] = bk[l];
-            }
-            UpdateNucMatrix();
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double MultiGeneCodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
+    ProfileMove(nucrelrate,0.1,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.03,3,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.01,3,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
 
     vector<double>& nucstat = (*nucstatarray)[0];
-
-    double nacc = 0;
-    double ntot = 0;
-    double bk[Nnuc];
-    for (int rep=0; rep<nrep; rep++)	{
-        for (int l=0; l<Nnuc; l++)	{
-            bk[l] = nucstat[l];
-        }
-        double deltalogprob = -GlobalNucRatesLogPrior() -NucRatesSuffStatLogProb();
-        double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
-        deltalogprob += loghastings;
-        UpdateNucMatrix();
-        deltalogprob += GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            for (int l=0; l<Nnuc; l++)	{
-                nucstat[l] = bk[l];
-            }
-            UpdateNucMatrix();
-        }
-        ntot++;
-    }
-    return nacc/ntot;
+    ProfileMove(nucstat,0.1,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucstat,0.01,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
 }
 
 //-------------------

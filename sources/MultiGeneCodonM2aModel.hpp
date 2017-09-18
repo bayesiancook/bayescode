@@ -5,8 +5,9 @@
 #include "IIDBernoulliBeta.hpp"
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
+#include "Model.hpp"
 
-class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
+class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public Model	{
 
     public:
 
@@ -30,12 +31,18 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     // Setting and updating
     // ------------------
 
+    // called upon constructing the model
+    // mode == 2: global (only for branch lengths and nuc rates)
+    // mode == 1: gene specific, with hyperparameters estimated across genes
+    // mode == 0: gene-specific, with fixed hyperparameters
     void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode);
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
 	void UpdateNucMatrix();
     void SetMixtureArrays();
+
+    void NoUpdate() {}
 
     //-------------------
     // Traces and Monitors
@@ -54,6 +61,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) {}
 
+    // summary statistics for tracing MCMC
     int GetNpos();
 	double GetMeanTotalLength();
     double GetMeanLength();
@@ -65,34 +73,156 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     // Log Probs
     // ------------------
 
-    // priors
+    //-------------------
+    // Log Priors
+    // ------------------
+
+    // total log prior
     double GetLogPrior();
 
-    double GlobalBranchLengthsLogPrior();
-    double GeneBranchLengthsHyperLogPrior();
+    // branch lengths
+    // exponential of mean 10 for lambda
+    double LambdaHyperLogPrior()    {
+        return -lambda/10;
+    }
 
-    double LambdaHyperLogPrior();
-    double BranchLengthsHyperInvShapeLogPrior();
+    double GlobalBranchLengthsLogPrior()    {
+        return LambdaHyperLogPrior() + branchlength->GetLogProb();
+    }
 
-    double GlobalNucRatesLogPrior();
-    double GeneNucRatesHyperLogPrior();
+    // exponential of mean 1 for blhyperinvshape
+    double BranchLengthsHyperInvShapeLogPrior() {
+        return -blhyperinvshape;
+    }
 
-    double MixtureHyperLogPrior();
+    double GeneBranchLengthsHyperLogPrior() {
+        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
+    }
 
-    // likelihood
+    // nuc rates
+    double GlobalNucRatesLogPrior() {
+        return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
+    }
+
+    // exponential of mean 1 for nucrelrate and nucstat hyper inverse concentration
+    double GeneNucRatesHyperLogPrior()  {
+        double total = 0;
+        if (nucmode == 1)   {
+            total -= nucrelratehyperinvconc;
+            total -= nucstathyperinvconc;
+        }
+        return total;
+    }
+
+    // mixture
+    double MixtureHyperLogPrior()   {
+
+        double total = 0;
+        if (pi) {
+            // beta distribution for pi, if not 0
+            double pialpha = pihypermean / pihyperinvconc;
+            double pibeta = (1-pihypermean) / pihyperinvconc;
+            total += (pialpha-1) * log(1.0 - pi) + (pibeta-1) * log(pi);
+        }
+        // exponential of mean 1 for purom and purw hyperinvconc
+        total -= puromhyperinvconc;
+        total -= purwhyperinvconc;
+        // exponential of mean 10 for poswhyperinvconc
+        total -= 10*poswhyperinvconc;
+        // exponential of mean 1 for dposomhypermean
+        total -= dposomhypermean;
+        // exponential of mean 10 for dposomhyperinvshape
+        total -= 10*dposomhyperinvshape;
+        return total;
+    }
+
+    //-------------------
+    // Log Likelihood
+    // ------------------
+
     double GetLogLikelihood()   {
         return lnL;
     }
 
-    // hyper suffstatlogprob
-	double LambdaHyperSuffStatLogProb();
-    double BranchLengthsHyperSuffStatLogProb();
-    double NucRatesHyperSuffStatLogProb();
-    double MixtureHyperSuffStatLogProb();
+    //-------------------
+    // Suff Stat Log Probs
+    // ------------------
 
-    // suffstatlogprob
-    double NucRatesSuffStatLogProb();
+    // suff stat for global branch lengths, as a function of lambda
+	double LambdaHyperSuffStatLogProb() {
+        return lambdasuffstat.GetLogProb(1.0,lambda);
+    }
 
+    // suff stat for gene-specific branch lengths, as a function of bl hyperparameters
+    double BranchLengthsHyperSuffStatLogProb()  {
+        return lengthhypersuffstatarray->GetLogProb(*branchlength,blhyperinvshape);
+    }
+
+    // suff stat for global nuc rates, as a function of nucleotide matrix
+    // (which itself depends on nucstat and nucrelrate)  
+    double NucRatesSuffStatLogProb()    {
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    // suff stat for gene-specific nuc rates, as a function of nucrate hyperparameters
+    double NucRatesHyperSuffStatLogProb(){
+        double total = 0;
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
+        return total;
+    }
+
+    // suff stat for gene-specific mixture parameters, as a function of mixture hyperparameters
+    double MixtureHyperSuffStatLogProb()    {
+        double total = 0;
+
+        double puromalpha = puromhypermean / puromhyperinvconc;
+        double purombeta = (1-puromhypermean) / puromhyperinvconc;
+        total += puromsuffstat.GetLogProb(puromalpha,purombeta);
+
+        double dposomalpha = 1.0 / dposomhyperinvshape;
+        double dposombeta = dposomalpha / dposomhypermean;
+        total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
+
+        double purwalpha = purwhypermean / purwhyperinvconc;
+        double purwbeta = (1-purwhypermean) / purwhyperinvconc;
+        total += purwsuffstat.GetLogProb(purwalpha,purwbeta);
+
+        double poswalpha = poswhypermean / poswhyperinvconc;
+        double poswbeta = (1-poswhypermean) / poswhyperinvconc;
+        total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
+        return total;
+    }
+
+    //-------------------
+    // Log Probs for specific MH Moves
+    // ------------------
+
+    // logprob for moving lambda
+    double LambdaHyperLogProb() {
+        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
+    }
+
+    // logprob for moving hyperparameters of gene-specific branchlengths
+    double BranchLengthsHyperLogProb()  {
+        return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
+    }
+
+    // log prob for moving mixture hyper params
+    double MixtureHyperLogProb()    {
+        return MixtureHyperLogPrior() + MixtureHyperSuffStatLogProb();
+    }
+
+    // log prob for moving nuc rates hyper params
+    double NucRatesHyperLogProb() {
+        return GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+    }
+
+    // log prob for moving nuc rates
+    double NucRatesLogProb()    {
+        return GlobalNucRatesLogPrior()  + NucRatesSuffStatLogProb();
+    }
+    
     //-------------------
     // Moves
     // ------------------
@@ -101,37 +231,28 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     void MasterMove();
     void SlaveMove();
 
+    // moving gene-specific parameters
     void GeneResampleSub(double frac);
     void MoveGeneParameters(int nrep);
 
+    // moving global branch lengths and lambda hyperparam
     void ResampleBranchLengths();
 	void MoveLambda();
-	double MoveLambda(double tuning, int nrep);
 
+    // moving hyperparams for gene-specific branch lengths
     void MoveBranchLengthsHyperParameters();
     double BranchLengthsHyperScalingMove(double tuning, int nrep);
-    double BranchLengthsHyperInvShapeMove(double tuning, int nrep);
 
-    /*
-    void SetNucRelRateCenterToMean();
-    void SetNucStatCenterToMean();
-    */
-    void MoveNucRatesHyperParameters();
-
-    void MoveMixtureHyperParameters() ;
-
-	double NucRatesHyperProfileMove(vector<double>& x, double tuning, int n, int nrep);
-	double NucRatesHyperScalingMove(double& x, double tuning, int nrep);
-
-    void ResamplePi();
-
-	double MixtureHyperSlidingMove(double& x, double tuning, int nrep, double min = 0, double max = 0);
-	double MixtureHyperScalingMove(double& x, double tuning, int nrep);
-
+    // moving global nuc rates
     void MoveNucRates();
 
-	double MoveRR(double tuning, int n, int nrep);
-	double MoveNucStat(double tuning, int n, int nrep);
+    // moving gene-specific nuc rates hyper params
+    void MoveNucRatesHyperParameters();
+
+    // moving mixture hyper params
+    void MoveMixtureHyperParameters() ;
+    // special function for moving pi 
+    void ResamplePi();
 
     //-------------------
     // MPI send/receive
@@ -197,6 +318,10 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule	{
     
     void SlaveSendLogProbs();
     void MasterReceiveLogProbs();
+
+    //-------------------
+    // Data structures
+    // ------------------
 
     private:
 

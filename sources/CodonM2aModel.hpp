@@ -10,25 +10,26 @@
 #include "CodonSubMatrixArray.hpp"
 #include "M2aMix.hpp"
 #include "MultinomialAllocationVector.hpp"
+#include "Model.hpp"
 
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
-class CodonM2aModel	{
+class CodonM2aModel : public Model {
 
 	public:
 
-    // 
-    // Constructors and allocation
-    //
+    //-------------------
+    // Constructors
+    // ------------------
 
 	CodonM2aModel(string datafile, string treefile, double inpi);
 	void Allocate();
     void Unfold();
 
-    // 
+    //-------------------
     // Accessors
-    //
+    // ------------------
 
 	int GetNsite() const {return codondata->GetNsite();}
 
@@ -60,11 +61,21 @@ class CodonM2aModel	{
         return nucmode == 2;
     }
 
-    // 
-    // Setting model features and (hyper) parameters
-    //
 
-    void SetAcrossGenesModes(int inblmode, int innucmode);
+    //-------------------
+    // Setting and updating
+    // ------------------
+
+    // Setting model features and (hyper) parameters
+
+    // called upon constructing the model
+    // mode == 2: global
+    // mode == 1: gene specific, with hyperparameters estimated across genes
+    // mode == 0: gene-specific, with fixed hyperparameters
+    void SetAcrossGenesModes(int inblmode, int innucmode)   {
+        blmode = inblmode;
+        nucmode = innucmode;
+    }
 
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength);
     void GetBranchLengths(BranchArray<double>& inbranchlength) const;
@@ -81,24 +92,41 @@ class CodonM2aModel	{
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
-    // 
+    void NoUpdate() {}
+
+    //-------------------
     // Matrices
-    //
+    //-------------------
 
 	void UpdateNucMatrix();
 	void UpdateCodonMatrices();
 	void UpdateMatrices();
 
-    //
+    //-------------------
+    // Traces and Monitors
+    // ------------------
+
+	double GetMeanOmega() const;
+
+	void TraceHeader(std::ostream& os);
+	void Trace(ostream& os);
+	void TracePostProb(ostream& os);
+    void GetSitesPostProb(double* array) const;
+
+	void Monitor(ostream& os) {}
+	void FromStream(istream& is) {}
+	void ToStream(ostream& os) {}
+
+    //-------------------
     // Likelihood
-    //
+    //-------------------
 
 	double GetLogLikelihood();
     double GetIntegratedLogLikelihood();
 
-    //
+    //-------------------
     // Suff Stat and suffstatlogprobs
-    //
+    //-------------------
 
     const PoissonSuffStatBranchArray* GetLengthSuffStatArray();
     const NucPathSuffStat& GetNucPathSuffStat();
@@ -108,9 +136,9 @@ class CodonM2aModel	{
     double NucRatesSuffStatLogProb();
 	double OmegaSuffStatLogProb();
 
-    //
+    //-------------------
     // Priors
-    //
+    //-------------------
 
 	double GetLogPrior() const;
 
@@ -131,9 +159,25 @@ class CodonM2aModel	{
     // Bernoulli for whether posw == 0 or > 0
     double PosSwitchLogProb() const;
 
-    //
+    //-------------------
+    //  Log probs for MH moves
+    //-------------------
+
+    double LambdaHyperLogProb() {
+        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
+    }
+
+    double NucRatesLogProb()    {
+        return NucRatesLogPrior() + NucRatesSuffStatLogProb();
+    }
+
+    double OmegaLogProb()   {
+        return OmegaLogPrior() + OmegaSuffStatLogProb();
+    }
+
+    //-------------------
     //  Moves 
-    //
+    //-------------------
 
 	void Move();
     void ResampleSub(double frac);
@@ -147,7 +191,6 @@ class CodonM2aModel	{
 	void ResampleBranchLengths();
     void CollectLengthSuffStat();
 	void MoveLambda();
-	double MoveLambda(double tuning, int nrep);
 
 	void CollectPathSuffStat();
 
@@ -159,8 +202,6 @@ class CodonM2aModel	{
 	void MoveOmega();
 	void CollectOmegaSuffStat();
 	void ResampleAlloc();
-	double OmegaHyperScalingMove(double& x, double tuning, int nrep);
-	double OmegaHyperSlidingMove(double& x, double tuning, int nrep, double min = 0, double max = 0);
     double DrawBetaPosWeight();
 	double SwitchPosWeight(int nrep);
 
@@ -170,23 +211,10 @@ class CodonM2aModel	{
 
     void CollectNucPathSuffStat();
 	void MoveNucRates();
-	double MoveRR(double tuning, int n, int nrep);
-	double MoveNucStat(double tuning, int n, int nrep);
 
-    //
-	// summary statistics
-    //
-
-	double GetMeanOmega() const;
-
-	void TraceHeader(std::ostream& os);
-	void Trace(ostream& os);
-	void TracePostProb(ostream& os);
-    void GetSitesPostProb(double* array) const;
-
-	void Monitor(ostream& os) {}
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+    //-------------------
+    // Data structures
+    // ------------------
 
     private:
 

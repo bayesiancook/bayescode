@@ -100,11 +100,6 @@ void CodonM2aModel::Allocate()	{
 // setting model features and (hyper)parameters
 //
 
-void CodonM2aModel::SetAcrossGenesModes(int inblmode, int innucmode)   {
-    blmode = inblmode;
-    nucmode = innucmode;
-}
-
 void CodonM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
     branchlength->Copy(inbranchlength);
 }
@@ -410,32 +405,11 @@ void CodonM2aModel::MoveLambda()	{
 
     lambdasuffstat.Clear();
     branchlength->AddSuffStat(lambdasuffstat);
-    MoveLambda(1.0,10);
-    MoveLambda(0.3,10);
+
+    ScalingMove(lambda,1.0,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
+    ScalingMove(lambda,0.3,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
+
     blhypermean->SetAllBranches(1.0/lambda);
-}
-
-double CodonM2aModel::MoveLambda(double tuning, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - LambdaHyperLogPrior() - LambdaHyperSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        lambda *= e;
-        deltalogprob += LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            lambda /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
 }
 
 //
@@ -458,16 +432,15 @@ void CodonM2aModel::MoveOmega() 	{
 
     CollectOmegaSuffStat();
 
-    OmegaHyperSlidingMove(purom,0.1,10,0,1);
-    OmegaHyperSlidingMove(purw,1,10,0,1);
+    SlidingMove(purom,0.1,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
+    SlidingMove(purw,1.0,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
     if (pi != 0)    {
-        OmegaHyperScalingMove(dposom,1,10);
-        OmegaHyperSlidingMove(posw,1,10,0,1);
+        ScalingMove(dposom,1.0,10,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
+        SlidingMove(posw,1.0,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
     }
     if ((pi != 0) && (pi != 1))    {
         SwitchPosWeight(10);
     }
-
     ResampleAlloc();
 }
 
@@ -480,60 +453,6 @@ void CodonM2aModel::CollectOmegaSuffStat()	{
 void CodonM2aModel::ResampleAlloc()	{
     OmegaSuffStatLogProb();
     sitealloc->GibbsResample(sitepostprobarray);
-}
-
-double CodonM2aModel::OmegaHyperScalingMove(double& x, double tuning, int nrep)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - OmegaLogPrior() - OmegaSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        double e = exp(m);
-        x *= e;
-        deltalogprob += OmegaLogPrior() + OmegaSuffStatLogProb();
-        deltalogprob += m;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x /= e;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double CodonM2aModel::OmegaHyperSlidingMove(double& x, double tuning, int nrep, double min, double max)	{
-
-    double nacc = 0;
-    double ntot = 0;
-    for (int rep=0; rep<nrep; rep++)	{
-        double deltalogprob = - OmegaLogPrior() - OmegaSuffStatLogProb();
-        double m = tuning * (Random::Uniform() - 0.5);
-        x += m;
-        if (max > min)  {
-            while ((x < min) || (x > max))  {
-                if (x < min)    {
-                    x = 2*min - x;
-                }
-                if (x > max)    {
-                    x = 2*max - x;
-                }
-            }
-        }
-        deltalogprob += OmegaLogPrior() + OmegaSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            x -= m;
-        }
-        ntot++;
-    }
-    return nacc/ntot;
 }
 
 double CodonM2aModel::DrawBetaPosWeight()    {
@@ -583,72 +502,15 @@ void CodonM2aModel::MoveNucRates()	{
     CollectComponentPathSuffStat();
     CollectNucPathSuffStat();
 
-    MoveRR(0.1,1,3);
-    MoveRR(0.03,3,3);
-    MoveRR(0.01,3,3);
+    ProfileMove(nucrelrate,0.1,1,3,&CodonM2aModel::NucRatesLogProb,&CodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.03,3,3,&CodonM2aModel::NucRatesLogProb,&CodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.01,3,3,&CodonM2aModel::NucRatesLogProb,&CodonM2aModel::UpdateNucMatrix,this);
 
-    MoveNucStat(0.1,1,3);
-    MoveNucStat(0.01,1,3);
+    ProfileMove(nucstat,0.1,1,3,&CodonM2aModel::NucRatesLogProb,&CodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucstat,0.01,1,3,&CodonM2aModel::NucRatesLogProb,&CodonM2aModel::UpdateNucMatrix,this);
 
     UpdateMatrices();
 }
-
-double CodonM2aModel::MoveRR(double tuning, int n, int nrep)	{
-    double nacc = 0;
-    double ntot = 0;
-    double bk[Nrr];
-    for (int rep=0; rep<nrep; rep++)	{
-        for (int l=0; l<Nrr; l++)	{
-            bk[l] = nucrelrate[l];
-        }
-        double deltalogprob = -NucRatesLogPrior() - NucRatesSuffStatLogProb();
-        double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
-        deltalogprob += loghastings;
-        UpdateNucMatrix();
-        deltalogprob += NucRatesLogPrior() + NucRatesSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            for (int l=0; l<Nrr; l++)	{
-                nucrelrate[l] = bk[l];
-            }
-            UpdateNucMatrix();
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
-double CodonM2aModel::MoveNucStat(double tuning, int n, int nrep)	{
-    double nacc = 0;
-    double ntot = 0;
-    double bk[Nnuc];
-    for (int rep=0; rep<nrep; rep++)	{
-        for (int l=0; l<Nnuc; l++)	{
-            bk[l] = nucstat[l];
-        }
-        double deltalogprob = -NucRatesLogPrior() - NucRatesSuffStatLogProb();
-        double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
-        deltalogprob += loghastings;
-        UpdateNucMatrix();
-        deltalogprob += NucRatesLogPrior() + NucRatesSuffStatLogProb();
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (accepted)	{
-            nacc ++;
-        }
-        else	{
-            for (int l=0; l<Nnuc; l++)	{
-                nucstat[l] = bk[l];
-            }
-            UpdateNucMatrix();
-        }
-        ntot++;
-    }
-    return nacc/ntot;
-}
-
 
 // summary statistics
 
