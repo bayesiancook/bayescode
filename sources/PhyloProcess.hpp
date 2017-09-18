@@ -50,8 +50,8 @@ public:
 		return rootsubmatrixarray->GetVal(site).GetStationary();
 	}
 
-	double SiteLogLikelihood(int site);
-	double FastSiteLogLikelihood(int site);
+	double SiteLogLikelihood(int site) const;
+	double FastSiteLogLikelihood(int site) const;
 
 	const StateSpace* GetStateSpace() const { return data->GetStateSpace(); }
 	const TaxonSet* GetTaxonSet() const { return data->GetTaxonSet(); }
@@ -84,8 +84,8 @@ public:
 	}
 
 	// probability, pruning, sampling
-	double GetLogProb();                        // likelihood Felsenstein 1981
-	double GetFastLogProb();                            // likelihood Felsenstein 1981
+	double GetLogProb() const;                        // likelihood Felsenstein 1981
+	double GetFastLogProb() const;                            // likelihood Felsenstein 1981
 
 	double Move(double fraction);
 	void DrawSites(double fraction); // draw a fraction of sites which will be resampled
@@ -176,7 +176,7 @@ public:
 	void RecursiveCreateTBL(const Link *from);
 	void RecursiveDeleteTBL(const Link *from);
 
-	void Pruning(const Link *from, int site);
+	void Pruning(const Link *from, int site) const ;
 	void ResampleSub(const Link *from, int site);
 	void ResampleState();
 	void ResampleState(int site);
@@ -202,7 +202,7 @@ public:
 	bool allocrootsubmatrixarray;
 
 	int *sitearray;
-	double *sitelnL;
+	mutable double *sitelnL;
 
 	int Nstate;
 
@@ -218,7 +218,7 @@ public:
 
 	private:
 
-	std::map<const Link *, double *> condlmap;
+	mutable std::map<const Link *, double *> condlmap;
 	std::map<const Node*, BranchSitePath **> pathmap;
 	std::map<const Node *, int *> statemap;
 	// std::map<const Node *, int> totmissingmap;

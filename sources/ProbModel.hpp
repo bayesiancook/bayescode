@@ -12,17 +12,20 @@ class ProbModel {
     ~ProbModel() {}
 
     virtual double Move() {return 1;}
+
+    // void NoUpdate() {}
     virtual void Update() {}
+    virtual double GetLogProb() {return 0;}
 
     // save model configuration to stream
-    virtual void ToStream(std::ostream &os) {}
+    virtual void ToStream(std::ostream &os) const {}
     // get model configuration from stream
     virtual void FromStream(std::istream &is) {}
 
     // monitoring the run
-    virtual void Trace(std::ostream & /*unused*/) {}
-    virtual void TraceHeader(std::ostream & /*unused*/) {}
-    virtual void Monitor(std::ostream &os) {}
+    virtual void Trace(std::ostream & /*unused*/) const {}
+    virtual void TraceHeader(std::ostream & /*unused*/) const {}
+    virtual void Monitor(std::ostream &os) const {}
 
     // templates for Metropolis Hastings Moves
     template<class C> using LogProbF = double (C::*)(void);

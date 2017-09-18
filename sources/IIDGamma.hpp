@@ -276,6 +276,14 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
 
+    double GetTotalLength() const {
+        double m1 = 0;
+        for (int i=0; i<GetNbranch(); i++) {
+            m1 += GetVal(i);
+        }
+        return m1;
+    }
+
 	void AddSuffStat(GammaSuffStat& suffstat)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			suffstat.AddSuffStat((*this)[i],log((*this)[i]));

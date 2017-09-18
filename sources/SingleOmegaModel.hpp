@@ -7,12 +7,14 @@
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
 #include "CodonSuffStat.hpp"
+#include "ProbModel.hpp"
 
 const int Nrr = Nnuc * (Nnuc-1) / 2;
 const int Nstate = 61;
 
-class SingleOmegaModel {
+class SingleOmegaModel : public ProbModel {
 
+    // tree and data
 	Tree* tree;
 	FileSequenceAlignment* data;
 	const TaxonSet* taxonset;
@@ -22,29 +24,50 @@ class SingleOmegaModel {
 	int Ntaxa;
 	int Nbranch;
 
+    // branch lengths iid expo (gamma of shape 1 and scale lambda)
+    // where lambda is a hyperparameter
 	double lambda;
 	BranchIIDGamma* branchlength;
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
-	GammaSuffStat lambdasuffstat;
 
-	std::vector<double> nucstat;
+    // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
 	std::vector<double> nucrelrate;
-	GTRSubMatrix* nucmatrix;
+	std::vector<double> nucstat;
 
-    double alpha;
-    double beta;
+    // omega has a Gamma prior
+    // of mean omegahypermean and inverse shape parameter omegahyperinvshape
+    double omegahypermean;
+    double omegahyperinvshape;
 	double omega;
-	OmegaSuffStat omegasuffstat;
+
+    // a nucleotide matrix (parameterized by nucrelrate and nucstat)
+	GTRSubMatrix* nucmatrix;
+    // a codon matrix (parameterized by nucmatrix and omega)
 	MGOmegaCodonSubMatrix* codonmatrix;
 	
 	PhyloProcess* phyloprocess;
 
+	// suffstats
+
+    // generic suff stats for substitution paths
 	PathSuffStat pathsuffstat;
+
+    // which can be collected across all sites and branches
+    // and summarized in terms of 4x4 suff stats, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
+    // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
+	OmegaSuffStat omegasuffstat;
+
+    // Poisson suffstats for substitution histories, as a function of branch lengths
+	PoissonSuffStatBranchArray* lengthsuffstatarray;
+
+    // suff stats branch lengths, as a function of their hyper parameter lambda
+    // (bl are iid gamma, of scale parameter lambda)
+	GammaSuffStat lambdasuffstat;
 
 	public:
 
+    // constructor
 	SingleOmegaModel(string datafile, string treefile)  {
 
 		data = new FileSequenceAlignment(datafile);
@@ -65,22 +88,6 @@ class SingleOmegaModel {
 
 		tree->SetIndices();
 		Nbranch = tree->GetNbranch();
-
-		// Allocate();
-	}
-
-    void Unfold()   {
-
-		cerr << "-- unfold\n";
-		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogProb() << '\n';
-		std::cerr << "-- mapping substitutions\n";
-		phyloprocess->ResampleSub();
-		// Trace(cerr);
-    }
-
-	CodonStateSpace* GetCodonStateSpace()   {
-		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
 	void Allocate()	{
@@ -97,49 +104,57 @@ class SingleOmegaModel {
 
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-        alpha = beta = 1.0;
+        omegahypermean = 1.0;
+        omegahyperinvshape = 1.0;
 		omega = 1.0;
 		codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
 	}
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
-        for (int j=0; j<Nbranch; j++)   {
-            (*branchlength)[j] = inbranchlength.GetVal(j);
-        }
+    void Unfold()   {
+
+		cerr << "-- unfold\n";
+		phyloprocess->Unfold();
+		cerr << phyloprocess->GetLogProb() << '\n';
+		std::cerr << "-- mapping substitutions\n";
+		phyloprocess->ResampleSub();
     }
+
+    //-------------------
+    // Accessors
+    // ------------------
+
+	CodonStateSpace* GetCodonStateSpace() const {
+		return (CodonStateSpace*) codondata->GetStateSpace();
+	}
+
+    double GetOmega()   {
+        return omega;
+    }
+
+    //-------------------
+    // Setting and updating
+    // ------------------
 
     void SetOmega(double inomega)   {
         omega = inomega;
         UpdateCodonMatrix();
     }
 
-    void SetAlphaBeta(double inalpha, double inbeta)    {
-        alpha = inalpha;
-        beta = inbeta;
+    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
+        omegahypermean = inomegahypermean;
+        omegahyperinvshape = inomegahyperinvshape;
+    }
+
+    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+        branchlength->Copy(inbranchlength);
     }
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
-        for (int j=0; j<Nrr; j++)   {
-            nucrelrate[j] = innucrelrate[j];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            nucstat[j] = innucstat[j];
-        }
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
         UpdateMatrices();
-    }
-
-    double GetOmega()   {
-        return omega;
-    }
-
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
-        return lengthsuffstatarray;
-    }
-
-    const NucPathSuffStat& GetNucPathSuffStat() {
-        return nucpathsuffstat;
     }
 
 	void UpdateNucMatrix()	{
@@ -157,48 +172,113 @@ class SingleOmegaModel {
         UpdateCodonMatrix();
     }
 
-	double PathSuffStatLogProb()	{
-		return pathsuffstat.GetLogProb(*codonmatrix);
+    void NoUpdate() {}
+
+    //-------------------
+    // Priors and likelihood
+    //-------------------
+
+    double GetLogPrior() const {
+        double total = 0;
+        total += BranchLengthsHyperLogPrior();
+        total += BranchLengthsLogPrior();
+        total += NucRatesLogPrior();
+        total += OmegaLogPrior();
+        return total;
+    }
+
+	double GetLogLikelihood() const {
+		return phyloprocess->GetLogProb();
 	}
 
-	// exponential of mean 1
-	double OmegaLogProb()	{
-        return Random::logGammaDensity(omega,alpha,beta);
-	}
+    double GetLogProb() const   {
+        return GetLogPrior() + GetLogLikelihood();
+    }
 
-	double LambdaLogProb()	{
+	double BranchLengthsHyperLogPrior()	const {
+        // exponential of mean 10
 		return -lambda / 10;
 	}
 
-	double LengthSuffStatLogProb()	{
-		return lambdasuffstat.GetLogProb(1.0,lambda);
-	}
-
-	double LengthLogProb()	{
+	double BranchLengthsLogPrior()	const {
 		return branchlength->GetLogProb();
 	}
 
-	void Move()	{
+    // uniform prior
+    double NucRatesLogPrior() const {
+        return 0;
+    }
 
-		ResampleSub();
+	double OmegaLogPrior()	const {
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        return Random::logGammaDensity(omega,alpha,beta);
+	}
 
-		int nrep = 30;
+    //-------------------
+    // Suff Stat and suffstatlogprobs
+    //-------------------
 
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
+        return lengthsuffstatarray;
+    }
+
+    const NucPathSuffStat& GetNucPathSuffStat() {
+        return nucpathsuffstat;
+    }
+
+	double PathSuffStatLogProb() const {
+		return pathsuffstat.GetLogProb(*codonmatrix);
+	}
+
+	double BranchLengthsHyperSuffStatLogProb()	const {
+		return lambdasuffstat.GetLogProb(1.0,lambda);
+	}
+
+    double NucRatesSuffStatLogProb() const {
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    //-------------------
+    //  Log probs for MH moves
+    //-------------------
+
+    // for moving branch lengths hyperparameter lambda
+    double BranchLengthsHyperLogProb() {
+        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
+    }
+
+    // for moving nuc rates
+    double NucRatesLogProb()    {
+        return NucRatesLogPrior() + NucRatesSuffStatLogProb();
+    }
+
+    //-------------------
+    //  Moves 
+    //-------------------
+
+	double Move()	{
+        ResampleSub(1.0);
+        MoveParameters(30);
+        return 1.0;
+	}
+
+    void ResampleSub(double frac)   {
+        UpdateMatrices();
+		phyloprocess->ResampleSub(frac);
+    }
+
+    void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
 			ResampleBranchLengths();
-			MoveLambda();
+			MoveBranchLengthsHyperParameter();
 
 			CollectPathSuffStat();
 
 			MoveOmega();
-			MoveNuc();
+			MoveNucRates();
 		}
-	}
-
-    void ResampleSub()  {
-        UpdateMatrices();
-		phyloprocess->ResampleSub();
     }
 
     void CollectLengthSuffStat()    {
@@ -211,12 +291,12 @@ class SingleOmegaModel {
 		branchlength->GibbsResample(*lengthsuffstatarray);
 	}
 
-	void MoveLambda()	{
+	void MoveBranchLengthsHyperParameter()	{
 
 		lambdasuffstat.Clear();
 		branchlength->AddSuffStat(lambdasuffstat);
-		MoveLambda(1.0,10);
-		MoveLambda(0.3,10);
+        ScalingMove(lambda,1.0,10,&SingleOmegaModel::BranchLengthsHyperLogProb,&SingleOmegaModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&SingleOmegaModel::BranchLengthsHyperLogProb,&SingleOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);
 	}
 
@@ -230,13 +310,11 @@ class SingleOmegaModel {
 
 		omegasuffstat.Clear();
 		omegasuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
 		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
 		UpdateCodonMatrix();
 	}
-
-    double NucPathSuffStatLogProb() {
-        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
-    }
 
     void CollectNucPathSuffStat()    {
         UpdateMatrices();
@@ -244,120 +322,23 @@ class SingleOmegaModel {
         nucpathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
     }
 
-	void MoveNuc()	{
+	void MoveNucRates()	{
 
         CollectNucPathSuffStat();
 
-		MoveRR(0.1,1,3);
-		MoveRR(0.03,3,3);
-		MoveRR(0.01,3,3);
+        ProfileMove(nucrelrate,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.03,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.01,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
 
-		MoveNucStat(0.1,1,3);
-		MoveNucStat(0.01,1,3);
+        ProfileMove(nucstat,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucstat,0.01,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
 
         UpdateMatrices();
 	}
 
-	double MoveRR(double tuning, int n, int nrep)	{
-		double nacc = 0;
-		double ntot = 0;
-		double bk[Nrr];
-		for (int rep=0; rep<nrep; rep++)	{
-			for (int l=0; l<Nrr; l++)	{
-				bk[l] = nucrelrate[l];
-			}
-			double deltalogprob = -NucPathSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
-			deltalogprob += loghastings;
-            UpdateNucMatrix();
-			deltalogprob += NucPathSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				for (int l=0; l<Nrr; l++)	{
-					nucrelrate[l] = bk[l];
-				}
-                UpdateNucMatrix();
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveNucStat(double tuning, int n, int nrep)	{
-		double nacc = 0;
-		double ntot = 0;
-		double bk[Nnuc];
-		for (int rep=0; rep<nrep; rep++)	{
-			for (int l=0; l<Nnuc; l++)	{
-				bk[l] = nucstat[l];
-			}
-			double deltalogprob = -NucPathSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
-			deltalogprob += loghastings;
-            UpdateNucMatrix();
-			deltalogprob += NucPathSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				for (int l=0; l<Nnuc; l++)	{
-					nucstat[l] = bk[l];
-				}
-                UpdateNucMatrix();
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveLambda(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - LambdaLogProb() - LengthSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			lambda *= e;
-			deltalogprob += LambdaLogProb() + LengthSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				lambda /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	// summary statistics
-
-	double GetTotalLength()	{
-		double tot = 0;
-		for (int j=1; j<Nbranch; j++)	{
-			tot += branchlength->GetVal(j);
-		}
-		return tot;
-	}
-
-	double GetLogPrior() {
-		double total = 0;
-		total += LambdaLogProb();
-		total += LengthLogProb();
-		total += OmegaLogProb();
-		return total;
-	}
-
-	double GetLogLikelihood()	{
-		return phyloprocess->GetLogProb();
-	}
+    //-------------------
+    // Traces and Monitors
+    // ------------------
 
 	void TraceHeader(std::ostream& os)  {
 		os << "#logprior\tlnL\tlength\tlambda\t";
@@ -369,7 +350,7 @@ class SingleOmegaModel {
 	void Trace(ostream& os) {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-		os << GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
 		os << lambda << '\t';
 		os << omega << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
@@ -378,8 +359,21 @@ class SingleOmegaModel {
 
 	void Monitor(ostream& os) {}
 
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+	void ToStream(ostream& os) const {
+        os << lambda << '\n';
+        os << *branchlength << '\n';
+        os << omega << '\n';
+        os << nucrelrate << '\n';
+        os << nucstat << '\n';
+    }
+
+	void FromStream(istream& is) {
+        is >> lambda;
+        is >> *branchlength;
+        is >> omega;
+        is >> nucrelrate;
+        is >> nucstat;
+    }
 
 };
 

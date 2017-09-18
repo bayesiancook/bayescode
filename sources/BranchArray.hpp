@@ -4,7 +4,6 @@
 
 #include "Tree.hpp"
 #include <vector>
-
 #include "MPIBuffer.hpp"
 
 template<class T> class ConstBranchArray	{
@@ -23,6 +22,13 @@ template<class T> class ConstBranchArray	{
         for (int i=0; i<this->GetNbranch(); i++)  {
             buffer << this->GetVal(i);
         }
+    }
+
+    void ToStream(ostream& os) const    {
+        for (int i=0; i<this->GetNbranch(); i++)  {
+            os << this->GetVal(i) << '\t';
+        }
+        os << '\n';
     }
 };
 
@@ -49,7 +55,23 @@ template<class T> class BranchArray : public ConstBranchArray<T>	{
             buffer >> (*this)[i];
         }
     }
+
+    void FromStream(istream& is)    {
+        for (int i=0; i<this->GetNbranch(); i++)  {
+            is >> (*this)[i];
+        }
+    }
 };
+
+template<class T> ostream& operator<<(ostream& os, const ConstBranchArray<T>& array)  {
+    array.ToStream(os);
+    return os;
+}
+
+template<class T> istream& operator>>(istream& is, BranchArray<T>& array) {
+    array.FromStream(is);
+    return is;
+}
 
 template<class T> class HomogeneousBranchArray : public ConstBranchArray<T>	{
 

@@ -97,6 +97,14 @@ void CodonM2aModel::Allocate()	{
     siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
 }
 
+void CodonM2aModel::Update()    {
+
+    blhypermean->SetAllBranches(1.0/lambda);
+    UpdateMatrices();
+    componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
+    ResampleAlloc();
+}
+
 // setting model features and (hyper)parameters
 //
 
@@ -180,12 +188,12 @@ void CodonM2aModel::UpdateMatrices()   {
 // Likelihood
 //
 
-double CodonM2aModel::GetLogLikelihood()	{
+double CodonM2aModel::GetLogLikelihood() const {
     // return GetIntegratedLogLikelihood();
     return phyloprocess->GetLogProb();
 }
 
-double CodonM2aModel::GetIntegratedLogLikelihood() {
+double CodonM2aModel::GetIntegratedLogLikelihood() const {
 
     int ncat = 3;
 
@@ -220,7 +228,7 @@ double CodonM2aModel::GetIntegratedLogLikelihood() {
 // Suff Stat and suffstatlogprobs
 //
 
-const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray()  {
+const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray() const {
     return lengthsuffstatarray;
 }
 
@@ -228,7 +236,7 @@ double CodonM2aModel::LambdaHyperSuffStatLogProb() {
     return lambdasuffstat.GetLogProb(1.0,lambda);
 }
 
-const NucPathSuffStat& CodonM2aModel::GetNucPathSuffStat() {
+const NucPathSuffStat& CodonM2aModel::GetNucPathSuffStat() const {
     return nucpathsuffstat;
 }
 
@@ -519,14 +527,14 @@ double CodonM2aModel::GetMeanOmega() const {
     return posw*(1 + dposom) + (1-posw)*(purw*purom + (1-purw));
 }
 
-void CodonM2aModel::TraceHeader(std::ostream& os) {
+void CodonM2aModel::TraceHeader(std::ostream& os) const {
     os << "#logprior\tlnL\tlength\t";
     os << "purom\tposom\tpurw\tposw\t";
     os << "statent\t";
     os << "rrent\n";
 }
 
-void CodonM2aModel::Trace(ostream& os)  {	
+void CodonM2aModel::Trace(ostream& os) const {	
     os << GetLogPrior() << '\t';
     os << GetLogLikelihood() << '\t';
     os << branchlength->GetTotalLength() << '\t';
@@ -536,7 +544,7 @@ void CodonM2aModel::Trace(ostream& os)  {
     SubMatrix::diagerr = 0;
 }
 
-void CodonM2aModel::TracePostProb(ostream& os) {
+void CodonM2aModel::TracePostProb(ostream& os) const {
     for (int i=0; i<GetNsite(); i++)    {
         os << sitepostprobarray[i][2] << '\t';
     }
@@ -553,3 +561,20 @@ void CodonM2aModel::GetSitesPostProb(double* array) const {
     }
 }
 
+void CodonM2aModel::ToStream(ostream& os) const {
+
+    os << lambda << '\n';
+    os << *branchlength << '\n';
+    os << purom << '\t' << dposom << '\t' << purw << '\t' << posw << '\n';
+    os << nucrelrate << '\n';
+    os << nucstat << '\n';
+}
+
+void CodonM2aModel::FromStream(istream& is) {
+
+    is >> lambda;
+    is >> *branchlength;
+    is >> purom >> dposom >> purw >> posw;
+    is >> nucrelrate;
+    is >> nucstat;
+}

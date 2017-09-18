@@ -245,7 +245,7 @@ void PhyloProcess::RecursiveDeleteTBL(const Link *from) {
     delete[] condlmap[from];
 }
 
-double PhyloProcess::SiteLogLikelihood(int site) {
+double PhyloProcess::SiteLogLikelihood(int site) const {
     Pruning(GetRoot(), site);
     double ret = 0;
     double *t = GetCondLikelihood(GetRoot());
@@ -264,7 +264,7 @@ double PhyloProcess::SiteLogLikelihood(int site) {
     return log(ret) + t[GetNstate()];
 }
 
-double PhyloProcess::FastSiteLogLikelihood(int site) {
+double PhyloProcess::FastSiteLogLikelihood(int site) const {
     double ret = 0;
     double *t = GetCondLikelihood(GetRoot());
     const EVector& stat = GetRootFreq(site);
@@ -282,7 +282,7 @@ double PhyloProcess::FastSiteLogLikelihood(int site) {
     return sitelnL[site];
 }
 
-double PhyloProcess::GetFastLogProb() {
+double PhyloProcess::GetFastLogProb() const {
     double total = 0;
     MeasureTime timer;
     for (int i = 0; i < GetNsite(); i++) {
@@ -292,7 +292,7 @@ double PhyloProcess::GetFastLogProb() {
     return total;
 }
 
-double PhyloProcess::GetLogProb() {
+double PhyloProcess::GetLogProb() const {
 #if DEBUG > 1
     MeasureTime timer;
 #endif
@@ -306,7 +306,7 @@ double PhyloProcess::GetLogProb() {
     return total;
 }
 
-void PhyloProcess::Pruning(const Link *from, int site) {
+void PhyloProcess::Pruning(const Link *from, int site) const {
     double *t = GetCondLikelihood(from);
         if (from->isLeaf()) {
             int totcomp = 0;

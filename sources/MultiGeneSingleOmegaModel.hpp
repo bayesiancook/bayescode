@@ -2,8 +2,9 @@
 #include "SingleOmegaModel.hpp"
 #include "MultiGeneMPIModule.hpp"
 #include "Parallel.hpp"
+#include "ProbModel.hpp"
 
-class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
+class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
 
     private:
 
@@ -19,10 +20,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 	double lambda;
 	BranchIIDGamma* branchlength;
 	
-	double alpha;
-	double beta;
+	double omegahypermean;
+	double omegahyperinvshape;
 	IIDGamma* omegaarray;
-	GammaSuffStat alphabetasuffstat;
+	GammaSuffStat omegahypersuffstat;
 
 	vector<double> nucrelrate;
 	vector<double> nucstat;
@@ -34,14 +35,14 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     NucPathSuffStat nucpathsuffstat;
     std::vector<SingleOmegaModel*> geneprocess;
 
-    double totlnL;
-    double* lnL;
+    double lnL;
+    double GeneLogPrior;
 
     public:
 
-	CodonStateSpace* GetCodonStateSpace()   {
-		return (CodonStateSpace*) refcodondata->GetStateSpace();
-	}
+    //-------------------
+    // Construction and allocation
+    //-------------------
 
     MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
 
@@ -82,17 +83,13 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
         nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-        alpha = beta = 1.0;
-		omegaarray = new IIDGamma(GetLocalNgene(),alpha,beta);
+        omegahypermean = 1.0;
+        omegahyperinvshape = 1.0;
+		omegaarray = new IIDGamma(GetLocalNgene(),1.0,1.0);
 
-        if (myid)   {
-            lnL = new double[GetLocalNgene()];
-        }
-        else    {
-            lnL = 0;
-        }
+        lnL = 0;
+        GeneLogPrior = 0;
 
-        cerr << "gene processes\n";
         if (! GetMyid())    {
             geneprocess.assign(0,(SingleOmegaModel*) 0);
         }
@@ -112,9 +109,14 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
             MasterSendGlobalNucRates();
             MasterSendOmegaHyperParameters();
             MasterSendOmega();
-            MasterReceiveLogLikelihood();
+            MasterReceiveLogProbs();
         }
         else    {
+
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
+                geneprocess[gene]->Allocate();
+            }
+
             SlaveReceiveGlobalBranchLengths();
             SlaveReceiveGlobalNucRates();
             SlaveReceiveOmegaHyperParameters();
@@ -124,17 +126,25 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
                 geneprocess[gene]->UpdateMatrices();
                 geneprocess[gene]->Unfold();
             }
-            SlaveSendLogLikelihood();
+
+            SlaveSendLogProbs();
         }
     }
 
+	CodonStateSpace* GetCodonStateSpace() const {
+		return (CodonStateSpace*) refcodondata->GetStateSpace();
+	}
+
+    //-------------------
+    // Traces and Monitors
+    //-------------------
 
     void TraceHeader(ostream& os)   {
 
         os << "#logprior\tlnL\tlength\t";
         os << "meanomega\t";
         os << "varomega\t";
-        os << "alpha\tbeta\t";
+        os << "omegahypermean\tinvshape\t";
         os << "statent\t";
         os << "rrent\n";
     }
@@ -142,68 +152,114 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
     void Trace(ostream& os)    {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-		os << GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
-        os << alpha << '\t' << beta << '\t';
+        os << omegahypermean << '\t' << omegahyperinvshape << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 		os.flush();
     }
 
-    double GetLogPrior()    {
-		double total = 0;
-		total += LambdaLogProb();
-		total += LengthLogProb();
-		total += OmegaLogProb();
-        total += AlphaLogProb();
-        total += BetaLogProb();
-		return total;
-    }
-
-	double LambdaLogProb()	{
-		return -lambda / 10;
-	}
-
-	double LengthSuffStatLogProb()	{
-		return lambdasuffstat.GetLogProb(1.0,lambda);
-	}
-
-    double OmegaSuffStatLogProb()   {
-        return alphabetasuffstat.GetLogProb(alpha,beta);
-    }
-
-	double LengthLogProb()	{
-		return branchlength->GetLogProb();
-	}
-
-    double AlphaLogProb()   {
-        return -alpha/10;
-    }
-
-    double BetaLogProb()    {
-        return -beta/10;
-    }
-
-    double OmegaLogProb()   {
-        return omegaarray->GetLogProb();
-    }
-
-    double GetLogLikelihood()   {
-        return totlnL;
-    }
-
-	double GetTotalLength()	{
-		double tot = 0;
-		for (int j=1; j<Nbranch; j++)	{
-			tot += branchlength->GetVal(j);
-		}
-		return tot;
-	}
-
 	void Monitor(ostream& os) {}
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) {}
+
+    //-------------------
+    // Updates
+    //-------------------
+
+	void UpdateNucMatrix()	{
+		nucmatrix->CopyStationary(nucstat);
+		nucmatrix->CorruptMatrix();
+	}
+
+    void NoUpdate() {}
+
+    //-------------------
+    // Log Prior and Likelihood
+    //-------------------
+
+    double GetLogPrior()    {
+		double total = 0;
+		total += BranchLengthsHyperLogPrior();
+		total += BranchLengthsLogPrior();
+        total += NucRatesLogPrior();
+        total += OmegaHyperLogPrior();
+		total += OmegaLogPrior();
+		return total;
+    }
+
+	double BranchLengthsHyperLogPrior()	{
+		return -lambda / 10;
+	}
+
+	double BranchLengthsLogPrior()	{
+		return branchlength->GetLogProb();
+	}
+
+    double OmegaHyperLogPrior() {
+        double total = 0;
+        total -= omegahypermean;
+        total -= omegahyperinvshape;
+        return total;
+    }
+
+    double OmegaLogPrior()   {
+        return omegaarray->GetLogProb();
+    }
+
+    double NucRatesLogPrior()   {
+        return 0;
+    }
+
+    double GetLogLikelihood()   {
+        return lnL;
+    }
+
+    //-------------------
+    // Suff Stat Log Probs
+    //-------------------
+
+    // suff stat for moving branch lengths hyperparameter (lambda)
+	double BranchLengthsHyperSuffStatLogProb()	{
+		return lambdasuffstat.GetLogProb(1.0,lambda);
+	}
+
+    // suff stats for moving nuc rates
+    double NucRatesSuffStatLogProb() {
+        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+    }
+
+    // suff stats for moving omega hyper parameters
+    double OmegaHyperSuffStatLogProb()   {
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        return omegahypersuffstat.GetLogProb(alpha,beta);
+    }
+
+    //-------------------
+    // Log Probs for MH moves
+    //-------------------
+
+    // log prob for moving branch lengths hyperparameter (lambda)
+    double BranchLengthsHyperLogProb() {
+        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
+    }
+
+    // log prob for moving nuc rates
+    double NucRatesLogProb()    {
+        return NucRatesLogPrior() + NucRatesSuffStatLogProb();
+    }
+
+    // log prob for moving omega hyperparameters
+    double OmegaHyperLogProb()  {
+        return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb();
+    }
+
+    //-------------------
+    // Moves
+    //-------------------
 
     void MasterMove() {
 
@@ -211,481 +267,225 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule	{
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MasterReceiveLengthSuffStat();
-            MasterResampleBranchLengths();
-            MasterMoveLambda();
-            MasterSendGlobalBranchLengths();
-
             MasterReceiveOmega();
-            MasterMoveAlphaBeta();
+            MoveOmegaHyperParameters();
             MasterSendOmegaHyperParameters();
 
+            MasterReceiveLengthSuffStat();
+            ResampleBranchLengths();
+            MoveBranchLengthsHyperParameter();
+            MasterSendGlobalBranchLengths();
+
             MasterReceiveNucPathSuffStat();
-            MasterMoveNuc();
+            MoveNucRates();
             MasterSendGlobalNucRates();
         }
 
         MasterReceiveOmega();
-        MasterReceiveLogLikelihood();
+        MasterReceiveLogProbs();
     }
 
     // slave move
     void SlaveMove() {
 
-        SlaveResampleSub();
+        GeneResampleSub(1.0);
 
 		int nrep = 30;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            SlaveSendLengthSuffStat();
-            SlaveReceiveGlobalBranchLengths();
-
-            SlaveCollectPathSuffStat();
-            SlaveMoveOmega();
+            GeneCollectPathSuffStat();
+            MoveGeneOmegas();
             SlaveSendOmega();
             SlaveReceiveOmegaHyperParameters();
+
+            SlaveSendLengthSuffStat();
+            SlaveReceiveGlobalBranchLengths();
 
             SlaveSendNucPathSuffStat();
             SlaveReceiveGlobalNucRates();
         }
 
         SlaveSendOmega();
-        SlaveSendLogLikelihood();
+        SlaveSendLogProbs();
     }
 
-    void SlaveResampleSub()  {
+    void GeneResampleSub(double frac)  {
 
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->ResampleSub();
+            geneprocess[gene]->ResampleSub(frac);
         }
     }
 
-    void MasterSendGlobalBranchLengths() {
-
-        double* array = new double[Nbranch];
-        for (int j=0; j<Nbranch; j++)   {
-            array[j] = branchlength->GetVal(j);
-        }
-        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        delete[] array;
-    }
-
-    void SlaveReceiveGlobalBranchLengths()   {
-
-        double* array = new double[Nbranch];
-        MPI_Bcast(array,Nbranch,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        for (int j=0; j<Nbranch; j++)   {
-            (*branchlength)[j] = array[j];
-        }
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->SetBranchLengths(*branchlength);
-        }
-        delete[] array;
-    }
-
-    void SlaveSendLengthSuffStat()  {
-
-        lengthsuffstatarray->Clear();
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->CollectLengthSuffStat();
-            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
-        }
-
-        int* count = new int[Nbranch];
-        double* beta = new double[Nbranch];
-        lengthsuffstatarray->Push(count,beta);
-        MPI_Send(count,Nbranch,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-        MPI_Send(beta,Nbranch,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-        delete[] count;
-        delete[] beta;
-    }
-
-    void MasterReceiveLengthSuffStat()  {
-
-        int* count = new int[Nbranch];
-        double* beta = new double[Nbranch];
-        lengthsuffstatarray->Clear();
-        MPI_Status stat;
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(count,Nbranch,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-            MPI_Recv(beta,Nbranch,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            lengthsuffstatarray->Add(count,beta);
-        }
-        delete[] count;
-        delete[] beta;
-    }
-
-    void MasterResampleBranchLengths()    {
-		branchlength->GibbsResample(*lengthsuffstatarray);
-    }
-
-	void MasterMoveLambda()	{
-
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
-		MoveLambda(1.0,10);
-		MoveLambda(0.3,10);
-		branchlength->SetScale(lambda);
-    }
-
-	double MoveLambda(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - LambdaLogProb() - LengthSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			lambda *= e;
-			deltalogprob += LambdaLogProb() + LengthSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				lambda /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-    void MasterMoveAlphaBeta()  {
-
-		alphabetasuffstat.Clear();
-		omegaarray->AddSuffStat(alphabetasuffstat);
-		MoveAlpha(1.0,10);
-		MoveBeta(1.0,10);
-		MoveAlpha(0.3,10);
-		MoveBeta(0.3,10);
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
-    }
-
-	double MoveAlpha(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - AlphaLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			alpha *= e;
-			deltalogprob += AlphaLogProb() + OmegaSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				alpha /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveBeta(double tuning, int nrep)	{
-
-		double nacc = 0;
-		double ntot = 0;
-		for (int rep=0; rep<nrep; rep++)	{
-			double deltalogprob = - BetaLogProb() - OmegaSuffStatLogProb();
-			double m = tuning * (Random::Uniform() - 0.5);
-			double e = exp(m);
-			beta *= e;
-			deltalogprob += BetaLogProb() + OmegaSuffStatLogProb();
-			deltalogprob += m;
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				beta /= e;
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-    void SlaveCollectPathSuffStat() {
+    void GeneCollectPathSuffStat()  {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectPathSuffStat();
         }
     }
 
-    void SlaveSendNucPathSuffStat()  {
-
-        nucpathsuffstat.Clear();
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->CollectNucPathSuffStat();
-            nucpathsuffstat.Add(geneprocess[gene]->GetNucPathSuffStat());
-        }
-
-        int* count = new int[Nnuc+Nnuc*Nnuc];
-        double* beta = new double[Nnuc*Nnuc];
-        nucpathsuffstat.Push(count,beta);
-        MPI_Send(count,Nnuc+Nnuc*Nnuc,MPI_INT,0,TAG1,MPI_COMM_WORLD);
-        MPI_Send(beta,Nnuc*Nnuc,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-        delete[] count;
-        delete[] beta;
-    }
-
-    void MasterReceiveNucPathSuffStat()  {
-
-        int* count = new int[Nnuc+Nnuc*Nnuc];
-        double* beta = new double[Nnuc*Nnuc];
-        nucpathsuffstat.Clear();
-        MPI_Status stat;
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            MPI_Recv(count,Nnuc+Nnuc*Nnuc,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
-            MPI_Recv(beta,Nnuc*Nnuc,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            nucpathsuffstat.Add(count,beta);
-        }
-        delete[] count;
-        delete[] beta;
-    }
-
-    void MasterMoveNuc()    {
-
-		MoveRR(0.1,1,3);
-		MoveRR(0.03,3,3);
-		MoveRR(0.01,3,3);
-
-		MoveNucStat(0.1,1,3);
-		MoveNucStat(0.01,1,3);
-    }
-
-    double NucPathSuffStatLogProb() {
-        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
-    }
-
-	void UpdateNucMatrix()	{
-		nucmatrix->CopyStationary(nucstat);
-		nucmatrix->CorruptMatrix();
-	}
-
-	double MoveRR(double tuning, int n, int nrep)	{
-		double nacc = 0;
-		double ntot = 0;
-		double bk[Nrr];
-		for (int rep=0; rep<nrep; rep++)	{
-			for (int l=0; l<Nrr; l++)	{
-				bk[l] = nucrelrate[l];
-			}
-			double deltalogprob = -NucPathSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(nucrelrate,Nrr,tuning,n);
-			deltalogprob += loghastings;
-            UpdateNucMatrix();
-			deltalogprob += NucPathSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				for (int l=0; l<Nrr; l++)	{
-					nucrelrate[l] = bk[l];
-				}
-                UpdateNucMatrix();
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-	double MoveNucStat(double tuning, int n, int nrep)	{
-		double nacc = 0;
-		double ntot = 0;
-		double bk[Nnuc];
-		for (int rep=0; rep<nrep; rep++)	{
-			for (int l=0; l<Nnuc; l++)	{
-				bk[l] = nucstat[l];
-			}
-			double deltalogprob = -NucPathSuffStatLogProb();
-			double loghastings = Random::ProfileProposeMove(nucstat,Nnuc,tuning,n);
-			deltalogprob += loghastings;
-            UpdateNucMatrix();
-			deltalogprob += NucPathSuffStatLogProb();
-			int accepted = (log(Random::Uniform()) < deltalogprob);
-			if (accepted)	{
-				nacc ++;
-			}
-			else	{
-				for (int l=0; l<Nnuc; l++)	{
-					nucstat[l] = bk[l];
-				}
-                UpdateNucMatrix();
-			}
-			ntot++;
-		}
-		return nacc/ntot;
-	}
-
-
-    void MasterSendGlobalNucRates()   {
-
-        int N = Nrr + Nnuc;
-        double* array = new double[N];
-        int i = 0;
-        for (int j=0; j<Nrr; j++)   {
-            array[i++] = nucrelrate[j];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            array[i++] = nucstat[j];
-        }
-        if (i != N) {
-            cerr << "error when sending global nuc rates: non matching vector size\n";
-            cerr << i << '\t' << N << '\n';
-            exit(1);
-        }
-
-        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        delete[] array;
-    }
-
-    void SlaveReceiveGlobalNucRates()   {
-
-        int N = Nrr + Nnuc;
-        double* array = new double[N];
-        MPI_Bcast(array,N,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        int i = 0;
-        for (int j=0; j<Nrr; j++)   {
-            nucrelrate[j] = array[i++];
-        }
-        for (int j=0; j<Nnuc; j++)  {
-            nucstat[j] = array[i++];
-        }
-
-        if (i != N) {
-            cerr << "error when receiving global nuc rates: non matching vector size\n";
-            cerr << i << '\t' << N << '\n';
-            exit(1);
-        }
-
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
-        }
-        delete[] array;
-    }
-
-    void SlaveMoveOmega()  {
-
+    void MoveGeneOmegas()  {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->MoveOmega();
             (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
         }
     }
 
-    void SlaveSendOmega()   {
+    void ResampleBranchLengths()    {
+		branchlength->GibbsResample(*lengthsuffstatarray);
+    }
 
-        int ngene = GetLocalNgene();
-        double* array = new double[ngene];
-        for (int gene=0; gene<ngene; gene++)   {
-            array[gene] = (*omegaarray)[gene];
+	void MoveBranchLengthsHyperParameter()	{
+
+		lambdasuffstat.Clear();
+		branchlength->AddSuffStat(lambdasuffstat);
+
+        ScalingMove(lambda,1.0,10,&MultiGeneSingleOmegaModel::BranchLengthsHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&MultiGeneSingleOmegaModel::BranchLengthsHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+
+		branchlength->SetScale(lambda);
+    }
+
+    void MoveOmegaHyperParameters()  {
+
+		omegahypersuffstat.Clear();
+		omegaarray->AddSuffStat(omegahypersuffstat);
+
+        ScalingMove(omegahypermean,1.0,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+        ScalingMove(omegahypermean,0.3,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+        ScalingMove(omegahyperinvshape,1.0,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+        ScalingMove(omegahyperinvshape,0.3,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
+
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
+    }
+
+    void MoveNucRates()    {
+
+        ProfileMove(nucrelrate,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.03,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.01,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+
+        ProfileMove(nucstat,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucstat,0.01,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+    }
+
+    //-------------------
+    // MPI send / receive
+    //-------------------
+
+    // global branch lengths
+    
+    void MasterSendGlobalBranchLengths() {
+        MasterSendGlobal(*branchlength);
+    }
+
+    void SlaveReceiveGlobalBranchLengths()   {
+        SlaveReceiveGlobal(*branchlength);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetBranchLengths(*branchlength);
         }
-        MPI_Send(array,ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-        delete[] array;
+    }
+
+    // global nuc rates
+
+    void MasterSendGlobalNucRates()   {
+        MasterSendGlobal(nucrelrate,nucstat);
+    }
+
+    void SlaveReceiveGlobalNucRates()   {
+
+        SlaveReceiveGlobal(nucrelrate,nucstat);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
+        }
+    }
+
+    // omega (and hyperparameters)
+
+    void SlaveSendOmega()   {
+        SlaveSendGeneArray(*omegaarray);
     }
 
     void MasterReceiveOmega()    {
-
-        MPI_Status stat;
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            int ngene = GetSlaveNgene(proc);
-            double* array = new double[ngene];
-            MPI_Recv(array,ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            int index = 0;
-            for (int gene=0; gene<Ngene; gene++)    {
-                if (GeneAlloc[gene] == proc)    {
-                    (*omegaarray)[gene] = array[index++];
-                }
-            }
-            if (index != ngene) {
-                cerr << "error: non matching number of genes in master receive omega\n";
-                exit(1);
-            }
-            delete[] array;
-        }
+        MasterReceiveGeneArray(*omegaarray);
     }
 
     void MasterSendOmega()  {
-
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            int ngene = GetSlaveNgene(proc);
-            double* array = new double[4*ngene];
-            int index = 0;
-            for (int gene=0; gene<Ngene; gene++)    {
-                if (GeneAlloc[gene] == proc)    {
-                    array[index++] = (*omegaarray)[gene];
-                }
-            }
-            if (index != ngene) {
-                cerr << "error: non matching number of genes in master send omega\n";
-                exit(1);
-            }
-            MPI_Send(array,ngene,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
-            delete[] array;
-        }
+        MasterSendGeneArray(*omegaarray);
     }
-
+    
     void SlaveReceiveOmega()    {
-
-        int ngene = GetLocalNgene();
-        double* array = new double[ngene];
-        MPI_Status stat;
-        MPI_Recv(array,ngene,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
-
-        for (int gene=0; gene<ngene; gene++)    {
-            (*omegaarray)[gene] = array[gene];
-            geneprocess[gene]->SetOmega(array[gene]);
-        }
-        delete[] array;
+        SlaveReceiveGeneArray(*omegaarray);
     }
+
+    // omega hyperparameters
 
     void MasterSendOmegaHyperParameters()   {
-
-        double* array = new double[2];
-        array[0] = alpha;
-        array[1] = beta;
-        MPI_Bcast(array,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        delete[] array;
+        MasterSendGlobal(omegahypermean,omegahyperinvshape);
     }
 
     void SlaveReceiveOmegaHyperParameters() {
-
-        double* array = new double[Ngene];
-        MPI_Bcast(array,2,MPI_DOUBLE,0,MPI_COMM_WORLD);
-        alpha = array[0];
-        beta = array[1];
-        delete[] array;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
+        SlaveReceiveGlobal(omegahypermean,omegahyperinvshape);
         for (int gene=0; gene<GetLocalNgene(); gene++)    {
-            geneprocess[gene]->SetAlphaBeta(alpha,beta);
+            geneprocess[gene]->SetOmegaHyperParameters(omegahypermean,omegahyperinvshape);
         }
     }
 
-    void SlaveSendLogLikelihood()   {
+    // branch length suff stat
 
-        totlnL = 0;
+    void SlaveSendLengthSuffStat()  {
+        lengthsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            lnL[gene] = geneprocess[gene]->GetLogLikelihood();
-            totlnL += lnL[gene];
+            geneprocess[gene]->CollectLengthSuffStat();
+            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
         }
-        MPI_Send(&totlnL,1,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+        SlaveSendAdditive(*lengthsuffstatarray);
     }
 
-    void MasterReceiveLogLikelihood()    {
+    void MasterReceiveLengthSuffStat()  {
 
-        MPI_Status stat;
-        totlnL = 0;
-        for (int proc=1; proc<GetNprocs(); proc++)  {
-            double tmp;
-            MPI_Recv(&tmp,1,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-            totlnL += tmp;
+        lengthsuffstatarray->Clear();
+        MasterReceiveAdditive(*lengthsuffstatarray);
+    }
+
+    // nuc rate suff stat
+
+    void SlaveSendNucPathSuffStat()  {
+        nucpathsuffstat.Clear();
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->CollectNucPathSuffStat();
+            nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
         }
+        SlaveSendAdditive(nucpathsuffstat);
+    }
+
+    void MasterReceiveNucPathSuffStat()  {
+        nucpathsuffstat.Clear();
+        MasterReceiveAdditive(nucpathsuffstat);
+    }
+
+    // log probs
+
+    void SlaveSendLogProbs()   {
+
+        GeneLogPrior = 0;
+        lnL = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            GeneLogPrior += geneprocess[gene]->GetLogPrior();
+            lnL += geneprocess[gene]->GetLogLikelihood();
+        }
+        SlaveSendAdditive(GeneLogPrior);
+        SlaveSendAdditive(lnL);
+    }
+
+    void MasterReceiveLogProbs()    {
+
+        GeneLogPrior = 0;
+        MasterReceiveAdditive(GeneLogPrior);
+        lnL = 0;
+        MasterReceiveAdditive(lnL);
     }
 };
 

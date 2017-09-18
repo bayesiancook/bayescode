@@ -20,6 +20,12 @@ template<class T> class ConstArray	{
             buffer << this->GetVal(i);
         }
     }
+
+    void ToStream(ostream& os) const    {
+        for (int i=0; i<this->GetSize(); i++)  {
+            os << this->GetVal(i);
+        }
+    }
 };
 
 template<class T> class Array : public ConstArray<T>	{
@@ -34,7 +40,38 @@ template<class T> class Array : public ConstArray<T>	{
             buffer >> (*this)[i];
         }
     }
+
+    void FromStream(istream& is)    {
+        for (int i=0; i<this->GetSize(); i++)  {
+            is >> (*this)[i];
+        }
+    }
 };
+
+template<class T> ostream& operator<<(ostream& os, const ConstArray<T>& array)  {
+    array.ToStream(os);
+    return os;
+}
+
+template<class T> istream& operator>>(istream& is, Array<T>& array) {
+    array.FromStream(is);
+    return is;
+}
+
+template<class T> ostream& operator<<(ostream& os, const vector<T>& array)  {
+    for (unsigned int i=0; i<array.size(); i++) {
+        os << array[i] << '\t';
+    }
+    os << '\n';
+    return os;
+}
+
+template<class T> istream& operator>>(istream& is, vector<T>& array)    {
+    for (unsigned int i=0; i<array.size(); i++) {
+        is >> array[i];
+    }
+    return is;
+}
 
 template<class T> class HomogeneousArray : public ConstArray<T>	{
 

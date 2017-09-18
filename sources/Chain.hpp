@@ -69,10 +69,6 @@ class Chain {
 
     std::string GetName() { return name; }
 
-    void SetEvery(int inevery) { every = inevery; }
-    void SetUntil(int inuntil) { until = inuntil; }
-    void SetName(std::string inname) { name = inname; }
-
     ProbModel *GetModel() { return model; }
     int GetSize() { return size; }
 

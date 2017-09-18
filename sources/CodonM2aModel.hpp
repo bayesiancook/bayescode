@@ -92,12 +92,14 @@ class CodonM2aModel : public ProbModel {
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
+    // void Update() override {}
     void NoUpdate() {}
 
     //-------------------
     // Matrices
     //-------------------
 
+    void Update() override;
 	void UpdateNucMatrix();
 	void UpdateCodonMatrices();
 	void UpdateMatrices();
@@ -108,28 +110,32 @@ class CodonM2aModel : public ProbModel {
 
 	double GetMeanOmega() const;
 
-	void TraceHeader(std::ostream& os);
-	void Trace(ostream& os);
-	void TracePostProb(ostream& os);
+	void TraceHeader(std::ostream& os) const override;
+	void Trace(ostream& os) const override;
+	void TracePostProb(ostream& os) const ;
     void GetSitesPostProb(double* array) const;
 
-	void Monitor(ostream& os) {}
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+	// void Monitor(ostream& os) const override {}
+	void FromStream(istream& is) override;
+	void ToStream(ostream& os) const override;
 
     //-------------------
     // Likelihood
     //-------------------
 
-	double GetLogLikelihood();
-    double GetIntegratedLogLikelihood();
+    double GetLogProb() override {
+        return GetLogPrior() + GetIntegratedLogLikelihood();
+    }
+
+	double GetLogLikelihood() const;
+    double GetIntegratedLogLikelihood() const;
 
     //-------------------
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray();
-    const NucPathSuffStat& GetNucPathSuffStat();
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const;
+    const NucPathSuffStat& GetNucPathSuffStat() const;
 
 	double PathSuffStatLogProb();
 	double LambdaHyperSuffStatLogProb();
