@@ -67,7 +67,10 @@ class SingleOmegaModel : public ProbModel {
 
 	public:
 
-    // constructor
+    //-------------------
+    // Construction and allocation
+    // ------------------
+
 	SingleOmegaModel(string datafile, string treefile)  {
 
 		data = new FileSequenceAlignment(datafile);

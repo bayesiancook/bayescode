@@ -31,7 +31,7 @@ class NucPathSuffStat : public SuffStat	{
 
 	// assumes pathsuffstat is 61x61
 	// collect the 4x4 path suff stat out of codonpathsuffstat
-	void AddSuffStat(const MGOmegaCodonSubMatrix& codonmatrix, const PathSuffStat& codonpathsuffstat)    {
+	void AddSuffStat(const NucCodonSubMatrix& codonmatrix, const PathSuffStat& codonpathsuffstat)    {
 
 		const CodonStateSpace* cod = codonmatrix.GetCodonStateSpace();
         const SubMatrix* nucmatrix = codonmatrix.GetNucMatrix();
@@ -232,7 +232,7 @@ class OmegaSuffStat : public PoissonSuffStat {
 
 	// assumes pathsuffstat is 61x61
 	// tease out syn and non-syn substitutions and sum up count and beta stats  
-	void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix, const PathSuffStat& pathsuffstat)	{
+	void AddSuffStat(const OmegaCodonSubMatrix& codonsubmatrix, const PathSuffStat& pathsuffstat)    {
 
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace* statespace = codonsubmatrix.GetCodonStateSpace();
@@ -266,6 +266,13 @@ class OmegaSuffStat : public PoissonSuffStat {
 
         PoissonSuffStat::AddSuffStat(tmpcount,tmpbeta);
     }
+
+	void AddSuffStat(const ConstArray<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+		for (int i=0; i<codonsubmatrixarray.GetSize(); i++)	{
+            AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
+		}
+	}
+
 };
 
 class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<PoissonSuffStat>    {
@@ -286,6 +293,12 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 	}
 
 	void AddSuffStat(const ConstArray<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
+		}
+	}
+
+	void AddSuffStat(const ConstArray<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}

@@ -7,7 +7,7 @@
 
 using namespace std;
 
-class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix {
+class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public virtual OmegaCodonSubMatrix {
   public:
 
     AAMutSelOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, const vector<double>& inaa, double inomega,
@@ -15,11 +15,8 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix {
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           NucCodonSubMatrix(instatespace, inNucMatrix, innormalise),
-          aa(inaa),
-          omega(inomega) {}
-
-    double GetOmega() const { return omega + omegamin; }
-    void SetOmega(double inomega) { omega = inomega; CorruptMatrix();}
+          OmegaCodonSubMatrix(instatespace,inomega,innormalise),
+          aa(inaa) {}
 
     const vector<double>& GetAAFitnessProfile() const {return aa;}
     double GetFitness(int a) const {return aa[a];}
@@ -32,7 +29,6 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix {
     // data members
 
     const vector<double>& aa;
-    double omega;
 };
 
 #endif

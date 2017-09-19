@@ -53,6 +53,20 @@ class NucCodonSubMatrix : public virtual CodonSubMatrix {
     const SubMatrix *NucMatrix;
 };
 
+class OmegaCodonSubMatrix : public virtual CodonSubMatrix   {
+
+    public:
+    OmegaCodonSubMatrix(const CodonStateSpace* instatespace, double inomega, bool innormalise) : SubMatrix(instatespace->GetNstate(),innormalise), CodonSubMatrix(instatespace,normalise), omega(inomega)   {
+    }
+
+    double GetOmega() const { return omega + omegamin; }
+    void SetOmega(double inomega) { omega = inomega; CorruptMatrix();}
+
+    protected:
+    double omega;
+
+};
+
 // The Muse and Gaut codon substitution process
 // The simplest codon model based on a pure nucleotide mutation process (with
 // stops excluded)
@@ -141,18 +155,14 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 // look at how ComputeArray and ComputeStationary are implemented in
 // CodonSubMatrix.cpp
 
-class MGOmegaCodonSubMatrix : public MGCodonSubMatrix {
+class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix {
   public:
     MGOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, double inomega,
                           bool innormalise = false)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           MGCodonSubMatrix(instatespace, inNucMatrix, innormalise),
-          omega(inomega) {}
-
-    double GetOmega() const { return omega + omegamin; }
-
-    void SetOmega(double inomega) { omega = inomega; CorruptMatrix();}
+          OmegaCodonSubMatrix(instatespace,inomega,innormalise) {}
 
   protected:
     // look at how ComputeArray and ComputeStationary are implemented in
@@ -168,10 +178,6 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix {
         os << '\n';
         SubMatrix::ToStream(os);
     }
-
-    // data members
-
-    double omega;
 };
 
 #endif
