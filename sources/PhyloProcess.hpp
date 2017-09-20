@@ -9,6 +9,8 @@
 #include "SubMatrix.hpp"
 #include "Tree.hpp"
 #include "BranchSiteArray.hpp"
+#include "BidimArray.hpp"
+#include "BranchAllocationSystem.hpp"
  
 // PhyloProcess is a dispatcher:
 // its responsibility is to create a random branch/site path
@@ -114,6 +116,11 @@ public:
 	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
 	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
 	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
+
+	// heterogeneeous across sites, branches partitioned into conditions
+	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
+	void RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
+	void LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond);
 
 	// homogeneous across sites, heterogeneous across branches
 	// void AddSuffStat(BranchArray<PathSuffStat>& branchsuffstatarray, PathSuffStat& rootsuffstat);

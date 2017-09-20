@@ -59,6 +59,7 @@ class ProbModel {
             }
             else	{
                 x -= m;
+                (This->*updatef)();
             }
             ntot++;
         }
@@ -83,6 +84,7 @@ class ProbModel {
             }
             else	{
                 x /= e;
+                (This->*updatef)();
             }
             ntot++;
         }
@@ -107,6 +109,7 @@ class ProbModel {
             }
             else	{
                 x = bk;
+                (This->*updatef)();
             }
             ntot++;
         }

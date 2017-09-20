@@ -5,6 +5,7 @@
 #include "SuffStat.hpp"
 #include "SubMatrix.hpp"
 #include "Array.hpp"
+#include "BidimArray.hpp"
 #include <map>
 
 
@@ -130,6 +131,48 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 			GetVal(i).AddTo(suffstatarray[alloc.GetVal(i)]);
 		}
 	}
+};
+
+class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
+
+	public:
+
+	PathSuffStatBidimArray(int inncol, int innrow) : SimpleBidimArray<PathSuffStat>(inncol,innrow,PathSuffStat()) {}
+	~PathSuffStatBidimArray() {}
+
+	void Clear()	{
+        for (int i=0; i<this->GetNrow(); i++)  {
+            for (int j=0; j<this->GetNcol(); j++)   {
+                (*this)(i,j).Clear();
+            }
+        }
+	}
+
+    double GetLogProb(const ConstBidimArray<SubMatrix>& matrixarray) const  {
+        double total = 0;
+        for (int j=0; j<this->GetNcol(); j++)   {
+            total += GetLogProb(j,matrixarray);
+        }
+        return total;
+    }
+
+    double GetLogProb(int j, const ConstBidimArray<SubMatrix>& matrixarray) const   {
+        double total = 0;
+        for (int i=0; i<this->GetNrow(); i++)  {
+            total += GetVal(i,j).GetLogProb(matrixarray.GetVal(i,j));
+        }
+        return total;
+    }
+
+    double GetLogProb(int j, const vector<int>& flag, const ConstBidimArray<SubMatrix>& matrixarray) const   {
+        double total = 0;
+        for (int i=0; i<this->GetNrow(); i++)  {
+            if (flag[i])    {
+                total += GetVal(i,j).GetLogProb(matrixarray.GetVal(i,j));
+            }
+        }
+        return total;
+    }
 };
 
 #endif

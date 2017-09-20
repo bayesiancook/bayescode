@@ -343,14 +343,14 @@ class SingleOmegaModel : public ProbModel {
     // Traces and Monitors
     // ------------------
 
-	void TraceHeader(std::ostream& os)  {
+	void TraceHeader(std::ostream& os) const {
 		os << "#logprior\tlnL\tlength\tlambda\t";
 		os << "omega\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
 
-	void Trace(ostream& os) {	
+	void Trace(ostream& os) const {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
@@ -360,7 +360,7 @@ class SingleOmegaModel : public ProbModel {
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
 
-	void Monitor(ostream& os) {}
+	void Monitor(ostream& os) const {}
 
 	void ToStream(ostream& os) const {
         os << lambda << '\n';

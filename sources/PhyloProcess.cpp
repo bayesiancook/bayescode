@@ -288,7 +288,7 @@ double PhyloProcess::GetFastLogProb() const {
     for (int i = 0; i < GetNsite(); i++) {
         total += sitelnL[i];
     }
-    timer.print<2>("GetFastLogProb. ");
+    // timer.print<2>("GetFastLogProb. ");
     return total;
 }
 
@@ -758,6 +758,40 @@ void PhyloProcess::LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat
                 exit(1);
             }
             pathmap[from->GetNode()][i]->AddPathSuffStat(suffstat,GetBranchLength(from->GetBranch()->GetIndex()) * GetSiteRate(i));
+        }
+    }
+}
+
+void PhyloProcess::AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc)	{
+	RecursiveAddPathSuffStat(GetRoot(),suffstatarray,branchalloc);
+}
+
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc)	{
+
+    if (from->isRoot()) {
+        LocalAddPathSuffStat(from,suffstatarray,0);
+    }
+    else    {
+        LocalAddPathSuffStat(from,suffstatarray,branchalloc.GetBranchAlloc(from->GetBranch()->GetIndex()));
+    }
+	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
+		RecursiveAddPathSuffStat(link->Out(),suffstatarray,branchalloc);
+	}
+}
+
+void PhyloProcess::LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond)   {
+
+    int nodeindex = from->GetNode()->GetIndex();
+    for (int i=0; i<GetNsite(); i++)    {
+        if (missingmap[nodeindex][i] == 2)   {
+            suffstatarray(cond,i).IncrementRootCount(GetState(from->GetNode(),i));
+        }
+        else if (missingmap[nodeindex][i] == 1) {
+            if (from->isRoot()) {
+                cerr << "error in missing map\n";
+                exit(1);
+            }
+            pathmap[from->GetNode()][i]->AddPathSuffStat(suffstatarray(cond,i),GetBranchLength(from->GetBranch()->GetIndex()) * GetSiteRate(i));
         }
     }
 }

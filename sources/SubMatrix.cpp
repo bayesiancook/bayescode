@@ -16,7 +16,7 @@ double SubMatrix::nz = 0;
 double SubMatrix::meanz = 0;
 double SubMatrix::maxz = 0;
 
-const int witheigen = 0;
+const int witheigen = 1;
 
 // ---------------------------------------------------------------------------
 //     SubMatrix()

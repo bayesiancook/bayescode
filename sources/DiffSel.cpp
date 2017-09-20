@@ -9,7 +9,7 @@ class DiffSelChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int codonmodel, category, level, fixglob, fixvar, conjugate;
+    int codonmodel, category, level, fixglob, fixvar;
 
   public:
     DiffSelModel* GetModel() {
@@ -20,7 +20,7 @@ class DiffSelChain: public Chain {
 
     DiffSelChain(string indata, string intree, int incategory,
                                               int inlevel, int inevery, int inuntil, int infixglob,
-                                              int infixvar, int incodonmodel, int inconjugate,
+                                              int infixvar, int incodonmodel,
                                               string inname, int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
@@ -29,11 +29,10 @@ class DiffSelChain: public Chain {
           category(incategory),
           level(inlevel),
           fixglob(infixglob),
-          fixvar(infixvar),
-          conjugate(inconjugate) {
-        SetEvery(inevery);
-        SetUntil(inuntil);
-        SetName(inname);
+          fixvar(infixvar)  {
+        every = inevery;
+        until = inuntil;
+        name = inname;
         New(force);
     }
 
@@ -44,9 +43,13 @@ class DiffSelChain: public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, conjugate, codonmodel, true);
+        model = new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+        GetModel()->Allocate();
+        GetModel()->Unfold(true);
         cerr << "-- Reset" << endl;
         Reset(force);
+        cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
+        model->Trace(cerr);
     }
 
     void Open() override {
@@ -58,7 +61,6 @@ class DiffSelChain: public Chain {
         is >> modeltype;
         is >> datafile >> treefile >> category >> level;
         is >> fixglob >> fixvar >> codonmodel;
-        is >> conjugate;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -69,16 +71,18 @@ class DiffSelChain: public Chain {
 
         if (modeltype == "DIFFSEL") {
             model = new DiffSelModel(
-                datafile, treefile, category, level, fixglob, fixvar, conjugate, codonmodel, true);
+                datafile, treefile, category, level, fixglob, fixvar, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        GetModel()->Allocate();
         model->FromStream(is);
-
         model->Update();
-        cerr << size << "-- Points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
+        GetModel()->Unfold(true);
+        cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
+        model->Trace(cerr);
     }
 
     void Save() override {
@@ -86,22 +90,10 @@ class DiffSelChain: public Chain {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << category << '\t' << level << '\n';
         param_os << fixglob << '\t' << fixvar << '\t' << codonmodel << '\n';
-        param_os << conjugate << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
 
         model->ToStream(param_os);
-    }
-
-
-    void Move() override {
-        for (int i = 0; i < every; i++) {
-            model->Move();
-        }
-
-        SavePoint();
-        Save();
-        Monitor();
     }
 };
 
@@ -126,7 +118,6 @@ int main(int argc, char* argv[]) {
 	int fixglob = 1;
 	int fixvar = 1;
 	int codonmodel = 1;
-	int conjugate = 1;
 
 	string name = "";
 	int every = 1;
@@ -175,7 +166,7 @@ int main(int argc, char* argv[]) {
 		cerr << "error in command\n";
 		exit(1);
 	}
-	DiffSelChain* chain = new DiffSelChain(datafile,treefile,ncond,nlevel,every,until,fixglob,fixvar,codonmodel,conjugate,name,true);
+	DiffSelChain* chain = new DiffSelChain(datafile,treefile,ncond,nlevel,every,until,fixglob,fixvar,codonmodel,name,true);
 	chain->Start();
     }
 }
