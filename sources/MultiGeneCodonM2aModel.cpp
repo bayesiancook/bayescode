@@ -334,7 +334,7 @@ int MultiGeneCodonM2aModel::GetNpos()    {
 
 double MultiGeneCodonM2aModel::GetMeanTotalLength()	{
     double tot = 0;
-    for (int j=1; j<Nbranch; j++)	{
+    for (int j=0; j<Nbranch; j++)	{
         tot += branchlength->GetVal(j);
     }
     return tot;
