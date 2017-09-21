@@ -15,7 +15,7 @@ class ProbModel {
 
     // void NoUpdate() {}
     virtual void Update() {}
-    virtual double GetLogProb() {return 0;}
+    virtual double GetLogProb() const {return 0;}
 
     // save model configuration to stream
     virtual void ToStream(std::ostream &os) const {}
@@ -28,10 +28,8 @@ class ProbModel {
     virtual void Monitor(std::ostream &os) const {}
 
     // templates for Metropolis Hastings Moves
-    template<class C> using LogProbF = double (C::*)(void);
+    template<class C> using LogProbF = double (C::*)(void) const;
     template<class C> using UpdateF = void (C::*)(void);
-    // template<class C> typedef double (C::*LogProbF)(void);
-    // template<class C> typedef void (C::*UpdateF)(void);
 
 	template<class C> double SlidingMove(double& x, double tuning, int nrep, double min, double max, LogProbF<C> logprobf, UpdateF<C> updatef, C* This) {
     

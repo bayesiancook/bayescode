@@ -424,11 +424,11 @@ class DiffSelModel : public ProbModel {
     // log probs for MH moves
     // ---------------
 
-    double BranchLengthsHyperLogProb()  {
+    double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return NucRatesLogPrior() + SuffStatLogProb();
     }
 

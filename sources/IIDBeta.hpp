@@ -112,7 +112,7 @@ class IIDBeta : public SimpleArray<double> {
 		}
 	}
 
-	double GetLogProb()	{
+	double GetLogProb() const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
 			total += GetLogProb(i);
@@ -120,7 +120,7 @@ class IIDBeta : public SimpleArray<double> {
 		return total;
 	}
 
-	double GetLogProb(int i)	{
+	double GetLogProb(int i) const {
         return Random::logBetaDensity(GetVal(i),alpha,beta);
 	}
 
@@ -130,7 +130,7 @@ class IIDBeta : public SimpleArray<double> {
 		}
 	}
 
-    double GetPosMean()    {
+    double GetPosMean() const {
         int tot = 0;
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {
@@ -145,28 +145,6 @@ class IIDBeta : public SimpleArray<double> {
         m1 /= tot;
         return m1;
     }
-
-    /*
-    double GetPosVar() {
-        int tot = 0;
-        double m1 = 0;
-        double m2 = 0;
-        for (int i=0; i<GetSize(); i++) {
-            if (GetVal(i))  {
-                m1 += GetVal(i);
-                m2 += GetVal(i) * GetVal(i);
-                tot++;
-            }
-        }
-        if (! tot)  {
-            return 0;
-        }
-        m1 /= tot;
-        m2 /= tot;
-        m2 -= m1*m1;
-        return m2;
-    }
-    */
 
 	protected:
 

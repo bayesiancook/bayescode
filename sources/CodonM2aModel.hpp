@@ -123,7 +123,7 @@ class CodonM2aModel : public ProbModel {
     // Likelihood
     //-------------------
 
-    double GetLogProb() override {
+    double GetLogProb() const override {
         return GetLogPrior() + GetIntegratedLogLikelihood();
     }
 
@@ -137,10 +137,10 @@ class CodonM2aModel : public ProbModel {
     const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const;
     const NucPathSuffStat& GetNucPathSuffStat() const;
 
-	double PathSuffStatLogProb();
-	double LambdaHyperSuffStatLogProb();
-    double NucRatesSuffStatLogProb();
-	double OmegaSuffStatLogProb();
+	double PathSuffStatLogProb() const;
+	double LambdaHyperSuffStatLogProb() const;
+    double NucRatesSuffStatLogProb() const;
+	double OmegaSuffStatLogProb() const;
 
     //-------------------
     // Priors
@@ -169,15 +169,15 @@ class CodonM2aModel : public ProbModel {
     //  Log probs for MH moves
     //-------------------
 
-    double LambdaHyperLogProb() {
+    double LambdaHyperLogProb() const {
         return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
 
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
     }
 
-    double OmegaLogProb()   {
+    double OmegaLogProb() const {
         return OmegaLogPrior() + OmegaSuffStatLogProb();
     }
 
@@ -257,7 +257,7 @@ class CodonM2aModel : public ProbModel {
 
 	M2aMix* componentomegaarray;
 	MultinomialAllocationVector* sitealloc;
-	vector<vector<double> > sitepostprobarray;
+	mutable vector<vector<double> > sitepostprobarray;
 
     // 
     // hyperparameters of the priors over the mixture parameters

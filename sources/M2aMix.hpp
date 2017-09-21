@@ -64,7 +64,7 @@ class M2aMix: public SimpleArray<double>  {
             return ret;
     }
 
-    double GetPostProbArray(OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
+    double GetPostProbArray(const OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
 
         double total = 0;
         for (int i=0; i<suffstatarray.GetSize(); i++)   {

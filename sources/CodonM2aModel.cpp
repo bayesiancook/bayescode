@@ -232,7 +232,7 @@ const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray() const 
     return lengthsuffstatarray;
 }
 
-double CodonM2aModel::LambdaHyperSuffStatLogProb() {
+double CodonM2aModel::LambdaHyperSuffStatLogProb() const {
     return lambdasuffstat.GetLogProb(1.0,lambda);
 }
 
@@ -240,15 +240,15 @@ const NucPathSuffStat& CodonM2aModel::GetNucPathSuffStat() const {
     return nucpathsuffstat;
 }
 
-double CodonM2aModel::NucRatesSuffStatLogProb() {
+double CodonM2aModel::NucRatesSuffStatLogProb() const {
     return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
 }
 
-double CodonM2aModel::PathSuffStatLogProb()	{
+double CodonM2aModel::PathSuffStatLogProb() const {
     return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 }
 
-double CodonM2aModel::OmegaSuffStatLogProb()    {
+double CodonM2aModel::OmegaSuffStatLogProb() const {
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
     return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
 }

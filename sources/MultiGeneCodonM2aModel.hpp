@@ -23,7 +23,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // Accessors
     // ------------------
 
-	CodonStateSpace* GetCodonStateSpace()   {
+	CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
@@ -48,26 +48,26 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // Traces and Monitors
     // ------------------
 
-    void TraceHeader(ostream& os);
-    void Trace(ostream& os);
+    void TraceHeader(ostream& os) const;
+    void Trace(ostream& os) const;
 
-    void TracePosWeight(ostream& os);
-    void TracePosOm(ostream& os);
+    void TracePosWeight(ostream& os) const;
+    void TracePosOm(ostream& os) const;
 
     void MasterTraceSitesPostProb(ostream& os);
     void SlaveTraceSitesPostProb();
 
-	void Monitor(ostream& os) {}
+	void Monitor(ostream& os) const {}
 	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+	void ToStream(ostream& os) const {}
 
     // summary statistics for tracing MCMC
-    int GetNpos();
-	double GetMeanTotalLength();
-    double GetMeanLength();
-    double GetVarLength();
-    double GetVarNucRelRate();
-    double GetVarNucStat();
+    int GetNpos() const;
+	double GetMeanTotalLength() const;
+    double GetMeanLength() const;
+    double GetVarLength() const;
+    double GetVarNucRelRate() const;
+    double GetVarNucStat() const;
 
     //-------------------
     // Log Probs
@@ -78,34 +78,34 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // ------------------
 
     // total log prior
-    double GetLogPrior();
+    double GetLogPrior() const;
 
     // branch lengths
     // exponential of mean 10 for lambda
-    double LambdaHyperLogPrior()    {
+    double LambdaHyperLogPrior() const {
         return -lambda/10;
     }
 
-    double GlobalBranchLengthsLogPrior()    {
+    double GlobalBranchLengthsLogPrior() const {
         return LambdaHyperLogPrior() + branchlength->GetLogProb();
     }
 
     // exponential of mean 1 for blhyperinvshape
-    double BranchLengthsHyperInvShapeLogPrior() {
+    double BranchLengthsHyperInvShapeLogPrior() const {
         return -blhyperinvshape;
     }
 
-    double GeneBranchLengthsHyperLogPrior() {
+    double GeneBranchLengthsHyperLogPrior() const {
         return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
     }
 
     // nuc rates
-    double GlobalNucRatesLogPrior() {
+    double GlobalNucRatesLogPrior() const {
         return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
     }
 
     // exponential of mean 1 for nucrelrate and nucstat hyper inverse concentration
-    double GeneNucRatesHyperLogPrior()  {
+    double GeneNucRatesHyperLogPrior() const {
         double total = 0;
         if (nucmode == 1)   {
             total -= nucrelratehyperinvconc;
@@ -115,7 +115,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     }
 
     // mixture
-    double MixtureHyperLogPrior()   {
+    double MixtureHyperLogPrior() const {
 
         double total = 0;
         if (pi) {
@@ -140,7 +140,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // Log Likelihood
     // ------------------
 
-    double GetLogLikelihood()   {
+    double GetLogLikelihood() const {
         return lnL;
     }
 
@@ -149,23 +149,23 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // ------------------
 
     // suff stat for global branch lengths, as a function of lambda
-	double LambdaHyperSuffStatLogProb() {
+	double LambdaHyperSuffStatLogProb() const {
         return lambdasuffstat.GetLogProb(1.0,lambda);
     }
 
     // suff stat for gene-specific branch lengths, as a function of bl hyperparameters
-    double BranchLengthsHyperSuffStatLogProb()  {
+    double BranchLengthsHyperSuffStatLogProb() const {
         return lengthhypersuffstatarray->GetLogProb(*branchlength,blhyperinvshape);
     }
 
     // suff stat for global nuc rates, as a function of nucleotide matrix
     // (which itself depends on nucstat and nucrelrate)  
-    double NucRatesSuffStatLogProb()    {
+    double NucRatesSuffStatLogProb() const {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
 
     // suff stat for gene-specific nuc rates, as a function of nucrate hyperparameters
-    double NucRatesHyperSuffStatLogProb(){
+    double NucRatesHyperSuffStatLogProb() const {
         double total = 0;
         total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
         total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
@@ -173,7 +173,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     }
 
     // suff stat for gene-specific mixture parameters, as a function of mixture hyperparameters
-    double MixtureHyperSuffStatLogProb()    {
+    double MixtureHyperSuffStatLogProb() const {
         double total = 0;
 
         double puromalpha = puromhypermean / puromhyperinvconc;
@@ -199,27 +199,27 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // ------------------
 
     // logprob for moving lambda
-    double LambdaHyperLogProb() {
+    double LambdaHyperLogProb() const {
         return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
 
     // logprob for moving hyperparameters of gene-specific branchlengths
-    double BranchLengthsHyperLogProb()  {
+    double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
     // log prob for moving mixture hyper params
-    double MixtureHyperLogProb()    {
+    double MixtureHyperLogProb() const {
         return MixtureHyperLogPrior() + MixtureHyperSuffStatLogProb();
     }
 
     // log prob for moving nuc rates hyper params
-    double NucRatesHyperLogProb() {
+    double NucRatesHyperLogProb() const {
         return GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
     }
 
     // log prob for moving nuc rates
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return GlobalNucRatesLogPrior()  + NucRatesSuffStatLogProb();
     }
     

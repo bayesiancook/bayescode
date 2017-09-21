@@ -132,7 +132,7 @@ class SingleOmegaModel : public ProbModel {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
-    double GetOmega()   {
+    double GetOmega() const {
         return omega;
     }
 
@@ -222,11 +222,11 @@ class SingleOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
         return lengthsuffstatarray;
     }
 
-    const NucPathSuffStat& GetNucPathSuffStat() {
+    const NucPathSuffStat& GetNucPathSuffStat() const {
         return nucpathsuffstat;
     }
 
@@ -247,12 +247,12 @@ class SingleOmegaModel : public ProbModel {
     //-------------------
 
     // for moving branch lengths hyperparameter lambda
-    double BranchLengthsHyperLogProb() {
+    double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
     // for moving nuc rates
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
     }
 

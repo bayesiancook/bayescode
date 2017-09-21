@@ -139,7 +139,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     // Traces and Monitors
     //-------------------
 
-    void TraceHeader(ostream& os)   {
+    void TraceHeader(ostream& os) const {
 
         os << "#logprior\tlnL\tlength\t";
         os << "meanomega\t";
@@ -149,7 +149,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
         os << "rrent\n";
     }
 
-    void Trace(ostream& os)    {
+    void Trace(ostream& os) const {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
@@ -161,9 +161,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
 		os.flush();
     }
 
-	void Monitor(ostream& os) {}
+	void Monitor(ostream& os) const {}
 	void FromStream(istream& is) {}
-	void ToStream(ostream& os) {}
+	void ToStream(ostream& os) const {}
 
     //-------------------
     // Updates
@@ -180,7 +180,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     // Log Prior and Likelihood
     //-------------------
 
-    double GetLogPrior()    {
+    double GetLogPrior() const {
 		double total = 0;
 		total += BranchLengthsHyperLogPrior();
 		total += BranchLengthsLogPrior();
@@ -190,30 +190,30 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
 		return total;
     }
 
-	double BranchLengthsHyperLogPrior()	{
+	double BranchLengthsHyperLogPrior() const {
 		return -lambda / 10;
 	}
 
-	double BranchLengthsLogPrior()	{
+	double BranchLengthsLogPrior() const {
 		return branchlength->GetLogProb();
 	}
 
-    double OmegaHyperLogPrior() {
+    double OmegaHyperLogPrior() const {
         double total = 0;
         total -= omegahypermean;
         total -= omegahyperinvshape;
         return total;
     }
 
-    double OmegaLogPrior()   {
+    double OmegaLogPrior()   const {
         return omegaarray->GetLogProb();
     }
 
-    double NucRatesLogPrior()   {
+    double NucRatesLogPrior() const {
         return 0;
     }
 
-    double GetLogLikelihood()   {
+    double GetLogLikelihood() const {
         return lnL;
     }
 
@@ -222,17 +222,17 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     //-------------------
 
     // suff stat for moving branch lengths hyperparameter (lambda)
-	double BranchLengthsHyperSuffStatLogProb()	{
+	double BranchLengthsHyperSuffStatLogProb() const {
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
 
     // suff stats for moving nuc rates
-    double NucRatesSuffStatLogProb() {
+    double NucRatesSuffStatLogProb() const {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
 
     // suff stats for moving omega hyper parameters
-    double OmegaHyperSuffStatLogProb()   {
+    double OmegaHyperSuffStatLogProb() const {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
         return omegahypersuffstat.GetLogProb(alpha,beta);
@@ -243,17 +243,17 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     //-------------------
 
     // log prob for moving branch lengths hyperparameter (lambda)
-    double BranchLengthsHyperLogProb() {
+    double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
     // log prob for moving nuc rates
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
     }
 
     // log prob for moving omega hyperparameters
-    double OmegaHyperLogProb()  {
+    double OmegaHyperLogProb() const {
         return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb();
     }
 

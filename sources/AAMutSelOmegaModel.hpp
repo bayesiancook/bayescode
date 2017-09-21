@@ -140,7 +140,7 @@ class AAMutSelOmegaModel : public ProbModel {
         return omega;
     }
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray()  {
+    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
         return lengthsuffstatarray;
     }
 
@@ -264,12 +264,12 @@ class AAMutSelOmegaModel : public ProbModel {
     //-------------------
 
     // for moving branch lengths hyperparameter lambda
-    double BranchLengthsHyperLogProb() {
+    double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
     // for moving nuc rates
-    double NucRatesLogProb()    {
+    double NucRatesLogProb() const {
         return NucRatesLogPrior() + PathSuffStatLogProb();
     }
 

@@ -235,7 +235,7 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
 // ------------------
 
 
-void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
+void MultiGeneCodonM2aModel::TraceHeader(ostream& os) const {
 
     os << "#logprior\tlnL";
     if (blmode == 2)    {
@@ -267,7 +267,7 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os)   {
     os << '\n';
 }
 
-void MultiGeneCodonM2aModel::Trace(ostream& os)    {
+void MultiGeneCodonM2aModel::Trace(ostream& os)  const {
     os << GetLogPrior();
     os << '\t' << GetLogLikelihood();
     if (blmode == 2)    {
@@ -309,30 +309,30 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)    {
     os.flush();
 }
 
-void MultiGeneCodonM2aModel::TracePosWeight(ostream& os) {
+void MultiGeneCodonM2aModel::TracePosWeight(ostream& os) const {
 
     for (int gene=0; gene<Ngene; gene++)    {
-        os << (*poswarray)[gene] << '\t';
+        os << poswarray->GetVal(gene) << '\t';
     }
     os << '\n';
     os.flush();
 }
 
-void MultiGeneCodonM2aModel::TracePosOm(ostream& os) {
+void MultiGeneCodonM2aModel::TracePosOm(ostream& os) const {
 
     for (int gene=0; gene<Ngene; gene++)    {
-        os << 1 + (*dposomarray)[gene] << '\t';
+        os << 1 + dposomarray->GetVal(gene) << '\t';
     }
     os << '\n';
     os.flush();
 }
 
 
-int MultiGeneCodonM2aModel::GetNpos()    {
+int MultiGeneCodonM2aModel::GetNpos() const {
     return GetNgene() - poswarray->GetNullSet();
 }
 
-double MultiGeneCodonM2aModel::GetMeanTotalLength()	{
+double MultiGeneCodonM2aModel::GetMeanTotalLength() const {
     double tot = 0;
     for (int j=0; j<Nbranch; j++)	{
         tot += branchlength->GetVal(j);
@@ -340,7 +340,7 @@ double MultiGeneCodonM2aModel::GetMeanTotalLength()	{
     return tot;
 }
 
-double MultiGeneCodonM2aModel::GetMeanLength()   {
+double MultiGeneCodonM2aModel::GetMeanLength() const {
 
     if (blmode == 2)    {
         cerr << "error: in getvarlength\n";
@@ -350,7 +350,7 @@ double MultiGeneCodonM2aModel::GetMeanLength()   {
     return branchlengtharray->GetMeanLength();
 }
 
-double MultiGeneCodonM2aModel::GetVarLength()   {
+double MultiGeneCodonM2aModel::GetVarLength() const {
 
     if (blmode == 2)    {
         cerr << "error: in getvarlength\n";
@@ -360,7 +360,7 @@ double MultiGeneCodonM2aModel::GetVarLength()   {
     return branchlengtharray->GetVarLength();
 }
 
-double MultiGeneCodonM2aModel::GetVarNucRelRate()   {
+double MultiGeneCodonM2aModel::GetVarNucRelRate() const {
 
     if (nucmode == 2)   {
         cerr << "error in getvarnucrelrate\n";
@@ -385,7 +385,7 @@ double MultiGeneCodonM2aModel::GetVarNucRelRate()   {
     return tot;
 }
 
-double MultiGeneCodonM2aModel::GetVarNucStat()  {
+double MultiGeneCodonM2aModel::GetVarNucStat() const {
 
     if (nucmode == 2)   {
         cerr << "error in getvarnucstat\n";
@@ -415,7 +415,7 @@ double MultiGeneCodonM2aModel::GetVarNucStat()  {
 // Log Priors and likelihood
 // ------------------
 
-double MultiGeneCodonM2aModel::GetLogPrior()    {
+double MultiGeneCodonM2aModel::GetLogPrior() const {
 
     // gene contributions
     double total = GeneLogPrior;
