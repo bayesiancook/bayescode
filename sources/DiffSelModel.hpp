@@ -472,7 +472,7 @@ class DiffSelModel : public ProbModel {
     }
 
     void ResampleSub(double frac)   {
-		phyloprocess->ResampleSub(frac);
+		phyloprocess->Move(frac);
     }
 
 	void ResampleBranchLengths()	{

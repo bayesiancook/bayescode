@@ -268,7 +268,7 @@ class SingleOmegaModel : public ProbModel {
 
     void ResampleSub(double frac)   {
         UpdateMatrices();
-		phyloprocess->ResampleSub(frac);
+		phyloprocess->Move(frac);
     }
 
     void MoveParameters(int nrep)   {
