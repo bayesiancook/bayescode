@@ -164,19 +164,6 @@ class DiffSelModel : public ProbModel {
         std::cerr << "-- conditions over branches ok\n";
     }
 
-    void Unfold(bool sample)   {
-
-        // unfold phyloprocess (allocate conditional likelihood vectors, etc)
-        std::cerr << "-- unfolding\n";
-        phyloprocess->Unfold();
-
-        if (sample) {
-            // stochastic mapping of substitution histories
-            std::cerr << "-- mapping substitutions\n";
-            phyloprocess->ResampleSub();
-        }
-    }
-
     DiffSelModel(const DiffSelModel&) = delete;
 
     ~DiffSelModel() {}
@@ -287,6 +274,19 @@ class DiffSelModel : public ProbModel {
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
     }
 
+    void Unfold(bool sample)   {
+
+        // unfold phyloprocess (allocate conditional likelihood vectors, etc)
+        std::cerr << "-- unfolding\n";
+        phyloprocess->Unfold();
+
+        if (sample) {
+            // stochastic mapping of substitution histories
+            std::cerr << "-- mapping substitutions\n";
+            phyloprocess->ResampleSub();
+        }
+    }
+
     // ------------------
     // Update system
     // ------------------
@@ -368,7 +368,8 @@ class DiffSelModel : public ProbModel {
     }
 
     double BaselineLogPrior() const {
-        return baseline->GetLogProb();
+        // return baseline->GetLogProb();
+        return Nsite * Random::logGamma((double)Naa);
     }
 
     double DeltaLogPrior() const {
@@ -493,12 +494,12 @@ class DiffSelModel : public ProbModel {
 
         CorruptMatrices();
 
-        ProfileMove(nucrelrate,0.1,1,3,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.03,3,3,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.01,3,3,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.03,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.01,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
 
-        ProfileMove(nucstat,0.1,1,3,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucstat,0.01,1,3,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.01,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
 
         CorruptMatrices();
 	}

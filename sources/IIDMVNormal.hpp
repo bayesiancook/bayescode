@@ -98,7 +98,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
         for (int k=0; k<GetDim(); k++) {
             total += x[k]*x[k];
         }
-        return -0.5*(total/v + GetDim()*log(v));
+        return -0.5*(total/v + GetDim()*log(2*Pi*v));
     }
 
     protected:
