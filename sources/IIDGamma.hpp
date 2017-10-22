@@ -175,11 +175,50 @@ class IIDGamma: public SimpleArray<double>	{
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
 
+    void GetAllocPostProb(const PoissonSuffStat& suffstat, const vector<double>& weight, vector<double>& postprob) const {
+
+        double max = 0;
+        for (int i=0; i<GetSize(); i++) {
+            double tmp = suffstat.GetLogProb(GetVal(i));
+            postprob[i] = tmp;
+            if ((!i) || (max < tmp))    {
+                max = tmp;
+            }
+        }
+
+        double total = 0;
+        for (int i=0; i<GetSize(); i++) {
+            postprob[i] = weight[i] * exp(postprob[i] - max);
+            total += postprob[i];
+        }
+
+        for (int i=0; i<GetSize(); i++) {
+            postprob[i] /= total;
+        }
+
+    }
+
 	void AddSuffStat(GammaSuffStat& suffstat) const {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
 		}
 	}
+
+	void AddSuffStat(GammaSuffStat& suffstat, const vector<int>& occupancy) const {
+		for (int i=0; i<GetSize(); i++)	{
+            if (occupancy[i])   {
+                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
+            }
+		}
+	}
+
+    void PriorResample(const vector<int>& occupancy) {
+		for (int i=0; i<GetSize(); i++)	{
+            if (! occupancy[i]) {
+                (*this)[i] = Random::GammaSample(shape,scale);
+            }
+		}
+    }
 
 	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<double>& poswarray) const {
 		for (int i=0; i<GetSize(); i++)	{
@@ -190,6 +229,9 @@ class IIDGamma: public SimpleArray<double>	{
 	}
 
     void PriorResample(const ConstArray<double>& poswarray) {
+        cerr << "in prior resample\n";
+        cerr << "check that\n";
+        exit(1);
 		for (int i=0; i<GetSize(); i++)	{
             if (poswarray.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);

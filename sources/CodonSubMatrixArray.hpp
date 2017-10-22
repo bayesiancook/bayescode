@@ -31,6 +31,19 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 		}
     }
 
+    void UpdateCodonMatrices(const vector<int>& occupancy)  {
+        if (((int) occupancy.size()) != GetSize())  {
+            cerr << "error in UpdateCodonMatrices: occupancy vector size does not match array size\n";
+            exit(1);
+        }
+		for (int i=0; i<GetSize(); i++)	{
+            if (occupancy[i])   {
+                (*this)[i].SetOmega(omegaarray->GetVal(i));
+                (*this)[i].CorruptMatrix();
+            }
+		}
+    }
+
 	private:
 
     void Create()   {

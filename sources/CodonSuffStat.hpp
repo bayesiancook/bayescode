@@ -304,6 +304,12 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 		}
 	}
 
+	void AddToComponents(Array<OmegaSuffStat>& suffstatarray, const Array<int>& alloc)	const {
+		for (int i=0; i<GetSize(); i++)	{
+			suffstatarray[alloc.GetVal(i)].Add(GetVal(i));
+		}
+	}
+
 	double GetLogProb(const Array<double>* omegaarray) const{
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{

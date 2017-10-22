@@ -7,7 +7,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 
 	public:
 
-	MultinomialAllocationVector(int insize, const vector<double>& inweight) : SimpleArray<int>(insize), weight(inweight) {
+	MultinomialAllocationVector(int insize, const vector<double>& inweight) : SimpleArray<int>(insize), weight(inweight), occupancy(inweight.size()) {
             SampleAlloc();
 	}
 
@@ -17,17 +17,25 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 		for (int i=0; i<GetSize(); i++) {
 			(*this)[i] = Random::DrawFromDiscreteDistribution(weight);
 		}
+        UpdateOccupancies();
 	}
 	
+    void GibbsResample(int i, const vector<double>& postprob)   {
+        (*this)[i] = Random::DrawFromDiscreteDistribution(postprob);
+    }
+
 	void GibbsResample(const vector<vector<double> >& postprobarray)	{
 		for (int i=0; i<GetSize(); i++) {
 		    (*this)[i] = Random::DrawFromDiscreteDistribution(postprobarray[i]);
 		}
-
+        UpdateOccupancies();
 	}
 
-	/*
-	void AddSuffStat(vector<int>& occupancy) const {
+    const vector<int>& GetOccupancies() const   {
+        return occupancy;
+    }
+
+	void UpdateOccupancies() const {
 		if (occupancy.size() != weight.size())  {
 			cerr << "error: non matching size\n";
 			exit(1);
@@ -39,10 +47,10 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 			occupancy[GetVal(i)]++;
 		}
 	}
-	*/
 
 	private:
 	const vector<double>& weight;
+    mutable vector<int> occupancy;
 };
 
 #endif
