@@ -100,8 +100,13 @@ void CodonM2aModel::Allocate()	{
 void CodonM2aModel::Update()    {
 
     blhypermean->SetAllBranches(1.0/lambda);
+    cerr << "check that\n";
+    componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
+    UpdateMatrices();
+    /*
     UpdateMatrices();
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
+    */
     ResampleAlloc();
 }
 
