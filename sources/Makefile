@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2 
+ALL= dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -89,6 +89,10 @@ $(PROGSDIR)/multigenecodonm8$(EXEEXT): MultiGeneCodonM8.o $(OBJS)
 multigeneglobom$(EXEEXT): $(PROGSDIR)/multigeneglobom$(EXEEXT)
 $(PROGSDIR)/multigeneglobom$(EXEEXT): MultiGeneSingleOmega.o $(OBJS)
 	$(CC) MultiGeneSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+dgamom$(EXEEXT): $(PROGSDIR)/dgamom$(EXEEXT)
+$(PROGSDIR)/dgamom$(EXEEXT): DiscGammaSiteOmega.o $(OBJS)
+	$(CC) DiscGammaSiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
