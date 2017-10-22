@@ -23,8 +23,9 @@ template<class T> class ConstArray	{
 
     void ToStream(ostream& os) const    {
         for (int i=0; i<this->GetSize(); i++)  {
-            os << this->GetVal(i);
+            os << this->GetVal(i) << '\t';;
         }
+	os << '\n';
     }
 };
 
