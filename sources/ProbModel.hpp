@@ -33,6 +33,8 @@ class ProbModel {
 
 	template<class C> double SlidingMove(double& x, double tuning, int nrep, double min, double max, LogProbF<C> logprobf, UpdateF<C> updatef, C* This) {
     
+        // C* This = dynamic_cast<C*>(this);
+
         double nacc = 0;
         double ntot = 0;
         for (int rep=0; rep<nrep; rep++)	{

@@ -1,10 +1,9 @@
 
 #include "SingleOmegaModel.hpp"
-#include "MultiGeneMPIModule.hpp"
 #include "Parallel.hpp"
-#include "ProbModel.hpp"
+#include "MultiGeneProbModel.hpp"
 
-class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
+class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     private:
 
@@ -44,7 +43,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs) : MultiGeneMPIModule(inmyid,innprocs) {
+    MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -261,7 +260,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     // Moves
     //-------------------
 
-    void MasterMove() {
+    void MasterMove() override {
 
 		int nrep = 30;
 
@@ -286,7 +285,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneMPIModule, public ProbModel {
     }
 
     // slave move
-    void SlaveMove() {
+    void SlaveMove() override {
 
         GeneResampleSub(1.0);
 
