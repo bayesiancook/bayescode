@@ -312,6 +312,12 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 		return total;
 	}
 
+    double GetMeanInvShapeMarginalLogProb(double mean, double invshape) const    {
+        double alpha = 1.0 / invshape;
+        double beta = alpha / mean;
+        return GetMarginalLogProb(alpha,beta);
+    }
+
 	double GetMarginalLogProb(double shape, double scale)	const {
 		double total = 0;
 		// factoring out prior factor
