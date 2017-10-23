@@ -8,7 +8,6 @@
 #include "IIDGamma.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
-#include "DiscGamma.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "StickBreakingProcess.hpp"
 
@@ -234,15 +233,7 @@ class DPOmegaModel : public ProbModel {
         total += BranchLengthsLogPrior();
         total += NucRatesLogPrior();
         total += StickBreakingHyperLogPrior();
-        if (std::isnan(total))  {
-            cerr << "sb hyper\n";
-            exit(1);
-        }
         total += StickBreakingLogPrior();
-        if (std::isnan(total))  {
-            cerr << "sb\n";
-            exit(1);
-        }
         total += OmegaHyperLogPrior();
         total += OmegaLogPrior();
         return total;

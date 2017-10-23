@@ -149,6 +149,22 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
+	void AddSuffStat(DirichletSuffStat& suffstat, const vector<int>& occupancy) const {
+		for (int i=0; i<GetSize(); i++)	{
+            if (occupancy[i])   {
+                suffstat.AddSuffStat(GetVal(i));
+            }
+		}
+	}
+
+    void PriorResample(const vector<int>& occupancy) {
+		for (int i=0; i<GetSize(); i++)	{
+            if (! occupancy[i]) {
+                Random::DirichletSample((*this)[i],center,concentration);
+            }
+		}
+    }
+
     double GetMeanEntropy() const   {
 
         double mean = 0;

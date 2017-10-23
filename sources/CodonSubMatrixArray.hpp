@@ -98,6 +98,12 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
     const AAMutSelOmegaCodonSubMatrix& GetVal(int i) const {return *matrixarray[i];}
     AAMutSelOmegaCodonSubMatrix& operator[](int i) {return *matrixarray[i];}
 
+    void Swap(int cat1, int cat2)   {
+        AAMutSelOmegaCodonSubMatrix* tmp = matrixarray[cat1];
+        matrixarray[cat1] = matrixarray[cat2];
+        matrixarray[cat2] = tmp;
+    }
+
 	const GTRSubMatrix& GetNucMatrix() const {return *nucmatrix;}
 
     void UpdateCodonMatrices()  {
