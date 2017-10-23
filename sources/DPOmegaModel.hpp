@@ -321,12 +321,6 @@ class DPOmegaModel : public ProbModel {
         return omegahypersuffstat.GetLogProb(alpha,beta);
     }
 
-    /*
-    double OmegaSuffStatLogProb() const {
-        return componentomegaarray->GetLogProb(*componentomegasuffstatarray);
-    }
-    */
-
     //-------------------
     //  Log probs for MH moves
     //-------------------
