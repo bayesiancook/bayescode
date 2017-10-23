@@ -47,6 +47,9 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
                 if (deltaS != 0) {
                     Q(i,j) *= deltaS / (1.0 - exp(-deltaS));
                 }
+                if (!Synonymous(i, j)) {
+                    Q(i,j) *= GetOmega();
+                }
             } else {
                 Q(i,j) = 0;
             }
