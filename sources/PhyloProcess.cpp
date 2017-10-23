@@ -655,7 +655,7 @@ BranchSitePath* PhyloProcess::ResampleAcceptReject(int maxtrial, int stateup, in
 			// draw waiting time
 			double q = - rate * matrix(state,state);
 			double u = -log (1 - Random::Uniform()) / q;
-			if (isnan(u))	{
+			if (std::isnan(u))	{
 				cerr << "in MatrixSubstitutionProcess:: drawing exponential number: nan\n";
 				cerr << rate << '\t' << q << '\n';
 				exit(1);
