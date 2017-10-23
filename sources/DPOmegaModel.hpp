@@ -234,7 +234,15 @@ class DPOmegaModel : public ProbModel {
         total += BranchLengthsLogPrior();
         total += NucRatesLogPrior();
         total += StickBreakingHyperLogPrior();
+        if (std::isnan(total))  {
+            cerr << "sb hyper\n";
+            exit(1);
+        }
         total += StickBreakingLogPrior();
+        if (std::isnan(total))  {
+            cerr << "sb\n";
+            exit(1);
+        }
         total += OmegaHyperLogPrior();
         total += OmegaLogPrior();
         return total;
@@ -515,7 +523,6 @@ class DPOmegaModel : public ProbModel {
         os << omegainvshape << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
-        cerr << *componentomegaarray << '\n';
 	}
 
 	void Monitor(ostream& os) const {}
