@@ -24,6 +24,12 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 
 	const GTRSubMatrix& GetNucMatrix() const {return *nucmatrix;}
 
+    void Swap(int cat1, int cat2)   {
+        MGOmegaCodonSubMatrix* tmp = matrixarray[cat1];
+        matrixarray[cat1] = matrixarray[cat2];
+        matrixarray[cat2] = tmp;
+    }
+
     void UpdateCodonMatrices()  {
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].SetOmega(omegaarray->GetVal(i));

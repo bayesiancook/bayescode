@@ -416,6 +416,7 @@ class DPOmegaModel : public ProbModel {
         for (int rep=0; rep<10; rep++)  {
             ResampleOmega();
             ResampleAlloc();
+            LabelSwitchingMove();
             ResampleWeights();
         }
     }
@@ -442,6 +443,83 @@ class DPOmegaModel : public ProbModel {
             sitealloc->GibbsResample(i,postprob);
         }
         sitealloc->UpdateOccupancies();
+    }
+
+    void SwapComponents(int cat1, int cat2) {
+        componentomegaarray->Swap(cat1,cat2);
+        componentcodonmatrixarray->Swap(cat1,cat2);
+        weight->SwapComponents(cat1,cat2);
+        sitealloc->SwapComponents(cat1,cat2);
+    }
+
+    void LabelSwitchingMove()   {
+        MoveOccupiedCompAlloc(5);
+        MoveAdjacentCompAlloc(5);
+    }
+
+    double MoveOccupiedCompAlloc(int k0)	{
+
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        const vector<double>& V = weight->GetBetaVariates();
+        const vector<double>& w = weight->GetArray();
+
+        int nrep = (int) (k0 * kappa);
+        ResampleWeights();
+        double total = 0.0;
+        int Nocc = GetNcluster();
+        if (Nocc != 1)	{
+            for (int i=0; i<nrep; i++)	{
+                int occupiedComponentIndices[Nocc];
+                int j=0;
+                for (int k=0; k<Ncat; k++)	{
+                    if (occupancy[k] != 0)	{
+                        occupiedComponentIndices[j] = k;
+                        j++;
+                    }
+                }
+                if (j != Nocc)	{
+                    cerr << "error in MoveOccupiedCompAlloc.\n";
+                    exit(1);
+                }
+                int indices[2];
+                Random::DrawFromUrn(indices,2,Nocc);
+                int cat1 = occupiedComponentIndices[indices[0]];
+                int cat2 = occupiedComponentIndices[indices[1]];
+                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log(w[cat1] / w[cat2]);
+                int accepted = (log(Random::Uniform()) < logMetropolis);
+                if (accepted)	{
+                    total += 1.0;
+                    SwapComponents(cat1, cat2);
+                    weight->SwapComponents(cat1,cat2);
+                }
+            }
+            return total /= nrep;
+        }
+        return 0;
+    }
+
+    double MoveAdjacentCompAlloc(int k0)	{
+
+        ResampleWeights();
+        int nrep = (int) (k0 * kappa);
+        
+        double total = 0;
+
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        const vector<double>& V = weight->GetBetaVariates();
+
+        for (int i=0; i<nrep; i++)	{
+            int cat1 = (int)(Random::Uniform() * (Ncat-2));  
+            int cat2 = cat1 + 1;
+            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            int accepted = (log(Random::Uniform()) < logMetropolis);
+            if (accepted)	{
+                total += 1.0;
+                SwapComponents(cat1,cat2);
+            }
+        }
+
+        return total /= nrep;
     }
 
     void ResampleWeights()  {
@@ -508,6 +586,7 @@ class DPOmegaModel : public ProbModel {
 	void TraceHeader(std::ostream& os) const {
 		os << "#logprior\tlnL\tlength\tlambda\t";
         os << "ncluster\t";
+        os << "kappa\t";
 		os << "omegamean\tinvshape\t";
 		os << "statent\t";
 		os << "rrent\n";
@@ -519,6 +598,7 @@ class DPOmegaModel : public ProbModel {
         os << branchlength->GetTotalLength() << '\t';
 		os << lambda << '\t';
         os << GetNcluster() << '\t';
+        os << kappa << '\t';
 		os << omegamean << '\t';
         os << omegainvshape << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';

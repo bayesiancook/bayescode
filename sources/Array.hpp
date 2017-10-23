@@ -99,6 +99,12 @@ template<class T> class SimpleArray : public Array<T>	{
 	const T& GetVal(int index) const /*override*/ {return array[index];}
 	const vector<T>& GetArray() const {return array;}
 
+    void Swap(int cat1, int cat2)   {
+        T tmp = (*this)[cat1];
+        (*this)[cat1] = (*this)[cat2];
+        (*this)[cat2] = tmp;
+    }
+
 	protected:
 	vector<T> array;
 };

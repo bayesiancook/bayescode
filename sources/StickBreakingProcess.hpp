@@ -17,6 +17,17 @@ class StickBreakingProcess : public SimpleArray<double> {
         kappa = inkappa;
     }
 
+    const vector<double>& GetBetaVariates() const {
+        return V;
+    }
+
+    void SwapComponents(int cat1, int cat2)   {
+        Swap(cat1,cat2);
+        double tmp = V[cat1];
+        V[cat1] = V[cat2];
+        V[cat2] = tmp;
+    }
+
     void Sample()   {
         double cumulProduct = 1.0;
         double totweight = 0;
