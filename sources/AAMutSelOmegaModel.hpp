@@ -43,6 +43,7 @@ class AAMutSelOmegaModel : public ProbModel {
     double aainvconc;
     IIDDirichlet* aafitnessarray;
 	AAMutSelOmegaCodonSubMatrixArray* codonmatrixarray;
+    DirichletSuffStat aahypersuffstat;
 
 	PhyloProcess* phyloprocess;
 
@@ -54,7 +55,7 @@ class AAMutSelOmegaModel : public ProbModel {
     // Construction and allocation
     // ------------------
 
-	AAMutSelOmegaModel(string datafile, string treefile)  {
+	AAMutSelOmegaModel(string datafile, string treefile) : aahypersuffstat(20) {
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -215,7 +216,7 @@ class AAMutSelOmegaModel : public ProbModel {
 	}
 
     double AAHyperLogPrior() const {
-        return 0;
+        return -aainvconc;
     }
 
     double AALogPrior() const {
@@ -246,6 +247,10 @@ class AAMutSelOmegaModel : public ProbModel {
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
 
+    double AAHyperSuffStatLogProb() const   {
+        return aahypersuffstat.GetLogProb(aacenter,1.0/aainvconc);
+    }
+
     //-------------------
     //  Log probs for MH moves
     //-------------------
@@ -258,6 +263,11 @@ class AAMutSelOmegaModel : public ProbModel {
     // for moving nuc rates
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + PathSuffStatLogProb();
+    }
+
+    // for moving aa hyper params (aacenter and aainvconc)
+    double AAHyperLogProb() const   {
+        return AAHyperLogPrior() + AAHyperSuffStatLogProb();
     }
 
     //-------------------
@@ -284,6 +294,7 @@ class AAMutSelOmegaModel : public ProbModel {
 			CollectPathSuffStat();
 
             MoveAA();
+            MoveAAHyperParameters();
 			MoveOmega();
 			MoveNucRates();
 		}
@@ -338,6 +349,20 @@ class AAMutSelOmegaModel : public ProbModel {
         UpdateMatrices();
 	}
 
+    void MoveAAHyperParameters()    {
+        aahypersuffstat.Clear();
+        aafitnessarray->AddSuffStat(aahypersuffstat);
+        for (int rep=0; rep<10; rep++)  {
+            ProfileMove(aacenter,0.1,1,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            ProfileMove(aacenter,0.03,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            ProfileMove(aacenter,0.01,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            ScalingMove(aainvconc,1.0,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            ScalingMove(aainvconc,0.3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+        }
+        aafitnessarray->SetCenter(aacenter);
+        aafitnessarray->SetConcentration(1.0/aainvconc);
+    }
+
     double MoveAA() {
         MoveAA(1.0,1,3);
         MoveAA(0.3,1,3);
@@ -385,6 +410,8 @@ class AAMutSelOmegaModel : public ProbModel {
 		os << "#logprior\tlnL\tlength\t";
 		os << "omega\t";
         os << "aaent\t";
+        os << "aainvconc\t";
+        os << "aacenter\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
@@ -395,6 +422,8 @@ class AAMutSelOmegaModel : public ProbModel {
         os << branchlength->GetTotalLength() << '\t';
 		os << omega << '\t';
         os << aafitnessarray->GetMeanEntropy() << '\t';
+        os << aainvconc << '\t';
+        os << Random::GetEntropy(aacenter) << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
