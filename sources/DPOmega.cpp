@@ -128,7 +128,7 @@ int main(int argc, char* argv[])	{
                 else if (s == "-f")	{
                     force = 1;
                 }
-                else if (s == "-dgam") {
+                else if (s == "-ncat") {
                     i++;
                     Ncat = atoi(argv[i]);
                 }
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])	{
             }
         }
         catch(...)	{
-            cerr << "discom -d <alignment> -t <tree> -dgam <ncat> <chainname> \n";
+            cerr << "discom -d <alignment> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
