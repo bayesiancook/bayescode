@@ -81,6 +81,14 @@ class DPOmegaChain : public Chain  {
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
+
+        ofstream pos((name + ".siteom").c_str(), ios_base::app);
+        GetModel()->TraceSiteOmega(pos);
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream pos((name + ".sitepp").c_str());
     }
 };
 

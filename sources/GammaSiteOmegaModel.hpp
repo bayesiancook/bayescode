@@ -376,9 +376,20 @@ class GammaSiteOmegaModel : public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    double GetEmpiricalPosFrac() const {
+        double tot = 0;
+        for (int i=0; i<Nsite; i++) {
+            if ((*omegaarray)[i] > 1.0) {
+                tot++;
+            }
+        }
+        return tot / Nsite;
+    }
+
 	void TraceHeader(std::ostream& os) const {
-		os << "#logprior\tlnL\tlength\tlambda\t";
+		os << "#logprior\tlnL\tlength\t";
 		os << "omegamean\tinvshape\t";
+        os << "posfrac\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
@@ -387,12 +398,20 @@ class GammaSiteOmegaModel : public ProbModel {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-		os << lambda << '\t';
 		os << omegamean << '\t';
         os << omegainvshape << '\t';
+        os << GetEmpiricalPosFrac() << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
+
+    void TraceSiteOmega(ostream& os) const  {
+        for (int i=0; i<Nsite; i++) {
+            os << (*omegaarray)[i] << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
 
 	void Monitor(ostream& os) const {}
 

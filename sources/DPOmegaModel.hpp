@@ -356,7 +356,7 @@ class DPOmegaModel : public ProbModel {
 			ResampleBranchLengths();
 			MoveBranchLengthsHyperParameter();
 
-			CollectPathSuffStat();
+			CollectSitePathSuffStat();
 
 			MoveOmega();
             MoveOmegaHyperParameters();
@@ -385,7 +385,7 @@ class DPOmegaModel : public ProbModel {
 	}
 
     // per site
-	void CollectPathSuffStat()	{
+	void CollectSitePathSuffStat()	{
 		sitepathsuffstatarray->Clear();
 		phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
 	}
@@ -430,13 +430,6 @@ class DPOmegaModel : public ProbModel {
         sitealloc->UpdateOccupancies();
     }
 
-    void SwapComponents(int cat1, int cat2) {
-        componentomegaarray->Swap(cat1,cat2);
-        componentcodonmatrixarray->Swap(cat1,cat2);
-        weight->SwapComponents(cat1,cat2);
-        sitealloc->SwapComponents(cat1,cat2);
-    }
-
     void LabelSwitchingMove()   {
         MoveOccupiedCompAlloc(5);
         MoveAdjacentCompAlloc(5);
@@ -474,8 +467,8 @@ class DPOmegaModel : public ProbModel {
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
-                    SwapComponents(cat1, cat2);
-                    weight->SwapComponents(cat1,cat2);
+                    componentomegaarray->Swap(cat1,cat2);
+                    sitealloc->SwapComponents(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -500,7 +493,9 @@ class DPOmegaModel : public ProbModel {
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
-                SwapComponents(cat1,cat2);
+                componentomegaarray->Swap(cat1,cat2);
+                sitealloc->SwapComponents(cat1,cat2);
+                weight->SwapComponents(cat1,cat2);
             }
         }
 
@@ -568,10 +563,47 @@ class DPOmegaModel : public ProbModel {
         return n;
     }
 
+    double GetMeanOmega() const {
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double mean = 0;
+        for (int i=0; i<Ncat; i++)  {
+            mean += occupancy[i] * componentomegaarray->GetVal(i);
+        }
+        mean /= Nsite;
+        return mean;
+    }
+
+    double GetOmegaRelVar() const {
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double mean = 0;
+        double var = 0;
+        for (int i=0; i<Ncat; i++)  {
+            mean += occupancy[i] * componentomegaarray->GetVal(i);
+            var += occupancy[i] * componentomegaarray->GetVal(i) * componentomegaarray->GetVal(i);
+        }
+        mean /= Nsite;
+        var /= Nsite;
+        var -= mean*mean;
+        var /= mean*mean;
+        return var;
+    }
+
+    double GetEmpiricalPosFrac() const {
+        double tot = 0;
+        for (int i=0; i<Nsite; i++) {
+            if ((*componentomegaarray)[(*sitealloc)[i]] > 1)    {
+                tot++;
+            }
+        }
+        return tot / Nsite;
+    }
+
 	void TraceHeader(std::ostream& os) const {
-		os << "#logprior\tlnL\tlength\tlambda\t";
+		os << "#logprior\tlnL\tlength\t";
+        os << "meanomega\t";
+        os << "relvar\t";
+        os << "posfrac\t";
         os << "ncluster\t";
-        os << "kappa\t";
 		os << "omegamean\tinvshape\t";
 		os << "statent\t";
 		os << "rrent\n";
@@ -581,14 +613,23 @@ class DPOmegaModel : public ProbModel {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-		os << lambda << '\t';
+        os << GetMeanOmega() << '\t';
+        os << GetOmegaRelVar() << '\t';
+        os << GetEmpiricalPosFrac() << '\t';
         os << GetNcluster() << '\t';
-        os << kappa << '\t';
 		os << omegamean << '\t';
         os << omegainvshape << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
+
+    void TraceSiteOmega(ostream& os) const  {
+        for (int i=0; i<Nsite; i++) {
+            os << (*componentomegaarray)[(*sitealloc)[i]] << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
 
 	void Monitor(ostream& os) const {}
 
