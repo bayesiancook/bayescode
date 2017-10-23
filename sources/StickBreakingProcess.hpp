@@ -33,6 +33,7 @@ class StickBreakingProcess : public SimpleArray<double> {
             cumulProduct *= (1 - v);	
             totweight += (*this)[k];
         }
+        cerr << "tot weight : " << totweight << '\n';
     }
 
 
@@ -63,7 +64,7 @@ class StickBreakingProcess : public SimpleArray<double> {
 
     double GetLogProb() const   {
         double total = 0;
-        for (int k=0; k<GetSize(); k++)	{
+        for (int k=0; k<GetSize()-1; k++)	{
             total += Random::logBetaDensity(V[k],1.0,kappa);
         }
         return total;
@@ -71,7 +72,7 @@ class StickBreakingProcess : public SimpleArray<double> {
 
     double GetLogProb(double kappa) const   {
         double total = 0;
-        for (int k=0; k<GetSize(); k++)	{
+        for (int k=0; k<GetSize()-1; k++)	{
             total += Random::logBetaDensity(V[k],1.0,kappa);
         }
         return total;
