@@ -74,8 +74,11 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<AAMutSelOmegaCodonSubMatrix>	{
 
 	public:
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), matrixarray(inaafitnessarray->GetSize())   {
-	// AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), omegaarray(0), matrixarray(inaafitnessarray->GetSize())   {
+        Create();
+	}
+
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         Create();
 	}
 
@@ -84,6 +87,10 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 	}
 		
     void SetOmega(double inomega)   {
+        if (omegaarray) {
+            cerr << "error in AAMutSelOmegaCodonSubMatrixArray::SetOmega\n";
+            exit(1);
+        }
         omega = inomega;
     }
 
@@ -94,19 +101,30 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 	const GTRSubMatrix& GetNucMatrix() const {return *nucmatrix;}
 
     void UpdateCodonMatrices()  {
-		for (int i=0; i<GetSize(); i++)	{
-            (*this)[i].SetOmega(omega);
-            // (*this)[i].SetOmega(omegaarray->GetVal(i));
-            (*this)[i].CorruptMatrix();
-		}
+        if (omegaarray) {
+            for (int i=0; i<GetSize(); i++)	{
+                (*this)[i].SetOmega(omegaarray->GetVal(i));
+                (*this)[i].CorruptMatrix();
+            }
+        }
+        else    {
+            for (int i=0; i<GetSize(); i++)	{
+                (*this)[i].SetOmega(omega);
+                (*this)[i].CorruptMatrix();
+            }
+        }
     }
 
 	private:
 
     void Create()   {
 		for (int i=0; i<GetSize(); i++)	{
-			matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace,nucmatrix,aafitnessarray->GetVal(i),omega);
-			// matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace,nucmatrix,aafitnessarray->GetVal(i),omegaarray->GetVal(i));
+            if (omegaarray) {
+                matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace,nucmatrix,aafitnessarray->GetVal(i),omegaarray->GetVal(i));
+            }
+            else    {
+                matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace,nucmatrix,aafitnessarray->GetVal(i),omega);
+            }
 		}
     }
 
@@ -120,8 +138,8 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 	const CodonStateSpace* codonstatespace;
 	const GTRSubMatrix* nucmatrix;
     const Array<vector<double> >* aafitnessarray;
-	// const Array<double>* omegaarray;
     double omega;
+	const Array<double>* omegaarray;
     vector<AAMutSelOmegaCodonSubMatrix*> matrixarray;
 };
 
