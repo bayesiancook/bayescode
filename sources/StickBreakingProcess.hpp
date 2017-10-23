@@ -44,7 +44,6 @@ class StickBreakingProcess : public SimpleArray<double> {
             cumulProduct *= (1 - v);	
             totweight += (*this)[k];
         }
-        cerr << "tot weight : " << totweight << '\n';
     }
 
 

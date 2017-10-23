@@ -84,6 +84,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 		Nsite = codondata->GetNsite();    // # columns
 		Ntaxa = codondata->GetNtaxa();
 
+        Ncat = inNcat;
+
 		std::cerr << "-- Number of sites: " << Nsite << std::endl;
 
 		taxonset = codondata->GetTaxonSet();
@@ -386,7 +388,6 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
 	void MoveOmega()	{
 
-        // CollectComponentPathSuffStat();
 		omegasuffstat.Clear();
 		omegasuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
         double alpha = 1.0 / omegahyperinvshape;
@@ -397,16 +398,12 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
 	void MoveNucRates()	{
 
-        // UpdateMatrices();
-
         ProfileMove(nucrelrate,0.1,1,3,&AAMutSelSBDPOmegaModel::NucRatesLogProb,&AAMutSelSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucrelrate,0.03,3,3,&AAMutSelSBDPOmegaModel::NucRatesLogProb,&AAMutSelSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucrelrate,0.01,3,3,&AAMutSelSBDPOmegaModel::NucRatesLogProb,&AAMutSelSBDPOmegaModel::UpdateMatrices,this);
 
         ProfileMove(nucstat,0.1,1,3,&AAMutSelSBDPOmegaModel::NucRatesLogProb,&AAMutSelSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucstat,0.01,1,3,&AAMutSelSBDPOmegaModel::NucRatesLogProb,&AAMutSelSBDPOmegaModel::UpdateMatrices,this);
-
-        UpdateMatrices();
 	}
 
     void MoveAAHyperParameters()    {
@@ -423,6 +420,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         componentaafitnessarray->SetCenter(aacenter);
         componentaafitnessarray->SetConcentration(1.0/aainvconc);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
+        componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
     }
 
     void MoveAAMixture()    {
@@ -432,6 +430,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
             ResampleAlloc();
             LabelSwitchingMove();
             ResampleWeights();
+            UpdateCodonMatrices();
+            CollectComponentPathSuffStat();
         }
     }
 
@@ -440,6 +440,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         MoveAAProfiles(0.3,1,3);
         MoveAAProfiles(0.1,3,3);
         MoveAAProfiles(0.1,5,3);
+        componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
+        componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
         return 1.0;
     }
 
@@ -477,10 +479,6 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     }
 
     void SwapComponents(int cat1, int cat2) {
-        componentaafitnessarray->Swap(cat1,cat2);
-        componentcodonmatrixarray->Swap(cat1,cat2);
-        weight->SwapComponents(cat1,cat2);
-        sitealloc->SwapComponents(cat1,cat2);
     }
 
     void LabelSwitchingMove()   {
@@ -520,8 +518,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
-                    SwapComponents(cat1, cat2);
-                    weight->SwapComponents(cat1,cat2);
+                    componentaafitnessarray->Swap(cat1,cat2);
+                    sitealloc->SwapComponents(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -546,7 +544,9 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
-                SwapComponents(cat1,cat2);
+                componentaafitnessarray->Swap(cat1,cat2);
+                sitealloc->SwapComponents(cat1,cat2);
+                weight->SwapComponents(cat1,cat2);
             }
         }
 
@@ -578,28 +578,31 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 		double nacc = 0;
 		double ntot = 0;
 		double bk[Naa];
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
         for (int i=0; i<Ncat; i++) {
-            vector<double>& aa = (*componentaafitnessarray)[i];
-            for (int rep=0; rep<nrep; rep++)	{
-                for (int l=0; l<Naa; l++)	{
-                    bk[l] = aa[l];
-                }
-                double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
-                double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
-                deltalogprob += loghastings;
-                UpdateCodonMatrix(i);
-                deltalogprob += AALogPrior(i) + PathSuffStatLogProb(i);
-                int accepted = (log(Random::Uniform()) < deltalogprob);
-                if (accepted)	{
-                    nacc ++;
-                }
-                else	{
+            if (occupancy[i])   {
+                vector<double>& aa = (*componentaafitnessarray)[i];
+                for (int rep=0; rep<nrep; rep++)	{
                     for (int l=0; l<Naa; l++)	{
-                        aa[l] = bk[l];
+                        bk[l] = aa[l];
                     }
+                    double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
+                    double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
+                    deltalogprob += loghastings;
                     UpdateCodonMatrix(i);
+                    deltalogprob += AALogPrior(i) + PathSuffStatLogProb(i);
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted)	{
+                        nacc ++;
+                    }
+                    else	{
+                        for (int l=0; l<Naa; l++)	{
+                            aa[l] = bk[l];
+                        }
+                        UpdateCodonMatrix(i);
+                    }
+                    ntot++;
                 }
-                ntot++;
             }
         }
 		return nacc/ntot;
@@ -626,8 +629,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
 		os << omega << '\t';
-        os << "ncluster\t";
-        os << "kappa\t";
+        os << GetNcluster() << '\t';
+        os << kappa << '\t';
         os << componentaafitnessarray->GetMeanEntropy() << '\t';
         os << aainvconc << '\t';
         os << Random::GetEntropy(aacenter) << '\t';
