@@ -661,7 +661,7 @@ BranchSitePath* PhyloProcess::ResampleAcceptReject(int maxtrial, int stateup, in
 				exit(1);
 			}
 		
-			if (isinf(u))	{
+			if (std::isinf(u))	{
 				cerr << "in MatrixSubstitutionProcess:: drawing exponential number: inf\n";
 				cerr << rate << '\t' << q << '\n';
 				cerr << totaltime << '\n';

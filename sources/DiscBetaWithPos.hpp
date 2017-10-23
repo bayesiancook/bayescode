@@ -72,11 +72,11 @@ class DiscBetaWithPos : public SimpleArray<double>  {
                 postprob[cat] /= tot;
             }
             double ret = log(tot) + max;
-            if (isinf(ret)) {
+            if (std::isinf(ret)) {
                 cerr << "ret is inf: " << tot << '\t' << max << '\n';
                 exit(1);
             }
-            if (isnan(ret)) {
+            if (std::isnan(ret)) {
                 cerr << "ret is nan: " << tot << '\t' << max << '\n';
                 for (int cat=0; cat<GetSize(); cat++)   {
                     cerr << GetVal(cat) << '\t' << weight[cat] << '\t' << logp[cat] << '\t' << postprob[cat] << '\n';
