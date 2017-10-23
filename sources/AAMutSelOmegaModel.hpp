@@ -328,12 +328,12 @@ class AAMutSelOmegaModel : public ProbModel {
 
         UpdateMatrices();
 
-        ProfileMove(nucrelrate,0.1,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.03,3,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.01,3,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.1,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateMatrices,this);
+        ProfileMove(nucrelrate,0.03,3,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateMatrices,this);
+        ProfileMove(nucrelrate,0.01,3,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateMatrices,this);
 
-        ProfileMove(nucstat,0.1,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucstat,0.01,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucstat,0.1,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateMatrices,this);
+        ProfileMove(nucstat,0.01,1,3,&AAMutSelOmegaModel::NucRatesLogProb,&AAMutSelOmegaModel::UpdateMatrices,this);
 
         UpdateMatrices();
 	}
@@ -360,7 +360,7 @@ class AAMutSelOmegaModel : public ProbModel {
                 double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
                 deltalogprob += loghastings;
                 UpdateCodonMatrix(i);
-                deltalogprob += PathSuffStatLogProb(i);
+                deltalogprob += AALogPrior(i) + PathSuffStatLogProb(i);
                 int accepted = (log(Random::Uniform()) < deltalogprob);
                 if (accepted)	{
                     nacc ++;
