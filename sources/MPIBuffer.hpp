@@ -124,5 +124,8 @@ template<class T> T& operator +=(T& t, const MPIBuffer& buffer) {
 template<> double& operator +=(double& d, const MPIBuffer& buffer);
 template<> int& operator +=(int& i, const MPIBuffer& buffer);
 
+template<> vector<int>& operator += (vector<int>& v, const MPIBuffer& buffer);
+template<> vector<double>& operator += (vector<double>& v, const MPIBuffer& buffer);
+
 #endif
 
