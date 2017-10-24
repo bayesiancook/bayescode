@@ -80,6 +80,14 @@ class AAMutSelM2aChain : public Chain  {
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
+
+        ofstream pospp((name + ".sitepp").c_str(), ios_base::app);
+        GetModel()->TracePostProb(pospp);
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream pospp((name + ".sitepp").c_str());
     }
 };
 
