@@ -88,7 +88,7 @@ class DPOmegaChain : public Chain  {
 
     void MakeFiles(int force) override {
         Chain::MakeFiles(force);
-        ofstream pos((name + ".sitepp").c_str());
+        ofstream pos((name + ".siteom").c_str());
     }
 };
 
