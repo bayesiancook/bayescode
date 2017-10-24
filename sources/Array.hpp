@@ -92,6 +92,7 @@ template<class T> class SimpleArray : public Array<T>	{
 
 	public:
 	SimpleArray(int insize) : array(insize) {}
+    SimpleArray(int insize, const T& initval) : array(insize,initval) {}
 	virtual ~SimpleArray() {}
 
 	int GetSize() const /*override*/ {return array.size();}
