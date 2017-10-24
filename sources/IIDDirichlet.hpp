@@ -20,6 +20,10 @@ class DirichletSuffStat : public SuffStat	{
         n = 0;
 	}
 
+    int GetDim()    {
+        return (int) sumlog.size();
+    }
+
     void AddSuffStat(const vector<double>& pi)  {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             if (pi[i] <= 0) {
@@ -104,14 +108,52 @@ class DirichletSuffStat : public SuffStat	{
 class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
 
     public:
-    DirichletSuffStatArray(int insize, int indim) : SimpleArray<DirichletSuffStat>(insize,DirichletSuffStat(indim)) {}
+    DirichletSuffStatArray(int insize, int indim) : SimpleArray<DirichletSuffStat>(insize,DirichletSuffStat(indim)), dim(indim) {}
     ~DirichletSuffStatArray() {}
+
+    int GetDim() const {
+        return dim;
+    }
 
     void Clear()    {
         for (int i=0; i<GetSize(); i++) {
             (*this)[i].Clear();
         }
     }
+
+    void Add(const DirichletSuffStatArray& from)    {
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
+    DirichletSuffStatArray& operator+=(const DirichletSuffStatArray& from)  {
+        Add(from);
+        return *this;
+    }
+
+    unsigned int GetMPISize() const {return GetDim() * GetSize();}
+
+    void MPIPut(MPIBuffer& buffer) const    {
+		for (int i=0; i<GetSize(); i++)	{
+            buffer << GetVal(i);
+        }
+    }
+
+    void MPIGet(const MPIBuffer& buffer)    {
+		for (int i=0; i<GetSize(); i++)	{
+            buffer >> (*this)[i];
+        }
+    }
+
+    void Add(const MPIBuffer& buffer)   {
+		for (int i=0; i<GetSize(); i++)	{
+            (*this)[i] += buffer;
+        }
+    }
+
+    private:
+    int dim;
 };
 
 class IIDDirichlet: public SimpleArray<vector<double> >	{

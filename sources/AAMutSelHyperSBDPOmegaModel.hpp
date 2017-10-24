@@ -41,23 +41,33 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 	double omega;
 	OmegaSuffStat omegasuffstat;
 	
-    double kappa;
-    StickBreakingProcess* weight;
-	MultinomialAllocationVector* sitealloc;
-
+    // mixture components
+    // set of Ncat Dirichlet densities
+    // centers
     vector<double> aacenterhypercenter;
     double aacenterhyperinvconc;
     IIDDirichlet* componentaacenterarray;
-    ConstMixtureArray<vector<double> >* siteaacenterarray;
-
+    // concentrations
     double aaconchypermean;
     double aaconchyperinvshape;
     IIDGamma* componentaaconcentrationarray;
+    // and associated suffstatarray
+    DirichletSuffStatArray* aahypersuffstatarray;
+
+    // now, a mixture model drawing from this set of Ncat components
+    // weights:
+    double kappa;
+    StickBreakingProcess* weight;
+
+    // site allocations
+	MultinomialAllocationVector* sitealloc;
+    // dispatching across sites
+    ConstMixtureArray<vector<double> >* siteaacenterarray;
     ConstMixtureArray<double>* siteaaconcentrationarray;
 
+    // aa fitness arrays:w
+    //
     MultiDirichlet* aafitnessarray;
-
-    DirichletSuffStatArray* aahypersuffstatarray;
 
 	AAMutSelOmegaCodonSubMatrixArray* codonmatrixarray;
 
@@ -67,6 +77,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
     int Ncat;
 
+    int fixhypermix;
+
 	public:
 
     //-------------------
@@ -74,6 +86,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     // ------------------
 
 	AAMutSelHyperSBDPOmegaModel(string datafile, string treefile, int inNcat) {
+
+        fixhypermix = 0;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -106,6 +120,10 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 		// Allocate();
 	}
 
+    void SetFixAAHyperMix(int inmix)    {
+        fixhypermix = inmix;
+    }
+
     void Unfold()   {
 
 		cerr << "-- unfold\n";
@@ -130,6 +148,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
+        // mixture components
         aacenterhypercenter.assign(Naa,1.0/Naa);
         aacenterhyperinvconc = 1.0/Naa;
         componentaacenterarray = new IIDDirichlet(Ncat,aacenterhypercenter,1.0/aacenterhyperinvconc);
@@ -144,16 +163,22 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
             (*componentaaconcentrationarray)[k] = 20.0;
         }
 
+        // suff stats for mixture components
+        aahypersuffstatarray = new DirichletSuffStatArray(Ncat,Naa);
+
+        // mixture weights
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
+
+        // site allocations
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
+        // site distributors
         siteaacenterarray = new ConstMixtureArray<vector<double> >(componentaacenterarray,sitealloc);
         siteaaconcentrationarray = new ConstMixtureArray<double>(componentaaconcentrationarray,sitealloc);
 
+        // site-specific amino-acid fitness profiles
         aafitnessarray = new MultiDirichlet(siteaacenterarray,siteaaconcentrationarray);
-
-        aahypersuffstatarray = new DirichletSuffStatArray(Ncat,Naa);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -180,6 +205,14 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         return lengthsuffstatarray;
     }
 
+    const DirichletSuffStatArray* GetAAHyperSuffStatArray() const   {
+        return aahypersuffstatarray;
+    }
+
+    const vector<int>& GetOccupancies() const   {
+        return sitealloc->GetOccupancies();
+    }
+
     //-------------------
     // Setting and updating
     // ------------------
@@ -196,6 +229,13 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
+    }
+
+    void SetAAHyperMixture(const ConstArray<vector<double> >& incomponentaacenterarray, const ConstArray<double>& incomponentaaconcentrationarray, const ConstArray<double>& inweight) {
+
+        componentaacenterarray->Copy(incomponentaacenterarray);
+        componentaaconcentrationarray->Copy(incomponentaaconcentrationarray);
+        weight->Copy(inweight);
     }
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
@@ -334,9 +374,6 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         return NucRatesLogPrior() + PathSuffStatLogProb();
     }
 
-    // for moving aa fitness array?
-    // recompute PathSuffStatLogProb(i)
-    //
     // for moving aa hyper params (aacenter and aainvconc)
     // for component k of the mixture
     double AAHyperLogProb(int k) const   {
@@ -371,8 +408,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
 			CollectPathSuffStat();
 
-            MoveAA();
-            MoveAAHyperMixture();
+            MoveAA(3);
+
 			MoveNucRates();
 			MoveOmega();
 		}
@@ -427,19 +464,29 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         UpdateMatrices();
 	}
 
-    void MoveAAHyperMixture()   {
+    void MoveAA(int nrep)   {
 
+        for (int rep=0; rep<nrep; rep++)    {
+            MoveAAFitness();
+            ResampleAlloc();
+            if (! fixhypermix)  {
+                MoveAAHyperMixture();
+            }
+        }
+    }
+
+    void MoveAAHyperMixture()   {
         for (int rep=0; rep<10; rep++)  {
             MoveAAHyperMixtureComponents();
-            ResampleAlloc();
             LabelSwitchingMove();
             ResampleWeights();
+            MoveKappa();
         }
     }
 
     void MoveAAHyperMixtureComponents() {
 
-        CollectComponentHyperSuffStats();
+        CollectAAHyperSuffStat();
 
         for (int k=0; k<Ncat; k++)  {
             for (int rep=0; rep<3; rep++)    {
@@ -451,7 +498,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         }
     }
 
-    void CollectComponentHyperSuffStats()   {
+    void CollectAAHyperSuffStat()   {
         aahypersuffstatarray->Clear();
         aafitnessarray->AddSuffStat(*aahypersuffstatarray,*sitealloc);
     }
@@ -630,15 +677,15 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         return n;
     }
 
-    double MoveAA() {
-        MoveAA(1.0,1,3);
-        MoveAA(0.3,1,3);
-        MoveAA(0.1,3,3);
-        MoveAA(0.1,5,3);
+    double MoveAAFitness() {
+        MoveAAFitness(1.0,1,3);
+        MoveAAFitness(0.3,1,3);
+        MoveAAFitness(0.1,3,3);
+        MoveAAFitness(0.1,5,3);
         return 1.0;
     }
 
-	double MoveAA(double tuning, int n, int nrep)	{
+	double MoveAAFitness(double tuning, int n, int nrep)	{
 		double nacc = 0;
 		double ntot = 0;
 		double bk[Naa];
