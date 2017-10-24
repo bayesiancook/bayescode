@@ -5,7 +5,7 @@
 
 AAMutSelM2aModel::AAMutSelM2aModel(string datafile, string treefile, double inpi) : aahypersuffstat(20)	{
 
-    std::cerr << "in principal constructor" << std::endl;
+    //std::cerr << "in principal constructor" << std::endl;
 
     blmode = 0;
     nucmode = 0;
@@ -16,7 +16,7 @@ AAMutSelM2aModel::AAMutSelM2aModel(string datafile, string treefile, double inpi
     Nsite = codondata->GetNsite();    // # columns
     Ntaxa = codondata->GetNtaxa();
 
-    // std::cerr << "-- Number of sites: " << Nsite << std::endl;
+    //std::cerr << "-- Number of sites: " << Nsite << std::endl;
 
     taxonset = codondata->GetTaxonSet();
 
@@ -28,6 +28,7 @@ AAMutSelM2aModel::AAMutSelM2aModel(string datafile, string treefile, double inpi
 
     tree->SetIndices();
     Nbranch = tree->GetNbranch();
+    //std::cerr << "end of  principal constructor" << std::endl;
 }
 
 
@@ -72,7 +73,7 @@ void AAMutSelM2aModel::Allocate()	{
     componentomegaarray = new MechM2aMix(dposom+1,posw);
     sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
     siteomegaarray = new ConstMixtureArray<double> (componentomegaarray,sitealloc);
-    sitepostprobarray.assign(GetNsite(),vector<double>(3,0));
+    sitepostprobarray.assign(GetNsite(),vector<double>(2,0));
 
     nucrelratehypercenter.assign(Nrr,1.0/Nrr);
     nucrelratehyperinvconc = 1.0 / Nrr;
@@ -92,8 +93,7 @@ void AAMutSelM2aModel::Allocate()	{
     aainvconc = 1.0/Naa;
     aafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc);
 
-    sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,aafitnessarray,componentomegaarray);
-    //componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
+    sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,aafitnessarray,siteomegaarray);
 
     //sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
     //sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
@@ -153,33 +153,21 @@ void AAMutSelM2aModel::SetNucRatesHyperParameters(const std::vector<double>& inn
     nucstathyperinvconc = innucstathyperinvconc;
 }
 
-//void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw)    {
 void AAMutSelM2aModel::SetMixtureParameters(double indposom, double inposw)    {
-    //purom = inpurom;
     dposom = indposom;
-    //purw = inpurw;
     posw = inposw;
-    //componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
     componentomegaarray->SetParameters(dposom+1,posw);
 }
 
-//void CodonM2aModel::GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw)  const {
 void AAMutSelM2aModel::GetMixtureParameters(double& indposom, double& inposw)  const {
-    //inpurom = purom;
     indposom = dposom;
-    //inpurw = purw;
     inposw = posw;
 }
 
-//void CodonM2aModel::SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc)  {
 void AAMutSelM2aModel::SetMixtureHyperParameters(double indposomhypermean, double indposomhyperinvshape, double inpi, double inposwhypermean, double inposwhyperinvconc)  {
-    //puromhypermean = inpuromhypermean;
-    //puromhyperinvconc = inpuromhyperinvconc;
     dposomhypermean = indposomhypermean;
     dposomhyperinvshape = indposomhyperinvshape;
     pi = inpi;
-    //purwhypermean = inpurwhypermean;
-    //purwhyperinvconc = inpurwhyperinvconc;
     poswhypermean = inposwhypermean;
     poswhyperinvconc = inposwhyperinvconc;
 }
@@ -188,15 +176,12 @@ void AAMutSelM2aModel::SetMixtureHyperParameters(double indposomhypermean, doubl
 // Matrices
 //
 
-//void CodonM2aModel::UpdateNucMatrix()	{
 void AAMutSelM2aModel::UpdateNucMatrix()	{
     nucmatrix->CopyStationary(nucstat);
     nucmatrix->CorruptMatrix();
 }
 
-//void CodonM2aModel::UpdateCodonMatrices()	{
 void AAMutSelM2aModel::UpdateCodonMatrices()	{
-    //componentcodonmatrixarray->UpdateCodonMatrices();
     sitecodonmatrixarray->UpdateCodonMatrices();
 }
 
@@ -204,7 +189,6 @@ void AAMutSelM2aModel::UpdateCodonMatrix(int site)    {
     (*sitecodonmatrixarray)[site].CorruptMatrix();
 }
     
-//void CodonM2aModel::UpdateMatrices()   {
 void AAMutSelM2aModel::UpdateMatrices()   {
     UpdateNucMatrix();
     UpdateCodonMatrices();
@@ -217,37 +201,6 @@ void AAMutSelM2aModel::UpdateMatrices()   {
 double AAMutSelM2aModel::GetLogLikelihood() const {
     // return GetIntegratedLogLikelihood();
     return phyloprocess->GetLogProb();
-}
-
-double AAMutSelM2aModel::GetIntegratedLogLikelihood() const {
-
-    int ncat = 3;
-
-    double total = 0;
-    double logp[ncat];
-    const vector<double>& w = componentomegaarray->GetWeights();
-    double max = 0;
-    for (int i=0; i<GetNsite(); i++) {
-        int bkalloc = sitealloc->GetVal(i);
-
-        for (int k=0; k<ncat; k++) {
-            (*sitealloc)[i] = k;
-            logp[k] = phyloprocess->SiteLogLikelihood(i);
-            if ((!k) || (max<logp[k]))  {
-                max = logp[k];
-            }
-        }
-
-        double p = 0;
-        for (int k=0; k<ncat; k++) {
-            p += w[k] * exp(logp[k]-max);
-        }
-        double logl = log(p) + max;
-        total += logl;
-
-        (*sitealloc)[i] = bkalloc;
-    }
-    return total;
 }
 
 //

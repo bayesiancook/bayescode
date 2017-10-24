@@ -39,17 +39,9 @@ class AAMutSelM2aModel : public ProbModel {
 		return (CodonStateSpace*) codondata->GetStateSpace();
     }
 
-    //double GetPurOm() const {
-    //    return purom;
-    //}
-
     double GetDPosOm() const {
         return dposom;
     }
-
-    //double GetPurW() const {
-    //   return purw;
-    //}
 
     double GetPosW() const {
         return posw;
@@ -62,7 +54,6 @@ class AAMutSelM2aModel : public ProbModel {
     bool FixedNucRates() const  {
         return nucmode == 2;
     }
-
 
     //-------------------
     // Setting and updating
@@ -130,11 +121,12 @@ class AAMutSelM2aModel : public ProbModel {
     //-------------------
 
     double GetLogProb() const override {
-        return GetLogPrior() + GetIntegratedLogLikelihood();
+        //return GetLogPrior() + GetIntegratedLogLikelihood();
+        return GetLogPrior() + GetLogLikelihood();
     }
 
 	double GetLogLikelihood() const;
-    double GetIntegratedLogLikelihood() const;
+    //double GetIntegratedLogLikelihood() const;
 
     //-------------------
     // Suff Stat and suffstatlogprobs
