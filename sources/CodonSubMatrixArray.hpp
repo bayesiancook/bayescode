@@ -72,8 +72,8 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
         Create();
 	}
 
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
-        if (aafitnessarray.size() != omegaarray.size()) {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+        if (aafitnessarray->GetSize() != omegaarray->GetSize()) {
             cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: arrays of aafitness and omega values should be of same size\n";
             exit(1);
         }
@@ -156,7 +156,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 	const GTRSubMatrix* nucmatrix;
     const Array<vector<double> >* aafitnessarray;
     double omega;
-	const Array<double>* omegaarray;
+	const ConstArray<double>* omegaarray;
     vector<AAMutSelOmegaCodonSubMatrix*> matrixarray;
 };
 
