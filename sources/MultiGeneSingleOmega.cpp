@@ -70,8 +70,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         }
         is >> every >> until >> size;
 
-        if (modeltype == "SINGLEOMEGA") {
-            model = new SingleOmegaModel(datafile,treefile);
+        if (modeltype == "MULTIGENESINGLEOMEGA") {
+            model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
