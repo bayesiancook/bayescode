@@ -18,7 +18,7 @@ class AAMutSelM2aChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelM2aChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile) {
+    AAMutSelM2aChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])	{
             }
         }
         catch(...)	{
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
+            cerr << "aamutselm2a -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
