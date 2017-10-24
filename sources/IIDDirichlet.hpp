@@ -100,6 +100,20 @@ class DirichletSuffStat : public SuffStat	{
     int n;
 };
 
+
+class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
+
+    public:
+    DirichletSuffStatArray(int insize, int indim) : SimpleArray<DirichletSuffStat>(insize,DirichletSuffStat(indim)) {}
+    ~DirichletSuffStatArray() {}
+
+    void Clear()    {
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].Clear();
+        }
+    }
+};
+
 class IIDDirichlet: public SimpleArray<vector<double> >	{
 
 	public: 
@@ -119,6 +133,15 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
     
     void SetConcentration(double inconcentration)   {
         concentration = inconcentration;
+    }
+
+    void SetUniform()   {
+        int dim = GetDim();
+        for (int i=0; i<GetSize(); i++) {
+            for (int k=0; k<dim; k++)   {
+                (*this)[i][k] = 1.0/dim;
+            }
+        }
     }
 
     int GetDim() const {
@@ -200,6 +223,90 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 	protected:
     vector<double> center;
     double concentration;
+};
+
+class MultiDirichlet: public SimpleArray<vector<double> >	{
+
+	public: 
+
+	MultiDirichlet(const ConstArray<vector<double> >* incenterarray, const ConstArray<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
+        if (centerarray->GetSize() != concentrationarray->GetSize())    {
+            cerr << "error in multi dirichlet: center and concentration arrays should have same size\n";
+            exit(1);
+        }
+
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].assign(dim,0);
+        }
+		Sample();
+	}
+
+	~MultiDirichlet() {}
+
+    int GetDim() const {
+        return dim;
+    }
+
+	void Sample()	{
+		for (int i=0; i<GetSize(); i++)	{
+            Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
+		}
+	}
+
+	double GetLogProb()	const {
+		double total = 0;
+		for (int i=0; i<GetSize(); i++)	{
+			total += GetLogProb(i);
+		}
+		return total;
+	}
+
+	double GetLogProb(int i) const {
+        return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
+	}
+
+    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Array<int>& alloc) {
+		for (int i=0; i<GetSize(); i++)	{
+			suffstatarray[alloc.GetVal(i)].AddSuffStat(GetVal(i));
+		}
+	}
+
+    double GetMeanEntropy() const   {
+
+        double mean = 0;
+        for (int i=0; i<GetSize(); i++) {
+            mean += Random::GetEntropy(GetVal(i));
+        }
+        mean /= GetSize();
+        return mean;
+    }
+
+    double GetMean(int k) const {
+        double m1 = 0;
+        for (int i=0; i<GetSize(); i++) {
+            m1 += GetVal(i)[k];
+        }
+        m1 /= GetSize();
+        return m1;
+    }
+
+    double GetVar(int k) const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i=0; i<GetSize(); i++) {
+            m1 += GetVal(i)[k];
+            m2 += GetVal(i)[k] * GetVal(i)[k];
+        }
+        m1 /= GetSize();
+        m2 /= GetSize();
+        m2 -= m1*m1;
+        return m2;
+    }
+
+	protected:
+    int dim;
+    const ConstArray<vector<double> >* centerarray;
+    const ConstArray<double>* concentrationarray;
 };
 
 #endif

@@ -85,6 +85,13 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 		Ntaxa = codondata->GetNtaxa();
 
         Ncat = inNcat;
+        if (Ncat == -1) {
+            Ncat = Nsite;
+            if (Ncat > 100)    {
+                Ncat = 100;
+            }
+        }
+
 
 		std::cerr << "-- Number of sites: " << Nsite << std::endl;
 
@@ -476,9 +483,6 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         for (int i=0; i<Ncat; i++) {
             postprob[i] /= total;
         }
-    }
-
-    void SwapComponents(int cat1, int cat2) {
     }
 
     void LabelSwitchingMove()   {
