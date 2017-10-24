@@ -607,7 +607,7 @@ void AAMutSelM2aModel::Trace(ostream& os) const {
 
 void AAMutSelM2aModel::TracePostProb(ostream& os) const {
     for (int i=0; i<GetNsite(); i++)    {
-        os << sitepostprobarray[i][2] << '\t';
+        os << sitepostprobarray[i][1] << '\t';
     }
     os << '\n';
 }
