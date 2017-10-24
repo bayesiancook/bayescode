@@ -1,7 +1,7 @@
 #include <cmath>
 #include <fstream>
-#include "Chain.hpp"
 #include "AAMutSelM2aModel.hpp"
+#include "Chain.hpp"
 using namespace std;
 
 class AAMutSelM2aChain : public Chain  {
@@ -18,7 +18,7 @@ class AAMutSelM2aChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelM2aChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
+    AAMutSelM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -99,6 +99,7 @@ int main(int argc, char* argv[])	{
     else    {
         string datafile = "";
         string treefile = "";
+        double pi = 0.1;
         string name = "";
         int force = 1;
         int every = 1;
@@ -151,7 +152,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        AAMutSelM2aChain* chain = new AAMutSelM2aChain(datafile,treefile,every,until,name,force);
+        AAMutSelM2aChain* chain = new AAMutSelM2aChain(datafile,treefile,pi,every,until,name,force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";

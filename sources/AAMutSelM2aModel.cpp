@@ -5,6 +5,8 @@
 
 AAMutSelM2aModel::AAMutSelM2aModel(string datafile, string treefile, double inpi) : aahypersuffstat(20)	{
 
+    std::cerr << "in principal constructor" << std::endl;
+
     blmode = 0;
     nucmode = 0;
     data = new FileSequenceAlignment(datafile);
