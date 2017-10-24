@@ -469,6 +469,7 @@ void AAMutSelM2aModel::CollectOmegaSuffStat()	{
 void AAMutSelM2aModel::ResampleAlloc()	{
     OmegaSuffStatLogProb();
     sitealloc->GibbsResample(sitepostprobarray);
+    UpdateMatrices();
 }
 
 double AAMutSelM2aModel::DrawBetaPosWeight()    {
