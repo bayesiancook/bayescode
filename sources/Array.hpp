@@ -36,6 +36,17 @@ template<class T> class Array : public ConstArray<T>	{
 
 	virtual T& operator[](int index) = 0;
 
+    void Copy(const ConstArray<T>& from)  {
+
+        if (this->GetSize() != from.GetSize())    {
+            cerr << "error: arrays do not have same size\n";
+            exit(1);
+        }
+        for (int i=0; i<this->GetSize(); i++)  {
+            (*this)[i] = from.GetVal(i);
+        }
+    }
+
     void MPIGet(const MPIBuffer& buffer)    {
         for (int i=0; i<this->GetSize(); i++)  {
             buffer >> (*this)[i];
