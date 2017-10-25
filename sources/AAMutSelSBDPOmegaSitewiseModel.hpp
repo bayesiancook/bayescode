@@ -209,6 +209,15 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         //(*componentcodonmatrixarray)[k].CorruptMatrix();
         (*sitecodonmatrixarray)[k].CorruptMatrix();
     }
+    
+    void UpdateComponentCodonMatrix(int k)    {
+        //(*componentcodonmatrixarray)[k].CorruptMatrix();
+        for (int i=0; i<Nsite; i++) {
+            if (sitealloc->GetVal(i) == k)  {
+                (*sitecodonmatrixarray)[i].CorruptMatrix();
+            }
+        }
+    }
 		
     void UpdateMatrices()   {
         UpdateNucMatrix();
@@ -615,7 +624,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
                     double deltalogprob = -AALogPrior(i) - ComponentPathSuffStatLogProb(i);
                     double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
                     deltalogprob += loghastings;
-                    UpdateCodonMatrix(i);
+                    UpdateComponentCodonMatrix(i);
                     deltalogprob += AALogPrior(i) + ComponentPathSuffStatLogProb(i);
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted)	{
