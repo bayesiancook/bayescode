@@ -309,7 +309,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         double tot=0;
         for (int i=0; i<Nsite; i++) {
             if (sitealloc->GetVal(i) == k)   {
-                tot += sitepathsuffstatarray->GetVal(k).GetLogProb(sitecodonmatrixarray->GetVal(k));
+                tot += SitePathSuffStatLogProb(i);
+                //tot += sitepathsuffstatarray->GetVal(i).GetLogProb(sitecodonmatrixarray->GetVal(i));
             }
         }
         return tot;
@@ -496,7 +497,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         for (int i=0; i<Ncat; i++) {
             (*sitealloc)[site] = i;
             UpdateSiteCodonMatrix(site);
-            //double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i));
             double tmp = suffstat.GetLogProb(sitecodonmatrixarray->GetVal(site));
             postprob[i] = tmp;
             if ((!i) || (max < tmp))    {
