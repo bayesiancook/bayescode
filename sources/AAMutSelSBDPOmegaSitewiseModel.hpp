@@ -634,7 +634,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
                         for (int l=0; l<Naa; l++)	{
                             aa[l] = bk[l];
                         }
-                        UpdateCodonMatrix(i);
+                        UpdateComponentCodonMatrix(i);
                     }
                     ntot++;
                 }
