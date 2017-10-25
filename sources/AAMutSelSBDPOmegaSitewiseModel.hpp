@@ -144,7 +144,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         omegahyperinvshape = 1.0;
 		omega = 1.0;
 
-        sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
+        sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, siteaafitnessarray, omega);
 
         //sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
