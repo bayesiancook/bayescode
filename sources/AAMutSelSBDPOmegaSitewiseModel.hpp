@@ -54,10 +54,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     double aainvconc;
     IIDDirichlet* componentaafitnessarray;
     // IIDDirichlet* siteaafitnessarray; // for sitewise version
-    ConstMixtureArray<double>* siteaafitnessarray;
+    ConstMixtureArray<vector <double> >* siteaafitnessarray;
     DirichletSuffStat aahypersuffstat;
-
-    
 
     // (3) site allocations: multinomial given the weights
     // multinomial allocation of sites to components of aa fitness profile distribution
@@ -140,7 +138,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         aainvconc = 1.0/Naa;
         componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,1.0/aainvconc);
         // siteaafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc); // for sitewise
-        siteaafitnessarray = new ConstMixtureArray<double>(Nsite,componentaafitnessarray,sitealloc);
+        siteaafitnessarray = new ConstMixtureArray<vector<double> >(componentaafitnessarray,sitealloc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -299,7 +297,13 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
     double ComponentPathSuffStatLogProb(int k) const {
         //return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k));
-        return sitepathsuffstatarray->GetVal(k).GetLogProb(sitecodonmatrixarray->GetVal(k));
+        double tot=0;
+        for (int i=0; i<Nsite; i++) {
+            if (sitealloc->GetVal(i) == k)   {
+                tot += sitepathsuffstatarray->GetVal(k).GetLogProb(sitecodonmatrixarray->GetVal(k));
+            }
+        }
+        return tot;
     }
 
 	double BranchLengthsHyperSuffStatLogProb() const {
@@ -607,11 +611,12 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
                     for (int l=0; l<Naa; l++)	{
                         bk[l] = aa[l];
                     }
-                    double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
+                    //double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
+                    double deltalogprob = -AALogPrior(i) - ComponentPathSuffStatLogProb(i);
                     double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
                     deltalogprob += loghastings;
                     UpdateCodonMatrix(i);
-                    deltalogprob += AALogPrior(i) + PathSuffStatLogProb(i);
+                    deltalogprob += AALogPrior(i) + ComponentPathSuffStatLogProb(i);
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted)	{
                         nacc ++;
