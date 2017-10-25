@@ -10,7 +10,7 @@
 class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegaCodonSubMatrix>	{
 
 	public:
-	MGOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	MGOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         Create();
 	}
 
@@ -61,18 +61,18 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 
 	const CodonStateSpace* codonstatespace;
 	const GTRSubMatrix* nucmatrix;
-	const Array<double>* omegaarray;
+	const ConstArray<double>* omegaarray;
     vector<MGOmegaCodonSubMatrix*> matrixarray;
 };
 
 class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<AAMutSelOmegaCodonSubMatrix>	{
 
 	public:
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), omegaarray(0), matrixarray(inaafitnessarray->GetSize())   {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), omegaarray(0), matrixarray(inaafitnessarray->GetSize())   {
         Create();
 	}
 
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Array<vector<double> >* inaafitnessarray, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<vector<double> >* inaafitnessarray, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         if (aafitnessarray->GetSize() != omegaarray->GetSize()) {
             cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: arrays of aafitness and omega values should be of same size\n";
             exit(1);
@@ -154,7 +154,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 
 	const CodonStateSpace* codonstatespace;
 	const GTRSubMatrix* nucmatrix;
-    const Array<vector<double> >* aafitnessarray;
+    const ConstArray<vector<double> >* aafitnessarray;
     double omega;
 	const ConstArray<double>* omegaarray;
     vector<AAMutSelOmegaCodonSubMatrix*> matrixarray;
