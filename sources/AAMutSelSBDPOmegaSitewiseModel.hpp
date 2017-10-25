@@ -205,9 +205,9 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 		sitecodonmatrixarray->UpdateCodonMatrices();
 	}
 
-    void UpdateCodonMatrix(int k)    {
+    void UpdateSiteCodonMatrix(int i)    {
         //(*componentcodonmatrixarray)[k].CorruptMatrix();
-        (*sitecodonmatrixarray)[k].CorruptMatrix();
+        (*sitecodonmatrixarray)[i].CorruptMatrix();
     }
     
     void UpdateComponentCodonMatrix(int k)    {
@@ -451,7 +451,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         componentaafitnessarray->SetConcentration(1.0/aainvconc);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
         //componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
-        sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
+        //sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
     }
 
     void MoveAAMixture()    {
@@ -474,7 +474,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         MoveAAProfiles(0.1,5,3);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
         //componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
-        sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
+        //sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
         return 1.0;
     }
 
@@ -485,6 +485,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
             sitealloc->GibbsResample(i,postprob);
         }
         sitealloc->UpdateOccupancies();
+        UpdateCodonMatrices();
     }
 
     void GetAllocPostProb(int site, vector<double>& postprob)    {
@@ -493,8 +494,10 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         const vector<double>& w = weight->GetArray();
         const PathSuffStat& suffstat = sitepathsuffstatarray->GetVal(site);
         for (int i=0; i<Ncat; i++) {
+            (*sitealloc)[site] = i;
+            UpdateSiteCodonMatrix(site);
             //double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i));
-            double tmp = suffstat.GetLogProb(sitecodonmatrixarray->GetVal(i));
+            double tmp = suffstat.GetLogProb(sitecodonmatrixarray->GetVal(site));
             postprob[i] = tmp;
             if ((!i) || (max < tmp))    {
                 max = tmp;
