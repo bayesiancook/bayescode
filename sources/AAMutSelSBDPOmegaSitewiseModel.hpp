@@ -53,7 +53,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     vector<double> aacenter;
     double aainvconc;
     IIDDirichlet* componentaafitnessarray;
-    IIDDirichlet* siteaafitnessarray; // for sitewise version
+    // IIDDirichlet* siteaafitnessarray; // for sitewise version
+    ConstMixtureArray<double>* siteaafitnessarray;
     DirichletSuffStat aahypersuffstat;
 
     
@@ -138,7 +139,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         aacenter.assign(Naa,1.0/Naa);
         aainvconc = 1.0/Naa;
         componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,1.0/aainvconc);
-        siteaafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc); // for sitewise
+        // siteaafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc); // for sitewise
+        siteaafitnessarray = new ConstMixtureArray<double>(Nsite,componentaafitnessarray,sitealloc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -291,7 +293,11 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         return sitepathsuffstatarray->GetLogProb(*sitecodonmatrixarray);
 	}
 
-    double PathSuffStatLogProb(int k) const {
+    double SitePathSuffStatLogProb(int i) const {
+        return sitepathsuffstatarray->GetVal(i).GetLogProb(sitecodonmatrixarray->GetVal(i));
+    }
+
+    double ComponentPathSuffStatLogProb(int k) const {
         //return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k));
         return sitepathsuffstatarray->GetVal(k).GetLogProb(sitecodonmatrixarray->GetVal(k));
     }
