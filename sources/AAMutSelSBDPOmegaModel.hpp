@@ -70,6 +70,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;
 
+    int fixbl;
+
 	public:
 
     //-------------------
@@ -77,6 +79,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     // ------------------
 
 	AAMutSelSBDPOmegaModel(string datafile, string treefile, int inNcat) : aahypersuffstat(20) {
+
+        fixbl = 0;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -175,6 +179,10 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
+    void SetFixBL(int infixbl)    {
+        fixbl = infixbl;
+    }
+
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
@@ -222,8 +230,10 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
     double GetLogPrior() const {
         double total = 0;
-        total += BranchLengthsHyperLogPrior();
-        total += BranchLengthsLogPrior();
+        if (! fixbl)    {
+            total += BranchLengthsHyperLogPrior();
+            total += BranchLengthsLogPrior();
+        }
         total += NucRatesLogPrior();
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
@@ -364,8 +374,10 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
-			ResampleBranchLengths();
-			MoveBranchLengthsHyperParameter();
+            if (! fixbl)    {
+                ResampleBranchLengths();
+                MoveBranchLengthsHyperParameter();
+            }
 
 			CollectSitePathSuffStat();
             CollectComponentPathSuffStat();
@@ -616,6 +628,18 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    double GetMeanAAEntropy() const {
+        return componentaafitnessarray->GetMeanEntropy();
+    }
+
+    double GetNucRREntropy() const  {
+        return Random::GetEntropy(nucrelrate);
+    }
+
+    double GetNucStatEntropy() const    {
+        return Random::GetEntropy(nucrelrate);
+    }
+
 	void TraceHeader(std::ostream& os) const {
 		os << "#logprior\tlnL\tlength\t";
 		os << "omega\t";
@@ -635,7 +659,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 		os << omega << '\t';
         os << GetNcluster() << '\t';
         os << kappa << '\t';
-        os << componentaafitnessarray->GetMeanEntropy() << '\t';
+        os << GetMeanAAEntropy() << '\t';
         os << aainvconc << '\t';
         os << Random::GetEntropy(aacenter) << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';

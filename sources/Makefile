@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
+ALL= multigeneaamutseldp multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -69,6 +69,10 @@ $(PROGSDIR)/chi2$(EXEEXT): Chi2.o $(OBJS)
 aamutseldp$(EXEEXT): $(PROGSDIR)/aamutseldp$(EXEEXT)
 $(PROGSDIR)/aamutseldp$(EXEEXT): AAMutSelSBDPOmega.o $(OBJS)
 	$(CC) AAMutSelSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigeneaamutseldp$(EXEEXT): $(PROGSDIR)/multigeneaamutseldp$(EXEEXT)
+$(PROGSDIR)/multigeneaamutseldp$(EXEEXT): MultiGeneAAMutSelSBDPOmega.o $(OBJS)
+	$(CC) MultiGeneAAMutSelSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneaamutselhdp$(EXEEXT): $(PROGSDIR)/multigeneaamutselhdp$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselhdp$(EXEEXT): MultiGeneAAMutSelHyperSBDPOmega.o $(OBJS)
