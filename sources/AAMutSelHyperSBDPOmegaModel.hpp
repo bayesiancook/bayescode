@@ -725,6 +725,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 		os << "omega\t";
         os << "aaent\t";
         os << "ncluster\t";
+        os << "kappa\t";
         os << "aahypercenter\t";
 		os << "hyperstatent\t";
 		os << "rrent\t";
@@ -738,6 +739,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 		os << omega << '\t';
         os << aafitnessarray->GetMeanEntropy() << '\t';
         os << GetNcluster() << '\t';
+        os << kappa << '\t';
         os << componentaacenterarray->GetMeanEntropy() << '\t';
 		os << componentaaconcentrationarray->GetMean() << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\t';
