@@ -65,9 +65,10 @@ class AAMutSelM2aModel : public ProbModel {
     // mode == 2: global
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode)   {
+    //void SetAcrossGenesModes(int inblmode, int innucmode)   {
+    void SetAcrossGenesModes(int inblmode)   {
         blmode = inblmode;
-        nucmode = innucmode;
+        //nucmode = innucmode;
     }
 
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength);

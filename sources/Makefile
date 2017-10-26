@@ -21,14 +21,14 @@ CPPFLAGS= -std=c++0x -g -Wall -O3 $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp MultiGeneAAMutSelM2aModel.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigeneaamutseldp multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
+ALL= multigeneaamutselm2a multigeneaamutseldp multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -105,6 +105,10 @@ $(PROGSDIR)/codonm8$(EXEEXT): CodonM8.o $(OBJS)
 multigenecodonm2a$(EXEEXT): $(PROGSDIR)/multigenecodonm2a$(EXEEXT)
 $(PROGSDIR)/multigenecodonm2a$(EXEEXT): MultiGeneCodonM2a.o $(OBJS)
 	$(CC) MultiGeneCodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigeneaamutselm2a$(EXEEXT): $(PROGSDIR)/multigeneaamutselm2a$(EXEEXT)
+$(PROGSDIR)/multigeneaamutselm2a$(EXEEXT): MultiGeneAAMutSelM2a.o $(OBJS)
+	$(CC) MultiGeneAAMutSelM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigenecodonm8$(EXEEXT): $(PROGSDIR)/multigenecodonm8$(EXEEXT)
 $(PROGSDIR)/multigenecodonm8$(EXEEXT): MultiGeneCodonM8.o $(OBJS)
