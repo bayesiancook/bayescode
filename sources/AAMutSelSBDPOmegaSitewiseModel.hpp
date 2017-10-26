@@ -398,8 +398,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 			MoveOmega();
 
             MoveAAMixture();
-            MoveAAHyperParameters();
-            MoveKappa();
+            //MoveAAHyperParameters();
+            //MoveKappa();
 		}
 	}
 
@@ -460,11 +460,10 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         for (int rep=0; rep<10; rep++)  {
             MoveAAProfiles();
             ResampleAlloc();
-            LabelSwitchingMove();
-            ResampleWeights();
+            //LabelSwitchingMove();
+            //ResampleWeights();
             UpdateCodonMatrices();
-            //CollectComponentPathSuffStat();
-			CollectSitePathSuffStat();
+			//CollectSitePathSuffStat();
         }
     }
 

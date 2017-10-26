@@ -387,8 +387,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 			MoveOmega();
 
             MoveAAMixture();
-            MoveAAHyperParameters();
-            MoveKappa();
+            //MoveAAHyperParameters();
+            //MoveKappa();
 		}
 	}
 
@@ -447,8 +447,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         for (int rep=0; rep<10; rep++)  {
             MoveAAProfiles();
             ResampleAlloc();
-            LabelSwitchingMove();
-            ResampleWeights();
+            //LabelSwitchingMove();
+            //ResampleWeights();
             UpdateCodonMatrices();
             CollectComponentPathSuffStat();
         }
