@@ -74,12 +74,18 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
 
     void Allocate() {
 
+        // lambda and branchlengths  will be resampled at the global level
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
+
+        // will collect suff stats from genes
         lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
+        // these 2 hyperparameters will be resampled at the global level
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
+
+        // these are just copies from gene-specific omega's
 		omegaarray = new IIDGamma(GetLocalNgene(),1.0,1.0);
 
         lnL = 0;

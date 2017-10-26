@@ -24,12 +24,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 	IIDGamma* omegaarray;
 	GammaSuffStat omegahypersuffstat;
 
-    /*
-	vector<double> nucrelrate;
-	vector<double> nucstat;
-	GTRSubMatrix* nucmatrix;
-    */
-
 	PoissonSuffStatBranchArray* lengthsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 
@@ -52,7 +46,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     StickBreakingProcess* weight;
     vector<int> occupancy;
 
-    // NucPathSuffStat nucpathsuffstat;
     std::vector<AAMutSelHyperSBDPOmegaModel*> geneprocess;
 
     double lnL;
@@ -97,16 +90,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
         lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-
-        /*
-        nucrelrate.assign(Nrr,0);
-        Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
-
-        nucstat.assign(Nnuc,0);
-        Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
-
-        nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
-        */
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -215,10 +198,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         os << componentaacenterarray->GetMeanEntropy() << '\t';
 		os << componentaaconcentrationarray->GetMean() << '\n';
 
-        /*
-		os << Random::GetEntropy(nucstat) << '\t';
-		os << Random::GetEntropy(nucrelrate) << '\n';
-        */
 		os.flush();
     }
 
@@ -229,13 +208,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     //-------------------
     // Updates
     //-------------------
-
-    /*
-	void UpdateNucMatrix()	{
-		nucmatrix->CopyStationary(nucstat);
-		nucmatrix->CorruptMatrix();
-	}
-    */
 
     void NoUpdate() {}
 
@@ -275,12 +247,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         return omegaarray->GetLogProb();
     }
 
-    /*
-    double NucRatesLogPrior() const {
-        return 0;
-    }
-    */
-
     double StickBreakingHyperLogPrior() const   {
         return -kappa/10;
     }
@@ -316,13 +282,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
 
-    // suff stats for moving nuc rates
-    /*
-    double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
-    }
-    */
-
     // suff stats for moving omega hyper parameters
     double OmegaHyperSuffStatLogProb() const {
         double alpha = 1.0 / omegahyperinvshape;
@@ -342,13 +301,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
-
-    // log prob for moving nuc rates
-    /*
-    double NucRatesLogProb() const {
-        return NucRatesLogPrior() + NucRatesSuffStatLogProb();
-    }
-    */
 
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const {
@@ -388,12 +340,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
             ResampleBranchLengths();
             MoveBranchLengthsHyperParameter();
             MasterSendGlobalBranchLengths();
-
-            /*
-            MasterReceiveNucPathSuffStat();
-            MoveNucRates();
-            MasterSendGlobalNucRates();
-            */
         }
 
         MasterReceiveOmega();
@@ -423,11 +369,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
             SlaveSendLengthSuffStat();
             SlaveReceiveGlobalBranchLengths();
-
-            /*
-            SlaveSendNucPathSuffStat();
-            SlaveReceiveGlobalNucRates();
-            */
         }
 
         SlaveSendOmega();
@@ -667,18 +608,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         omegaarray->SetScale(beta);
     }
 
-    /*
-    void MoveNucRates()    {
-
-        ProfileMove(nucrelrate,0.1,1,3,&MultiGeneAAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.03,3,3,&MultiGeneAAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.01,3,3,&MultiGeneAAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::UpdateNucMatrix,this);
-
-        ProfileMove(nucstat,0.1,1,3,&MultiGeneAAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucstat,0.01,1,3,&MultiGeneAAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::UpdateNucMatrix,this);
-    }
-    */
-
     //-------------------
     // MPI send / receive
     //-------------------
@@ -695,22 +624,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->SetBranchLengths(*branchlength);
         }
     }
-
-    // global nuc rates
-
-    /*
-    void MasterSendGlobalNucRates()   {
-        MasterSendGlobal(nucrelrate,nucstat);
-    }
-
-    void SlaveReceiveGlobalNucRates()   {
-
-        SlaveReceiveGlobal(nucrelrate,nucstat);
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->SetNucRates(nucrelrate,nucstat);
-        }
-    }
-    */
 
     // omega (and hyperparameters)
 
@@ -806,8 +719,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         lengthsuffstatarray->Clear();
         MasterReceiveAdditive(*lengthsuffstatarray);
     }
-
-    // nuc rate suff stat
 
     // log probs
 
