@@ -1,4 +1,16 @@
 
+// this is a multigene version of singleomegamodel
+//
+// - branch lengths are shared across genes, and are iid Exponential of rate lambda
+// - nucleotide relative exchangeabilities and stationaries are also shared across genes (uniform Dirichlet)
+// - the array of gene-specific omega's are iid gamma with hyperparameters omegahypermean and omegahyperinvshaped
+//
+// the sequence of MCMC moves is as follows:
+// - genes resample substitution histories, gather path suff stats and move their omega's
+// - master receives the array of omega's across genes, moves their hyperparameters and then broadcast the new value of these hyperparams
+// - master collects branch length suff stats across genes, moves branch lengths and broadcasts their new value
+// - master collects nuc path suffstats across genes, moves nuc rates and broadcasts their new value
+
 #include "SingleOmegaModel.hpp"
 #include "Parallel.hpp"
 #include "MultiGeneProbModel.hpp"
