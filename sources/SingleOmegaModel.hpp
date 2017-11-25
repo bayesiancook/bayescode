@@ -48,11 +48,11 @@ class SingleOmegaModel : public ProbModel {
 
 	// suffstats
 
-    // generic suff stats for substitution paths
+    // suff stats for substitution paths
+    // summed over all branches and over all sites
 	PathSuffStat pathsuffstat;
 
-    // which can be collected across all sites and branches
-    // and summarized in terms of 4x4 suff stats, as a function of nucleotide rates
+    // path suff stat can be summarized in terms of 4x4 suff stats, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
