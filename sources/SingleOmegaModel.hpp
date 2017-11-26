@@ -5,8 +5,9 @@
 // - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
 // - there is one single omega=dN/dS for all sites and across all branches
 //
-// omega has a gamma prior, with hyperparameters omegahypermean and omegahyperinvshaped
-// these hyperparameters are fixed when this model is used in isolation
+// prior over omega:
+// omega ~ Gamma(omegahypermean,omegahyperinvshape)
+// these 2 hyperparameters are fixed when this model is used in isolation
 // on the other hand, this model can be used in a multigene context (see MultiGeneSingeOmegaModel)
 // in which case omegahypermean and hyperinvshape are estimated across genes
 

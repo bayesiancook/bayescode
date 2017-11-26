@@ -3,7 +3,7 @@
 //
 // - branch lengths are shared across genes, and are iid Exponential of rate lambda
 // - nucleotide relative exchangeabilities and stationaries are also shared across genes (uniform Dirichlet)
-// - the array of gene-specific omega's are iid gamma with hyperparameters omegahypermean and omegahyperinvshaped
+// - the array of gene-specific omega's are iid gamma with hyperparameters omegahypermean and omegahyperinvshape
 //
 // the sequence of MCMC moves is as follows:
 // - genes resample substitution histories, gather path suff stats and move their omega's
