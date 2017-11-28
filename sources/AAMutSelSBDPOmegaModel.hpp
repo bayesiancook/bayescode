@@ -11,6 +11,7 @@
 #include "ProbModel.hpp"
 #include "StickBreakingProcess.hpp"
 #include "MultinomialAllocationVector.hpp"
+#include "Chrono.hpp"
 
 class AAMutSelSBDPOmegaModel : public ProbModel {
 
@@ -48,7 +49,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
     // (2) component values: independent aa fitness profiles from Dirichlet distribution
     vector<double> aacenter;
-    double aainvconc;
+    double aaconc;
+    // double aainvconc;
     IIDDirichlet* componentaafitnessarray;
     DirichletSuffStat aahypersuffstat;
 
@@ -68,6 +70,9 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 	PathSuffStatArray* componentpathsuffstatarray;
 
     int fixbl;
+
+    Chrono aachrono;
+    Chrono totchrono;
 
 	public:
 
@@ -140,8 +145,10 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
         aacenter.assign(Naa,1.0/Naa);
-        aainvconc = 1.0/Naa;
-        componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,1.0/aainvconc);
+        aaconc = ((double) Naa);
+        // aainvconc = 1.0/Naa;
+        componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,aaconc);
+        // componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,1.0/aainvconc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -273,7 +280,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     }
 
     double AAHyperLogPrior() const {
-        return -aainvconc;
+        return Random::logGammaDensity(aaconc,20.0,1.0);
+        // return -aainvconc;
     }
 
     double AALogPrior() const {
@@ -305,7 +313,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 	}
 
     double AAHyperSuffStatLogProb() const   {
-        return aahypersuffstat.GetLogProb(aacenter,1.0/aainvconc);
+        return aahypersuffstat.GetLogProb(aacenter,aaconc);
+        // return aahypersuffstat.GetLogProb(aacenter,1.0/aainvconc);
     }
 
     //-------------------
@@ -322,7 +331,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         return NucRatesLogPrior() + PathSuffStatLogProb();
     }
 
-    // for moving aa hyper params (aacenter and aainvconc)
+    // for moving aa hyper params (aacenter and aaconc)
     double AAHyperLogProb() const   {
         return AAHyperLogPrior() + AAHyperSuffStatLogProb();
     }
@@ -371,6 +380,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
+            totchrono.Start();
             if (! fixbl)    {
                 ResampleBranchLengths();
                 MoveBranchLengthsHyperParameter();
@@ -383,9 +393,12 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
 			MoveOmega();
 
+            aachrono.Start();
             MoveAAMixture();
-            //MoveAAHyperParameters();
-            //MoveKappa();
+            aachrono.Stop();
+            MoveAAHyperParameters();
+            MoveKappa();
+            totchrono.Stop();
 		}
 	}
 
@@ -430,22 +443,27 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
             ProfileMove(aacenter,0.1,1,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
             ProfileMove(aacenter,0.03,3,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
             ProfileMove(aacenter,0.01,3,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
+            ScalingMove(aaconc,1.0,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
+            ScalingMove(aaconc,0.3,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
+            /*
             ScalingMove(aainvconc,1.0,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
             ScalingMove(aainvconc,0.3,10,&AAMutSelSBDPOmegaModel::AAHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
+            */
         }
         componentaafitnessarray->SetCenter(aacenter);
-        componentaafitnessarray->SetConcentration(1.0/aainvconc);
+        componentaafitnessarray->SetConcentration(aaconc);
+        // componentaafitnessarray->SetConcentration(1.0/aainvconc);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
         componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
     }
 
     void MoveAAMixture()    {
 
-        for (int rep=0; rep<10; rep++)  {
+        for (int rep=0; rep<3; rep++)  {
             MoveAAProfiles();
             ResampleAlloc();
-            //LabelSwitchingMove();
-            //ResampleWeights();
+            LabelSwitchingMove();
+            ResampleWeights();
             UpdateCodonMatrices();
             CollectComponentPathSuffStat();
         }
@@ -453,8 +471,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
     double MoveAAProfiles() {
         MoveAAProfiles(1.0,1,3);
-        MoveAAProfiles(0.3,1,3);
-        MoveAAProfiles(0.1,3,3);
+        MoveAAProfiles(1.0,3,3);
+        MoveAAProfiles(0.3,3,3);
         MoveAAProfiles(0.1,5,3);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
         componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
@@ -573,6 +591,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     void MoveKappa()    {
         ScalingMove(kappa,1.0,10,&AAMutSelSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
         ScalingMove(kappa,0.3,10,&AAMutSelSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelSBDPOmegaModel::NoUpdate,this);
+        weight->SetKappa(kappa);
     }
 
     int GetNcluster() const {
@@ -643,7 +662,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         os << "ncluster\t";
         os << "kappa\t";
         os << "aaent\t";
-        os << "aainvconc\t";
+        os << "aaconc\t";
         os << "aacenter\t";
 		os << "statent\t";
 		os << "rrent\n";
@@ -652,18 +671,22 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 	void Trace(ostream& os) const {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
+        // 3x: per coding site (and not per nucleotide site)
+        os << 3*branchlength->GetTotalLength() << '\t';
 		os << omega << '\t';
         os << GetNcluster() << '\t';
         os << kappa << '\t';
         os << GetMeanAAEntropy() << '\t';
-        os << aainvconc << '\t';
+        os << aaconc << '\t';
         os << Random::GetEntropy(aacenter) << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
 
-	void Monitor(ostream& os) const {}
+	void Monitor(ostream& os) const {
+        os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
+        os << "prop time in aa moves: " << aachrono.GetTime() / totchrono.GetTime() << '\n';
+    }
 
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) const {}

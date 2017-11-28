@@ -198,7 +198,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 	void UpdateCodonMatrices()	{
         //componentcodonmatrixarray->SetOmega(omega);
         sitecodonmatrixarray->SetOmega(omega);
-		//componentcodonmatrixarray->UpdateCodonMatrices();
 		sitecodonmatrixarray->UpdateCodonMatrices();
 	}
 
@@ -448,8 +447,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         componentaafitnessarray->SetCenter(aacenter);
         componentaafitnessarray->SetConcentration(1.0/aainvconc);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
-        //componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
-        //sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
     }
 
     void MoveAAMixture()    {
@@ -470,8 +467,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         MoveAAProfiles(0.1,3,3);
         MoveAAProfiles(0.1,5,3);
         componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
-        //componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
-        //sitecodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
         return 1.0;
     }
 

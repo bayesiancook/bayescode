@@ -62,8 +62,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     ConstMixtureArray<vector<double> >* siteaacenterarray;
     ConstMixtureArray<double>* siteaaconcentrationarray;
 
-    // aa fitness arrays:w
-    //
+    // aa fitness arrays
     MultiDirichlet* aafitnessarray;
 
 	AAMutSelOmegaCodonSubMatrixArray* codonmatrixarray;
@@ -660,6 +659,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     void MoveKappa()    {
         ScalingMove(kappa,1.0,10,&AAMutSelHyperSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelHyperSBDPOmegaModel::NoUpdate,this);
         ScalingMove(kappa,0.3,10,&AAMutSelHyperSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelHyperSBDPOmegaModel::NoUpdate,this);
+        weight->SetKappa(kappa);
     }
 
     int GetNcluster() const {
@@ -732,7 +732,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 	void Trace(ostream& os) const {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
+        // 3x: per coding site (and not per nucleotide site)
+        os << 3*branchlength->GetTotalLength() << '\t';
 		os << omega << '\t';
         os << aafitnessarray->GetMeanEntropy() << '\t';
         os << GetNcluster() << '\t';
