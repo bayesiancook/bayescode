@@ -390,7 +390,6 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
             CollectComponentPathSuffStat();
 
 			MoveNucRates();
-
 			MoveOmega();
 
             aachrono.Start();

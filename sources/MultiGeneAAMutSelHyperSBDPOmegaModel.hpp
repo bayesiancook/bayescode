@@ -173,6 +173,32 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     // Traces and Monitors
     //-------------------
 
+    double GetMeanComponentAAConcentration() const {
+
+        return componentaaconcentrationarray->GetMean();
+        /*
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double tot = 0;
+        for (int i=0; i<Ncat; i++)  {
+            tot += occupancy[i] * componentaaconcentrationarray->GetVal(i);
+        }
+        return tot / Nsite;
+        */
+    }
+
+    double GetMeanComponentAAEntropy() const {
+
+        return componentaacenterarray->GetMeanEntropy();
+        /*
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double tot = 0;
+        for (int i=0; i<Ncat; i++)  {
+            tot += occupancy[i] * Random::GetEntropy(componentaacenterarray->GetVal(i));
+        }
+        return tot / Nsite;
+        */
+    }
+
     void TraceHeader(ostream& os) const {
 
         os << "#logprior\tlnL\tlength\t";
@@ -190,13 +216,13 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     void Trace(ostream& os) const {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
+        os << 3*branchlength->GetTotalLength() << '\t';
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
 
         os << GetNcluster() << '\t';
-        os << componentaacenterarray->GetMeanEntropy() << '\t';
-		os << componentaaconcentrationarray->GetMean() << '\n';
+        os << GetMeanComponentAAEntropy() << '\t';
+		os << GetMeanComponentAAConcentration() << '\n';
 
 		os.flush();
     }
@@ -216,7 +242,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
-		double total = 0;
+		double total = GeneLogPrior;
 		total += BranchLengthsHyperLogPrior();
 		total += BranchLengthsLogPrior();
         // total += NucRatesLogPrior();

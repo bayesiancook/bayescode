@@ -11,6 +11,7 @@
 #include "ProbModel.hpp"
 #include "StickBreakingProcess.hpp"
 #include "MultinomialAllocationVector.hpp"
+#include "Chrono.hpp"
 
 class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
@@ -74,6 +75,9 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     int Ncat;
 
     int fixhypermix;
+
+    Chrono totchrono;
+    Chrono aachrono;
 
 	public:
 
@@ -314,6 +318,10 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         double total = 0;
         total += componentaacenterarray->GetLogProb();
         total += componentaaconcentrationarray->GetLogProb();
+        if (isinf(total))   {
+            cerr << "in AAHyperLogPrior: inf\n";
+            exit(1);
+        }
         return total;
     }
 
@@ -399,15 +407,21 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
+            totchrono.Start();
+
 			ResampleBranchLengths();
 			MoveBranchLengthsHyperParameter();
 
 			CollectPathSuffStat();
 
-            MoveAA(3);
-
 			MoveNucRates();
 			MoveOmega();
+
+            aachrono.Start();
+            MoveAA(3);
+            aachrono.Stop();
+            // MoveAAHyper();
+            totchrono.Stop();
 		}
 	}
 
@@ -447,24 +461,26 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 	}
 
 	void MoveNucRates()	{
-
-        UpdateMatrices();
-
         ProfileMove(nucrelrate,0.1,1,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucrelrate,0.03,3,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucrelrate,0.01,3,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
 
         ProfileMove(nucstat,0.1,1,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
         ProfileMove(nucstat,0.01,1,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
-
-        UpdateMatrices();
 	}
+
+    /*
+    void MoveAAHyper()  {
+    }
+    */
 
     void MoveAA(int nrep)   {
 
         for (int rep=0; rep<nrep; rep++)    {
             MoveAAFitness();
-            ResampleAlloc();
+            if (Ncat > 1)   {
+                ResampleAlloc();
+            }
             if (! fixhypermix)  {
                 MoveAAHyperMixture();
             }
@@ -472,11 +488,15 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     void MoveAAHyperMixture()   {
-        for (int rep=0; rep<10; rep++)  {
+        // should be here?? but changes the results under fixed random seed
+        // CollectAAHyperSuffStat();
+        for (int rep=0; rep<3; rep++)  {
             MoveAAHyperMixtureComponents();
-            LabelSwitchingMove();
-            ResampleWeights();
-            MoveKappa();
+            if (Ncat > 1)   {
+                LabelSwitchingMove();
+                ResampleWeights();
+                MoveKappa();
+            }
         }
     }
 
@@ -485,8 +505,9 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         CollectAAHyperSuffStat();
 
         for (int k=0; k<Ncat; k++)  {
-            for (int rep=0; rep<3; rep++)    {
+            for (int rep=0; rep<10; rep++)    {
                 MoveAAHyperCenters(1.0,1);
+                MoveAAHyperCenters(1.0,3);
                 MoveAAHyperCenters(0.3,3);
                 MoveAAHyperConcentrations(1.0);
                 MoveAAHyperConcentrations(0.3);
@@ -662,22 +683,10 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         weight->SetKappa(kappa);
     }
 
-    int GetNcluster() const {
-
-        int n = 0;
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        for (int i=0; i<Ncat; i++)  {
-            if (occupancy[i])    {
-                n++;
-            }
-        }
-        return n;
-    }
-
     double MoveAAFitness() {
         MoveAAFitness(1.0,1,3);
-        MoveAAFitness(0.3,1,3);
-        MoveAAFitness(0.1,3,3);
+        MoveAAFitness(1.0,3,3);
+        MoveAAFitness(0.3,3,3);
         MoveAAFitness(0.1,5,3);
         return 1.0;
     }
@@ -717,14 +726,52 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    int GetNcluster() const {
+
+        int n = 0;
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        for (int i=0; i<Ncat; i++)  {
+            if (occupancy[i])    {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    double GetMeanComponentAAConcentration() const {
+
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double tot = 0;
+        for (int i=0; i<Ncat; i++)  {
+            tot += occupancy[i] * componentaaconcentrationarray->GetVal(i);
+        }
+        return tot / Nsite;
+    }
+
+    double GetMeanComponentAAEntropy() const {
+
+        const vector<int>& occupancy = sitealloc->GetOccupancies();
+        double tot = 0;
+        for (int i=0; i<Ncat; i++)  {
+            tot += occupancy[i] * Random::GetEntropy(componentaacenterarray->GetVal(i));
+        }
+        return tot / Nsite;
+    }
+
 	void TraceHeader(std::ostream& os) const {
 		os << "#logprior\tlnL\tlength\t";
 		os << "omega\t";
         os << "aaent\t";
         os << "ncluster\t";
         os << "kappa\t";
-        os << "aahypercenter\t";
-		os << "hyperstatent\t";
+        /*
+        os << "aaconchypermean\t";
+        os << "aaconchyperinvshape\t";
+        os << "aacenterhypercenterent\t";
+        os << "aacenterhyperinvconc\t";
+        */
+        os << "aacenterent\t";
+		os << "meanaaconc\t";
 		os << "rrent\t";
         os << "statent\n";
 	}
@@ -738,13 +785,22 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         os << aafitnessarray->GetMeanEntropy() << '\t';
         os << GetNcluster() << '\t';
         os << kappa << '\t';
-        os << componentaacenterarray->GetMeanEntropy() << '\t';
-		os << componentaaconcentrationarray->GetMean() << '\t';
+        /*
+        os << aaconchypermean << '\t';
+        os << aaconchyperinvshape << '\t';
+        os << Random::GetEntropy(aacenterhypercenter) << '\t';
+        os << aacenterhyperinvconc << '\t';
+        */
+        os << GetMeanComponentAAEntropy() << '\t';
+		os << GetMeanComponentAAConcentration() << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\t';
 		os << Random::GetEntropy(nucstat) << '\n';
 	}
 
-	void Monitor(ostream& os) const {}
+	void Monitor(ostream& os) const {
+        os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
+        os << "prop time in aa moves: " << aachrono.GetTime() / totchrono.GetTime() << '\n';
+    }
 
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) const {}
