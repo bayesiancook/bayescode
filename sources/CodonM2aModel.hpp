@@ -48,9 +48,6 @@
 #include "MultinomialAllocationVector.hpp"
 #include "ProbModel.hpp"
 
-const int Nrr = Nnuc * (Nnuc-1) / 2;
-const int Nstate = 61;
-
 class CodonM2aModel : public ProbModel {
 
 	public:

@@ -11,9 +11,6 @@
 #include "DiscGamma.hpp"
 #include "MultinomialAllocationVector.hpp"
 
-const int Nrr = Nnuc * (Nnuc-1) / 2;
-const int Nstate = 61;
-
 class DiscGammaSiteOmegaModel : public ProbModel {
 
     // tree and data

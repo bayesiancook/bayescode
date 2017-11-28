@@ -12,9 +12,6 @@
 #include "StickBreakingProcess.hpp"
 #include "MultinomialAllocationVector.hpp"
 
-const int Nrr = Nnuc * (Nnuc-1) / 2;
-const int Nstate = 61;
-
 class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
 	Tree* tree;
@@ -590,7 +587,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     double MoveOccupiedCompAlloc(int k0)	{
 
         const vector<int>& occupancy = sitealloc->GetOccupancies();
-        const vector<double>& V = weight->GetBetaVariates();
+        // const vector<double>& V = weight->GetBetaVariates();
         const vector<double>& w = weight->GetArray();
 
         int nrep = (int) (k0 * kappa);

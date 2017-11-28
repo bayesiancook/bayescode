@@ -39,9 +39,6 @@ license and that you accept its terms.*/
 #include "IIDGamma.hpp"
 #include "IIDDirichlet.hpp"
 
-const int Nrr = Nnuc * (Nnuc - 1) / 2;
-const int Nstate = 61;
-
 class DiffSelModel : public ProbModel {
 
     // -----

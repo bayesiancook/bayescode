@@ -49,7 +49,6 @@
 // in particular, fixing pi to 0 (-pi 0 0) leads to a model without positive selection
 //
 
-#include "CodonM2aModel.hpp"
 #include <cmath>
 #include <fstream>
 #include "MultiGeneCodonM2aModel.hpp"
