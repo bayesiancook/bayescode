@@ -1,4 +1,16 @@
 
+// this is a multigene version of singleomegamodel
+//
+// - branch lengths are shared across genes, and are iid Exponential of rate lambda
+// - nucleotide relative exchangeabilities and stationaries are also shared across genes (uniform Dirichlet)
+// - the array of gene-specific omega's are iid gamma with hyperparameters omegahypermean and omegahyperinvshape
+//
+// the sequence of MCMC moves is as follows:
+// - genes resample substitution histories, gather path suff stats and move their omega's
+// - master receives the array of omega's across genes, moves their hyperparameters and then broadcast the new value of these hyperparams
+// - master collects branch length suff stats across genes, moves branch lengths and broadcasts their new value
+// - master collects nuc path suffstats across genes, moves nuc rates and broadcasts their new value
+
 #include "SingleOmegaModel.hpp"
 #include "Parallel.hpp"
 #include "MultiGeneProbModel.hpp"
@@ -16,25 +28,43 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 	int Ntaxa;
 	int Nbranch;
 
+    // branch lengths are shared across genes
+    // iid expo (gamma of shape 1 and scale lambda)
+    // where lambda is a hyperparameter
 	double lambda;
 	BranchIIDGamma* branchlength;
 	
-	double omegahypermean;
-	double omegahyperinvshape;
-	IIDGamma* omegaarray;
-	GammaSuffStat omegahypersuffstat;
-
+    // nucleotide rates are shared across genes
 	vector<double> nucrelrate;
 	vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
+    // each gene has its own omega
+    // omegaarray[gene], for gene=1..Ngene
+    // iid gamma, with hyperparameters omegahypermean and hyperinvshape
+	double omegahypermean;
+	double omegahyperinvshape;
+	IIDGamma* omegaarray;
+
+    // suffstat for gene-specific omega's
+    // as a function of omegahypermean and omegahyperinvshape
+	GammaSuffStat omegahypersuffstat;
+
+    // suffstats for paths, as a function of branch lengths
 	PoissonSuffStatBranchArray* lengthsuffstatarray;
+    // suff stats for branch lengths, as a function of lambda
 	GammaSuffStat lambdasuffstat;
 
+    // suffstats for paths, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
+
+    // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel*> geneprocess;
 
+    // total log likelihood (summed across all genes)
     double lnL;
+    // total logprior for gene-specific variables (here, omega only)
+    // summed over all genes
     double GeneLogPrior;
 
     public:
@@ -260,23 +290,37 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // Moves
     //-------------------
 
+    // all methods starting with Master are called only by master
+    // for each such method, there is a corresponding method called by slave, and starting with Slave
+    //
+    // all methods starting with Gene are called only be slaves, and do some work across all genes allocated to that slave
+
     void MasterMove() override {
 
 		int nrep = 30;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
+            // collect gene-specific omega's
             MasterReceiveOmega();
+            // move omegahypermean and omegahyperinvshape
             MoveOmegaHyperParameters();
+            // send omega hyperparams to slaves
             MasterSendOmegaHyperParameters();
 
+            // collect pathsuffstats (as a function of branch lengths) across genes
             MasterReceiveLengthSuffStat();
+            // resample branch lengths and hyperparams
             ResampleBranchLengths();
             MoveBranchLengthsHyperParameter();
+            // send branch lengths to slaves
             MasterSendGlobalBranchLengths();
 
+            // collect nucpathsuffstat (i.e. path suff stats as a function of nuc rates) across genes
             MasterReceiveNucPathSuffStat();
+            // resample nuc rates
             MoveNucRates();
+            // send nucrates to slaves
             MasterSendGlobalNucRates();
         }
 

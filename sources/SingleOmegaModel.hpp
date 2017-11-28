@@ -1,4 +1,16 @@
 
+// this is a codon model, with the following structure
+//
+// - branch lengths iid Exponential of rate lambda
+// - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
+// - there is one single omega=dN/dS for all sites and across all branches
+//
+// prior over omega:
+// omega ~ Gamma(omegahypermean,omegahyperinvshape)
+// these 2 hyperparameters are fixed when this model is used in isolation
+// on the other hand, this model can be used in a multigene context (see MultiGeneSingeOmegaModel)
+// in which case omegahypermean and hyperinvshape are estimated across genes
+
 #include "CodonSequenceAlignment.hpp"
 #include "Tree.hpp"
 #include "ProbModel.hpp"
@@ -48,11 +60,11 @@ class SingleOmegaModel : public ProbModel {
 
 	// suffstats
 
-    // generic suff stats for substitution paths
+    // suff stats for substitution paths
+    // summed over all branches and over all sites
 	PathSuffStat pathsuffstat;
 
-    // which can be collected across all sites and branches
-    // and summarized in terms of 4x4 suff stats, as a function of nucleotide rates
+    // path suff stat can be summarized in terms of 4x4 suff stats, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega

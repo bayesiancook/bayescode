@@ -1,4 +1,40 @@
 
+// this is the M2a model of codeml (Muse and Gaut version)
+// this model assumes that the omega_i's across sites (i=1..Nsite)
+// are a mixture with 3 components
+//
+// omega0 < 1, with weight w0 
+// omega1 = 1, with weight w1 
+// omega2 > 1, with weight w2
+//
+// this model is used to test for the presence of positive selection (i.e to test whether w2>0) in a gene
+// and then to select those sites that have a dN/dS > 1 (i.e. that are allocated to the third category of the mixture with high post prob) 
+//
+// here, the model is parameterized as follows:
+// omega0 = purom, 
+// omega1 = 1,
+// omega2 = 1 + dposom,
+// where 0 < purom < 1 and dposom > 0
+// purom has a beta prior (hyperparams: puromhypermean and puromhyperinvconc)
+// dposom has a gamma prior (hyperparams: dposomhypermean and dposomhyperinvshape)
+//
+// the weights of the mixture are parameterized as follows:
+// w0 = purw * (1 - posw)
+// w1 = (1-purw) * (1-posw)
+// w2 = posw
+// where 0<purw<1 and 0<=posw<1
+// purw has a beta prior (hyperparams: purwhypermean and purwhyperinvconc)
+// the prior on posw is a mixture:
+// - with probability 1-pi, posw = 0
+// - with probability pi, 0 < posw < 1, in which case is it from a beta prior (hyperparams: poswhypermean and poswhyperinvconc)
+// thus, setting pi = 0 imposes a model without positive selection
+//
+// in total, the 9 hyperparameters of the mixture of omegas are:
+// puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape
+// purwhypermean, purwhyperinvconc, pi, poswhypermean, poswhyperinvconc
+// in a single-gene context, these hyperparameters are fixed 
+// in a multigene context, they can be either fixed or estimated across genes (see MultiGeneCodonM2aModel)
+
 #include "CodonSequenceAlignment.hpp"
 #include "Tree.hpp"
 #include "ProbModel.hpp"
