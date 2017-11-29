@@ -50,8 +50,13 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
     double lnL;
     double GeneLogPrior;
+    double MeanStatEnt;
+    double MeanAAConc;
+    double MeanAACenterEnt;
 
     int Ncat;
+
+    int fixomega;
 
     public:
 
@@ -59,11 +64,12 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneAAMutSelHyperSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
+    MultiGeneAAMutSelHyperSBDPOmegaModel(string datafile, string intreefile, int inNcat, int infixomega, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
 
         AllocateAlignments(datafile);
         treefile = intreefile;
         Ncat = inNcat;
+        fixomega = infixomega;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -94,9 +100,17 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
 		omegaarray = new IIDGamma(GetLocalNgene(),1.0,1.0);
+        if (fixomega) {
+            for (int i=0; i<GetLocalNgene(); i++)   {
+                (*omegaarray)[i] = 1.0;
+            }
+        }
 
         lnL = 0;
         GeneLogPrior = 0;
+        MeanStatEnt = 0;
+        MeanAAConc = 0;
+        MeanAACenterEnt = 0;
 
         // mixture components
         aacenterhypercenter.assign(Naa,1.0/Naa);
@@ -130,6 +144,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene] = new AAMutSelHyperSBDPOmegaModel(GetLocalGeneName(gene),treefile,Ncat);
                 geneprocess[gene]->SetFixAAHyperMix(1);
+                geneprocess[gene]->SetFixOmega(fixomega);
             }
         }
     }
@@ -139,8 +154,10 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         if (! GetMyid())    {
             MasterSendGlobalBranchLengths();
             // MasterSendGlobalNucRates();
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
+            if (! fixomega) {
+                MasterSendOmegaHyperParameters();
+                MasterSendOmega();
+            }
             MasterSendAAHyperMixture();
             MasterReceiveLogProbs();
         }
@@ -152,8 +169,10 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
             SlaveReceiveGlobalBranchLengths();
             // SlaveReceiveGlobalNucRates();
-            SlaveReceiveOmegaHyperParameters();
-            SlaveReceiveOmega();
+            if (! fixomega) {
+                SlaveReceiveOmegaHyperParameters();
+                SlaveReceiveOmega();
+            }
             SlaveReceiveAAHyperMixture();
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
@@ -173,44 +192,15 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     // Traces and Monitors
     //-------------------
 
-    double GetMeanComponentAAConcentration() const {
-
-        return componentaaconcentrationarray->GetMean();
-        /*
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        double tot = 0;
-        for (int i=0; i<Ncat; i++)  {
-            tot += occupancy[i] * componentaaconcentrationarray->GetVal(i);
-        }
-        return tot / Nsite;
-        */
-    }
-
-    double GetMeanComponentAAEntropy() const {
-
-        return componentaacenterarray->GetMeanEntropy();
-        /*
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        double tot = 0;
-        for (int i=0; i<Ncat; i++)  {
-            tot += occupancy[i] * Random::GetEntropy(componentaacenterarray->GetVal(i));
-        }
-        return tot / Nsite;
-        */
-    }
-
     void TraceHeader(ostream& os) const {
 
         os << "#logprior\tlnL\tlength\t";
         os << "meanomega\t";
         os << "varomega\t";
-        os << "kappa\t";
+        os << "ncluster\t";
+        os << "aastatent\t";
         os << "hypercenter\t";
-        os << "hyperstatalpha\t";
-        /*
-        os << "statent\t";
-        os << "rrent\n";
-        */
+        os << "hyperstatalpha\n";
     }
 
     void Trace(ostream& os) const {
@@ -219,11 +209,10 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         os << 3*branchlength->GetTotalLength() << '\t';
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
-
         os << GetNcluster() << '\t';
-        os << GetMeanComponentAAEntropy() << '\t';
-		os << GetMeanComponentAAConcentration() << '\n';
-
+        os << MeanStatEnt << '\t';
+        os << MeanAAConc << '\t';
+		os << MeanAACenterEnt << '\n';
 		os.flush();
     }
 
@@ -246,8 +235,10 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 		total += BranchLengthsHyperLogPrior();
 		total += BranchLengthsLogPrior();
         // total += NucRatesLogPrior();
-        total += OmegaHyperLogPrior();
-		total += OmegaLogPrior();
+        if (! fixomega) {
+            total += OmegaHyperLogPrior();
+            total += OmegaLogPrior();
+        }
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
         total += AAHyperLogPrior();
@@ -358,9 +349,11 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
             MoveAAHyperMixture();
             MasterSendAAHyperMixture();
 
-            MasterReceiveOmega();
-            MoveOmegaHyperParameters();
-            MasterSendOmegaHyperParameters();
+            if (! fixomega) {
+                MasterReceiveOmega();
+                MoveOmegaHyperParameters();
+                MasterSendOmegaHyperParameters();
+            }
 
             MasterReceiveLengthSuffStat();
             ResampleBranchLengths();
@@ -387,9 +380,11 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
             SlaveSendAAHyperSuffStat();
             SlaveReceiveAAHyperMixture();
 
-            MoveGeneOmegas();
-            SlaveSendOmega();
-            SlaveReceiveOmegaHyperParameters();
+            if (! fixomega) {
+                MoveGeneOmegas();
+                SlaveSendOmega();
+                SlaveReceiveOmegaHyperParameters();
+            }
 
             MoveGeneNucRates();
 
@@ -433,25 +428,27 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    /*
     void MoveAAHyperMixtureHyperParameters()    {
-
     }
+    */
 
     void MoveAAHyperMixture()   {
-        for (int rep=0; rep<10; rep++)  {
+        for (int rep=0; rep<3; rep++)  {
             MoveAAHyperMixtureComponents();
             // LabelSwitchingMove();
             ResampleWeights();
             MoveKappa();
-            MoveAAHyperMixtureHyperParameters();
+            // MoveAAHyperMixtureHyperParameters();
         }
     }
 
     void MoveAAHyperMixtureComponents() {
 
         for (int k=0; k<Ncat; k++)  {
-            for (int rep=0; rep<3; rep++)    {
+            for (int rep=0; rep<10; rep++)    {
                 MoveAAHyperCenters(1.0,1);
+                MoveAAHyperCenters(1.0,3);
                 MoveAAHyperCenters(0.3,3);
                 MoveAAHyperConcentrations(1.0);
                 MoveAAHyperConcentrations(0.3);
@@ -752,20 +749,38 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
         GeneLogPrior = 0;
         lnL = 0;
+        MeanStatEnt = 0;
+        MeanAAConc = 0;
+        MeanAACenterEnt = 0;
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
+            MeanStatEnt += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanAAEntropy();
+            MeanAAConc += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanComponentAAConcentration();
+            MeanAACenterEnt += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanComponentAAEntropy();
         }
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
+        SlaveSendAdditive(MeanStatEnt);
+        SlaveSendAdditive(MeanAAConc);
+        SlaveSendAdditive(MeanAACenterEnt);
     }
 
     void MasterReceiveLogProbs()    {
 
         GeneLogPrior = 0;
-        MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
+        MasterReceiveAdditive(GeneLogPrior);
         MasterReceiveAdditive(lnL);
+        MeanStatEnt = 0;
+        MeanAAConc = 0;
+        MeanAACenterEnt = 0;
+        MasterReceiveAdditive(MeanStatEnt);
+        MasterReceiveAdditive(MeanAAConc);
+        MasterReceiveAdditive(MeanAACenterEnt);
+        MeanStatEnt /= GetTotNsite();
+        MeanAAConc /= GetTotNsite();
+        MeanAACenterEnt /= GetTotNsite();
     }
 };
 

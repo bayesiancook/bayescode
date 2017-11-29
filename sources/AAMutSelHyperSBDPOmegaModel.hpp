@@ -75,6 +75,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     int Ncat;
 
     int fixhypermix;
+    int fixomega;
 
     Chrono totchrono;
     Chrono aachrono;
@@ -88,6 +89,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 	AAMutSelHyperSBDPOmegaModel(string datafile, string treefile, int inNcat) {
 
         fixhypermix = 0;
+        fixomega = 0;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -124,6 +126,14 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         fixhypermix = inmix;
     }
 
+    void SetFixOmega(int inom)  {
+        fixomega = inom;
+    }
+
+    int GetNsite() const    {
+        return Nsite;
+    }
+
     void Unfold()   {
 
 		cerr << "-- unfold\n";
@@ -149,21 +159,28 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
         // mixture components
+        // each component defines a center and a concentration (a Dirichlet density)
+        // componentaacenterarray and componentaaconcentrationarray
+
+        // hyperparameters for centers: fixed for the moment
         aacenterhypercenter.assign(Naa,1.0/Naa);
         aacenterhyperinvconc = 1.0/Naa;
+
         componentaacenterarray = new IIDDirichlet(Ncat,aacenterhypercenter,1.0/aacenterhyperinvconc);
         componentaacenterarray->SetUniform();
 
+        // hyperparameters for the concentrations: fixed for the moment
         aaconchypermean = Naa;
         aaconchyperinvshape = 1.0;
         double alpha = 1.0 / aaconchyperinvshape;
         double beta = alpha / aaconchypermean;
+
         componentaaconcentrationarray = new IIDGamma(Ncat,alpha,beta);
         for (int k=0; k<Ncat; k++)  {
             (*componentaaconcentrationarray)[k] = 20.0;
         }
 
-        // suff stats for mixture components
+        // suff stats for aa fitness arrays, as a function of from mixture components
         aahypersuffstatarray = new DirichletSuffStatArray(Ncat,Naa);
 
         // mixture weights
@@ -276,9 +293,17 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         total += NucRatesLogPrior();
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
+        // if the hyperparameters of the base distribution 
+        // for the component centers and the concentrations
+        // where not fixed
+        // total += AAHyperHyperLogPrior();
         total += AAHyperLogPrior();
         total += AALogPrior();
         total += OmegaLogPrior();
+        if (isinf(total))   {
+            cerr << "in GetLogPrior: inf\n";
+            exit(1);
+        }
         return total;
     }
 
@@ -303,8 +328,12 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     double StickBreakingLogPrior() const    {
-        return weight->GetLogProb(kappa);
-        // return weight->GetMarginalLogProb(sitealloc->GetOccupancies());
+        double ret = weight->GetLogProb(kappa);
+        if (isinf(ret)) {
+            cerr << "in StickBreakingLogPrior: inf\n";
+            exit(1);
+        }
+        return ret;
     }
 
 	// exponential of mean 1
@@ -333,7 +362,12 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     double AALogPrior() const {
-        return aafitnessarray->GetLogProb();
+        double ret = aafitnessarray->GetLogProb();
+        if (isinf(ret)) {
+            cerr << "in AALogPrior: inf\n";
+            exit(1);
+        }
+        return ret;
     }
 
     double AALogPrior(int i) const {
@@ -415,7 +449,9 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 			CollectPathSuffStat();
 
 			MoveNucRates();
-			MoveOmega();
+            if (! fixomega) {
+                MoveOmega();
+            }
 
             aachrono.Start();
             MoveAA(3);
@@ -469,11 +505,6 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         ProfileMove(nucstat,0.01,1,3,&AAMutSelHyperSBDPOmegaModel::NucRatesLogProb,&AAMutSelHyperSBDPOmegaModel::UpdateMatrices,this);
 	}
 
-    /*
-    void MoveAAHyper()  {
-    }
-    */
-
     void MoveAA(int nrep)   {
 
         for (int rep=0; rep<nrep; rep++)    {
@@ -488,8 +519,6 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     void MoveAAHyperMixture()   {
-        // should be here?? but changes the results under fixed random seed
-        // CollectAAHyperSuffStat();
         for (int rep=0; rep<3; rep++)  {
             MoveAAHyperMixtureComponents();
             if (Ncat > 1)   {
@@ -756,6 +785,10 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
             tot += occupancy[i] * Random::GetEntropy(componentaacenterarray->GetVal(i));
         }
         return tot / Nsite;
+    }
+
+    double GetMeanAAEntropy() const {
+        return aafitnessarray->GetMeanEntropy();
     }
 
 	void TraceHeader(std::ostream& os) const {

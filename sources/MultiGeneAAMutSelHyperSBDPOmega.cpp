@@ -13,6 +13,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
     // Chain parameters
     string modeltype, datafile, treefile;
     int Ncat;
+    int fixomega;
 
   public:
     MultiGeneAAMutSelHyperSBDPOmegaModel* GetModel() {
@@ -21,7 +22,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneAAMutSelHyperSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELHYPERSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat) {
+    MultiGeneAAMutSelHyperSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int infixomega, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELHYPERSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), fixomega(infixomega) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -37,7 +38,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelHyperSBDPOmegaModel(datafile,treefile,Ncat,myid,nprocs);
+        model = new MultiGeneAAMutSelHyperSBDPOmegaModel(datafile,treefile,Ncat,fixomega,myid,nprocs);
         if (! myid) {
             cerr << " -- master allocate\n";
         }
@@ -64,6 +65,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> Ncat;
+        is >> fixomega;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -73,7 +75,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELHYPERSBDPOMEGA") {
-            model = new MultiGeneAAMutSelHyperSBDPOmegaModel(datafile,treefile,Ncat,myid,nprocs);
+            model = new MultiGeneAAMutSelHyperSBDPOmegaModel(datafile,treefile,Ncat,fixomega,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -104,6 +106,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
         param_os << Ncat << '\n';
+        param_os << fixomega << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -149,6 +152,7 @@ int main(int argc, char* argv[])	{
         string datafile = "";
         string treefile = "";
         int Ncat = -1;
+        int fixomega = 1;
         string name = "";
         int force = 1;
         int every = 1;
@@ -179,6 +183,12 @@ int main(int argc, char* argv[])	{
                     i++;
                     Ncat = atoi(argv[i]);
                 }
+                else if (s == "-fixomega")  {
+                    fixomega = 1;
+                }
+                else if (s == "-freeomega") {
+                    fixomega = 0;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -205,7 +215,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneAAMutSelHyperSBDPOmegaChain* chain = new MultiGeneAAMutSelHyperSBDPOmegaChain(datafile,treefile,Ncat,every,until,name,force,myid,nprocs);
+        MultiGeneAAMutSelHyperSBDPOmegaChain* chain = new MultiGeneAAMutSelHyperSBDPOmegaChain(datafile,treefile,Ncat,fixomega,every,until,name,force,myid,nprocs);
         if (! myid) {
             cerr << "chain " << name << " started\n";
         }
