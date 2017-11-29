@@ -132,7 +132,7 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
         return *this;
     }
 
-    unsigned int GetMPISize() const {return GetDim() * GetSize();}
+    unsigned int GetMPISize() const {return GetSize() * GetVal(0).GetMPISize();}
 
     void MPIPut(MPIBuffer& buffer) const    {
 		for (int i=0; i<GetSize(); i++)	{
