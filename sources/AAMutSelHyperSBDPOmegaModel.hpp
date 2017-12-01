@@ -713,12 +713,86 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     double MoveAAFitness() {
+        MoveAAGamma(3.0,10);
+        MoveAAGamma(1.0,10);
+        MoveAAGamma(0.3,10);
+        MoveAAGamma(0.1,10);
+        /*
         MoveAAFitness(1.0,1,3);
         MoveAAFitness(1.0,3,3);
         MoveAAFitness(0.3,3,3);
         MoveAAFitness(0.1,5,3);
+        */
         return 1.0;
     }
+
+    double GammaAALogPrior(const vector<double>& x, const vector<double>& aacenter, double aaconc) {
+        double total = 0;
+        for (int l=0; l<Naa; l++)   {
+            total += (aaconc*aacenter[l] -1)*log(x[l]) - x[l] - Random::logGamma(aaconc*aacenter[l]);
+        }
+        return total;
+    }
+
+	double MoveAAGamma(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        for (int i=0; i<Nsite; i++) {
+
+            double aaconc = siteaaconcentrationarray->GetVal(i);
+            const vector<double>& aacenter = siteaacenterarray->GetVal(i);
+            vector<double>& aa = (*aafitnessarray)[i];
+            vector<double> x(Naa,0);
+            double z = Random::sGamma(aaconc);
+            for (int l=0; l<Naa; l++)   {
+                x[l] = z*aa[l];
+            }
+
+            double bkz = z;
+            vector<double> bkx = x;
+            vector<double> bkaa = aa;
+
+            for (int rep=0; rep<nrep; rep++)	{
+
+                double deltalogprob = -GammaAALogPrior(x,aacenter,aaconc) - PathSuffStatLogProb(i);
+
+                double loghastings = 0;
+                z = 0;
+                for (int l=0; l<Naa; l++)   {
+                    double m = tuning * (Random::Uniform() - 0.5);
+                    double e = exp(m);
+                    x[l] *= e;
+                    z += x[l];
+                    loghastings += m;
+                }
+                for (int l=0; l<Naa; l++)   {
+                    aa[l] = x[l]/z;
+                }
+
+                deltalogprob += loghastings;
+
+                UpdateCodonMatrix(i);
+
+                deltalogprob += GammaAALogPrior(x,aacenter,aaconc) + PathSuffStatLogProb(i);
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted)	{
+                    nacc ++;
+                    bkaa = aa;
+                    bkx = x;
+                    bkz = z;
+                }
+                else	{
+                    aa = bkaa;
+                    x = bkx;
+                    z = bkz;
+                    UpdateCodonMatrix(i);
+                }
+                ntot++;
+            }
+        }
+		return nacc/ntot;
+	}
 
 	double MoveAAFitness(double tuning, int n, int nrep)	{
 		double nacc = 0;
