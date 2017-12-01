@@ -31,13 +31,13 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 		}
     }
 
-    void UpdateCodonMatrices(const vector<int>& occupancy)  {
-        if (((int) occupancy.size()) != GetSize())  {
+    void UpdateCodonMatrices(const ConstArray<int>& occupancy)	{
+        if (occupancy.GetSize() != GetSize())	{
             cerr << "error in UpdateCodonMatrices: occupancy vector size does not match array size\n";
             exit(1);
         }
-		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy[i])   {
+	for (int i=0; i<GetSize(); i++)	{
+            if (occupancy.GetVal(i))   {
                 (*this)[i].SetOmega(omegaarray->GetVal(i));
                 (*this)[i].CorruptMatrix();
             }
@@ -113,10 +113,10 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
         }
     }
 
-    void UpdateCodonMatrices(const vector<int>& occupancy)  {
+    void UpdateCodonMatrices(const ConstArray<int>& occupancy)	{
         if (omegaarray) {
             for (int i=0; i<GetSize(); i++)	{
-                if (! occupancy[i]) {
+                if (! occupancy.GetVal(i)) {
                     (*this)[i].SetOmega(omegaarray->GetVal(i));
                     (*this)[i].CorruptMatrix();
                 }
@@ -124,7 +124,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
         }
         else    {
             for (int i=0; i<GetSize(); i++)	{
-                if (! occupancy[i]) {
+                if (! occupancy.GetVal(i)) {
                     (*this)[i].SetOmega(omega);
                     (*this)[i].CorruptMatrix();
                 }

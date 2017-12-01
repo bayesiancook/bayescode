@@ -42,6 +42,7 @@ class DPOmegaModel : public ProbModel {
     // (1) component weights (truncated stick breaking)
     double kappa;
     StickBreakingProcess* weight;
+    OccupancySuffStat* occupancy;
 
     // (2) component values: independent omega values from Gamma distribution
     // of mean omegamean and inverse shape parameter omegainvshape
@@ -147,6 +148,7 @@ class DPOmegaModel : public ProbModel {
 
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
+        occupancy = new OccupancySuffStat(Ncat);
 
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
@@ -179,6 +181,7 @@ class DPOmegaModel : public ProbModel {
     }
 
     void Update()   {
+        UpdateOccupancies();
         UpdateMatrices();
     }
 
@@ -210,7 +213,7 @@ class DPOmegaModel : public ProbModel {
 	}
 
     void UpdateCodonMatrices()  {
-        componentcodonmatrixarray->UpdateCodonMatrices(sitealloc->GetOccupancies());
+        componentcodonmatrixarray->UpdateCodonMatrices(*occupancy);
     }
 
     void UpdateMatrices()   {
@@ -265,7 +268,6 @@ class DPOmegaModel : public ProbModel {
 
     double StickBreakingLogPrior() const    {
         return weight->GetLogProb(kappa);
-        // return weight->GetMarginalLogProb(sitealloc->GetOccupancies());
     }
 
     double OmegaHyperLogPrior() const   {
@@ -373,7 +375,6 @@ class DPOmegaModel : public ProbModel {
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
-
 		lambdasuffstat.Clear();
 		branchlength->AddSuffStat(lambdasuffstat);
         ScalingMove(lambda,1.0,10,&DPOmegaModel::BranchLengthsHyperLogProb,&DPOmegaModel::NoUpdate,this);
@@ -403,6 +404,11 @@ class DPOmegaModel : public ProbModel {
         }
     }
 
+    void UpdateOccupancies()    {
+        occupancy->Clear();
+        sitealloc->AddSuffStat(*occupancy);
+    }
+
     void CollectSiteOmegaSuffStat() {
         siteomegasuffstatarray->Clear();
         siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
@@ -424,7 +430,7 @@ class DPOmegaModel : public ProbModel {
             componentomegaarray->GetAllocPostProb(siteomegasuffstatarray->GetVal(i),weight->GetArray(),postprob);
             sitealloc->GibbsResample(i,postprob);
         }
-        sitealloc->UpdateOccupancies();
+        UpdateOccupancies();
     }
 
     void LabelSwitchingMove()   {
@@ -434,8 +440,6 @@ class DPOmegaModel : public ProbModel {
 
     double MoveOccupiedCompAlloc(int k0)	{
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        // const vector<double>& V = weight->GetBetaVariates();
         const vector<double>& w = weight->GetArray();
 
         int nrep = (int) (k0 * kappa);
@@ -447,7 +451,7 @@ class DPOmegaModel : public ProbModel {
                 int occupiedComponentIndices[Nocc];
                 int j=0;
                 for (int k=0; k<Ncat; k++)	{
-                    if (occupancy[k] != 0)	{
+                    if ((*occupancy)[k] != 0)	{
                         occupiedComponentIndices[j] = k;
                         j++;
                     }
@@ -460,12 +464,13 @@ class DPOmegaModel : public ProbModel {
                 Random::DrawFromUrn(indices,2,Nocc);
                 int cat1 = occupiedComponentIndices[indices[0]];
                 int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log(w[cat1] / w[cat2]);
+                double logMetropolis = ((*occupancy)[cat2] - (*occupancy)[cat1]) * log(w[cat1] / w[cat2]);
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
                     componentomegaarray->Swap(cat1,cat2);
                     sitealloc->SwapComponents(cat1,cat2);
+                    occupancy->Swap(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -480,19 +485,19 @@ class DPOmegaModel : public ProbModel {
         
         double total = 0;
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         const vector<double>& V = weight->GetBetaVariates();
 
         for (int i=0; i<nrep; i++)	{
             int cat1 = (int)(Random::Uniform() * (Ncat-2));  
             int cat2 = cat1 + 1;
-            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            double logMetropolis = ((*occupancy)[cat1] * log(1 - V[cat2])) - ((*occupancy)[cat2] * log(1-V[cat1]));
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
                 componentomegaarray->Swap(cat1,cat2);
                 sitealloc->SwapComponents(cat1,cat2);
                 weight->SwapComponents(cat1,cat2);
+                occupancy->Swap(cat1,cat2);
             }
         }
 
@@ -500,13 +505,13 @@ class DPOmegaModel : public ProbModel {
     }
 
     void ResampleWeights()  {
-        weight->GibbsResample(sitealloc->GetOccupancies());
+        weight->GibbsResample(*occupancy);
     }
 
     void MoveOmegaHyperParameters() {
 
         omegahypersuffstat.Clear();
-        componentomegaarray->AddSuffStat(omegahypersuffstat,sitealloc->GetOccupancies());
+        componentomegaarray->AddSuffStat(omegahypersuffstat,*occupancy);
         ScalingMove(omegamean,1.0,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);
         ScalingMove(omegamean,0.3,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);
         ScalingMove(omegainvshape,1.0,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);
@@ -515,7 +520,7 @@ class DPOmegaModel : public ProbModel {
         double beta = alpha / omegamean;
         componentomegaarray->SetShape(alpha);
         componentomegaarray->SetScale(beta);
-        componentomegaarray->PriorResample(sitealloc->GetOccupancies());
+        componentomegaarray->PriorResample(*occupancy);
     }
 
     void MoveKappa()    {
@@ -549,11 +554,9 @@ class DPOmegaModel : public ProbModel {
     // ------------------
 
     int GetNcluster() const {
-
         int n = 0;
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         for (int i=0; i<Ncat; i++)  {
-            if (occupancy[i])    {
+            if (occupancy->GetVal(i))    {
                 n++;
             }
         }
@@ -561,22 +564,20 @@ class DPOmegaModel : public ProbModel {
     }
 
     double GetMeanOmega() const {
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         double mean = 0;
         for (int i=0; i<Ncat; i++)  {
-            mean += occupancy[i] * componentomegaarray->GetVal(i);
+            mean += occupancy->GetVal(i) * componentomegaarray->GetVal(i);
         }
         mean /= Nsite;
         return mean;
     }
 
     double GetOmegaRelVar() const {
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         double mean = 0;
         double var = 0;
         for (int i=0; i<Ncat; i++)  {
-            mean += occupancy[i] * componentomegaarray->GetVal(i);
-            var += occupancy[i] * componentomegaarray->GetVal(i) * componentomegaarray->GetVal(i);
+            mean += occupancy->GetVal(i) * componentomegaarray->GetVal(i);
+            var += occupancy->GetVal(i) * componentomegaarray->GetVal(i) * componentomegaarray->GetVal(i);
         }
         mean /= Nsite;
         var /= Nsite;
@@ -647,7 +648,6 @@ class DPOmegaModel : public ProbModel {
         is >> nucrelrate;
         is >> nucstat;
     }
-
 };
 
 

@@ -204,17 +204,17 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-	void AddSuffStat(GammaSuffStat& suffstat, const vector<int>& occupancy) const {
+	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<int>& occupancy) const	{
 		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy[i])   {
+            if (occupancy.GetVal(i))   {
                 suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
             }
 		}
 	}
 
-    void PriorResample(const vector<int>& occupancy) {
+    void PriorResample(const ConstArray<int>& occupancy)	{
 		for (int i=0; i<GetSize(); i++)	{
-            if (! occupancy[i]) {
+            if (! occupancy.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);
             }
 		}

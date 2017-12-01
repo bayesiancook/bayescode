@@ -2,6 +2,7 @@
 #define SBP_H
 
 #include "Array.hpp"
+#include "OccupancySuffStat.hpp"
 
 class StickBreakingProcess : public SimpleArray<double> {
 
@@ -46,19 +47,18 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
-
-    void GibbsResample(const vector<int>& occupancy)	{
+    void GibbsResample(const OccupancySuffStat& occupancy)  {
 
         int remainingOcc = 0;
-        for (unsigned int i=0; i<occupancy.size(); i++) {
-            remainingOcc += occupancy[i];
+        for (int i=0; i<occupancy.GetSize(); i++) {
+            remainingOcc += occupancy.GetVal(i);
         }
 
         double cumulProduct = 1.0;
         double totweight = 0;
         for (int k=0; k<GetSize(); k++)	{
-            remainingOcc -= occupancy[k];
-            double x = Random::sGamma(1 + occupancy[k]);
+            remainingOcc -= occupancy.GetVal(k);
+            double x = Random::sGamma(1 + occupancy.GetVal(k));
             double y = Random::sGamma(kappa + remainingOcc);
             double v = x / (x+y);
             V[k] = v;
@@ -88,18 +88,18 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total;
     }
 
-    double GetMarginalLogProb(const vector<int>& occupancy) const   {
+    double GetMarginalLogProb(const OccupancySuffStat& occupancy) const {
 
         int remainingOcc = 0;
-        for (unsigned int i=0; i<occupancy.size(); i++) {
-            remainingOcc += occupancy[i];
+        for (int i=0; i<occupancy.GetSize(); i++) {
+            remainingOcc += occupancy.GetVal(i);
         }
 
         double total = 0;
         for (int k=0; k<GetSize(); k++)	{
             if (remainingOcc)	{
-                remainingOcc -= occupancy[k];
-                total += log(kappa) + Random::logGamma(1 + occupancy[k]) + Random::logGamma(kappa + remainingOcc) - Random::logGamma(1 + kappa + occupancy[k] + remainingOcc);
+                remainingOcc -= occupancy.GetVal(k);
+                total += log(kappa) + Random::logGamma(1 + occupancy.GetVal(k)) + Random::logGamma(kappa + remainingOcc) - Random::logGamma(1 + kappa + occupancy.GetVal(k) + remainingOcc);
             }
         }
         if (remainingOcc)	{

@@ -214,17 +214,17 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
-	void AddSuffStat(DirichletSuffStat& suffstat, const vector<int>& occupancy) const {
+	void AddSuffStat(DirichletSuffStat& suffstat, const ConstArray<int>& occupancy) const   {
 		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy[i])   {
+            if (occupancy.GetVal(i))   {
                 suffstat.AddSuffStat(GetVal(i));
             }
 		}
 	}
 
-    void PriorResample(const vector<int>& occupancy) {
+    void PriorResample(const ConstArray<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
-            if (! occupancy[i]) {
+            if (! occupancy.GetVal(i)) {
                 Random::DirichletSample((*this)[i],center,concentration);
             }
 		}

@@ -56,6 +56,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     // weights:
     double kappa;
     StickBreakingProcess* weight;
+    OccupancySuffStat* occupancy;
 
     // site allocations
 	MultinomialAllocationVector* sitealloc;
@@ -186,6 +187,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         // mixture weights
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
+        occupancy = new OccupancySuffStat(Ncat);
 
         // site allocations
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
@@ -204,6 +206,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         codonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, aafitnessarray, omega);
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrixarray);
 		pathsuffstatarray = new PathSuffStatArray(Nsite);
+
+        Update();
 	}
 
     //-------------------
@@ -226,8 +230,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         return aahypersuffstatarray;
     }
 
-    const vector<int>& GetOccupancies() const   {
-        return sitealloc->GetOccupancies();
+    const OccupancySuffStat* GetOccupancies() const {
+        return occupancy;
     }
 
     //-------------------
@@ -278,6 +282,11 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     void UpdateMatrices()   {
         UpdateNucMatrix();
         UpdateCodonMatrices();
+    }
+
+    void Update()   {
+        UpdateOccupancies();
+        UpdateMatrices();
     }
 
     void NoUpdate() {}
@@ -602,7 +611,12 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
             GetAllocPostProb(i,postprob);
             sitealloc->GibbsResample(i,postprob);
         }
-        sitealloc->UpdateOccupancies();
+        UpdateOccupancies();
+    }
+
+    void UpdateOccupancies()    {
+        occupancy->Clear();
+        sitealloc->AddSuffStat(*occupancy);
     }
 
     void GetAllocPostProb(int site, vector<double>& postprob)    {
@@ -635,8 +649,6 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
     double MoveOccupiedCompAlloc(int k0)	{
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        // const vector<double>& V = weight->GetBetaVariates();
         const vector<double>& w = weight->GetArray();
 
         int nrep = (int) (k0 * kappa);
@@ -648,7 +660,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
                 int occupiedComponentIndices[Nocc];
                 int j=0;
                 for (int k=0; k<Ncat; k++)	{
-                    if (occupancy[k] != 0)	{
+                    if ((*occupancy)[k] != 0)	{
                         occupiedComponentIndices[j] = k;
                         j++;
                     }
@@ -661,13 +673,14 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
                 Random::DrawFromUrn(indices,2,Nocc);
                 int cat1 = occupiedComponentIndices[indices[0]];
                 int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log(w[cat1] / w[cat2]);
+                double logMetropolis = ((*occupancy)[cat2] - (*occupancy)[cat1]) * log(w[cat1] / w[cat2]);
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
                     componentaacenterarray->Swap(cat1,cat2);
                     componentaaconcentrationarray->Swap(cat1,cat2);
                     sitealloc->SwapComponents(cat1,cat2);
+                    occupancy->Swap(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -682,13 +695,12 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         
         double total = 0;
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         const vector<double>& V = weight->GetBetaVariates();
 
         for (int i=0; i<nrep; i++)	{
             int cat1 = (int)(Random::Uniform() * (Ncat-2));  
             int cat2 = cat1 + 1;
-            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            double logMetropolis = ((*occupancy)[cat1] * log(1 - V[cat2])) - ((*occupancy)[cat2] * log(1-V[cat1]));
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
@@ -696,6 +708,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
                 componentaaconcentrationarray->Swap(cat1,cat2);
                 sitealloc->SwapComponents(cat1,cat2);
                 weight->SwapComponents(cat1,cat2);
+                occupancy->Swap(cat1,cat2);
             }
         }
 
@@ -703,7 +716,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     }
 
     void ResampleWeights()  {
-        weight->GibbsResample(sitealloc->GetOccupancies());
+        weight->GibbsResample(*occupancy);
     }
 
     void MoveKappa()    {
@@ -832,9 +845,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     int GetNcluster() const {
 
         int n = 0;
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         for (int i=0; i<Ncat; i++)  {
-            if (occupancy[i])    {
+            if (occupancy->GetVal(i))    {
                 n++;
             }
         }
@@ -843,20 +855,18 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
     double GetMeanComponentAAConcentration() const {
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         double tot = 0;
         for (int i=0; i<Ncat; i++)  {
-            tot += occupancy[i] * componentaaconcentrationarray->GetVal(i);
+            tot += occupancy->GetVal(i) * componentaaconcentrationarray->GetVal(i);
         }
         return tot / Nsite;
     }
 
     double GetMeanComponentAAEntropy() const {
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         double tot = 0;
         for (int i=0; i<Ncat; i++)  {
-            tot += occupancy[i] * Random::GetEntropy(componentaacenterarray->GetVal(i));
+            tot += occupancy->GetVal(i) * Random::GetEntropy(componentaacenterarray->GetVal(i));
         }
         return tot / Nsite;
     }

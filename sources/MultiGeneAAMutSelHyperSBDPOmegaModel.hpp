@@ -44,7 +44,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     // weights:
     double kappa;
     StickBreakingProcess* weight;
-    vector<int> occupancy;
+    OccupancySuffStat* occupancy;
 
     std::vector<AAMutSelHyperSBDPOmegaModel*> geneprocess;
 
@@ -133,7 +133,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         // mixture weights
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
-        occupancy.assign(Ncat,0);
+        occupancy = new OccupancySuffStat(Ncat);
 
         if (! GetMyid())    {
             geneprocess.assign(0,(AAMutSelHyperSBDPOmegaModel*) 0);
@@ -512,7 +512,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
     double MoveOccupiedCompAlloc(int k0)	{
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         const vector<double>& V = weight->GetBetaVariates();
         const vector<double>& w = weight->GetArray();
 
@@ -525,7 +524,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
                 int occupiedComponentIndices[Nocc];
                 int j=0;
                 for (int k=0; k<Ncat; k++)	{
-                    if (occupancy[k] != 0)	{
+                    if ((*occupancy)[k] != 0)	{
                         occupiedComponentIndices[j] = k;
                         j++;
                     }
@@ -538,13 +537,14 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
                 Random::DrawFromUrn(indices,2,Nocc);
                 int cat1 = occupiedComponentIndices[indices[0]];
                 int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log(w[cat1] / w[cat2]);
+                double logMetropolis = ((*occupancy)[cat2] - (*occupancy)[cat1]) * log(w[cat1] / w[cat2]);
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
                     componentaacenterarray->Swap(cat1,cat2);
                     componentaaconcentrationarray->Swap(cat1,cat2);
                     sitealloc->SwapComponents(cat1,cat2);
+                    occupancy->Swap(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -559,13 +559,12 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
         
         double total = 0;
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         const vector<double>& V = weight->GetBetaVariates();
 
         for (int i=0; i<nrep; i++)	{
             int cat1 = (int)(Random::Uniform() * (Ncat-2));  
             int cat2 = cat1 + 1;
-            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            double logMetropolis = ((*occupancy)[cat1] * log(1 - V[cat2])) - ((*occupancy)[cat2] * log(1-V[cat1]));
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
@@ -573,6 +572,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
                 componentaaconcentrationarray->Swap(cat1,cat2);
                 sitealloc->SwapComponents(cat1,cat2);
                 weight->SwapComponents(cat1,cat2);
+                occupancy->Swap(cat1,cat2);
             }
         }
 
@@ -581,7 +581,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     */
 
     void ResampleWeights()  {
-        weight->GibbsResample(occupancy);
+        weight->GibbsResample(*occupancy);
     }
 
     void MoveKappa()    {
@@ -593,7 +593,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
         int n = 0;
         for (int i=0; i<Ncat; i++)  {
-            if (occupancy[i])    {
+            if (occupancy->GetVal(i))    {
                 n++;
             }
         }
@@ -698,33 +698,23 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
     void SlaveSendAAHyperSuffStat() {
         aahypersuffstatarray->Clear();
+        occupancy->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectAAHyperSuffStat();
             aahypersuffstatarray->Add(*geneprocess[gene]->GetAAHyperSuffStatArray());
+            geneprocess[gene]->UpdateOccupancies();
+            occupancy->Add(*geneprocess[gene]->GetOccupancies());
         }
         SlaveSendAdditive(*aahypersuffstatarray);
-
-        for (int k=0; k<Ncat; k++)  {
-            occupancy[k] = 0;
-        }
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            const vector<int>& geneocc = geneprocess[gene]->GetOccupancies();
-            for (int k=0; k<Ncat; k++)  {
-                occupancy[k] += geneocc[k];
-            }
-        }
-        SlaveSendAdditive(occupancy);
+        SlaveSendAdditive(*occupancy);
     }
 
     void MasterReceiveAAHyperSuffStat() {
 
         aahypersuffstatarray->Clear();
+        occupancy->Clear();
         MasterReceiveAdditive(*aahypersuffstatarray);
-
-        for (int k=0; k<Ncat; k++)  {
-            occupancy[k] = 0;
-        }
-        MasterReceiveAdditive(occupancy);
+        MasterReceiveAdditive(*occupancy);
     }
 
     // branch length suff stat

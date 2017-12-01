@@ -45,6 +45,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     // (1) component weights (truncated stick breaking)
     double kappa;
     StickBreakingProcess* weight;
+    OccupancySuffStat* occupancy;
 
     // (2) component values: independent aa fitness profiles from Dirichlet distribution
     vector<double> aacenter;
@@ -128,6 +129,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
+        occupancy = new OccupancySuffStat(Ncat);
 
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
@@ -148,6 +150,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitecodonmatrixarray);
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         //componentpathsuffstatarray = new PathSuffStatArray(Ncat);
+        //
+        Update();
 	}
 
     //-------------------
@@ -220,6 +224,11 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         UpdateCodonMatrices();
     }
 
+    void Update()   {
+        UpdateOccupancies();
+        UpdateMatrices();
+    }
+
     void NoUpdate() {}
 
     //-------------------
@@ -268,7 +277,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
     double StickBreakingLogPrior() const    {
         return weight->GetLogProb(kappa);
-        // return weight->GetMarginalLogProb(sitealloc->GetOccupancies());
     }
 
     double AAHyperLogPrior() const {
@@ -436,7 +444,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     void MoveAAHyperParameters()    {
 
         aahypersuffstat.Clear();
-        componentaafitnessarray->AddSuffStat(aahypersuffstat,sitealloc->GetOccupancies());
+        componentaafitnessarray->AddSuffStat(aahypersuffstat,*occupancy);
         for (int rep=0; rep<10; rep++)  {
             ProfileMove(aacenter,0.1,1,10,&AAMutSelSBDPOmegaSitewiseModel::AAHyperLogProb,&AAMutSelSBDPOmegaSitewiseModel::NoUpdate,this);
             ProfileMove(aacenter,0.03,3,10,&AAMutSelSBDPOmegaSitewiseModel::AAHyperLogProb,&AAMutSelSBDPOmegaSitewiseModel::NoUpdate,this);
@@ -446,7 +454,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         }
         componentaafitnessarray->SetCenter(aacenter);
         componentaafitnessarray->SetConcentration(1.0/aainvconc);
-        componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
+        componentaafitnessarray->PriorResample(*occupancy);
     }
 
     void MoveAAMixture()    {
@@ -466,7 +474,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         MoveAAProfiles(0.3,1,3);
         MoveAAProfiles(0.1,3,3);
         MoveAAProfiles(0.1,5,3);
-        componentaafitnessarray->PriorResample(sitealloc->GetOccupancies());
+        componentaafitnessarray->PriorResample(*occupancy);
         return 1.0;
     }
 
@@ -476,8 +484,13 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
             GetAllocPostProb(i,postprob);
             sitealloc->GibbsResample(i,postprob);
         }
-        sitealloc->UpdateOccupancies();
+        UpdateOccupancies();
         UpdateCodonMatrices();
+    }
+
+    void UpdateOccupancies()    {
+        occupancy->Clear();
+        sitealloc->AddSuffStat(*occupancy);
     }
 
     void GetAllocPostProb(int site, vector<double>& postprob)    {
@@ -516,8 +529,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
     double MoveOccupiedCompAlloc(int k0)	{
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
-        // const vector<double>& V = weight->GetBetaVariates();
         const vector<double>& w = weight->GetArray();
 
         int nrep = (int) (k0 * kappa);
@@ -529,7 +540,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
                 int occupiedComponentIndices[Nocc];
                 int j=0;
                 for (int k=0; k<Ncat; k++)	{
-                    if (occupancy[k] != 0)	{
+                    if ((*occupancy)[k] != 0)	{
                         occupiedComponentIndices[j] = k;
                         j++;
                     }
@@ -542,12 +553,13 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
                 Random::DrawFromUrn(indices,2,Nocc);
                 int cat1 = occupiedComponentIndices[indices[0]];
                 int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log(w[cat1] / w[cat2]);
+                double logMetropolis = ((*occupancy)[cat2] - (*occupancy)[cat1]) * log(w[cat1] / w[cat2]);
                 int accepted = (log(Random::Uniform()) < logMetropolis);
                 if (accepted)	{
                     total += 1.0;
                     componentaafitnessarray->Swap(cat1,cat2);
                     sitealloc->SwapComponents(cat1,cat2);
+                    occupancy->Swap(cat1,cat2);
                 }
             }
             return total /= nrep;
@@ -562,19 +574,19 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         
         double total = 0;
 
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         const vector<double>& V = weight->GetBetaVariates();
 
         for (int i=0; i<nrep; i++)	{
             int cat1 = (int)(Random::Uniform() * (Ncat-2));  
             int cat2 = cat1 + 1;
-            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            double logMetropolis = ((*occupancy)[cat1] * log(1 - V[cat2])) - ((*occupancy)[cat2] * log(1-V[cat1]));
             int accepted = (log(Random::Uniform()) < logMetropolis);
             if (accepted)	{
                 total += 1.0;
                 componentaafitnessarray->Swap(cat1,cat2);
                 sitealloc->SwapComponents(cat1,cat2);
                 weight->SwapComponents(cat1,cat2);
+                occupancy->Swap(cat1,cat2);
             }
         }
 
@@ -582,7 +594,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     }
 
     void ResampleWeights()  {
-        weight->GibbsResample(sitealloc->GetOccupancies());
+        weight->GibbsResample(*occupancy);
     }
 
     void MoveKappa()    {
@@ -593,9 +605,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     int GetNcluster() const {
 
         int n = 0;
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         for (int i=0; i<Ncat; i++)  {
-            if (occupancy[i])    {
+            if (occupancy->GetVal(i))    {
                 n++;
             }
         }
@@ -606,9 +617,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 		double nacc = 0;
 		double ntot = 0;
 		double bk[Naa];
-        const vector<int>& occupancy = sitealloc->GetOccupancies();
         for (int i=0; i<Ncat; i++) {
-            if (occupancy[i])   {
+            if (occupancy->GetVal(i))   {
                 vector<double>& aa = (*componentaafitnessarray)[i];
                 for (int rep=0; rep<nrep; rep++)	{
                     for (int l=0; l<Naa; l++)	{
