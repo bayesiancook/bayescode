@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= aamutseldp aamutsel dpom multigeneaamutselm2a multigeneaamutseldp multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
+ALL= aamutselhdp aamutseldp aamutsel dpom multigeneaamutselm2a multigeneaamutseldp multigeneaamutselhdp aamutselhdp aamutselm2a aamutseldp aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a aamutsel multigeneglobom globom chi2
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
