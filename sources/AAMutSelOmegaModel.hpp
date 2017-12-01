@@ -390,11 +390,17 @@ class AAMutSelOmegaModel : public ProbModel {
     }
 
     double MoveAA() {
+        acc1 += MoveAAGamma(3.0,10);
+        acc2 += MoveAAGamma(1.0,10);
+        acc3 += MoveAAGamma(0.3,10);
+        acc4 += MoveAAGamma(0.1,10);
+        /*
         acc1 += MoveAA(1.0,1,10);
         acc2 += MoveAA(1.0,3,10);
         acc3 += MoveAA(0.3,3,10);
         acc4 += MoveAA(0.1,3,10);
         acc5 += MoveAA(0.1,5,10);
+        */
         tot1++;
         tot2++;
         tot3++;
@@ -406,13 +412,11 @@ class AAMutSelOmegaModel : public ProbModel {
 	double MoveAA(double tuning, int n, int nrep)	{
 		double nacc = 0;
 		double ntot = 0;
-		double bk[Naa];
+        vector<double> bk(20,0);
         for (int i=0; i<Nsite; i++) {
             vector<double>& aa = (*aafitnessarray)[i];
             for (int rep=0; rep<nrep; rep++)	{
-                for (int l=0; l<Naa; l++)	{
-                    bk[l] = aa[l];
-                }
+                bk = aa;
                 double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
                 double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
                 deltalogprob += loghastings;
@@ -423,9 +427,73 @@ class AAMutSelOmegaModel : public ProbModel {
                     nacc ++;
                 }
                 else	{
-                    for (int l=0; l<Naa; l++)	{
-                        aa[l] = bk[l];
-                    }
+                    aa = bk;
+                    UpdateCodonMatrix(i);
+                }
+                ntot++;
+            }
+        }
+		return nacc/ntot;
+	}
+
+    double GammaAALogPrior(const vector<double>& x) {
+        double total = 0;
+        for (int l=0; l<Naa; l++)   {
+            total += (aaconc*aacenter[l] -1)*log(x[l]) - x[l] - Random::logGamma(aaconc*aacenter[l]);
+        }
+        return total;
+    }
+
+	double MoveAAGamma(double tuning, int nrep)	{
+
+		double nacc = 0;
+		double ntot = 0;
+        for (int i=0; i<Nsite; i++) {
+
+            vector<double>& aa = (*aafitnessarray)[i];
+            vector<double> x(Naa,0);
+            double z = Random::sGamma(aaconc);
+            for (int l=0; l<Naa; l++)   {
+                x[l] = z*aa[l];
+            }
+
+            double bkz = z;
+            vector<double> bkx = x;
+            vector<double> bkaa = aa;
+
+            for (int rep=0; rep<nrep; rep++)	{
+
+                double deltalogprob = -GammaAALogPrior(x) - PathSuffStatLogProb(i);
+
+                double loghastings = 0;
+                z = 0;
+                for (int l=0; l<Naa; l++)   {
+                    double m = tuning * (Random::Uniform() - 0.5);
+                    double e = exp(m);
+                    x[l] *= e;
+                    z += x[l];
+                    loghastings += m;
+                }
+                for (int l=0; l<Naa; l++)   {
+                    aa[l] = x[l]/z;
+                }
+
+                deltalogprob += loghastings;
+
+                UpdateCodonMatrix(i);
+
+                deltalogprob += GammaAALogPrior(x) + PathSuffStatLogProb(i);
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted)	{
+                    nacc ++;
+                    bkaa = aa;
+                    bkx = x;
+                    bkz = z;
+                }
+                else	{
+                    aa = bkaa;
+                    x = bkx;
+                    z = bkz;
                     UpdateCodonMatrix(i);
                 }
                 ntot++;
