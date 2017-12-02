@@ -435,6 +435,7 @@ class AAMutSelOmegaModel : public ProbModel {
             logratio += AAHyperSuffStatLogProb();
 
             if (i < nstep-1)    {
+                aafitnessarray->SetConcentration(aaconc);
                 MulMoveAA(1);
                 CompMoveAA(1);
             }
@@ -458,6 +459,7 @@ class AAMutSelOmegaModel : public ProbModel {
         else    {
             aaconc = aaconc2;
         }
+        aafitnessarray->SetConcentration(aaconc);
         return accepted;
     }
 
@@ -489,6 +491,7 @@ class AAMutSelOmegaModel : public ProbModel {
             logratio += AAHyperSuffStatLogProb();
 
             if (i < nstep-1)    {
+                aafitnessarray->SetCenter(aacenter);
                 MulMoveAA(1);
                 CompMoveAA(1);
             }
@@ -512,6 +515,7 @@ class AAMutSelOmegaModel : public ProbModel {
         else    {
             aacenter = aacenter2;
         }
+        aafitnessarray->SetCenter(aacenter);
         return accepted;
     }
 
