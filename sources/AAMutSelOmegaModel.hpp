@@ -107,7 +107,7 @@ class AAMutSelOmegaModel : public ProbModel {
 
         profilecompmovenrep = 5;
         profilemulmovenrep = 5;
-        simplehypermovenrep = 10;
+        simplehypermovenrep = 100;
         aishypermovenrep = inaisnrep;
         concaistuning = inaistuning;
         concaisnstep = inaisnstep;
