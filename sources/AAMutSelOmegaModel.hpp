@@ -390,22 +390,18 @@ class AAMutSelOmegaModel : public ProbModel {
     }
 
     double MoveAA() {
-        acc1 += MoveAAGamma(3.0,10);
-        acc2 += MoveAAGamma(1.0,10);
-        acc3 += MoveAAGamma(0.3,10);
-        acc4 += MoveAAGamma(0.1,10);
-        /*
-        acc1 += MoveAA(1.0,1,10);
-        acc2 += MoveAA(1.0,3,10);
-        acc3 += MoveAA(0.3,3,10);
-        acc4 += MoveAA(0.1,3,10);
-        acc5 += MoveAA(0.1,5,10);
-        */
+        acc1 += MoveAAGamma(3.0,5);
+        acc2 += MoveAAGamma(1.0,5);
+        acc3 += MoveAAGamma(0.3,5);
+        acc4 += MoveAAGamma(0.1,5);
+        acc1 += MoveAA(1.0,1,5);
+        acc2 += MoveAA(1.0,3,5);
+        acc3 += MoveAA(0.3,3,5);
+        acc4 += MoveAA(0.1,3,5);
         tot1++;
         tot2++;
         tot3++;
         tot4++;
-        tot5++;
         return 1.0;
     }
 
