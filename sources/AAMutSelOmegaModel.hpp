@@ -39,8 +39,8 @@ class AAMutSelOmegaModel : public ProbModel {
 	
     vector<double> aacenter;
     double aaconc;
-    // double aainvconc;
     IIDDirichlet* aafitnessarray;
+    IIDDirichlet* bkaafitnessarray;
 	AAMutSelOmegaCodonSubMatrixArray* codonmatrixarray;
     DirichletSuffStat aahypersuffstat;
 
@@ -49,9 +49,29 @@ class AAMutSelOmegaModel : public ProbModel {
 	PathSuffStatArray* pathsuffstatarray;
 
     Chrono aachrono;
+    Chrono aahyperchrono;
     Chrono totchrono;
-    double acc1,acc2,acc3,acc4,acc5;
-    double tot1,tot2,tot3,tot4,tot5;
+
+    int profilecompmovenrep;
+    int profilemulmovenrep;
+    int simplehypermovenrep;
+    int aishypermovenrep;
+
+    double concaistuning;
+    int concaisnstep;
+
+    double acca1,acca2,acca3,acca4;
+    double tota1,tota2,tota3,tota4;
+    double accb1,accb2,accb3,accb4;
+    double totb1,totb2,totb3,totb4;
+    double centeracca1,centeracca2,centeracca3;
+    double centertota1,centertota2,centertota3;
+    double concacca1,concacca2,concacca3;
+    double conctota1,conctota2,conctota3;
+    double centeraccb1,centeraccb2,centeraccb3;
+    double centertotb1,centertotb2,centertotb3;
+    double concaccb1,concaccb2,concaccb3;
+    double conctotb1,conctotb2,conctotb3;
 
 	public:
 
@@ -59,7 +79,7 @@ class AAMutSelOmegaModel : public ProbModel {
     // Construction and allocation
     // ------------------
 
-	AAMutSelOmegaModel(string datafile, string treefile) : aahypersuffstat(20) {
+	AAMutSelOmegaModel(string datafile, string treefile, int inaisnrep, double inaistuning, int inaisnstep) : aahypersuffstat(20) {
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -83,8 +103,29 @@ class AAMutSelOmegaModel : public ProbModel {
 		// Allocate();
         totchrono.Reset();
         aachrono.Reset();
-        acc1=acc2=acc3=acc4=acc5=0;
-        tot1=tot2=tot3=tot4=tot5=0;
+        aahyperchrono.Reset();
+
+        profilecompmovenrep = 5;
+        profilemulmovenrep = 5;
+        simplehypermovenrep = 10;
+        aishypermovenrep = inaisnrep;
+        concaistuning = inaistuning;
+        concaisnstep = inaisnstep;
+
+        acca1=acca2=acca3=acca4=0;
+        tota1=tota2=tota3=tota4=0;
+        accb1=accb2=accb3=accb4=0;
+        totb1=totb2=totb3=totb4=0;
+
+        centeracca1=centeracca2=centeracca3=0;
+        centertota1=centertota2=centertota3=0;
+        concacca1=concacca2=concacca3=0;
+        conctota1=conctota2=conctota3=0;
+
+        centeraccb1=centeraccb2=centeraccb3=0;
+        centertotb1=centertotb2=centertotb3=0;
+        concaccb1=concaccb2=concaccb3=0;
+        conctotb1=conctotb2=conctotb3=0;
 	}
 
     void Unfold()   {
@@ -113,9 +154,8 @@ class AAMutSelOmegaModel : public ProbModel {
 
         aacenter.assign(Naa,1.0/Naa);
         aaconc = ((double) Naa);
-        // aainvconc = 1.0/Naa;
         aafitnessarray = new IIDDirichlet(Nsite,aacenter,aaconc);
-        // aafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc);
+        bkaafitnessarray = new IIDDirichlet(Nsite,aacenter,aaconc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -227,7 +267,6 @@ class AAMutSelOmegaModel : public ProbModel {
 
     double AAHyperLogPrior() const {
         return Random::logGammaDensity(aaconc,20.0,1.0);
-        // return -aainvconc;
     }
 
     double AALogPrior() const {
@@ -260,7 +299,6 @@ class AAMutSelOmegaModel : public ProbModel {
 
     double AAHyperSuffStatLogProb() const   {
         return aahypersuffstat.GetLogProb(aacenter,aaconc);
-        // return aahypersuffstat.GetLogProb(aacenter,1.0/aainvconc);
     }
 
     //-------------------
@@ -277,7 +315,7 @@ class AAMutSelOmegaModel : public ProbModel {
         return NucRatesLogPrior() + PathSuffStatLogProb();
     }
 
-    // for moving aa hyper params (aacenter and aainvconc)
+    // for moving aa hyper params (aacenter and aaconc)
     double AAHyperLogProb() const   {
         return AAHyperLogPrior() + AAHyperSuffStatLogProb();
     }
@@ -310,13 +348,15 @@ class AAMutSelOmegaModel : public ProbModel {
 			MoveOmega();
 
             aachrono.Start();
-            MoveAA();
+            CompMoveAA(profilecompmovenrep);
+            MulMoveAA(profilemulmovenrep);
             aachrono.Stop();
-            MoveAAHyperParameters();
-            /*
-			MoveOmega();
-			MoveNucRates();
-            */
+
+            aahyperchrono.Start();
+            MoveAAHyperParameters(simplehypermovenrep);
+            AISMoveAAHyperParameters(aishypermovenrep);
+            aahyperchrono.Stop();
+
             totchrono.Stop();
 		}
 	}
@@ -370,38 +410,162 @@ class AAMutSelOmegaModel : public ProbModel {
         // UpdateMatrices();
 	}
 
-    void MoveAAHyperParameters()    {
+    double AISMoveAAHyperConcentration(double tuning, int nstep)  {
+
+        // backup all fitness profiles
+        bkaafitnessarray->Copy(*aafitnessarray);
+
+        double aaconc1 = aaconc;
+        double m = tuning*(Random::Uniform() - 0.5);
+        double e = exp(m);
+        double aaconc2 = aaconc * e;
+        double loghastings = m;
+
+        double logratio = 0;
+
+        for (int i=0; i<nstep; i++) {
+
+            aahypersuffstat.Clear();
+            aafitnessarray->AddSuffStat(aahypersuffstat);
+
+            aaconc = ((nstep-i)*aaconc1 + i*aaconc2)/nstep;
+            logratio -= AAHyperSuffStatLogProb();
+
+            aaconc = ((nstep-i-1)*aaconc1 + (i+1)*aaconc2)/nstep;
+            logratio += AAHyperSuffStatLogProb();
+
+            if (i < nstep-1)    {
+                MulMoveAA(1);
+                CompMoveAA(1);
+            }
+        }
+
+        aaconc = aaconc1;
+        logratio -= AAHyperLogPrior();
+
+        aaconc = aaconc2;
+        logratio += AAHyperLogPrior();
+
+        logratio += loghastings;
+
+        int accepted = (log(Random::Uniform()) < logratio);
+
+        if (! accepted) {
+            aaconc = aaconc1;
+            // restore fitness profiles
+            aafitnessarray->Copy(*bkaafitnessarray);
+        }
+        else    {
+            aaconc = aaconc2;
+        }
+        return accepted;
+    }
+
+    double AISMoveAAHyperCenter(double tuning, int n, int nstep)  {
+
+        // backup all fitness profiles
+        bkaafitnessarray->Copy(*aafitnessarray);
+
+        // propose new value
+        vector<double> aacenter1 = aacenter;
+        double loghastings = Random::ProfileProposeMove(aacenter,Naa,tuning,n);
+        vector<double> aacenter2 = aacenter;
+
+        double logratio = 0;
+
+        for (int i=0; i<nstep; i++) {
+
+            aahypersuffstat.Clear();
+            aafitnessarray->AddSuffStat(aahypersuffstat);
+
+            for (int k=0; k<Naa; k++)   {
+                aacenter[k] = ((nstep-i)*aacenter1[k] + i*aacenter2[k])/nstep;
+            }
+            logratio -= AAHyperSuffStatLogProb();
+
+            for (int k=0; k<Naa; k++)   {
+                aacenter[k] = ((nstep-i-1)*aacenter1[k] + (i+1)*aacenter2[k])/nstep;
+            }
+            logratio += AAHyperSuffStatLogProb();
+
+            if (i < nstep-1)    {
+                MulMoveAA(1);
+                CompMoveAA(1);
+            }
+        }
+
+        aacenter = aacenter1;
+        logratio -= AAHyperLogPrior();
+
+        aacenter = aacenter2;
+        logratio += AAHyperLogPrior();
+
+        logratio += loghastings;
+
+        int accepted = (log(Random::Uniform()) < logratio);
+
+        if (! accepted) {
+            aacenter = aacenter1;
+            // restore fitness profiles
+            aafitnessarray->Copy(*bkaafitnessarray);
+        }
+        else    {
+            aacenter = aacenter2;
+        }
+        return accepted;
+    }
+
+    void AISMoveAAHyperParameters(int nrep)   {
+
+        for (int rep=0; rep<nrep; rep++)  {
+            // AISMoveAAHyperCenter(0.1,3,10);
+            concaccb1 += AISMoveAAHyperConcentration(concaistuning,concaisnstep);
+            conctotb1++;
+        }
+    }
+
+    void MoveAAHyperParameters(int nrep)    {
         aahypersuffstat.Clear();
         aafitnessarray->AddSuffStat(aahypersuffstat);
-        for (int rep=0; rep<10; rep++)  {
-            ProfileMove(aacenter,0.1,1,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            ProfileMove(aacenter,0.03,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            ProfileMove(aacenter,0.01,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            ScalingMove(aaconc,1.0,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            ScalingMove(aaconc,0.3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            /*
-            ScalingMove(aainvconc,1.0,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            ScalingMove(aainvconc,0.3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
-            */
+        for (int rep=0; rep<nrep; rep++)  {
+            centeracca1 += ProfileMove(aacenter,0.1,1,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            centertota1++;
+            centeracca2 += ProfileMove(aacenter,0.03,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            centertota2++;
+            centeracca3 += ProfileMove(aacenter,0.01,3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            centertota3++;
+            concacca1 += ScalingMove(aaconc,1.0,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            conctota1++;
+            concacca2 += ScalingMove(aaconc,0.3,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            conctota2++;
+            concacca3 += ScalingMove(aaconc,0.1,10,&AAMutSelOmegaModel::AAHyperLogProb,&AAMutSelOmegaModel::NoUpdate,this);
+            conctota3++;
         }
         aafitnessarray->SetCenter(aacenter);
         aafitnessarray->SetConcentration(aaconc);
-        // aafitnessarray->SetConcentration(1.0/aainvconc);
     }
 
-    double MoveAA() {
-        acc1 += MoveAAGamma(3.0,5);
-        acc2 += MoveAAGamma(1.0,5);
-        acc3 += MoveAAGamma(0.3,5);
-        acc4 += MoveAAGamma(0.1,5);
-        acc1 += MoveAA(1.0,1,5);
-        acc2 += MoveAA(1.0,3,5);
-        acc3 += MoveAA(0.3,3,5);
-        acc4 += MoveAA(0.1,3,5);
-        tot1++;
-        tot2++;
-        tot3++;
-        tot4++;
+    double CompMoveAA(int nrep) {
+        accb1 += MoveAA(1.0,1,nrep);
+        accb2 += MoveAA(1.0,3,nrep);
+        accb3 += MoveAA(0.3,3,nrep);
+        accb4 += MoveAA(0.1,3,nrep);
+        totb1++;
+        totb2++;
+        totb3++;
+        totb4++;
+        return 1.0;
+    }
+
+    double MulMoveAA(int nrep) {
+        acca1 += MoveAAGamma(3.0,nrep);
+        acca2 += MoveAAGamma(1.0,nrep);
+        acca3 += MoveAAGamma(0.3,nrep);
+        acca4 += MoveAAGamma(0.1,nrep);
+        tota1++;
+        tota2++;
+        tota3++;
+        tota4++;
         return 1.0;
     }
 
@@ -523,16 +687,44 @@ class AAMutSelOmegaModel : public ProbModel {
         os << Random::GetEntropy(aacenter) << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
-	}
+
+    }
 
 	void Monitor(ostream& os) const {
         os << "prop time in aa moves: " << aachrono.GetTime() / totchrono.GetTime() << '\n';
-        os << "acceptance rates:\n";
-        os << acc1/tot1 << '\n';
-        os << acc2/tot2 << '\n';
-        os << acc3/tot3 << '\n';
-        os << acc4/tot4 << '\n';
-        os << acc5/tot5 << '\n';
+        os << "prop time in aa hyper moves: " << aahyperchrono.GetTime() / totchrono.GetTime() << '\n';
+
+        if (profilemulmovenrep) {
+            os << acca1/tota1 << '\n';
+            os << acca2/tota2 << '\n';
+            os << acca3/tota3 << '\n';
+            os << acca4/tota4 << '\n';
+        }
+        os << '\n';
+
+        if (profilecompmovenrep)  {
+            os << accb1/totb1 << '\n';
+            os << accb2/totb2 << '\n';
+            os << accb3/totb3 << '\n';
+            os << accb4/totb4 << '\n';
+        }
+        os << '\n';
+
+        if (simplehypermovenrep)    {
+            os << centeracca1/centertota1 << '\n';
+            os << centeracca2/centertota2 << '\n';
+            os << centeracca3/centertota3 << '\n';
+            os << concacca1/conctota1 << '\n';
+            os << concacca2/conctota2 << '\n';
+            os << concacca3/conctota3 << '\n';
+        }
+        os << '\n';
+
+        if (aishypermovenrep)   {
+            os << "ais: " << aishypermovenrep << '\t' << concaistuning << '\t' << concaisnstep << '\n';
+            os << concaccb1/conctotb1 << '\n';
+        }
+        os << '\n';
     }
 
 	void FromStream(istream& is) {}

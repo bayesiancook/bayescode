@@ -9,6 +9,9 @@ class AAMutSelOmegaChain : public Chain  {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    int aisnrep;
+    double aistuning;
+    int aisnstep;
 
   public:
     AAMutSelOmegaModel* GetModel() {
@@ -17,7 +20,7 @@ class AAMutSelOmegaChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELOMEGA"), datafile(indatafile), treefile(intreefile) {
+    AAMutSelOmegaChain(string indatafile, string intreefile, int inaisnrep, double inaistuning, int inaisnstep, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELOMEGA"), datafile(indatafile), treefile(intreefile), aisnrep(inaisnrep), aistuning(inaistuning), aisnstep(inaisnstep) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -31,7 +34,7 @@ class AAMutSelOmegaChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new AAMutSelOmegaModel(datafile,treefile);
+        model = new AAMutSelOmegaModel(datafile,treefile,aisnrep,aistuning,aisnstep);
         GetModel()->Allocate();
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;
@@ -48,6 +51,7 @@ class AAMutSelOmegaChain : public Chain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> aisnrep >> aistuning >> aisnstep;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -57,7 +61,7 @@ class AAMutSelOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELOMEGA") {
-            model = new AAMutSelOmegaModel(datafile,treefile);
+            model = new AAMutSelOmegaModel(datafile,treefile,aisnrep,aistuning,aisnstep);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -75,6 +79,7 @@ class AAMutSelOmegaChain : public Chain  {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << aisnrep << '\t' << aistuning << '\t' << aisnstep << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -98,6 +103,9 @@ int main(int argc, char* argv[])	{
     else    {
         string datafile = "";
         string treefile = "";
+        int aisnrep = 0;
+        double aistuning = 1.0;
+        int aisnstep = 10;
         string name = "";
         int force = 1;
         int every = 1;
@@ -123,6 +131,14 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "-f")	{
                     force = 1;
+                }
+                else if (s == "-ais")   {
+                    i++;
+                    aisnrep = atoi(argv[i]);
+                    i++;
+                    aistuning = atof(argv[i]);
+                    i++;
+                    aisnstep = atoi(argv[i]);
                 }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
@@ -150,7 +166,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        AAMutSelOmegaChain* chain = new AAMutSelOmegaChain(datafile,treefile,every,until,name,force);
+        AAMutSelOmegaChain* chain = new AAMutSelOmegaChain(datafile,treefile,aisnrep,aistuning,aisnstep,every,until,name,force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
