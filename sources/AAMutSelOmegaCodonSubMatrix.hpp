@@ -19,7 +19,7 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public vir
           aa(inaa) {}
 
     const vector<double>& GetAAFitnessProfile() const {return aa;}
-    double GetFitness(int a) const {return aa[a];}
+    double GetFitness(int a) const {return aa[a] + 1e-8;}
 
   protected:
 
