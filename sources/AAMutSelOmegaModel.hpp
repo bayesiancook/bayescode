@@ -436,8 +436,16 @@ class AAMutSelOmegaModel : public ProbModel {
 
             if (i < nstep-1)    {
                 aafitnessarray->SetConcentration(aaconc);
+                if (Random::Uniform() < 0.5)    {
+                    MoveAAGamma(3.0,1);
+                }
+                else    {
+                    MoveAAGamma(1.0,1);
+                }
+                /*
                 MulMoveAA(1);
                 CompMoveAA(1);
+                */
             }
         }
 
