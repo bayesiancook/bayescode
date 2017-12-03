@@ -307,11 +307,20 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
         return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
 	}
 
-    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Array<int>& alloc) {
+    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const ConstArray<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstatarray[alloc.GetVal(i)].AddSuffStat(GetVal(i));
 		}
 	}
+
+    void PriorResample(const ConstArray<int>& occupancy)    {
+		for (int i=0; i<GetSize(); i++)	{
+            if (! occupancy.GetVal(i)) {
+                Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
+            }
+		}
+    }
+
 
     double GetMeanEntropy() const   {
 
