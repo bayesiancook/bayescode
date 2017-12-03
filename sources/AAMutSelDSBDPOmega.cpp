@@ -32,8 +32,11 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
     }
 
     void New(int force) override {
+        cerr << "new model\n";
         model = new AAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat);
+        cerr << "allocate\n";
         GetModel()->Allocate();
+        cerr << "unfold\n";
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;
         Reset(force);

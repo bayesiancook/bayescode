@@ -28,6 +28,10 @@ class DirichletSuffStat : public SuffStat	{
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             if (pi[i] <= 0) {
                 cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
+                for (unsigned int j=0; j<sumlog.size(); j++)    {
+                    cerr << pi[j] << '\t';
+                }
+                cerr << '\n';
                 exit(1);
             }
             sumlog[i] += log(pi[i]);
@@ -295,6 +299,27 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
+    bool CheckPositivity()  {
+        int allpos = 1;
+		for (int i=0; i<GetSize(); i++)	{
+            int pos = 1;
+            for (int j=0; j<GetDim(); j++)  {
+                if (! GetVal(i)[j]) {
+                    pos = 0;
+                }
+            }
+            if (! pos)  {
+                allpos = 0;
+                for (int j=0; j<GetDim(); j++)  {
+                    cerr << GetVal(i)[j] << '\t';
+                }
+                cerr << '\n';
+                cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
+            }
+        }
+        return allpos;
+    }
+
 	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -317,6 +342,23 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
                 Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
+                /*
+                int pos = 1;
+                for (int j=0; j<GetDim(); j++)  {
+                    if (! GetVal(i)[j]) {
+                        pos = 0;
+                    }
+                }
+                if (! pos)  {
+                    cerr << "in MultiDirichlet::PriorResample\n";
+                    for (int j=0; j<GetDim(); j++)  {
+                        cerr << GetVal(i)[j] << '\t';
+                    }
+                    cerr << '\n';
+                    cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
+                    exit(1);
+                }
+                */
             }
 		}
     }

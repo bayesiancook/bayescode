@@ -81,7 +81,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	PathSuffStatArray* componentpathsuffstatarray;
 
     int fixbl;
-    int fixhypermix;
+    int fixbasemix;
     int fixomega;
 
     Chrono aachrono;
@@ -102,7 +102,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inNcat, int inbaseNcat)   {
 
         fixbl = 0;
-        fixhypermix = 0;
+        fixbasemix = 0;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -124,6 +124,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
 
 		std::cerr << "-- Number of sites: " << Nsite << std::endl;
+        cerr << "ncat : " << Ncat << '\n';
+        cerr << "basencat : " << baseNcat << '\n';
 
 		taxonset = codondata->GetTaxonSet();
 
@@ -170,7 +172,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         basekappa = 1.0;
         baseweight = new StickBreakingProcess(baseNcat,basekappa);
-        occupancy = new OccupancySuffStat(baseNcat);
+        baseoccupancy = new OccupancySuffStat(baseNcat);
 
         basecenterhypercenter.assign(Naa,1.0/Naa);
         basecenterhyperinvconc = 1.0/Naa;
@@ -188,13 +190,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             (*baseconcentrationarray)[k] = 20.0;
         }
 
+        // suff stats for component aa fitness arrays
+        basesuffstatarray = new DirichletSuffStatArray(baseNcat,Naa);
+
         componentalloc = new MultinomialAllocationVector(Ncat,baseweight->GetArray());
         componentcenterarray = new ConstMixtureArray<vector<double> >(basecenterarray,componentalloc);
         componentconcentrationarray = new ConstMixtureArray<double>(baseconcentrationarray,componentalloc);
 
         componentaafitnessarray = new MultiDirichlet(componentcenterarray,componentconcentrationarray);
-        // suff stats for component aa fitness arrays
-        basesuffstatarray = new DirichletSuffStatArray(baseNcat,Naa);
 
         // mixture of aa fitness profiles
         kappa = 1.0;
@@ -225,12 +228,24 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
+    int GetNsite() const    {
+        return Nsite;
+    }
+
     double GetOmega() const {
         return omega;
     }
 
     const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
         return lengthsuffstatarray;
+    }
+
+    const DirichletSuffStatArray* GetBaseSuffStatArray() const   {
+        return basesuffstatarray;
+    }
+
+    const OccupancySuffStat* GetBaseOccupancies() const {
+        return baseoccupancy;
     }
 
     //-------------------
@@ -245,8 +260,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         fixomega = inom;
     }
 
-    void SetFixAAHyperMix(int inmix)    {
-        fixhypermix = inmix;
+    void SetFixBaseMix(int inmix)    {
+        fixbasemix = inmix;
     }
 
     void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
@@ -269,11 +284,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         UpdateMatrices();
     }
 
-    void SetAAHyperMixture(const ConstArray<vector<double> >& inbasecenterarray, const ConstArray<double>& inbaseconcentrationarray, const ConstArray<double>& inbaseweight) {
+    void SetBaseMixture(const ConstArray<vector<double> >& inbasecenterarray, const ConstArray<double>& inbaseconcentrationarray, const ConstArray<double>& inbaseweight, const ConstArray<int>& inpermut) {
 
         basecenterarray->Copy(inbasecenterarray);
         baseconcentrationarray->Copy(inbaseconcentrationarray);
         baseweight->Copy(inbaseweight);
+        componentalloc->Permute(inpermut);
     }
 
 	void UpdateNucMatrix()	{
@@ -298,6 +314,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void NoUpdate() {}
 
     void Update()   {
+        UpdateBaseOccupancies();
         UpdateOccupancies();
         UpdateMatrices();
     }
@@ -317,7 +334,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         total += BaseStickBreakingLogPrior();
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
-        total += AAHyperLogPrior();
+        total += BaseLogPrior();
         total += AALogPrior();
         total += OmegaLogPrior();
         return total;
@@ -366,18 +383,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return weight->GetLogProb(kappa);
     }
 
-    double AAHyperLogPrior() const {
+    double BaseLogPrior() const {
         double total = 0;
         total += basecenterarray->GetLogProb();
         total += baseconcentrationarray->GetLogProb();
         if (isinf(total))   {
-            cerr << "in AAHyperLogPrior: inf\n";
+            cerr << "in BaseLogPrior: inf\n";
             exit(1);
         }
         return total;
     }
 
-    double AAHyperLogPrior(int k) const {
+    double BaseLogPrior(int k) const {
         double total = 0;
         total += basecenterarray->GetLogProb(k);
         total += baseconcentrationarray->GetLogProb(k);
@@ -408,7 +425,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
 
-    double AAHyperSuffStatLogProb(int k) const   {
+    double BaseSuffStatLogProb(int k) const   {
         return basesuffstatarray->GetVal(k).GetLogProb(basecenterarray->GetVal(k),baseconcentrationarray->GetVal(k));
     }
 
@@ -428,8 +445,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     // for moving aa hyper params (center and concentration)
     // for component k of the mixture
-    double AAHyperLogProb(int k) const   {
-        return AAHyperLogPrior(k) + AAHyperSuffStatLogProb(k);
+    double BaseLogProb(int k) const   {
+        return BaseLogPrior(k) + BaseSuffStatLogProb(k);
     }
 
     // for moving basekappa
@@ -500,11 +517,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             MoveAAMixture(3);
             aachrono.Stop();
 
-            if (! fixhypermix) {
-                basechrono.Start();
-                MoveAABaseMixture(3);
-                basechrono.Stop();
+            basechrono.Start();
+            if (baseNcat > 1)   {
+                ResampleBaseAlloc();
             }
+            if (! fixbasemix) {
+                MoveBaseMixture(3);
+            }
+            basechrono.Stop();
 
             totchrono.Stop();
 		}
@@ -814,12 +834,11 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         weight->SetKappa(kappa);
     }
 
-    void MoveAABaseMixture(int nrep)    {
+    void MoveBaseMixture(int nrep)    {
         for (int rep=0; rep<nrep; rep++)  {
             MoveBaseComponents(10);
             ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
-                ResampleBaseAlloc();
                 BaseLabelSwitchingMove();
                 ResampleBaseWeights();
                 MoveBaseKappa();
@@ -830,17 +849,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void MoveBaseComponents(int nrep) {
 
         CollectBaseSuffStat();
-
-        for (int k=0; k<baseNcat; k++)  {
-            if (baseoccupancy->GetVal(k))  {
-                for (int rep=0; rep<nrep; rep++)    {
-                    MoveBaseCenters(1.0,1);
-                    MoveBaseCenters(1.0,3);
-                    MoveBaseCenters(0.3,3);
-                    MoveBaseConcentrations(1.0);
-                    MoveBaseConcentrations(0.3);
-                }
-            }
+        for (int rep=0; rep<nrep; rep++)    {
+            MoveBaseCenters(1.0,1);
+            MoveBaseCenters(1.0,3);
+            MoveBaseCenters(0.3,3);
+            MoveBaseConcentrations(1.0);
+            MoveBaseConcentrations(0.3);
         }
     }
 
@@ -854,20 +868,22 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		double ntot = 0;
         vector<double> bk(Naa,0);
         for (int k=0; k<baseNcat; k++)  {
-            vector<double>& aa = (*basecenterarray)[k];
-            bk = aa;
-            double deltalogprob = -AAHyperLogProb(k);
-            double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
-            deltalogprob += loghastings;
-            deltalogprob += AAHyperLogProb(k);
-            int accepted = (log(Random::Uniform()) < deltalogprob);
-            if (accepted)	{
-                nacc ++;
+            if (baseoccupancy->GetVal(k))  {
+                vector<double>& aa = (*basecenterarray)[k];
+                bk = aa;
+                double deltalogprob = -BaseLogProb(k);
+                double loghastings = Random::ProfileProposeMove(aa,Naa,tuning,n);
+                deltalogprob += loghastings;
+                deltalogprob += BaseLogProb(k);
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted)	{
+                    nacc ++;
+                }
+                else	{
+                    aa = bk;
+                }
+                ntot++;
             }
-            else	{
-                aa = bk;
-            }
-            ntot++;
         }
 		return nacc/ntot;
 	}
@@ -876,22 +892,24 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		double nacc = 0;
 		double ntot = 0;
         for (int k=0; k<baseNcat; k++)  {
-            double& c = (*baseconcentrationarray)[k];
-            double bk = c;
-            double deltalogprob = -AAHyperLogProb(k);
-            double m = tuning * (Random::Uniform() - 0.5);
-            double e = exp(m);
-            c *= e;
-            deltalogprob += m;
-            deltalogprob += AAHyperLogProb(k);
-            int accepted = (log(Random::Uniform()) < deltalogprob);
-            if (accepted)	{
-                nacc ++;
+            if (baseoccupancy->GetVal(k))  {
+                double& c = (*baseconcentrationarray)[k];
+                double bk = c;
+                double deltalogprob = -BaseLogProb(k);
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                c *= e;
+                deltalogprob += m;
+                deltalogprob += BaseLogProb(k);
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted)	{
+                    nacc ++;
+                }
+                else	{
+                    c = bk;
+                }
+                ntot++;
             }
-            else	{
-                c = bk;
-            }
-            ntot++;
         }
 		return nacc/ntot;
     }
@@ -904,7 +922,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void ResampleBaseAlloc()    {
         vector<double> postprob(baseNcat,0);
         for (int i=0; i<Ncat; i++) {
-            GetAllocPostProb(i,postprob);
+            GetBaseAllocPostProb(i,postprob);
             componentalloc->GibbsResample(i,postprob);
         }
         UpdateBaseOccupancies();
@@ -928,12 +946,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
 
         double total = 0;
-        for (int i=0; i<Ncat; i++) {
+        for (int i=0; i<baseNcat; i++) {
             postprob[i] = w[i] * exp(postprob[i] - max);
             total += postprob[i];
         }
 
-        for (int i=0; i<Ncat; i++) {
+        for (int i=0; i<baseNcat; i++) {
             postprob[i] /= total;
         }
     }
@@ -955,7 +973,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             for (int i=0; i<nrep; i++)	{
                 int occupiedComponentIndices[Nocc];
                 int j=0;
-                for (int k=0; k<Ncat; k++)	{
+                for (int k=0; k<baseNcat; k++)	{
                     if ((*baseoccupancy)[k] != 0)	{
                         occupiedComponentIndices[j] = k;
                         j++;

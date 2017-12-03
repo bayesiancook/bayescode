@@ -28,8 +28,8 @@ const double gammacoefs[] = {0.9999999999995183,  676.5203681218835,      -1259.
 class random_init {
   public:
     random_init() {
-        Random::InitRandom();
-        // Random::InitRandom(1001);
+        // Random::InitRandom();
+        Random::InitRandom(5301);
         std::cerr << "-- [Random] Seed : " << Random::GetSeed() << std::endl;
     }
 };
@@ -605,10 +605,28 @@ void Random::DirichletSample(vector<double>& x, const vector<double>& center, do
     double tot = 0;
     for (unsigned int k=0; k<x.size(); k++)    {
         x[k] = Random::sGamma(concentration * center[k]);
+        if (!x[k])  {
+            x[k] = 1e-100;
+        }
+
+        /*
+        if (! x[k]) {
+            cerr << "in Random::DirichletSample: null entry\n";
+            cerr << "concentration: " << concentration << '\n';
+            cerr << "concentration*center[k] = " << concentration*center[k] << '\n';
+            exit(1);
+        }
+        */
         tot += x[k];
     }
     for (unsigned int k=0; k<x.size(); k++)    {
         x[k] /= tot;
+        /*
+        if (! x[k]) {
+            cerr << "in Random::DirichletSample: null entry after renorm\n";
+            exit(1);
+        }
+        */
     }
 }
 

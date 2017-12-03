@@ -36,6 +36,20 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 		}
 	}
 
+    void Permute(const ConstArray<int>& permut) {
+        if (permut.GetSize() != int(weight.size()))  {
+            cerr << "error in MultinomialAllocationVector::Permute: non matching array size\n";
+            exit(1);
+        }
+        vector<int> invpermut(permut.GetSize(),0);
+        for (int k=0; k<permut.GetSize(); k++)  {
+            invpermut[permut.GetVal(k)] = k;
+        }
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i] = invpermut[(*this)[i]];
+        }
+    }
+
     void SwapComponents(int cat1, int cat2) {
         for (int i=0; i<GetSize(); i++) {
             if ((*this)[i] == cat1)  {
