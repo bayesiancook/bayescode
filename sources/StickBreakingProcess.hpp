@@ -61,6 +61,9 @@ class StickBreakingProcess : public SimpleArray<double> {
             remainingOcc -= occupancy.GetVal(k);
             double x = Random::sGamma(1 + occupancy.GetVal(k));
             double y = Random::sGamma(kappa + remainingOcc);
+            if (! y)    {
+                y = 1e-50;
+            }
             double v = x / (x+y);
             V[k] = v;
             if (k == GetSize() - 1)	{

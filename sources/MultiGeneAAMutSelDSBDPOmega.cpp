@@ -112,6 +112,17 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
+
+    void Monitor() override {
+        Chain::Monitor();
+        ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
+        GetModel()->TraceMixture(trace_os);
+    }
+
+    void MakeFiles(int force) override  {
+        Chain::MakeFiles(force);
+        ofstream trace_os((name + ".basemix").c_str());
+    }
 };
 
 int main(int argc, char* argv[])	{

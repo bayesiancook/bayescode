@@ -589,8 +589,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     double CompMoveAAProfiles(int nrep) {
         accb1 += MoveAA(1.0,1,nrep);
-        accb2 += MoveAA(1.0,3,nrep);
-        accb3 += MoveAA(0.3,3,nrep);
+        // accb2 += MoveAA(1.0,3,nrep);
+        // accb3 += MoveAA(0.3,3,nrep);
         accb4 += MoveAA(0.1,3,nrep);
         totb1++;
         totb2++;
@@ -602,8 +602,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double MulMoveAAProfiles(int nrep) {
         acca1 += MoveAAGamma(3.0,nrep);
         acca2 += MoveAAGamma(1.0,nrep);
-        acca3 += MoveAAGamma(0.3,nrep);
-        acca4 += MoveAAGamma(0.1,nrep);
+        // acca3 += MoveAAGamma(0.3,nrep);
+        // acca4 += MoveAAGamma(0.1,nrep);
         tota1++;
         tota2++;
         tota3++;

@@ -64,8 +64,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     int fixomega;
 
     Chrono totchrono;
+    Chrono paramchrono;
     Chrono basechrono;
     Chrono blchrono;
+    Chrono aachrono;
 
     public:
 
@@ -237,10 +239,23 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 		os.flush();
     }
 
+    void TraceMixture(ostream& os) const {
+        for (int k=0; k<baseNcat; k++)  {
+            os << baseweight->GetVal(k) << '\t';
+            for (int l=0; l<Naa; l++)   {
+                os << baseconcentrationarray->GetVal(k) * basecenterarray->GetVal(k)[l] << '\t';
+            }
+        }
+        os << '\n';
+        os.flush();
+    }
+
 	void Monitor(ostream& os) const {
-        os << totchrono.GetTime() << '\t' << basechrono.GetTime() << '\t' << blchrono.GetTime() << '\n';
-        os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
-        os << "prop time in bl moves  : " << blchrono.GetTime() / totchrono.GetTime() << '\n';
+        os << totchrono.GetTime() << '\t' << paramchrono.GetTime() << '\t' << basechrono.GetTime() << '\t' << blchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
+        os << "prop time in param moves: " << paramchrono.GetTime() / totchrono.GetTime() << '\n';
+        os << "sub prop time in base moves : " << basechrono.GetTime() / paramchrono.GetTime() << '\n';
+        os << "sub prop time in bl moves   : " << blchrono.GetTime() / paramchrono.GetTime() << '\n';
+        os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime() << '\n';
     }
 
 	void FromStream(istream& is) {}
@@ -294,11 +309,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     double BaseStickBreakingLogPrior() const    {
-        double ret = baseweight->GetLogProb(basekappa);
-        if (isinf(ret)) {
-            cerr << "in BaseStickBreakingLogPrior: inf\n";
-            exit(1);
-        }
+        return baseweight->GetLogProb(basekappa);
     }
 
     double BaseLogPrior() const {
@@ -374,17 +385,20 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void MasterMove() override {
 
+        totchrono.Start();
 		int nrep = 30;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
             MPI_Barrier(MPI_COMM_WORLD);
-            totchrono.Start();
+            paramchrono.Start();
+            aachrono.Start();
 
             MPI_Barrier(MPI_COMM_WORLD);
+            aachrono.Stop();
             basechrono.Start();
 
-            for (int r=0; r<3; r++) {
+            for (int r=0; r<5; r++) {
                 MasterReceiveBaseSuffStat();
                 MoveBaseMixture(1);
                 MasterSendBaseMixture();
@@ -409,11 +423,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             MPI_Barrier(MPI_COMM_WORLD);
             blchrono.Stop();
-            totchrono.Stop();
+            paramchrono.Stop();
         }
 
         MasterReceiveOmega();
         MasterReceiveLogProbs();
+        totchrono.Stop();
     }
 
     // slave move
@@ -430,7 +445,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             MoveGeneAA();
 
             MPI_Barrier(MPI_COMM_WORLD);
-            for (int r=0; r<3; r++)   {
+            for (int r=0; r<5; r++)   {
                 MoveGeneBaseAlloc();
                 SlaveSendBaseSuffStat();
                 SlaveReceiveBaseMixture();
