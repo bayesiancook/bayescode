@@ -558,6 +558,12 @@ double Random::ProfileProposeMove(std::vector<double>& profile, int dim, double 
 	}
 	profile[i1] = x;
 	profile[i2] = tot - x;
+    if (!profile[i1])   {
+        profile[i1] = 1e-50;
+    }
+    if (!profile[i2])   {
+        profile[i2] = 1e-50;
+    }
     }
     delete[] indices;
 
