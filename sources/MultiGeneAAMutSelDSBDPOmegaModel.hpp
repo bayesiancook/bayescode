@@ -706,6 +706,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         GeneLogPrior = 0;
         lnL = 0;
+        MeanNcluster = 0;
         MeanStatEnt = 0;
         MeanAAConc = 0;
         MeanAACenterEnt = 0;
