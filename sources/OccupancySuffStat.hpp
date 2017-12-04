@@ -12,6 +12,16 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat   {
     OccupancySuffStat(int insize) : SimpleArray<int>(insize,0) {}
     ~OccupancySuffStat() {}
 
+    int GetNcluster() const {
+        int n = 0;
+        for (int i=0; i<GetSize(); i++) {
+            if (GetVal(i))  {
+                n++;
+            }
+        }
+        return n;
+    }
+
     void Clear()    {
         for (int i=0; i<GetSize(); i++) {
             (*this)[i] = 0;

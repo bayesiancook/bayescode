@@ -3,6 +3,7 @@
 
 #include "Array.hpp"
 #include "OccupancySuffStat.hpp"
+#include "Permutation.hpp"
 
 class StickBreakingProcess : public SimpleArray<double> {
 
@@ -107,6 +108,71 @@ class StickBreakingProcess : public SimpleArray<double> {
             exit(1);
         }
         return total;
+    }
+
+    void LabelSwitchingMove(int nrep, OccupancySuffStat& occupancy, Permutation& permut)   {
+        MoveOccupiedCompAlloc(nrep,occupancy,permut);
+        MoveAdjacentCompAlloc(nrep,occupancy,permut);
+    }
+
+    double MoveOccupiedCompAlloc(int k0, OccupancySuffStat& occupancy, Permutation& permut)	{
+
+        int nrep = (int) (k0 * kappa);
+        GibbsResample(occupancy);
+        double total = 0.0;
+        int Nocc = occupancy.GetNcluster();
+        if (Nocc != 1)	{
+            for (int i=0; i<nrep; i++)	{
+                int occupiedComponentIndices[Nocc];
+                int j=0;
+                for (int k=0; k<GetSize(); k++)	{
+                    if (occupancy[k] != 0)	{
+                        occupiedComponentIndices[j] = k;
+                        j++;
+                    }
+                }
+                if (j != Nocc)	{
+                    cerr << "error in MoveOccupiedCompAlloc.\n";
+                    exit(1);
+                }
+                int indices[2];
+                Random::DrawFromUrn(indices,2,Nocc);
+                int cat1 = occupiedComponentIndices[indices[0]];
+                int cat2 = occupiedComponentIndices[indices[1]];
+                double logMetropolis = (occupancy[cat2] - occupancy[cat1]) * log((*this)[cat1] / (*this)[cat2]);
+                int accepted = (log(Random::Uniform()) < logMetropolis);
+                if (accepted)	{
+                    total += 1.0;
+                    occupancy.Swap(cat1,cat2);
+                    permut.Swap(cat1,cat2);
+                }
+            }
+            return total /= nrep;
+        }
+        return 0;
+    }
+
+    double MoveAdjacentCompAlloc(int k0, OccupancySuffStat& occupancy, Permutation& permut)	{
+
+        GibbsResample(occupancy);
+        int nrep = (int) (k0 * kappa);
+        
+        double total = 0;
+
+        for (int i=0; i<nrep; i++)	{
+            int cat1 = (int)(Random::Uniform() * (GetSize()-2));  
+            int cat2 = cat1 + 1;
+            double logMetropolis = (occupancy[cat1] * log(1 - V[cat2])) - (occupancy[cat2] * log(1-V[cat1]));
+            int accepted = (log(Random::Uniform()) < logMetropolis);
+            if (accepted)	{
+                total += 1.0;
+                SwapComponents(cat1,cat2);
+                occupancy.Swap(cat1,cat2);
+                permut.Swap(cat1,cat2);
+            }
+        }
+
+        return total /= nrep;
     }
 
     private:

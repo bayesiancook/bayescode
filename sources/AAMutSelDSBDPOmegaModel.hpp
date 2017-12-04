@@ -12,6 +12,7 @@
 #include "StickBreakingProcess.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "Chrono.hpp"
+#include "Permutation.hpp"
 
 class AAMutSelDSBDPOmegaModel : public ProbModel {
 
@@ -754,74 +755,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     void LabelSwitchingMove()   {
-        MoveOccupiedCompAlloc(5);
-        MoveAdjacentCompAlloc(5);
-    }
-
-    double MoveOccupiedCompAlloc(int k0)	{
-
-        const vector<double>& w = weight->GetArray();
-
-        int nrep = (int) (k0 * kappa);
-        ResampleWeights();
-        double total = 0.0;
-        int Nocc = GetNcluster();
-        if (Nocc != 1)	{
-            for (int i=0; i<nrep; i++)	{
-                int occupiedComponentIndices[Nocc];
-                int j=0;
-                for (int k=0; k<Ncat; k++)	{
-                    if ((*occupancy)[k] != 0)	{
-                        occupiedComponentIndices[j] = k;
-                        j++;
-                    }
-                }
-                if (j != Nocc)	{
-                    cerr << "error in MoveOccupiedCompAlloc.\n";
-                    exit(1);
-                }
-                int indices[2];
-                Random::DrawFromUrn(indices,2,Nocc);
-                int cat1 = occupiedComponentIndices[indices[0]];
-                int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = ((*occupancy)[cat2] - (*occupancy)[cat1]) * log(w[cat1] / w[cat2]);
-                int accepted = (log(Random::Uniform()) < logMetropolis);
-                if (accepted)	{
-                    total += 1.0;
-                    componentaafitnessarray->Swap(cat1,cat2);
-                    sitealloc->SwapComponents(cat1,cat2);
-                    occupancy->Swap(cat1,cat2);
-                }
-            }
-            return total /= nrep;
-        }
-        return 0;
-    }
-
-    double MoveAdjacentCompAlloc(int k0)	{
-
-        ResampleWeights();
-        int nrep = (int) (k0 * kappa);
-        
-        double total = 0;
-
-        const vector<double>& V = weight->GetBetaVariates();
-
-        for (int i=0; i<nrep; i++)	{
-            int cat1 = (int)(Random::Uniform() * (Ncat-2));  
-            int cat2 = cat1 + 1;
-            double logMetropolis = ((*occupancy)[cat1] * log(1 - V[cat2])) - ((*occupancy)[cat2] * log(1-V[cat1]));
-            int accepted = (log(Random::Uniform()) < logMetropolis);
-            if (accepted)	{
-                total += 1.0;
-                componentaafitnessarray->Swap(cat1,cat2);
-                sitealloc->SwapComponents(cat1,cat2);
-                weight->SwapComponents(cat1,cat2);
-                occupancy->Swap(cat1,cat2);
-            }
-        }
-
-        return total /= nrep;
+        Permutation permut(Ncat);
+        weight->LabelSwitchingMove(5,*occupancy,permut);
+        sitealloc->Permute(permut);
+        componentaafitnessarray->Permute(permut);
     }
 
     void ResampleWeights()  {
@@ -957,76 +894,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     void BaseLabelSwitchingMove()   {
-        MoveBaseOccupiedCompAlloc(5);
-        MoveBaseAdjacentCompAlloc(5);
-    }
-
-    double MoveBaseOccupiedCompAlloc(int k0)	{
-
-        const vector<double>& w = baseweight->GetArray();
-
-        int nrep = (int) (k0 * basekappa);
-        ResampleBaseWeights();
-        double total = 0.0;
-        int Nocc = GetBaseNcluster();
-        if (Nocc != 1)	{
-            for (int i=0; i<nrep; i++)	{
-                int occupiedComponentIndices[Nocc];
-                int j=0;
-                for (int k=0; k<baseNcat; k++)	{
-                    if ((*baseoccupancy)[k] != 0)	{
-                        occupiedComponentIndices[j] = k;
-                        j++;
-                    }
-                }
-                if (j != Nocc)	{
-                    cerr << "error in MoveOccupiedCompAlloc.\n";
-                    exit(1);
-                }
-                int indices[2];
-                Random::DrawFromUrn(indices,2,Nocc);
-                int cat1 = occupiedComponentIndices[indices[0]];
-                int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = ((*baseoccupancy)[cat2] - (*baseoccupancy)[cat1]) * log(w[cat1] / w[cat2]);
-                int accepted = (log(Random::Uniform()) < logMetropolis);
-                if (accepted)	{
-                    total += 1.0;
-                    basecenterarray->Swap(cat1,cat2);
-                    baseconcentrationarray->Swap(cat1,cat2);
-                    componentalloc->SwapComponents(cat1,cat2);
-                    baseoccupancy->Swap(cat1,cat2);
-                }
-            }
-            return total /= nrep;
-        }
-        return 0;
-    }
-
-    double MoveBaseAdjacentCompAlloc(int k0)	{
-
-        ResampleBaseWeights();
-        int nrep = (int) (k0 * basekappa);
-        
-        double total = 0;
-
-        const vector<double>& V = baseweight->GetBetaVariates();
-
-        for (int i=0; i<nrep; i++)	{
-            int cat1 = (int)(Random::Uniform() * (baseNcat-2));  
-            int cat2 = cat1 + 1;
-            double logMetropolis = ((*baseoccupancy)[cat1] * log(1 - V[cat2])) - ((*baseoccupancy)[cat2] * log(1-V[cat1]));
-            int accepted = (log(Random::Uniform()) < logMetropolis);
-            if (accepted)	{
-                total += 1.0;
-                basecenterarray->Swap(cat1,cat2);
-                baseconcentrationarray->Swap(cat1,cat2);
-                componentalloc->SwapComponents(cat1,cat2);
-                baseoccupancy->Swap(cat1,cat2);
-                baseweight->SwapComponents(cat1,cat2);
-            }
-        }
-
-        return total /= nrep;
+        Permutation permut(baseNcat);
+        baseweight->LabelSwitchingMove(5,*baseoccupancy,permut);
+        componentalloc->Permute(permut);
+        basecenterarray->Permute(permut);
+        baseconcentrationarray->Permute(permut);
+        basesuffstatarray->Permute(permut);
     }
 
     void ResampleBaseWeights()  {

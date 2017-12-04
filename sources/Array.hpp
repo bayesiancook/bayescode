@@ -111,6 +111,21 @@ template<class T> class SimpleArray : public Array<T>	{
 	const T& GetVal(int index) const /*override*/ {return array[index];}
 	const vector<T>& GetArray() const {return array;}
 
+    virtual void Permute(const ConstArray<int>& permut) {
+        if (permut.GetSize() != GetSize())  {
+            cerr << "error in Array<T>::Permute: non matching array size\n";
+            exit(1);
+        }
+
+        vector<T> tmp(GetSize(),GetVal(0));
+        for (int i=0; i<GetSize(); i++) {
+            tmp[i] = GetVal(permut.GetVal(i));
+        }
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i] = tmp[i];
+        }
+    }
+
     void Swap(int cat1, int cat2)   {
         T tmp = (*this)[cat1];
         (*this)[cat1] = (*this)[cat2];

@@ -2,34 +2,7 @@
 #include "AAMutSelDSBDPOmegaModel.hpp"
 #include "Parallel.hpp"
 #include "MultiGeneProbModel.hpp"
-
-class Permutation : public SimpleArray<int> {
-
-    public:
-
-    Permutation(int size) : SimpleArray<int>(size) {}
-    ~Permutation() {}
-
-    void Reset()    {
-        for (int i=0; i<GetSize(); i++) {
-            (*this)[i] = i;
-        }
-    }
-
-    unsigned int GetMPISize() const {return GetSize();}
-
-    void MPIPut(MPIBuffer& buffer) const    {
-        for (int i=0; i<GetSize(); i++) {
-            buffer << GetVal(i);
-        }
-    }
-
-    void MPIGet(const MPIBuffer& buffer)    {
-        for (int i=0; i<GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
-    }
-};
+#include "Permutation.hpp"
 
 class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
@@ -89,6 +62,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double MeanAACenterEnt;
 
     int fixomega;
+
+    Chrono totchrono;
+    Chrono basechrono;
+    Chrono genechrono;
 
     public:
 
@@ -260,7 +237,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 		os.flush();
     }
 
-	void Monitor(ostream& os) const {}
+	void Monitor(ostream& os) const {
+        os << totchrono.GetTime() << '\t' << basechrono.GetTime() << '\n';
+        os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
+    }
+
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) const {}
 
@@ -388,9 +369,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MasterReceiveBaseSuffStat();
-            MoveBaseMixture(3);
-            MasterSendBaseMixture();
+            totchrono.Start();
+            basechrono.Start();
+            for (int r=0; r<3; r++) {
+                MasterReceiveBaseSuffStat();
+                MoveBaseMixture(1);
+                MasterSendBaseMixture();
+            }
+            basechrono.Stop();
 
             if (! fixomega) {
                 MasterReceiveOmega();
@@ -402,6 +388,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             ResampleBranchLengths();
             MoveBranchLengthsHyperParameter();
             MasterSendGlobalBranchLengths();
+
+            totchrono.Stop();
         }
 
         MasterReceiveOmega();
@@ -420,8 +408,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             GeneCollectPathSuffStat();
 
             MoveGeneAA();
-            SlaveSendBaseSuffStat();
-            SlaveReceiveBaseMixture();
+            for (int r=0; r<3; r++)   {
+                MoveGeneBaseAlloc();
+                SlaveSendBaseSuffStat();
+                SlaveReceiveBaseMixture();
+            }
 
             if (! fixomega) {
                 MoveGeneOmegas();
@@ -463,6 +454,13 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void MoveGeneAA()   {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->MoveAAMixture(3);
+        }
+    }
+
+    void MoveGeneBaseAlloc()    {
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->ResampleBaseAlloc();
+            geneprocess[gene]->CollectBaseSuffStat();
         }
     }
 
@@ -552,78 +550,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void BaseLabelSwitchingMove()   {
-        MoveBaseOccupiedCompAlloc(5);
-        MoveBaseAdjacentCompAlloc(5);
-    }
-
-    double MoveBaseOccupiedCompAlloc(int k0)	{
-
-        const vector<double>& w = baseweight->GetArray();
-
-        int nrep = (int) (k0 * basekappa);
-        ResampleBaseWeights();
-        double total = 0.0;
-        int Nocc = GetBaseNcluster();
-        if (Nocc != 1)	{
-            for (int i=0; i<nrep; i++)	{
-                int occupiedComponentIndices[Nocc];
-                int j=0;
-                for (int k=0; k<baseNcat; k++)	{
-                    if ((*baseoccupancy)[k] != 0)	{
-                        occupiedComponentIndices[j] = k;
-                        j++;
-                    }
-                }
-                if (j != Nocc)	{
-                    cerr << "error in MoveOccupiedCompAlloc.\n";
-                    exit(1);
-                }
-                int indices[2];
-                Random::DrawFromUrn(indices,2,Nocc);
-                int cat1 = occupiedComponentIndices[indices[0]];
-                int cat2 = occupiedComponentIndices[indices[1]];
-                double logMetropolis = ((*baseoccupancy)[cat2] - (*baseoccupancy)[cat1]) * log(w[cat1] / w[cat2]);
-                int accepted = (log(Random::Uniform()) < logMetropolis);
-                if (accepted)	{
-                    total += 1.0;
-                    basecenterarray->Swap(cat1,cat2);
-                    baseconcentrationarray->Swap(cat1,cat2);
-                    baseoccupancy->Swap(cat1,cat2);
-                    basesuffstatarray->Swap(cat1,cat2);
-                    permutocc->Swap(cat1,cat2);
-                }
-            }
-            return total /= nrep;
-        }
-        return 0;
-    }
-
-    double MoveBaseAdjacentCompAlloc(int k0)	{
-
-        ResampleBaseWeights();
-        int nrep = (int) (k0 * basekappa);
-        
-        double total = 0;
-
-        const vector<double>& V = baseweight->GetBetaVariates();
-
-        for (int i=0; i<nrep; i++)	{
-            int cat1 = (int)(Random::Uniform() * (baseNcat-2));  
-            int cat2 = cat1 + 1;
-            double logMetropolis = ((*baseoccupancy)[cat1] * log(1 - V[cat2])) - ((*baseoccupancy)[cat2] * log(1-V[cat1]));
-            int accepted = (log(Random::Uniform()) < logMetropolis);
-            if (accepted)	{
-                total += 1.0;
-                basecenterarray->Swap(cat1,cat2);
-                baseconcentrationarray->Swap(cat1,cat2);
-                baseoccupancy->Swap(cat1,cat2);
-                baseweight->SwapComponents(cat1,cat2);
-                basesuffstatarray->Swap(cat1,cat2);
-                permutocc->Swap(cat1,cat2);
-            }
-        }
-
-        return total /= nrep;
+        permutocc->Reset();
+        baseweight->LabelSwitchingMove(5,*baseoccupancy,*permutocc);
+        basecenterarray->Permute(*permutocc);
+        baseconcentrationarray->Permute(*permutocc);
+        basesuffstatarray->Permute(*permutocc);
     }
 
     void ResampleBaseWeights()  {
