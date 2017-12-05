@@ -155,24 +155,5 @@ template<class T> class ConstMixtureArray : public ConstArray<T>	{
 	const Array<int>* alloc;
 };
 
-template<class T> class MixtureArray : public Array<T>	{
-
-	public:
-
-	MixtureArray(Array<T>* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc)	{
-	}
-	~MixtureArray() {}
-
-	int GetSize() const /*override*/ {return alloc->GetSize();}
-	const T& GetVal(int i) const /*override*/ {
-		return components->GetVal(alloc->GetVal(i));
-	}
-	T& operator[](int i) /*override*/ {return (*components)[alloc->GetVal(i)];}
-
-	private:
-	const Array<T>* components;
-	const Array<int>* alloc;
-};
-
 #endif
 
