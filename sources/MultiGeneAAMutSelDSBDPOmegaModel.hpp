@@ -309,7 +309,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     double BaseStickBreakingLogPrior() const    {
-        return baseweight->GetLogProb(basekappa);
+        double ret = baseweight->GetLogProb(basekappa);
+        if (isinf(ret)) {
+            cerr << "in BaseStickBreakingLogPrior: inf\n";
+            exit(1);
+        }
+        return ret;
     }
 
     double BaseLogPrior() const {

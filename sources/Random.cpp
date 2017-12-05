@@ -627,12 +627,10 @@ void Random::DirichletSample(vector<double>& x, const vector<double>& center, do
     }
     for (unsigned int k=0; k<x.size(); k++)    {
         x[k] /= tot;
-        /*
         if (! x[k]) {
             cerr << "in Random::DirichletSample: null entry after renorm\n";
             exit(1);
         }
-        */
     }
 }
 
