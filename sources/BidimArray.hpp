@@ -5,10 +5,10 @@
 #include <vector>
 #include "MPIBuffer.hpp"
 
-template<class T> class ConstBidimArray	{
+template<class T> class BidimSelector	{
 
 	public:
-	virtual ~ConstBidimArray() {}
+	virtual ~BidimSelector() {}
 
 	virtual int GetNrow() const = 0;
     virtual int GetNcol() const = 0;
@@ -33,7 +33,7 @@ template<class T> class ConstBidimArray	{
     }
 };
 
-template<class T> class BidimArray : public ConstBidimArray<T>	{
+template<class T> class BidimArray : public BidimSelector<T>	{
 
 	public:
 	virtual ~BidimArray() {}
@@ -57,7 +57,7 @@ template<class T> class BidimArray : public ConstBidimArray<T>	{
     }
 };
 
-template<class T> ostream& operator<<(ostream& os, const ConstBidimArray<T>& array)  {
+template<class T> ostream& operator<<(ostream& os, const BidimSelector<T>& array)  {
     array.ToStream(os);
     return os;
 }
@@ -67,11 +67,11 @@ template<class T> istream& operator>>(istream& is, BidimArray<T>& array) {
     return is;
 }
 
-template<class T> class HomogeneousBidimArray : public ConstBidimArray<T>	{
+template<class T> class BidimHomogeneousSelector : public BidimSelector<T>	{
 
 	public:
-	HomogeneousBidimArray(int innrow, int inncol, const T& invalue) : nrow(innrow), ncol(inncol), value(invalue) {}
-	~HomogeneousBidimArray() {}
+	BidimHomogeneousSelector(int innrow, int inncol, const T& invalue) : nrow(innrow), ncol(inncol), value(invalue) {}
+	~BidimHomogeneousSelector() {}
 
     int GetNrow() const override {return nrow;}
     int GetNcol() const override {return ncol;}

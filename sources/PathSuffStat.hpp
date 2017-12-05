@@ -148,7 +148,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
         }
 	}
 
-    double GetLogProb(const ConstBidimArray<SubMatrix>& matrixarray) const  {
+    double GetLogProb(const BidimSelector<SubMatrix>& matrixarray) const  {
         double total = 0;
         for (int j=0; j<this->GetNcol(); j++)   {
             total += GetLogProb(j,matrixarray);
@@ -156,7 +156,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
         return total;
     }
 
-    double GetLogProb(int j, const ConstBidimArray<SubMatrix>& matrixarray) const   {
+    double GetLogProb(int j, const BidimSelector<SubMatrix>& matrixarray) const   {
         double total = 0;
         for (int i=0; i<this->GetNrow(); i++)  {
             total += GetVal(i,j).GetLogProb(matrixarray.GetVal(i,j));
@@ -164,7 +164,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
         return total;
     }
 
-    double GetLogProb(int j, const vector<int>& flag, const ConstBidimArray<SubMatrix>& matrixarray) const   {
+    double GetLogProb(int j, const vector<int>& flag, const BidimSelector<SubMatrix>& matrixarray) const   {
         double total = 0;
         for (int i=0; i<this->GetNrow(); i++)  {
             if (flag[i])    {

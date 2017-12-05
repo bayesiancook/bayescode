@@ -8,7 +8,7 @@
 #include "Chrono.hpp"
 #include "SubMatrix.hpp"
 #include "Tree.hpp"
-#include "BranchSiteArray.hpp"
+#include "BranchSiteSelector.hpp"
 #include "BidimArray.hpp"
 #include "BranchAllocationSystem.hpp"
  
@@ -21,7 +21,7 @@ class PhyloProcess	{
 public:
 
 	// generic constructor
-	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray);
+	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray);
 
 	// branch and site homogeneous
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix);
@@ -203,7 +203,7 @@ public:
 	const SequenceAlignment *data;
 	const BranchSelector<double>* branchlength;
 	const Selector<double>* siterate;
-	const ConstBranchSiteArray<SubMatrix>* submatrixarray; 
+	const BranchSiteSelector<SubMatrix>* submatrixarray; 
 	const Selector<SubMatrix>* rootsubmatrixarray;
 	bool allocsubmatrixarray;
 	bool allocrootsubmatrixarray;

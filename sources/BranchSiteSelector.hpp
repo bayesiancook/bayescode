@@ -5,10 +5,10 @@
 #include "Array.hpp"
 #include "BranchArray.hpp"
 
-template<class T> class ConstBranchSiteArray	{
+template<class T> class BranchSiteSelector	{
 
 	public:
-	virtual ~ConstBranchSiteArray() {}
+	virtual ~BranchSiteSelector() {}
 
 	virtual const Tree& GetTree() const  = 0;
 	int GetNbranch() const {return GetTree().GetNbranch();}
@@ -17,11 +17,11 @@ template<class T> class ConstBranchSiteArray	{
 	virtual const T& GetVal(int branch, int site) const = 0;
 };
 
-template<class T> class HomogeneousBranchSiteArray : public ConstBranchSiteArray<T> {
+template<class T> class BranchHomogeneousSiteHomogeneousSelector : public BranchSiteSelector<T> {
 
 	public:
-	HomogeneousBranchSiteArray(const Tree& intree, int insize, const T& invalue) : tree(intree), size(insize), value(invalue) {}
-	~HomogeneousBranchSiteArray() {}
+	BranchHomogeneousSiteHomogeneousSelector(const Tree& intree, int insize, const T& invalue) : tree(intree), size(insize), value(invalue) {}
+	~BranchHomogeneousSiteHomogeneousSelector() {}
 
     const Tree& GetTree() const /*override*/ {return tree;}
     int GetSize() const /*override*/ {return size;}
@@ -33,11 +33,11 @@ template<class T> class HomogeneousBranchSiteArray : public ConstBranchSiteArray
 	const T& value;
 };
 
-template<class T> class BranchHomogeneousSiteHeterogeneousArray : public ConstBranchSiteArray<T>	{
+template<class T> class BranchHomogeneousSiteHeterogeneousSelector : public BranchSiteSelector<T>	{
 
 	public:
-	BranchHomogeneousSiteHeterogeneousArray(const Tree& intree, const Selector<T>& inarray) : tree(intree), array(inarray) {}
-	~BranchHomogeneousSiteHeterogeneousArray() {}
+	BranchHomogeneousSiteHeterogeneousSelector(const Tree& intree, const Selector<T>& inarray) : tree(intree), array(inarray) {}
+	~BranchHomogeneousSiteHeterogeneousSelector() {}
 
     const Tree& GetTree() const /*override*/ {return tree;}
     int GetSize() const /*override*/ {return array.GetSize();}
@@ -48,7 +48,7 @@ template<class T> class BranchHomogeneousSiteHeterogeneousArray : public ConstBr
 	const Selector<T>& array;
 };
 
-template<class T> class BranchHeterogeneousSiteHomogeneousSelector : public ConstBranchSiteArray<T> {
+template<class T> class BranchHeterogeneousSiteHomogeneousSelector : public BranchSiteSelector<T> {
 
 	public:
 	BranchHeterogeneousSiteHomogeneousSelector(const BranchSelector<T>& inbrancharray, int insize) : brancharray(inbrancharray), size(insize) {}

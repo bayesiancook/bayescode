@@ -2,7 +2,7 @@
 #include "PhyloProcess.hpp"
 using namespace std;
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray)	{
 
     tree = intree;
     data = indata;
@@ -24,7 +24,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     maxtrial = DEFAULTMAXTRIAL;
     branchlength = inbranchlength;
     siterate = insiterate;
-    submatrixarray = new HomogeneousBranchSiteArray<SubMatrix>(*tree,GetNsite(),*insubmatrix);
+    submatrixarray = new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree,GetNsite(),*insubmatrix);
     allocsubmatrixarray = true;
     rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(),*insubmatrix);
     allocrootsubmatrixarray = true;
@@ -42,7 +42,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
         std::cerr << "error in PhyloProcess constructor: size of matrix array does not match alignment size\n";
         exit(1);
     }
-    submatrixarray = new BranchHomogeneousSiteHeterogeneousArray<SubMatrix>(*tree,*insubmatrixarray);
+    submatrixarray = new BranchHomogeneousSiteHeterogeneousSelector<SubMatrix>(*tree,*insubmatrixarray);
     allocsubmatrixarray = true;
     rootsubmatrixarray = insubmatrixarray;
     allocrootsubmatrixarray = false;
