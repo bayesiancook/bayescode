@@ -2,7 +2,7 @@
 #include "PhyloProcess.hpp"
 using namespace std;
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const ConstArray<SubMatrix>* inrootsubmatrixarray)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray)	{
 
     tree = intree;
     data = indata;
@@ -16,7 +16,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     allocrootsubmatrixarray = false;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const SubMatrix* insubmatrix)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix)	{
 
     tree = intree;
     data = indata;
@@ -26,11 +26,11 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     siterate = insiterate;
     submatrixarray = new HomogeneousBranchSiteArray<SubMatrix>(*tree,GetNsite(),*insubmatrix);
     allocsubmatrixarray = true;
-    rootsubmatrixarray = new HomogeneousArray<SubMatrix>(GetNsite(),*insubmatrix);
+    rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(),*insubmatrix);
     allocrootsubmatrixarray = true;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstArray<SubMatrix>* insubmatrixarray)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray)	{
 
     tree = intree;
     data = indata;

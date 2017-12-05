@@ -17,14 +17,6 @@ template<class T> class ConstBranchSiteArray	{
 	virtual const T& GetVal(int branch, int site) const = 0;
 };
 
-template<class T> class BranchSiteArray : public ConstBranchSiteArray<T> {
-
-	public:
-	virtual ~BranchSiteArray() {}
-
-	virtual T& operator()(int branch, int site) = 0;
-};
-
 template<class T> class HomogeneousBranchSiteArray : public ConstBranchSiteArray<T> {
 
 	public:
@@ -44,7 +36,7 @@ template<class T> class HomogeneousBranchSiteArray : public ConstBranchSiteArray
 template<class T> class BranchHomogeneousSiteHeterogeneousArray : public ConstBranchSiteArray<T>	{
 
 	public:
-	BranchHomogeneousSiteHeterogeneousArray(const Tree& intree, const ConstArray<T>& inarray) : tree(intree), array(inarray) {}
+	BranchHomogeneousSiteHeterogeneousArray(const Tree& intree, const Selector<T>& inarray) : tree(intree), array(inarray) {}
 	~BranchHomogeneousSiteHeterogeneousArray() {}
 
     const Tree& GetTree() const /*override*/ {return tree;}
@@ -53,21 +45,21 @@ template<class T> class BranchHomogeneousSiteHeterogeneousArray : public ConstBr
 
 	private:
     const Tree& tree;
-	const ConstArray<T>& array;
+	const Selector<T>& array;
 };
 
-template<class T> class BranchHeterogeneousSiteHomogeneousArray : public ConstBranchSiteArray<T> {
+template<class T> class BranchHeterogeneousSiteHomogeneousSelector : public ConstBranchSiteArray<T> {
 
 	public:
-	BranchHeterogeneousSiteHomogeneousArray(const ConstBranchArray<T>& inbrancharray, int insize) : brancharray(inbrancharray), size(insize) {}
-	~BranchHeterogeneousSiteHomogeneousArray() {}
+	BranchHeterogeneousSiteHomogeneousSelector(const BranchSelector<T>& inbrancharray, int insize) : brancharray(inbrancharray), size(insize) {}
+	~BranchHeterogeneousSiteHomogeneousSelector() {}
 
     const Tree& GetTree() const /*override*/ {return brancharray.GetTree();}
     int GetSize() const /*override*/ {return size;}
 	const T& GetVal(int branch, int site) const /*override*/ {return brancharray.GetVal(branch);}
 
 	private:
-	const ConstBranchArray<T>& brancharray;
+	const BranchSelector<T>& brancharray;
     int size;
 };
 

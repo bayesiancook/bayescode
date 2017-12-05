@@ -151,7 +151,7 @@ class GammaSiteOmegaModel : public ProbModel {
         omegaarray->SetScale(beta);
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 

@@ -117,7 +117,7 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
         }
     }
 
-    double GetLogProb(const ConstBranchArray<double>& blmean, double invshape) const {
+    double GetLogProb(const BranchSelector<double>& blmean, double invshape) const {
 
         double total = 0;
         for (int i=0; i<GetNbranch(); i++)  {
@@ -156,7 +156,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-	void GibbsResample(const ConstArray<PoissonSuffStat>& suffstatarray)	{
+	void GibbsResample(const Selector<PoissonSuffStat>& suffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
 			(*this)[i] = Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
@@ -204,7 +204,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<int>& occupancy) const	{
+	void AddSuffStat(GammaSuffStat& suffstat, const Selector<int>& occupancy) const	{
 		for (int i=0; i<GetSize(); i++)	{
             if (occupancy.GetVal(i))   {
                 suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
@@ -212,7 +212,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-    void PriorResample(const ConstArray<int>& occupancy)	{
+    void PriorResample(const Selector<int>& occupancy)	{
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);
@@ -220,7 +220,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
     }
 
-	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<double>& poswarray) const {
+	void AddSuffStat(GammaSuffStat& suffstat, const Selector<double>& poswarray) const {
 		for (int i=0; i<GetSize(); i++)	{
             if (poswarray.GetVal(i)) {
                 suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
@@ -228,7 +228,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
 	}
 
-    void PriorResample(const ConstArray<double>& poswarray) {
+    void PriorResample(const Selector<double>& poswarray) {
         cerr << "in prior resample\n";
         cerr << "check that\n";
         exit(1);
@@ -363,7 +363,7 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 
 	public: 
 
-	GammaWhiteNoise(const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape)	{
+	GammaWhiteNoise(const Tree& intree, const BranchSelector<double>& inblmean, double inshape) : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape)	{
 		Sample();
 	}
 
@@ -424,7 +424,7 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
     }
 
 	protected:
-    const ConstBranchArray<double>& blmean;
+    const BranchSelector<double>& blmean;
 	double shape;
 };
 
@@ -432,7 +432,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
 
     public:
 
-    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*) 0)    {
+    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const BranchSelector<double>& inblmean, double inshape) : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*) 0)    {
         
         for (int gene=0; gene<Ngene; gene++)    {
             blarray[gene] = new GammaWhiteNoise(tree,blmean,shape);
@@ -523,7 +523,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
 
     int Ngene;
     const Tree& tree;
-    const ConstBranchArray<double>& blmean;
+    const BranchSelector<double>& blmean;
 	double shape;
     vector<GammaWhiteNoise*> blarray;
 };

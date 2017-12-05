@@ -63,8 +63,8 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
     // an array of codon matrices (one for each distinct aa fitness profile)
 	AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
-	// this one is used by PhyloProcess: has to be a ConstArray<SubMatrix>
-	ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// this one is used by PhyloProcess: has to be a Selector<SubMatrix>
+	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
@@ -159,7 +159,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
 
         componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
 
-        sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -192,7 +192,7 @@ class AAMutSelSBDPOmegaModel : public ProbModel {
         fixbl = infixbl;
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 

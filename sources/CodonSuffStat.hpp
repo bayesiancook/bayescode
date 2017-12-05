@@ -267,7 +267,7 @@ class OmegaSuffStat : public PoissonSuffStat {
         PoissonSuffStat::AddSuffStat(tmpcount,tmpbeta);
     }
 
-	void AddSuffStat(const ConstArray<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+	void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<codonsubmatrixarray.GetSize(); i++)	{
             AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
@@ -292,13 +292,13 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 		}
 	}
 
-	void AddSuffStat(const ConstArray<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+	void AddSuffStat(const Selector<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
 	}
 
-	void AddSuffStat(const ConstArray<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const ConstArray<PathSuffStat>& pathsuffstatarray)	{
+	void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}

@@ -159,7 +159,7 @@ class SingleOmegaModel : public ProbModel {
         omegahyperinvshape = inomegahyperinvshape;
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 

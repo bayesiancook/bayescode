@@ -171,7 +171,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const ConstBranchArray<double>& ratearray) const{
+	double GetLogProb(const BranchSelector<double>& ratearray) const{
 		double total = 0;
 		for (int i=0; i<GetNbranch(); i++)	{
 			total += GetVal(i).GetLogProb(ratearray.GetVal(i));

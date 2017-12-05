@@ -72,7 +72,7 @@ void AAMutSelM2aModel::Allocate()	{
     //componentomegaarray = new M2aMix(purom,dposom+1,purw,posw);
     componentomegaarray = new MechM2aMix(dposom+1,posw);
     sitealloc = new MultinomialAllocationVector(GetNsite(),componentomegaarray->GetWeights());
-    siteomegaarray = new ConstMixtureArray<double> (componentomegaarray,sitealloc);
+    siteomegaarray = new MixtureSelector<double> (componentomegaarray,sitealloc);
     sitepostprobarray.assign(GetNsite(),vector<double>(2,0));
 
     nucrelratehypercenter.assign(Nrr,1.0/Nrr);
@@ -95,8 +95,8 @@ void AAMutSelM2aModel::Allocate()	{
 
     sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,aafitnessarray,siteomegaarray);
 
-    //sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
-    //sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
+    //sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
+    //sitecodonmatrixarray = new MixtureSelector<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
     phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitecodonmatrixarray);
 
@@ -122,7 +122,7 @@ void AAMutSelM2aModel::Update()    {
 // setting model features and (hyper)parameters
 //
 
-void AAMutSelM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+void AAMutSelM2aModel::SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
     branchlength->Copy(inbranchlength);
 }
 
@@ -130,7 +130,7 @@ void AAMutSelM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) con
     inbranchlength.Copy(*branchlength);
 }
 
-void AAMutSelM2aModel::SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
+void AAMutSelM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
     branchlength->SetShape(1.0 / blhyperinvshape);
 }

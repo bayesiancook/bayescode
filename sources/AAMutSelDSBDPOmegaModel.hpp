@@ -56,8 +56,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     IIDGamma* baseconcentrationarray;
 
     MultinomialAllocationVector* componentalloc;
-    ConstMixtureArray<vector<double> >* componentcenterarray;
-    ConstMixtureArray<double>* componentconcentrationarray;
+    MixtureSelector<vector<double> >* componentcenterarray;
+    MixtureSelector<double>* componentconcentrationarray;
 
     // aa fitness arrays across sites are a SBDP process of base G0 defined above
     int Ncat;
@@ -73,8 +73,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // an array of codon matrices (one for each distinct aa fitness profile)
 	AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
-	// this one is used by PhyloProcess: has to be a ConstArray<SubMatrix>
-	ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// this one is used by PhyloProcess: has to be a Selector<SubMatrix>
+	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
@@ -195,8 +195,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basesuffstatarray = new DirichletSuffStatArray(baseNcat,Naa);
 
         componentalloc = new MultinomialAllocationVector(Ncat,baseweight->GetArray());
-        componentcenterarray = new ConstMixtureArray<vector<double> >(basecenterarray,componentalloc);
-        componentconcentrationarray = new ConstMixtureArray<double>(baseconcentrationarray,componentalloc);
+        componentcenterarray = new MixtureSelector<vector<double> >(basecenterarray,componentalloc);
+        componentconcentrationarray = new MixtureSelector<double>(baseconcentrationarray,componentalloc);
 
         componentaafitnessarray = new MultiDirichlet(componentcenterarray,componentconcentrationarray);
 
@@ -212,7 +212,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		omega = 1.0;
 
         componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
-        sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -265,7 +265,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         fixbasemix = inmix;
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 
@@ -285,7 +285,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         UpdateMatrices();
     }
 
-    void SetBaseMixture(const ConstArray<vector<double> >& inbasecenterarray, const ConstArray<double>& inbaseconcentrationarray, const ConstArray<double>& inbaseweight, const ConstArray<int>& inpermut) {
+    void SetBaseMixture(const Selector<vector<double> >& inbasecenterarray, const Selector<double>& inbaseconcentrationarray, const Selector<double>& inbaseweight, const Selector<int>& inpermut) {
 
         basecenterarray->Copy(inbasecenterarray);
         baseconcentrationarray->Copy(inbaseconcentrationarray);

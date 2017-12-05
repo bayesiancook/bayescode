@@ -21,13 +21,13 @@ class PhyloProcess	{
 public:
 
 	// generic constructor
-	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const ConstArray<SubMatrix>* inrootsubmatrixarray);
+	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray);
 
 	// branch and site homogeneous
-	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const SubMatrix* insubmatrix);
+	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix);
 
 	// branch homogeneous, site heterogeneous
-	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstArray<SubMatrix>* insubmatrixarray);
+	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray);
 
 	~PhyloProcess();
 
@@ -201,10 +201,10 @@ public:
 
 	const Tree *tree;
 	const SequenceAlignment *data;
-	const ConstBranchArray<double>* branchlength;
-	const ConstArray<double>* siterate;
+	const BranchSelector<double>* branchlength;
+	const Selector<double>* siterate;
 	const ConstBranchSiteArray<SubMatrix>* submatrixarray; 
-	const ConstArray<SubMatrix>* rootsubmatrixarray;
+	const Selector<SubMatrix>* rootsubmatrixarray;
 	bool allocsubmatrixarray;
 	bool allocrootsubmatrixarray;
 

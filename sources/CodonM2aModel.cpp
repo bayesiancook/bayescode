@@ -86,8 +86,8 @@ void CodonM2aModel::Allocate()	{
 
     componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
-    sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
-    sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
+    sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
+    sitecodonmatrixarray = new MixtureSelector<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
     phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
@@ -113,7 +113,7 @@ void CodonM2aModel::Update()    {
 // setting model features and (hyper)parameters
 //
 
-void CodonM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+void CodonM2aModel::SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
     branchlength->Copy(inbranchlength);
 }
 
@@ -121,7 +121,7 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) const 
     inbranchlength.Copy(*branchlength);
 }
 
-void CodonM2aModel::SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
+void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
     branchlength->SetShape(1.0 / blhyperinvshape);
 }

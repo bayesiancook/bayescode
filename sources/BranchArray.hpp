@@ -6,10 +6,10 @@
 #include <vector>
 #include "MPIBuffer.hpp"
 
-template<class T> class ConstBranchArray	{
+template<class T> class BranchSelector	{
 
 	public:
-	virtual ~ConstBranchArray() {}
+	virtual ~BranchSelector() {}
 
 	int GetNbranch() const {return GetTree().GetNbranch();}
 
@@ -32,12 +32,12 @@ template<class T> class ConstBranchArray	{
     }
 };
 
-template<class T> class BranchArray : public ConstBranchArray<T>	{
+template<class T> class BranchArray : public BranchSelector<T>	{
 
 	public:
 	virtual ~BranchArray() {}
 
-    void Copy(const ConstBranchArray<T>& from)  {
+    void Copy(const BranchSelector<T>& from)  {
 
         if (this->GetNbranch() != from.GetNbranch())    {
             cerr << "error: branch arrays do not have same size\n";
@@ -63,7 +63,7 @@ template<class T> class BranchArray : public ConstBranchArray<T>	{
     }
 };
 
-template<class T> ostream& operator<<(ostream& os, const ConstBranchArray<T>& array)  {
+template<class T> ostream& operator<<(ostream& os, const BranchSelector<T>& array)  {
     array.ToStream(os);
     return os;
 }
@@ -73,11 +73,11 @@ template<class T> istream& operator>>(istream& is, BranchArray<T>& array) {
     return is;
 }
 
-template<class T> class HomogeneousBranchArray : public ConstBranchArray<T>	{
+template<class T> class BranchHomogeneousSelector : public BranchSelector<T>	{
 
 	public:
-	HomogeneousBranchArray(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
-	~HomogeneousBranchArray() {}
+	BranchHomogeneousSelector(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
+	~BranchHomogeneousSelector() {}
 
 	const Tree& GetTree() const /*override*/ {return tree;}
 	const T& GetVal(int index) const /*override*/ {return value;}

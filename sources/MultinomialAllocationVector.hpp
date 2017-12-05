@@ -36,7 +36,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 		}
 	}
 
-    void Permute(const ConstArray<int>& permut) override {
+    void Permute(const Selector<int>& permut) override {
         if (permut.GetSize() != int(weight.size()))  {
             cerr << "error in MultinomialAllocationVector::Permute: non matching array size\n";
             exit(1);

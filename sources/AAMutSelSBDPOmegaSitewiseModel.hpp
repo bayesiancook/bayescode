@@ -52,7 +52,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     double aainvconc;
     IIDDirichlet* componentaafitnessarray;
     // IIDDirichlet* siteaafitnessarray; // for sitewise version
-    ConstMixtureArray<vector <double> >* siteaafitnessarray;
+    MixtureSelector<vector <double> >* siteaafitnessarray;
     DirichletSuffStat aahypersuffstat;
 
     // (3) site allocations: multinomial given the weights
@@ -63,8 +63,8 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 	//AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 	AAMutSelOmegaCodonSubMatrixArray* sitecodonmatrixarray; // needed for sitewise version
 
-	// this one is used by PhyloProcess: has to be a ConstArray<SubMatrix> --- Not relevant anymore, since we now have sitecodonmatrixarray
-	//ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// this one is used by PhyloProcess: has to be a Selector<SubMatrix> --- Not relevant anymore, since we now have sitecodonmatrixarray
+	//MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
@@ -137,7 +137,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         aainvconc = 1.0/Naa;
         componentaafitnessarray = new IIDDirichlet(Ncat,aacenter,1.0/aainvconc);
         // siteaafitnessarray = new IIDDirichlet(Nsite,aacenter,1.0/aainvconc); // for sitewise
-        siteaafitnessarray = new ConstMixtureArray<vector<double> >(componentaafitnessarray,sitealloc);
+        siteaafitnessarray = new MixtureSelector<vector<double> >(componentaafitnessarray,sitealloc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -145,7 +145,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
         sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, siteaafitnessarray, omega);
 
-        //sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        //sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitecodonmatrixarray);
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -174,7 +174,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     // Setting and updating
     // ------------------
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 

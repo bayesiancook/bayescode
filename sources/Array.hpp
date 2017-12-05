@@ -5,10 +5,10 @@
 #include <vector>
 #include "MPIBuffer.hpp"
 
-template<class T> class ConstArray	{
+template<class T> class Selector	{
 
 	public:
-	virtual ~ConstArray() {}
+	virtual ~Selector() {}
 
 	virtual int GetSize() const = 0;
 	virtual const T& GetVal(int index) const = 0;
@@ -29,14 +29,14 @@ template<class T> class ConstArray	{
     }
 };
 
-template<class T> class Array : public ConstArray<T>	{
+template<class T> class Array : public Selector<T>	{
 
 	public:
 	virtual ~Array() {}
 
 	virtual T& operator[](int index) = 0;
 
-    void Copy(const ConstArray<T>& from)  {
+    void Copy(const Selector<T>& from)  {
 
         if (this->GetSize() != from.GetSize())    {
             cerr << "error: arrays do not have same size\n";
@@ -60,7 +60,7 @@ template<class T> class Array : public ConstArray<T>	{
     }
 };
 
-template<class T> ostream& operator<<(ostream& os, const ConstArray<T>& array)  {
+template<class T> ostream& operator<<(ostream& os, const Selector<T>& array)  {
     array.ToStream(os);
     return os;
 }
@@ -85,11 +85,11 @@ template<class T> istream& operator>>(istream& is, vector<T>& array)    {
     return is;
 }
 
-template<class T> class HomogeneousArray : public ConstArray<T>	{
+template<class T> class HomogeneousSelector : public Selector<T>	{
 
 	public:
-	HomogeneousArray(int insize, const T& invalue) : size(insize), value(invalue) {}
-	~HomogeneousArray() {}
+	HomogeneousSelector(int insize, const T& invalue) : size(insize), value(invalue) {}
+	~HomogeneousSelector() {}
 
 	int GetSize() const /*override*/ {return size;}
 	const T& GetVal(int index) const /*override*/ {return value;}
@@ -111,7 +111,7 @@ template<class T> class SimpleArray : public Array<T>	{
 	const T& GetVal(int index) const /*override*/ {return array[index];}
 	const vector<T>& GetArray() const {return array;}
 
-    virtual void Permute(const ConstArray<int>& permut) {
+    virtual void Permute(const Selector<int>& permut) {
         if (permut.GetSize() != GetSize())  {
             cerr << "error in Array<T>::Permute: non matching array size\n";
             exit(1);
@@ -137,13 +137,13 @@ template<class T> class SimpleArray : public Array<T>	{
 };
 
 
-template<class T> class ConstMixtureArray : public ConstArray<T>	{
+template<class T> class MixtureSelector : public Selector<T>	{
 
 	public:
 
-	ConstMixtureArray(const Array<T>* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc)	{
+	MixtureSelector(const Array<T>* incomponents, const Array<int>* inalloc) : components(incomponents), alloc(inalloc)	{
 	}
-	~ConstMixtureArray() {}
+	~MixtureSelector() {}
 
 	int GetSize() const /*override*/ {return alloc->GetSize();}
 	const T& GetVal(int i) const /*override*/ {

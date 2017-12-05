@@ -27,7 +27,7 @@ class SubMatrixSelector : public ConstBranchSiteArray<SubMatrix> {
     const BranchAllocationSystem& branchalloc;
 };
 
-class RootSubMatrixSelector : public ConstArray<SubMatrix>  {
+class RootSubMatrixSelector : public Selector<SubMatrix>  {
 
     public:
 

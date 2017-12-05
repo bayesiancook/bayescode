@@ -218,7 +218,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
-	void AddSuffStat(DirichletSuffStat& suffstat, const ConstArray<int>& occupancy) const   {
+	void AddSuffStat(DirichletSuffStat& suffstat, const Selector<int>& occupancy) const   {
 		for (int i=0; i<GetSize(); i++)	{
             if (occupancy.GetVal(i))   {
                 suffstat.AddSuffStat(GetVal(i));
@@ -226,7 +226,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
-    void PriorResample(const ConstArray<int>& occupancy)    {
+    void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
                 Random::DirichletSample((*this)[i],center,concentration);
@@ -275,7 +275,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	public: 
 
-	MultiDirichlet(const ConstArray<vector<double> >* incenterarray, const ConstArray<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
+	MultiDirichlet(const Selector<vector<double> >* incenterarray, const Selector<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
         if (centerarray->GetSize() != concentrationarray->GetSize())    {
             cerr << "error in multi dirichlet: center and concentration arrays should have same size\n";
             exit(1);
@@ -332,13 +332,13 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
         return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
 	}
 
-    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const ConstArray<int>& alloc) {
+    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Selector<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstatarray[alloc.GetVal(i)].AddSuffStat(GetVal(i));
 		}
 	}
 
-    void PriorResample(const ConstArray<int>& occupancy)    {
+    void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
                 Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
@@ -398,8 +398,8 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	protected:
     int dim;
-    const ConstArray<vector<double> >* centerarray;
-    const ConstArray<double>* concentrationarray;
+    const Selector<vector<double> >* centerarray;
+    const Selector<double>* concentrationarray;
 };
 
 #endif

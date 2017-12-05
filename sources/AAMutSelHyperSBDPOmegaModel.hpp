@@ -61,8 +61,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     // site allocations
 	MultinomialAllocationVector* sitealloc;
     // dispatching across sites
-    ConstMixtureArray<vector<double> >* siteaacenterarray;
-    ConstMixtureArray<double>* siteaaconcentrationarray;
+    MixtureSelector<vector<double> >* siteaacenterarray;
+    MixtureSelector<double>* siteaaconcentrationarray;
 
     // aa fitness arrays
     MultiDirichlet* aafitnessarray;
@@ -193,8 +193,8 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
         // site distributors
-        siteaacenterarray = new ConstMixtureArray<vector<double> >(componentaacenterarray,sitealloc);
-        siteaaconcentrationarray = new ConstMixtureArray<double>(componentaaconcentrationarray,sitealloc);
+        siteaacenterarray = new MixtureSelector<vector<double> >(componentaacenterarray,sitealloc);
+        siteaaconcentrationarray = new MixtureSelector<double>(componentaaconcentrationarray,sitealloc);
 
         // site-specific amino-acid fitness profiles
         aafitnessarray = new MultiDirichlet(siteaacenterarray,siteaaconcentrationarray);
@@ -238,7 +238,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 
@@ -252,7 +252,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         omegahyperinvshape = inomegahyperinvshape;
     }
 
-    void SetAAHyperMixture(const ConstArray<vector<double> >& incomponentaacenterarray, const ConstArray<double>& incomponentaaconcentrationarray, const ConstArray<double>& inweight) {
+    void SetAAHyperMixture(const Selector<vector<double> >& incomponentaacenterarray, const Selector<double>& incomponentaaconcentrationarray, const Selector<double>& inweight) {
 
         componentaacenterarray->Copy(incomponentaacenterarray);
         componentaaconcentrationarray->Copy(incomponentaaconcentrationarray);

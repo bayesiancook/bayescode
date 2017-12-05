@@ -61,11 +61,11 @@ class DPOmegaModel : public ProbModel {
     // obtained from component matrix array and site allocations
     // the 2 arrays are identical in value, they just differ by their type
 
-	// this one is used by PhyloProcess: has to be a ConstArray<SubMatrix>
-	ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// this one is used by PhyloProcess: has to be a Selector<SubMatrix>
+	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	// this one is used for collecting omega suffstats: need to have access to the *codon* matrix for each site
-	ConstMixtureArray<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
+	MixtureSelector<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
@@ -158,8 +158,8 @@ class DPOmegaModel : public ProbModel {
 
         componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
-        sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
-        sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
+        sitecodonmatrixarray = new MixtureSelector<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
         phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
@@ -197,7 +197,7 @@ class DPOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 

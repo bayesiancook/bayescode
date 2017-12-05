@@ -10,7 +10,7 @@
 class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmegaCodonSubMatrix>	{
 
 	public:
-	MGOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	MGOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Selector<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         Create();
 	}
 
@@ -31,7 +31,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 		}
     }
 
-    void UpdateCodonMatrices(const ConstArray<int>& occupancy)	{
+    void UpdateCodonMatrices(const Selector<int>& occupancy)	{
         if (occupancy.GetSize() != GetSize())	{
             cerr << "error in UpdateCodonMatrices: occupancy vector size does not match array size\n";
             exit(1);
@@ -61,18 +61,18 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
 
 	const CodonStateSpace* codonstatespace;
 	const GTRSubMatrix* nucmatrix;
-	const ConstArray<double>* omegaarray;
+	const Selector<double>* omegaarray;
     vector<MGOmegaCodonSubMatrix*> matrixarray;
 };
 
 class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<AAMutSelOmegaCodonSubMatrix>	{
 
 	public:
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), omegaarray(0), matrixarray(inaafitnessarray->GetSize())   {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Selector<vector<double> >* inaafitnessarray, double inomega) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omega(inomega), omegaarray(0), matrixarray(inaafitnessarray->GetSize())   {
         Create();
 	}
 
-	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const ConstArray<vector<double> >* inaafitnessarray, const ConstArray<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
+	AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace* incodonstatespace, const GTRSubMatrix* innucmatrix, const Selector<vector<double> >* inaafitnessarray, const Selector<double>* inomegaarray) : codonstatespace(incodonstatespace), nucmatrix(innucmatrix), aafitnessarray(inaafitnessarray), omegaarray(inomegaarray), matrixarray(inomegaarray->GetSize())   {
         if (aafitnessarray->GetSize() != omegaarray->GetSize()) {
             cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: arrays of aafitness and omega values should be of same size\n";
             exit(1);
@@ -113,7 +113,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
         }
     }
 
-    void UpdateCodonMatrices(const ConstArray<int>& occupancy)	{
+    void UpdateCodonMatrices(const Selector<int>& occupancy)	{
         if (omegaarray) {
             for (int i=0; i<GetSize(); i++)	{
                 if (! occupancy.GetVal(i)) {
@@ -154,9 +154,9 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
 
 	const CodonStateSpace* codonstatespace;
 	const GTRSubMatrix* nucmatrix;
-    const ConstArray<vector<double> >* aafitnessarray;
+    const Selector<vector<double> >* aafitnessarray;
     double omega;
-	const ConstArray<double>* omegaarray;
+	const Selector<double>* omegaarray;
     vector<AAMutSelOmegaCodonSubMatrix*> matrixarray;
 };
 

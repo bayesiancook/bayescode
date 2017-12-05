@@ -9,7 +9,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
 
     public:
 
-    BidimIIDMVNormal(int inncol, int indim, const ConstArray<double>& invar) : 
+    BidimIIDMVNormal(int inncol, int indim, const Selector<double>& invar) : 
         SimpleBidimArray(invar.GetSize(),inncol,vector<double>(indim,0)), dim(indim), var(invar) {
         Sample();
     }
@@ -104,7 +104,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
     protected:
 
     int dim;
-    const ConstArray<double>& var;
+    const Selector<double>& var;
 };
 
 

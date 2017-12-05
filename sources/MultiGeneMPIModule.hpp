@@ -105,7 +105,7 @@ class MultiGeneMPIModule    {
         }
     }
 
-    template<class T> void MasterSendGeneArray(const ConstArray<T>& array) const    {
+    template<class T> void MasterSendGeneArray(const Selector<T>& array) const    {
 
         int thusfar = 0;
         for (int proc=1; proc<GetNprocs(); proc++)  {
@@ -130,7 +130,7 @@ class MultiGeneMPIModule    {
         }
     }
 
-    template<class T> void SlaveSendGeneArray(const ConstArray<T>& array) const {
+    template<class T> void SlaveSendGeneArray(const Selector<T>& array) const {
 
         int ngene = GetLocalNgene();
         MPIBuffer buffer(ngene * MPISize(array.GetVal(0)));
@@ -155,7 +155,7 @@ class MultiGeneMPIModule    {
         }
     }
 
-    template<class T, class U> void MasterSendGeneArray(const ConstArray<T>& v, const ConstArray<U>& w) const    {
+    template<class T, class U> void MasterSendGeneArray(const Selector<T>& v, const Selector<U>& w) const    {
 
         int thusfar = 0;
         for (int proc=1; proc<GetNprocs(); proc++)  {
@@ -180,7 +180,7 @@ class MultiGeneMPIModule    {
         }
     }
 
-    template<class T, class U> void SlaveSendGeneArray(const ConstArray<T>& v, const ConstArray<U>& w) const {
+    template<class T, class U> void SlaveSendGeneArray(const Selector<T>& v, const Selector<U>& w) const {
 
         int ngene = GetLocalNgene();
         MPIBuffer buffer(ngene * (MPISize(v.GetVal(0)) + MPISize(w.GetVal(0))));

@@ -117,7 +117,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		}
 	}
 
-	double GetLogProb(const ConstArray<SubMatrix>& matrixarray) const	{
+	double GetLogProb(const Selector<SubMatrix>& matrixarray) const	{
 
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{

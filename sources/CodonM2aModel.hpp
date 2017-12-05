@@ -110,10 +110,10 @@ class CodonM2aModel : public ProbModel {
         nucmode = innucmode;
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength);
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength);
     void GetBranchLengths(BranchArray<double>& inbranchlength) const;
 
-    void SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape);
+    void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape);
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat);
     void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const;
@@ -333,10 +333,10 @@ class CodonM2aModel : public ProbModel {
 	// two versions differing only by their exact type
 
 	// used for collecting omega suffstats: need to have access to the *codon* matrix for each site
-	ConstMixtureArray<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
+	MixtureSelector<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
 
-	// used by PhyloProcess: has to be a ConstArray<SubMatrix>
-	ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// used by PhyloProcess: has to be a Selector<SubMatrix>
+	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 

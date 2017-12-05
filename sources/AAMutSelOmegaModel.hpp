@@ -186,7 +186,7 @@ class AAMutSelOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 
