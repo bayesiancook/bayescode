@@ -5,11 +5,14 @@
 #include "StateSpace.hpp"
 #include "TaxonSet.hpp"
 
-// this class works like an interface
-// it does not do any job
+/**
+ * \brief Generic interface for a multiple sequence alignment
+ */
+
 class SequenceAlignment {
   public:
 
+    //! default constructor
     SequenceAlignment() {}
 
     virtual ~SequenceAlignment()    {
@@ -17,9 +20,48 @@ class SequenceAlignment {
         delete statespace;
     }
 
-    // the set of characters (A,C,G,T for nucleotides, etc..)
+    //! return the state space (A,C,G,T for nucleotides, etc..)
     const StateSpace *GetStateSpace() const { return statespace; }
 
+    //! return size of state space
+    int GetNstate() const { return statespace->GetNstate(); }
+
+    //! return the set of taxa
+    const TaxonSet *GetTaxonSet() const { return taxset; }
+
+    //! return the number of aligned positions
+    int GetNsite() const { return Nsite; }
+
+    //! return the number of taxa (number of aligned sequences)
+    int GetNtaxa() const { return taxset->GetNtaxa(); }
+
+    // return state for this taxon at that site (return -1 if missing entry)
+    int GetState(int taxon, int site) const { return Data[taxon][site]; }
+
+    //! whether or not entry is missing for this taxon at that site
+    bool isMissing(int taxon, int site) const { return Data[taxon][site] == -1; }
+
+    //! Phylip-like formatted output to stream
+    void ToStream(std::ostream &os) const;
+
+    //! set the state to a new value (note: should really re-consider this option, currently used by PhyloProcess to simulate new data)
+    void SetState(int taxon, int site, int state) { Data[taxon][site] = state; }
+
+  protected:
+
+    bool AllMissingColumn(int site) const {
+        bool ret = true;
+        int tax = 0;
+        while ((tax < GetNtaxa()) && ret) {
+            ret &= static_cast<int>(Data[tax][site] == unknown);
+            tax++;
+        }
+        return ret;
+    }
+
+  private:
+
+    // replace all entries by missing entries
     void Unclamp() {
         for (int i = 0; i < Ntaxa; i++) {
             for (int j = 0; j < Nsite; j++) {
@@ -27,17 +69,6 @@ class SequenceAlignment {
             }
         }
     }
-
-    int GetNstate() const { return statespace->GetNstate(); }
-
-    // the list of taxa
-    const TaxonSet *GetTaxonSet() const { return taxset; }
-
-    int GetNsite() const { return Nsite; }
-
-    int GetNtaxa() const { return taxset->GetNtaxa(); }
-
-    bool isMissing(int taxon, int site) const { return Data[taxon][site] == -1; }
 
     bool AllMissingTaxon(int tax) const {
         bool ret = true;
@@ -56,16 +87,6 @@ class SequenceAlignment {
             exit(1);
         }
         return AllMissingTaxon(index);
-    }
-
-    bool AllMissingColumn(int site) const {
-        bool ret = true;
-        int tax = 0;
-        while ((tax < GetNtaxa()) && ret) {
-            ret &= static_cast<int>(Data[tax][site] == unknown);
-            tax++;
-        }
-        return ret;
     }
 
     bool NoMissingColumn(int site) const {
@@ -98,15 +119,13 @@ class SequenceAlignment {
         return ret;
     }
 
-    void SetState(int taxon, int site, int state) { Data[taxon][site] = state; }
-    int GetState(int taxon, int site) const { return Data[taxon][site]; }
-
-    void ToStream(std::ostream &os) const;
     void ToStreamTriplet(std::ostream &os) const;
     int GetNonMissingTriplet() const;
     void ToFasta(std::ostream &os) const;
 
     // data fields
+
+  protected:
 
     int Ntaxa;
     int Nsite;
@@ -115,12 +134,16 @@ class SequenceAlignment {
     std::vector<std::vector<int> > Data;
 };
 
+/**
+ * \brief A sequence alignment created by reading from a file (Phylip-like or Nexus format)
+ */
+
 class FileSequenceAlignment : public SequenceAlignment {
   public:
-    FileSequenceAlignment(std::istream &is);
     FileSequenceAlignment(std::string filename);
 
   private:
+    FileSequenceAlignment(std::istream &is);
     int ReadDataFromFile(std::string filespec, int forceinterleaved = 0);
     int ReadNexus(std::string filespec);
     int ReadSpecial(std::string filename);

@@ -10,12 +10,12 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
     try {
         DNAsource = from;
 
-        if (from->Nsite % 3 != 0) {
+        if (from->GetNsite() % 3 != 0) {
             cerr << "not multiple of three\n";
             exit(1);
         }
-        Nsite = from->Nsite / 3;
-        Ntaxa = from->Ntaxa;
+        Nsite = from->GetNsite() / 3;
+        Ntaxa = from->GetNtaxa();
         auto tempstatespace = new CodonStateSpace(type);
         statespace = tempstatespace;
         // DNAStateSpace* nucspace = tempstatespace->GetDNAStateSpace();

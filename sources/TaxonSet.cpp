@@ -23,6 +23,7 @@ TaxonSet::TaxonSet(const std::vector<string>& names) : Ntaxa(names.size()), taxl
     }
 }
 
+/*
 TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {
     Ntaxa = tree->GetSize(subgroup);
     taxlist.assign(Ntaxa,"");
@@ -32,6 +33,7 @@ TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {
     int i = 0;
     RecursiveGetSubSet(subgroup, i);
 }
+*/
 
 void TaxonSet::RecursiveGetSubSet(const Link *from, int &i) {
     if (from->isLeaf()) {

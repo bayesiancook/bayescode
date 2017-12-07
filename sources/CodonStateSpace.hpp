@@ -5,58 +5,56 @@
 #include "Random.hpp"
 #include "StateSpace.hpp"
 
+/**
+ * \brief A codon state space
+ *
+ * CodonStateSpace implements the methods of the base class StateSpace
+ * (conversion from int to string and conversely -- here, the strings are nucleotide triplets, e.g. "AAC").
+ * By default, the list of codons considered by any method or algorithm excludes stop codons.
+ * Thus, for instance, in the case of the universal genetic code, Nstate==61.
+ * If a method takes or returns codons including stops, then, this is made explicit in the method's name
+ */
+
+
 class CodonStateSpace : public StateSpace {
   public:
     static const int Npos = 3;
 
-    // by default, codons always exclude stops
-    // if a method takes or returns a codon stops INCLUDED, then this is made
-    // explicit in the
-    // method's name
-
+    //! constructor: should always specify the genetic code (en enum type: Universal, MtMam or MtInv, see BiologicalSequences.h)
     CodonStateSpace(GeneticCodeType type);
     ~CodonStateSpace() /*override*/;
 
-    // -----
-    // generic methods
-    // exist for any state space, and should have a consistent meaning throughout
-
     int GetNstate() const /*override*/ { return Nstate; }
 
-    // give a three letter code, returns codon (if stop exits with error message)
+    //! given a 3-nucleotide string, returns codon index, in 0..Nstate-1 (if stop or unrecognized, exits with error message)
     int GetState(std::string word) const /*override*/;
 
-    // give a codon (stops excluded), returns a three letter code
+    //! given a codon index (stops excluded), returns the corresponding 3-nucleotide string
     std::string GetState(int codon) const /*override*/;
 
-    // -----
     // codon specific methods
 
+    //! return the underlying nucleotide state space
     const DNAStateSpace *GetDNAStateSpace() const { return nucstatespace; }
 
+    //! return the amino-acid state space (for translated sequences)
     const ProteinStateSpace *GetProteinStateSpace() const { return protstatespace; }
 
-    // returns a codon based on three letters
-    // returns -1 (== unknown) if at least one of the positions is unknown
-    // if stop exits with error message...
+    //! \brief return a codon based on three nucleotides encoded as integers (see DNAStateSpace)
+    //!
+    //! returns -1 (== unknown) if at least one of the positions is unknown;
+    //! if stop, then exits with error message.
     int GetCodonFromDNA(int pos1, int pos2, int pos3) const;
 
-    /*
-      string TranslateDNASequenceWithStops(string s);
-      string GetStateWithStops(int state);
-      int isCodingSequence(string s);
-    */
-
-    // 2 codons excluding stops are compared
-    // method returns -1 if identical
-    // returns 3 is codons differ at more than one position
-    // otherwise, returns the position at which codons differ (i.e. returns 0,1 or
-    // 2 if the codons
-    // differ at position 1,2 or 3)
+    //! \brief given 2 nearest-neighbor codons, returns at which position they differ
+    //
+    //! codons should not be stop codons;
+    //! returns -1 if codons are identical;
+    //! returns 3 if codons differ at more than one position;
+    //! otherwise, returns the position at which codons differ (i.e. returns 0,1 or 2 if the codons differ at position 1,2 or 3).
     int GetDifferingPosition(int i, int j) const;
 
-    // return the integer encoding for the base at requested position
-    // stops excluded
+    //! return the integer encoding for the nucleotide at requested position pos=0,1, or 2
     int GetCodonPosition(int pos, int codon) const {
         if ((pos < 0) || (pos >= Npos)) {
             std::cerr << "GetCodonPosition: pos out of bound\n";
@@ -74,44 +72,16 @@ class CodonStateSpace : public StateSpace {
         return CodonPos[pos][codon];
     }
 
-    int IsNonCTNearest(int a, int b) const;
-
-    // translation stops excluded
+    //! translation: amino-acid encoded by given codon (stops excluded)
     int Translation(int codon) const { return CodonCode[codon]; }
 
-    // stops excluded
+    //! whether the two codons are synonymous or not
     bool Synonymous(int codon1, int codon2) const { return (CodonCode[codon1] == CodonCode[codon2]); }
 
-    // returns -1 if stop codon
-    // otherwise returns integer in [0,19] standing for an amino-acid (one letter
-    // code, alphabetical
-    // order)
-    int TranslationWithStops(int codon) const { return CodonCodeWithStops[codon]; }
-
+    //! check whether the combination of the three integer-encoded nucleotides make a stop codon or not
     bool CheckStop(int pos1, int pos2, int pos3) const;
 
-    /*
-      cannot exist: indexing system excludes stop codons anyway...
-      bool isStop(int codon)	{
-      int n = 0;
-      while ((n < Nstop) && (codon != StopCodons[n]))	{
-      n++;
-      }
-      return (n != Nstop);
-      }
-    */
-
-    int GetDegeneracy(int codon) const;
-
-    int GetNstop() const { return Nstop; }
-
-    const int *GetStopPos1() const { return StopPos1; }
-
-    const int *GetStopPos2() const { return StopPos2; }
-
-    const int *GetStopPos3() const { return StopPos3; }
-
-    // computes the sum of nuc stats over stop codons (S) and returns 1-S
+    //! computes the sum of nuc stats over stop codons (S) and returns 1-S
     double GetNormStat(const EVector& nucstat) const {
         double stopstat = 0;
         for (int i=0; i<Nstop; i++) {
@@ -120,6 +90,7 @@ class CodonStateSpace : public StateSpace {
         return 1.0 - stopstat;
     }
 
+    //! computes the sum of nuc stats over stop codons (S) and returns 1-S
     double GetNormStat(const double* nucstat) const {
         double stopstat = 0;
         for (int i=0; i<Nstop; i++) {
@@ -129,7 +100,16 @@ class CodonStateSpace : public StateSpace {
     }
 
   private:
-    void MakeDegeneracyMap() const;
+
+    // number of stop codons under this genetic code (typically 3 for the Universal code)
+    int GetNstop() const { return Nstop; }
+
+    const int *GetStopPos1() const { return StopPos1; }
+
+    const int *GetStopPos2() const { return StopPos2; }
+
+    const int *GetStopPos3() const { return StopPos3; }
+
 
     GeneticCodeType code;
     const DNAStateSpace *nucstatespace;

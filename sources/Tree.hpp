@@ -10,14 +10,26 @@ using namespace std;
 
 class TaxonSet;  // forward decl
 
+/**
+ * \brief a Node of a phylogenetic tree
+ *
+ * In itself, and like the Branch class,
+ * the Node class does not give access to the local structure of the tree
+ * (does not point to anything -- only pointed to by surrounding instances of the Link class -- see Tree and Link).
+ * Branch and Node are merely storing the name (string) and index (int) of the local branch or node.
+ */
+
 class Node {
   private:
     int index;
     std::string name;
 
   public:
+    //! default constructor
     Node() : index(0), name("") {}
+    //! constructor with string (giving the name of the node)
     Node(std::string s) : index(0), name(std::move(s)) {}
+    //! copy constructor (pointer-style)
     Node(const Node *from) : index(from->index), name(from->name) {}
 
     virtual ~Node() = default;
@@ -28,14 +40,26 @@ class Node {
     void SetIndex(int i) { index = i; }
 };
 
+/**
+ * \brief a Branch of a phylogenetic tree
+ *
+ * In itself, and like the Node class,
+ * the Branch class does not give access to the local structure of the tree.
+ * (does not point to anything -- only pointed to by surrounding instances of the Link class -- see Tree and Link).
+ * Branch and Node are merely storing the name (string) and index (int) of the local branch or node
+ */
+
 class Branch {
   private:
     int index;
     std::string name;
 
   public:
+    //! default constructor
     Branch() : index(0), name("") {}
+    //! constructor with string (giving the name of the branch)
     Branch(std::string s) : index(0), name(std::move(s)) {}
+    //! copy constructor (pointer style)
     Branch(const Branch *from) : index(from->index), name(from->name) {}
 
     virtual ~Branch() = default;
@@ -45,6 +69,19 @@ class Branch {
     int GetIndex() const { return index; }
     void SetIndex(int i) { index = i; }
 };
+
+/**
+ * \brief Link provides the building block for the chained structure of pointers defining a tree topology invariant by re-rooting (such as stored by the Tree class).
+ *
+ * The global structure defined by the Link pointers has the following property.
+ * (1) Each branch has two links, one at each end; which access to each other through the Link* out pointer.
+ * (2) The links of all branches stemming from a given node form a circular chained structure, through the Link* next pointer.
+ * (3) Links corresponding to tip nodes are their own next.
+ * (4) There is a root link, which does not point to any branch, and is just inserted
+ * in the circular chained structure at a given node of the tree. The root link is its own out.
+ * Rerooting of the tree can be done by just inserting this root node anywhere in the structure.
+ * From there, recursive functions will make a complete traversal of the tree, from the current position of the root down to all tips.
+ */
 
 class Link {
   private:
@@ -135,138 +172,112 @@ class Link {
     }
 };
 
-class NewickTree {
+/** \brief A phylogenetic tree
+ *
+ * The tree structure is encoded in the chained structure defined by the links (see Link class),
+ * which themselves point to branches and nodes (Branch and Node class).
+ * 
+ */
+
+class Tree {
   public:
-    virtual ~NewickTree() = default;
-    virtual Link *GetRoot() const = 0;
 
-    void ToStream(std::ostream &os) const;
-    void ToStream(std::ostream &os, const Link *from) const;
-    double ToStreamSimplified(std::ostream &os, const Link *from) const;
-
-    const Link *GetLeftMostLink(const Link *from) const {
-        if (from->isLeaf()) {
-            return from;
-        }
-        return GetLeftMostLink(from->Next()->Out());
-    }
-
-    const Link *GetRightMostLink(const Link *from) const {
-        if (from->isLeaf()) {
-            return from;
-        }
-        const Link *link = from->Next();
-        while (link->Next() != from) {
-            link = link->Next();
-        }
-        return GetRightMostLink(link->Out());
-    }
-
-    std::string GetLeftMost(const Link *from) const {
-        if (from->isLeaf()) {
-            return GetNodeName(from);
-        }
-        return GetLeftMost(from->Next()->Out());
-    }
-
-    std::string GetRightMost(const Link *from) const {
-        if (from->isLeaf()) {
-            return GetNodeName(from);
-        }
-        const Link *link = from->Next();
-        while (link->Next() != from) {
-            link = link->Next();
-        }
-        return GetRightMost(link->Out());
-    }
-
-    static void Simplify() { simplify = true; }
-
-    void PrintTab(std::ostream &os) const { RecursivePrintTab(os, GetRoot()); }
-
-    void RecursivePrintTab(std::ostream &os, const Link *from) const {
-        os << GetLeftMost(from) << '\t' << GetRightMost(from) << '\t' << GetNodeName(from) << '\n';
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursivePrintTab(os, link->Out());
-        }
-    }
-
-    int GetNnode() const { return RecursiveGetNnode(GetRoot()); }
-
-    int GetNinternalNode() const { return RecursiveGetNinternalNode(GetRoot()); }
-
-    int RecursiveGetNinternalNode(const Link *from) const {
-        int n = 0;
-        if (!from->isLeaf()) {
-            n++;
-        }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            n += RecursiveGetNinternalNode(link->Out());
-        }
-        return n;
-    }
-
-    int RecursiveGetNnode(const Link *from) const {
-        int n = 1;
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            n += RecursiveGetNnode(link->Out());
-        }
-        return n;
-    }
-
-  protected:
-    virtual std::string GetNodeName(const Link *link) const = 0;
-    virtual std::string GetBranchName(const Link *link) const = 0;
-
-    virtual std::string GetLeafNodeName(const Link *link) const { return GetNodeName(link); }
-
-    static bool simplify;
-};
-
-class Tree : public NewickTree {
-  public:
+    //! default constructor: set member pointers to 0
     Tree();
-    // default constructor: set member pointers to 0
 
+    //! copy constructor: recursively clone the entire chained structure of Link, Branch and Node objects
     Tree(const Tree *from);
-    // clones the entire Link structure
-    // but does NOT clone the Nodes and Branches
-    // calls RecursiveClone
 
+    //! create a tree by reading from file (newick format expected)
     Tree(std::string filename);
-    // create a tree by reading into a file (netwick format expected)
-    // calls ReadFromStream
 
+    //! recursively delete the whole chained structure of Link, Branch and Node objects
     ~Tree() /*override*/;
-    // calls RecursiveDelete
-    // but does NOT delete the Nodes and Branches
 
-    // Delete the leaf pointing by the next link and set everithing right.
-    void DeleteNextLeaf(Link *previous);
+    //! \brief register all leaves of the tree with an external TaxonSet
+    //
+    //! The taxon set defines an indexing system for taxon names, with indices ranging over 0..P-1.
+    //! The tree is recursively traversed, and each leaf's name is looked for in the map of the taxon set.
+    //! If not found : an error is produced;
+    //! otherwise, the leaf's index is set equal to the index of the corresponding taxon in TaxonSet.
+    void RegisterWith(const TaxonSet *taxset);
 
-    // Delete the unary Node wich from is paart of and set everithing right.
-    void DeleteUnaryNode(Link *from);
+    //! defines a global indexing system over all nodes, branches and links (such that tip node indices are in correspondance with the indexing provided by the TaxonSet).
+	void SetIndices()	{
+		Nlink = 0;
+		Nnode = GetSize();
+		Nbranch = 0;
+		linkmap.clear();
+		nodemap.clear();
+		branchmap.clear();
+		SetIndices(GetRoot(),Nlink,Nnode,Nbranch);
+	}
 
-    Link *GetRoot() const /*override*/ { return root; }
+    //! const access to the set of taxa (tips of the tree)
     const TaxonSet *GetTaxonSet() const { return taxset; }
 
+    //! const access to the root link 
+    Link *GetRoot() const /*override*/ { return root; }
+
+    //! reroot: after rerooting, root->next == from
     void RootAt(Link *from);
 
-    void RegisterWith(const TaxonSet *taxset);
-    // Registers all leaves of the tree with an external TaxonSet
-    // the taxon set defines a map between taxon names and indices (between 0 and
-    // P-1)
-    // the tree is recursively traversed
-    // each leaf's name is looked for in the map of the taxon set
-    // if not found : an error is emitted
-    // otherwise, the leaf's index is set equal to the index of the corresponding
-    // taxon
+    //! output to stream (newick format)
+    void ToStream(std::ostream &os) const;
 
-    bool RegisterWith(const TaxonSet *taxset, Link *from, int &tot);
-    // recursive function called by RegisterWith
+    //! return total number of links
+	int GetNlink() const {
+		return Nlink;
+	}
 
+    //! return total number of branches
+	int GetNbranch() const {
+		return Nbranch;
+	}
+
+    //! return total number of nodes
+	int GetNnode()	const {
+		return Nnode;
+	}
+
+    //! return total number of tips
+    unsigned int GetSize() const { return GetSize(GetRoot()); }
+
+	private:
+
+    // return const pointer to node with given index
+	const Node* GetNode(int index) const {
+		map<int,const Node*>::const_iterator i = nodemap.find(index);
+        if (i == nodemap.end()) {
+            cerr << "error in Tree::GetNode(int): not found\n";
+            exit(1);
+        }
+        return i->second;
+	}
+
+    // return const pointer to branch with given index
+	const Branch* GetBranch(int index) const  {
+		map<int,const Branch*>::const_iterator i = branchmap.find(index);
+        if (i == branchmap.end())   {
+            cerr << "error in Tree::GetBranch(int): not found\n";
+            exit(1);
+        }
+        return i->second;
+	}
+
+    // return const pointer to link with given index
+	Link* GetLink(int index) const {
+		map<int, Link*>::const_iterator i = linkmap.find(index);
+        if (i == linkmap.end()) {
+            cerr << "error in Tree::GetLink(int): not found\n";
+        }
+        return i->second;
+	}
+
+    // interprets the (string) name field of the branch pointed to by given link as a branch length (as a float, or double) -- not safe
     double GetBranchLength(const Link *link) const { return atof(GetBranchName(link).c_str()); }
 
+    // recursively calculates the maximum height (or depth) from the given link down to all of its downstream tips
     double GetMaxHeight(const Link *from) const {
         double max = 0;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
@@ -281,6 +292,7 @@ class Tree : public NewickTree {
         return max;
     }
 
+    // recursively calculates the minimum height (or depth) from the given link down to all of its downstream tips
     double GetMinHeight(const Link *from) const {
         double min = -1;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
@@ -295,6 +307,7 @@ class Tree : public NewickTree {
         return min;
     }
 
+    // output to stream, renormalizing all branch lengths by given normalization factor (and restoring branch lengths afterwards)
     void ToStreamRenorm(const Link *from, std::ostream &os, double normfactor) const {
         if (from->isLeaf()) {
             os << GetNodeName(from);
@@ -323,34 +336,10 @@ class Tree : public NewickTree {
 
     std::string GetNodeName(const Link *link) const /*override*/ {
         return link->GetNode()->GetName();
-        /*
-          if (! link->isLeaf())	{
-          return link->GetNode()->GetName();
-          }
-          std::string s = link->GetNode()->GetName();
-          unsigned int l = s.length();
-          unsigned int i = 0;
-          while ((i < l) && (s[i] != '_')) i++;
-          if (i == l)	{
-                  std::cerr << "error in get name\n";
-          exit(1);
-          }
-          i++;
-          return s.substr(i,l-i);
-        */
     }
-    // trivial accessors
-    // they can be useful to override, so as to bypass Branch::GetName() and
-    // Node::GetName()
 
     void EraseInternalNodeName();
     void EraseInternalNodeName(Link *from);
-
-    // void Print(std::ostream& os,const Link* from) const ;
-    // void Print(std::ostream& os) const;
-    // printing int netwick format
-
-    unsigned int GetSize() const { return GetSize(GetRoot()); }
 
     int GetSize(const Link *from) const {
         if (from->isLeaf()) {
@@ -459,64 +448,20 @@ class Tree : public NewickTree {
     int CountNodes(const Link *from) const;
     const Link *ChooseNode(const Link *from, const Link *&fromup, int &n) const;
 
-	// index links, nodes and branches through a recursive traversal of the tree
-	// nodes: tip nodes are assumed already numbered between 0 and Ntaxa-1 based on their correspondance with data
-	// branches: start at 0
-	// alternative (currently inactivated): branches: start at 1 (there is a null branch (null pointer) behind the root, of index 0)
-	void SetIndices()	{
-		Nlink = 0;
-		Nnode = GetSize();
-		Nbranch = 0;
-		linkmap.clear();
-		nodemap.clear();
-		branchmap.clear();
-		SetIndices(GetRoot(),Nlink,Nnode,Nbranch);
-	}
+    // delete the leaf pointed to by the next link and set everything right.
+    void DeleteNextLeaf(Link *previous);
 
-	int GetNlink() const {
-		return Nlink;
-	}
+    // delete the (assumed) non-branching Node pointed to by from set everything right.
+    void DeleteUnaryNode(Link *from);
 
-	int GetNbranch() const {
-		return Nbranch;
-	}
-
-	int GetNnode()	const {
-		return Nnode;
-	}
-
-	const Node* GetNode(int index) const {
-		map<int,const Node*>::const_iterator i = nodemap.find(index);
-        if (i == nodemap.end()) {
-            cerr << "error in Tree::GetNode(int): not found\n";
-            exit(1);
-        }
-        return i->second;
-	}
-
-	const Branch* GetBranch(int index) const  {
-		map<int,const Branch*>::const_iterator i = branchmap.find(index);
-        if (i == branchmap.end())   {
-            cerr << "error in Tree::GetBranch(int): not found\n";
-            exit(1);
-        }
-        return i->second;
-	}
-
-	Link* GetLink(int index) const {
-		map<int, Link*>::const_iterator i = linkmap.find(index);
-        if (i == linkmap.end()) {
-            cerr << "error in Tree::GetLink(int): not found\n";
-        }
-        return i->second;
-	}
-
-	protected:
+    // recursive function called by RegisterWith
+    bool RegisterWith(const TaxonSet *taxset, Link *from, int &tot);
 
 	map<int,const Node*> nodemap;
 	map<int,const Branch*> branchmap;
 	map<int,Link*> linkmap;
 
+    // recursively set the system of node, branch and link indices
 	void SetIndices(Link* from, int& linkindex, int& nodeindex, int& branchindex) {
 
 		if (! from->isRoot())	{
@@ -548,7 +493,6 @@ class Tree : public NewickTree {
 		}
 	}
 
-  protected:
     // returns 0 if not found
     // returns link if found (then found1 and found2 must
     const Link *RecursiveGetLCA(const Link *from, std::string tax1, std::string tax2, bool &found1,
@@ -667,6 +611,81 @@ class Tree : public NewickTree {
     void RecursiveDelete(Link *from);
 
     void SetRoot(Link *link) { root = link; }
+
+    int GetNinternalNode() const { return RecursiveGetNinternalNode(GetRoot()); }
+
+    void ToStream(std::ostream &os, const Link *from) const;
+    double ToStreamSimplified(std::ostream &os, const Link *from) const;
+
+    const Link *GetLeftMostLink(const Link *from) const {
+        if (from->isLeaf()) {
+            return from;
+        }
+        return GetLeftMostLink(from->Next()->Out());
+    }
+
+    const Link *GetRightMostLink(const Link *from) const {
+        if (from->isLeaf()) {
+            return from;
+        }
+        const Link *link = from->Next();
+        while (link->Next() != from) {
+            link = link->Next();
+        }
+        return GetRightMostLink(link->Out());
+    }
+
+    std::string GetLeftMost(const Link *from) const {
+        if (from->isLeaf()) {
+            return GetNodeName(from);
+        }
+        return GetLeftMost(from->Next()->Out());
+    }
+
+    std::string GetRightMost(const Link *from) const {
+        if (from->isLeaf()) {
+            return GetNodeName(from);
+        }
+        const Link *link = from->Next();
+        while (link->Next() != from) {
+            link = link->Next();
+        }
+        return GetRightMost(link->Out());
+    }
+
+    static void Simplify() { simplify = true; }
+
+    void PrintTab(std::ostream &os) const { RecursivePrintTab(os, GetRoot()); }
+
+    void RecursivePrintTab(std::ostream &os, const Link *from) const {
+        os << GetLeftMost(from) << '\t' << GetRightMost(from) << '\t' << GetNodeName(from) << '\n';
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursivePrintTab(os, link->Out());
+        }
+    }
+
+    int RecursiveGetNinternalNode(const Link *from) const {
+        int n = 0;
+        if (!from->isLeaf()) {
+            n++;
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            n += RecursiveGetNinternalNode(link->Out());
+        }
+        return n;
+    }
+
+    int RecursiveGetNnode(const Link *from) const {
+        int n = 1;
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            n += RecursiveGetNnode(link->Out());
+        }
+        return n;
+    }
+
+    string GetLeafNodeName(const Link *link) const { return GetNodeName(link); }
+
+    static bool simplify;
 
     // data fields
     // just 2 pointers, to the root and to a list of taxa

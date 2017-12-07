@@ -8,9 +8,9 @@ using namespace std;
 // c++11
 typedef list<string>::const_iterator csit;
 
-bool NewickTree::simplify = false;
+bool Tree::simplify = false;
 
-void NewickTree::ToStream(ostream &os) const {
+void Tree::ToStream(ostream &os) const {
     if (simplify) {
         ToStreamSimplified(os, GetRoot());
     } else {
@@ -19,7 +19,7 @@ void NewickTree::ToStream(ostream &os) const {
     os << ";\n";
 }
 
-double NewickTree::ToStreamSimplified(ostream &os, const Link *from) const {
+double Tree::ToStreamSimplified(ostream &os, const Link *from) const {
     if (!from->isLeaf()) {
         if (from->Next()->Next() == from) {
             double tot = ToStreamSimplified(os, from->Next()->Out());
@@ -53,7 +53,7 @@ double NewickTree::ToStreamSimplified(ostream &os, const Link *from) const {
     return atof(GetBranchName(from).c_str());
 }
 
-void NewickTree::ToStream(ostream &os, const Link *from) const {
+void Tree::ToStream(ostream &os, const Link *from) const {
     if (!from->isLeaf()) {
         os << '(';
         for (const Link *link = from->Next(); link != from; link = link->Next()) {

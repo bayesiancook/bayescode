@@ -7,8 +7,7 @@
 #include "MPIBuffer.hpp"
 
 /**
- * \brief An interface for an abstract tree-structured array of constant references over objects of type T
- * indexed by the branches of a phylogenetic tree.
+ * \brief An interface for an abstract tree-structured array (indexed by branches) of constant references over objects of type T
  *
  * This abstract class is meant as a general read-only interface
  * returning a reference over a T object for any branch of a given phylogenetic tree (through the GetVal(int index) method).
@@ -51,7 +50,7 @@ template<class T> class BranchSelector	{
 };
 
 /**
- * \brief An interface for an abstract tree-structured indexed array of references over objects of type T
+ * \brief An interface for an abstract tree-structured array (indexed by branches) of references over objects of type T
  *
  * Deriving from BranchSelector, BranchArray gives const access through GetVal(int index).
  * In addition, it provides a non-const access to through the [] operator.

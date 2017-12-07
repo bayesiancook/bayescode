@@ -8,6 +8,19 @@
 #include <typeinfo>
 #include "MPIBuffer.hpp"
 
+/**
+ * \brief A sufficient statistic for substitution histories, as a function of the underlying nucleotide rate matrix (for Muse-Gaut codon models only)
+ *
+ * The generic sufficient statistics for substitution histories (S) as a function of the rate matrix Q are defined in PathSuffStat.
+ * They give all information needed in order to compute p(S | Q), up to a normalization constant.
+ * When Q itself is a Muse and Gaut codon model parameterized by a nucleotide rate matrix M, 
+ * then the probability of S as a function of M, p(S | M),
+ * can be expressed in terms of an even more compact (4x4) suff stat.
+ *
+ * NucPathSuffStat implements this idea, and provides methods for calculating these suffstats based on generic PathSuffStat at the codon-level,
+ * adding them over sites / branches and computing the log p(S | M) for any M.
+ */
+
 class NucPathSuffStat : public SuffStat	{
 
 	public:
@@ -19,6 +32,7 @@ class NucPathSuffStat : public SuffStat	{
 
 	~NucPathSuffStat() {}
 
+    //! set suff stat to 0
 	void Clear()	{
 		for (int i=0; i<Nnuc; i++)	{
 			rootcount[i] = 0;
@@ -29,8 +43,9 @@ class NucPathSuffStat : public SuffStat	{
 		}
 	}
 
-	// assumes pathsuffstat is 61x61
-	// collect the 4x4 path suff stat out of codonpathsuffstat
+	//! \brief compute the 4x4 path suff stat out of 61x61 codonpathsuffstat
+    //
+    //! Note that the resulting 4x4 nuc path suff stat depends on other aspects of the codon matrix (e.g. the value of omega)
 	void AddSuffStat(const NucCodonSubMatrix& codonmatrix, const PathSuffStat& codonpathsuffstat)    {
 
 		const CodonStateSpace* cod = codonmatrix.GetCodonStateSpace();
@@ -75,12 +90,19 @@ class NucPathSuffStat : public SuffStat	{
         }
 	}
 
+	//! \brief compute the 4x4 path suff stats out of 61x61 codonpathsuffstats over a one-dim array, and sum them up into this
+    //!
+    //! Note that this function assumes that each codonpathsuffstat given by the second array
+    //! has a potentially different codon matrix, such as specified by the first array.
 	void AddSuffStat(const MGOmegaCodonSubMatrixArray& codonmatrixarray, const PathSuffStatArray& codonpathsuffstatarray)    {
 		for (int i=0; i<codonmatrixarray.GetSize(); i++)	{
             AddSuffStat(codonmatrixarray.GetVal(i),codonpathsuffstatarray.GetVal(i));
         }
     }
 
+    //! \brief return the log probability as a function of a nucleotide matrix
+    //!
+    //! The codon state space is given as an argument (the nucleotide matrix or the suff stat themselves do not know the genetic code)
 	double GetLogProb(const SubMatrix& mat, const CodonStateSpace& cod) const {
 
         double total = 0;
@@ -106,11 +128,7 @@ class NucPathSuffStat : public SuffStat	{
 		return total;
 	}
 
-    NucPathSuffStat& operator+=(const NucPathSuffStat& from)    {
-        Add(from);
-        return *this;
-    }
-
+    //! add another nucpath suff stat to this
     void Add(const NucPathSuffStat& from)   {
 
         for (int i=0; i<Nnuc; i++)  {
@@ -124,44 +142,16 @@ class NucPathSuffStat : public SuffStat	{
         }
     }
 
-    void Push(int* incount, double* inbeta) const {
-        int index = 0;
-        for (int i=0; i<Nnuc; i++)  {
-            incount[index++] = rootcount[i];
-        }
-        for (int i=0; i<Nnuc; i++)  {
-            for (int j=0; j<Nnuc; j++)  {
-                incount[index++] = paircount[i][j];
-            }
-        }
-        index = 0;
-        for (int i=0; i<Nnuc; i++)  {
-            for (int j=0; j<Nnuc; j++)  {
-                inbeta[index++] = pairbeta[i][j];
-            }
-        }
+    //! add another nuc path suffstat to this, operator version
+    NucPathSuffStat& operator+=(const NucPathSuffStat& from)    {
+        Add(from);
+        return *this;
     }
 
-    void Add(const int* incount, const double* inbeta)  {
-        int index = 0;
-        for (int i=0; i<Nnuc; i++)  {
-            rootcount[i] += incount[index++];
-        }
-        for (int i=0; i<Nnuc; i++)  {
-            for (int j=0; j<Nnuc; j++)  {
-                paircount[i][j] += incount[index++];
-            }
-        }
-        index = 0;
-        for (int i=0; i<Nnuc; i++)  {
-            for (int j=0; j<Nnuc; j++)  {
-                pairbeta[i][j] += inbeta[index++];
-            }
-        }
-    }
-
+    //! return size of object, when put into an MPI buffer
     unsigned int GetMPISize() const {return Nnuc + 2*Nnuc*Nnuc;}
 
+    //! put object into MPI buffer
     void MPIPut(MPIBuffer& buffer) const {
         for (int i=0; i<Nnuc; i++)  {
             buffer << rootcount[i];
@@ -178,6 +168,7 @@ class NucPathSuffStat : public SuffStat	{
         }
     }
 
+    //! get object from MPI buffer
     void MPIGet(const MPIBuffer& buffer)    {
         for (int i=0; i<Nnuc; i++)  {
             buffer >> rootcount[i];
@@ -194,6 +185,7 @@ class NucPathSuffStat : public SuffStat	{
         }
     }
 
+    //! get a nucpath suffstat from MPI buffer and add it to this
     void Add(const MPIBuffer& buffer)    {
         int a;
         for (int i=0; i<Nnuc; i++)  {
@@ -223,6 +215,17 @@ class NucPathSuffStat : public SuffStat	{
     std::vector<vector<double> > pairbeta;
 };
 
+/**
+ * \brief A sufficient statistic for substitution histories, as a function of omega=dN/dS (for codon models)
+ *
+ * The generic sufficient statistics for substitution histories (S) as a function of the rate matrix Q are defined in PathSuffStat.
+ * They give all information needed in order to compute p(S | Q), up to a normalization constant.
+ * When Q itself is codon model with an omega=dN/dS acting as a multiplier in front of all non-synonymous substitutions,
+ * then the probability of S as a function of omega can be expressed in very compact form:
+ * p(S | omega) propto omega^count exp(-beta * omega), where count (integer) and beta (positive real number) are the suff stats.
+ * Note that this is in fact analogous to a Poisson distribution, with mean omega, and thus, OmegaSuffStat derives from PoissonSuffStat.
+ */
+
 class OmegaSuffStat : public PoissonSuffStat {
 
 	public:
@@ -230,8 +233,9 @@ class OmegaSuffStat : public PoissonSuffStat {
 	OmegaSuffStat() {}
 	~OmegaSuffStat() {}
 
-	// assumes pathsuffstat is 61x61
-	// tease out syn and non-syn substitutions and sum up count and beta stats  
+	//! \brief tease out syn and non-syn substitutions and sum up count and beta stats from a 61x61 codon path suffstat
+    //!
+    //! note that omega suff stat depends on the other aspects of the codon matrix (in particular, the nucleotide rate matrix)
 	void AddSuffStat(const OmegaCodonSubMatrix& codonsubmatrix, const PathSuffStat& pathsuffstat)    {
 
         int ncodon = codonsubmatrix.GetNstate();
@@ -267,6 +271,10 @@ class OmegaSuffStat : public PoissonSuffStat {
         PoissonSuffStat::AddSuffStat(tmpcount,tmpbeta);
     }
 
+	//! \brief get count and beta stats from an array of 61x61 codon path suffstat and sum them up into this suff stat
+    //!
+    //! This method assumes that each codonpathsuffstat given by the second array
+    //! has a potentially different codon matrix, such as specified by the first array.
 	void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<codonsubmatrixarray.GetSize(); i++)	{
             AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
@@ -275,41 +283,58 @@ class OmegaSuffStat : public PoissonSuffStat {
 
 };
 
+/**
+ * An array of omega suff stats
+ */
+
 class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<PoissonSuffStat>    {
 
 	public:
 
+    //! constructor (param: array size)
 	OmegaSuffStatArray(int insize) : SimpleArray<OmegaSuffStat>(insize) {}
 	~OmegaSuffStatArray() {}
 
+    //! need to redefine GetSize(), because of mutiple inheritance, as an array of PoissonSuffstat and OmegaSuffStat
     int GetSize() const /*override*/ {return array.size();}
+
+    //! need to re-define GetVal(), by explicitly returning a const OmegaSuffStat&, because of multiple inheritance
     const OmegaSuffStat& GetVal(int i) const /*override*/ {return array[i];}
+
+    //! need to re-define operator[], by explicitly returning an OmegaSuffStat&, because of multiple inheritance
     OmegaSuffStat& operator[](int i) /*override*/ {return array[i];}
 
+    //! set all suff stats to 0
 	void Clear()	{
 		for (int i=0; i<GetSize(); i++)	{
 			(*this)[i].Clear();
 		}
 	}
 
+    //! compute omega suff stats and do a member-wise addition -- for Muse and Gaut codon matrices
 	void AddSuffStat(const Selector<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
 	}
 
+    //! compute omega suff stats and do a member-wise addition -- for mutation-selection codon matrices
 	void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixarray, const Selector<PathSuffStat>& pathsuffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
 	}
 
+    //! \brief add current suff stats to an array of suffstats, according to the allocations specified by the second argument
+    //!
+    //! specifically: suffstatarray[alloc[i]] += (*this)[i]
 	void AddToComponents(Array<OmegaSuffStat>& suffstatarray, const Array<int>& alloc)	const {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstatarray[alloc.GetVal(i)].Add(GetVal(i));
 		}
 	}
 
+    //! return total log prob over array, given an array of omega_i's of same size
 	double GetLogProb(const Array<double>* omegaarray) const{
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -318,12 +343,7 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 		return total;
 	}
 
-    double GetMeanInvShapeMarginalLogProb(double mean, double invshape) const    {
-        double alpha = 1.0 / invshape;
-        double beta = alpha / mean;
-        return GetMarginalLogProb(alpha,beta);
-    }
-
+    //! return marginal log prob summed over omega_i's that are iid gamma(shape, scale) (conjugate gamma-poisson relation)
 	double GetMarginalLogProb(double shape, double scale)	const {
 		double total = 0;
 		// factoring out prior factor

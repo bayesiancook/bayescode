@@ -602,7 +602,6 @@ void AAMutSelM2aModel::Trace(ostream& os) const {
     os << dposom+1 << '\t' << posw << '\t';
     os << Random::GetEntropy(nucstat) << '\t';
     os << Random::GetEntropy(nucrelrate) << '\n';
-    SubMatrix::diagerr = 0;
 }
 
 void AAMutSelM2aModel::TracePostProb(ostream& os) const {

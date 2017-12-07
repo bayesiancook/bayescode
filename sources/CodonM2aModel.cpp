@@ -546,7 +546,6 @@ void CodonM2aModel::Trace(ostream& os) const {
     os << purom << '\t' << dposom+1 << '\t' << purw << '\t' << posw << '\t';
     os << Random::GetEntropy(nucstat) << '\t';
     os << Random::GetEntropy(nucrelrate) << '\n';
-    SubMatrix::diagerr = 0;
 }
 
 void CodonM2aModel::TracePostProb(ostream& os) const {
