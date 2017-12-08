@@ -4,19 +4,19 @@
 #include "SingleOmegaModel.hpp"
 using namespace std;
 
+/**
+ * \brief Chain object for running an MCMC under SingleOmegaModel
+ */
+
 class SingleOmegaChain : public Chain  {
 
   private:
     // Chain parameters
-    string modeltype, datafile, treefile;
+    string modeltype;
+    string datafile, treefile;
 
   public:
-    SingleOmegaModel* GetModel() {
-        return static_cast<SingleOmegaModel*>(model);
-    }
-
-    string GetModelType() override { return modeltype; }
-
+    //! constructor for a new chain: datafile, treefile, saving frequency, final chain size, chain name and overwrite flag -- calls New
     SingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("SINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
@@ -24,6 +24,7 @@ class SingleOmegaChain : public Chain  {
         New(force);
     }
 
+    //! constructor for re-opening an already existing chain from file -- calls Open
     SingleOmegaChain(string filename) {
         name = filename;
         Open();
@@ -78,6 +79,16 @@ class SingleOmegaChain : public Chain  {
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
+    }
+
+    //! return the model, with its derived type (unlike ProbModel::GetModel)
+    SingleOmegaModel* GetModel() {
+        return static_cast<SingleOmegaModel*>(model);
+    }
+
+    //! return model type
+    string GetModelType() override  {
+        return modeltype;
     }
 };
 

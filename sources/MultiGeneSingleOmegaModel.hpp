@@ -152,7 +152,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
             SlaveReceiveOmega();
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->UpdateMatrices();
+                geneprocess[gene]->TouchMatrices();
                 geneprocess[gene]->Unfold();
             }
 
@@ -198,7 +198,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // Updates
     //-------------------
 
-	void UpdateNucMatrix()	{
+	void TouchNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
 		nucmatrix->CorruptMatrix();
 	}
@@ -406,12 +406,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     void MoveNucRates()    {
 
-        ProfileMove(nucrelrate,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.03,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.01,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucrelrate,0.03,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucrelrate,0.01,3,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::TouchNucMatrix,this);
 
-        ProfileMove(nucstat,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucstat,0.01,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucstat,0.1,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucstat,0.01,1,3,&MultiGeneSingleOmegaModel::NucRatesLogProb,&MultiGeneSingleOmegaModel::TouchNucMatrix,this);
     }
 
     //-------------------

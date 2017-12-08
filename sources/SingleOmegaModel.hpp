@@ -1,16 +1,3 @@
-
-// this is a codon model, with the following structure
-//
-// - branch lengths iid Exponential of rate lambda
-// - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
-// - there is one single omega=dN/dS for all sites and across all branches
-//
-// prior over omega:
-// omega ~ Gamma(omegahypermean,omegahyperinvshape)
-// these 2 hyperparameters are fixed when this model is used in isolation
-// on the other hand, this model can be used in a multigene context (see MultiGeneSingeOmegaModel)
-// in which case omegahypermean and hyperinvshape are estimated across genes
-
 #include "CodonSequenceAlignment.hpp"
 #include "Tree.hpp"
 #include "ProbModel.hpp"
@@ -20,6 +7,21 @@
 #include "IIDGamma.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
+
+/**
+ * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon model
+ *
+ * The model has the following structure:
+ * - branch lengths iid Exponential of rate lambda
+ * - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
+ * - there is one single omega=dN/dS for all sites and across all branches
+ * - prior over omega ~ Gamma(omegahypermean,omegahyperinvshape).
+ * 
+ * The 2 hyperparameters omegahypermean and hyperinvshape are fixed when this model is used in isolation.
+ * On the other hand, this model can be used in a multigene context (see MultiGeneSingeOmegaModel),
+ * in which case omegahypermean and hyperinvshape are estimated across genes.
+ */
+
 
 class SingleOmegaModel : public ProbModel {
 
@@ -68,7 +70,7 @@ class SingleOmegaModel : public ProbModel {
 	OmegaSuffStat omegasuffstat;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
@@ -80,6 +82,10 @@ class SingleOmegaModel : public ProbModel {
     // Construction and allocation
     // ------------------
 
+    //! \brief constructor, parameterized by names of data and tree files
+    //!
+    //! Note: in itself, the constructor does not allocate the model;
+    //! It only reads the data and tree file and register them together.
 	SingleOmegaModel(string datafile, string treefile)  {
 
 		data = new FileSequenceAlignment(datafile);
@@ -102,11 +108,12 @@ class SingleOmegaModel : public ProbModel {
 		Nbranch = tree->GetNbranch();
 	}
 
+    //! model allocation
 	void Allocate()	{
 
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
@@ -124,6 +131,9 @@ class SingleOmegaModel : public ProbModel {
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
 	}
 
+    //! \brief unfold the model
+    //! 
+    //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
     void Unfold()   {
 
 		cerr << "-- unfold\n";
@@ -137,10 +147,12 @@ class SingleOmegaModel : public ProbModel {
     // Accessors
     // ------------------
 
+    //! const access to codon state space
 	CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
+    //! return current value of omega
     double GetOmega() const {
         return omega;
     }
@@ -149,47 +161,78 @@ class SingleOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
+    //! \brief set omega to a new value 
+    //! 
+    //! Used in a multigene context.
+    //! Notifies corruption to the codon matrix.
     void SetOmega(double inomega)   {
         omega = inomega;
-        UpdateCodonMatrix();
+        TouchCodonMatrix();
     }
 
+    //! \brief set the hyperparameters of the gamma prior over omega
+    //! 
+    //! Used in a multigene context.
     void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
     }
 
+    //! \brief set branch lengths to a new value
+    //! 
+    //! Used in a multigene context.
     void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 
+    //! \brief set nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat) to a new value
+    //!
+    //! Notifies corruption to the nucleotide and the codon matrices
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
-        UpdateMatrices();
+        TouchMatrices();
     }
 
-	void UpdateNucMatrix()	{
+    //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
+    //!
+    //! The matrix is not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
+	void TouchNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
 		nucmatrix->CorruptMatrix();
 	}
 
-	void UpdateCodonMatrix()	{
+    //! \brief tell the codon matrix that its parameters have changed and that it should be updated
+    //!
+    //! The matrix is not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
+	void TouchCodonMatrix()	{
 		codonmatrix->SetOmega(omega);
 		codonmatrix->CorruptMatrix();
 	}
 		
-    void UpdateMatrices()   {
-        UpdateNucMatrix();
-        UpdateCodonMatrix();
+    //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that they should be updated
+    //!
+    //! Just successive calls to TouchNucMatrix() and then TouchCodonMatrix();
+    void TouchMatrices()   {
+        TouchNucMatrix();
+        TouchCodonMatrix();
     }
 
+    //! \brief dummy function that does not do anything.
+    //! 
+    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove (defined in ProbModel),
+    //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
     //-------------------
     // Priors and likelihood
     //-------------------
 
+    //! \brief return total log prior
+    //!
+    //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
         total += BranchLengthsHyperLogPrior();
@@ -199,28 +242,33 @@ class SingleOmegaModel : public ProbModel {
         return total;
     }
 
+    //! return current value of likelihood (pruning-style, i.e. integrated over all substitution histories)
 	double GetLogLikelihood() const {
 		return phyloprocess->GetLogProb();
 	}
 
+    //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const   {
         return GetLogPrior() + GetLogLikelihood();
     }
 
+    //! \brief log prior over hyperparameters of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior()	const {
         // exponential of mean 10
 		return -lambda / 10;
 	}
 
+    //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior()	const {
 		return branchlength->GetLogProb();
 	}
 
-    // uniform prior
+    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const {
         return 0;
     }
 
+    //! log prior over omega (gamma of mean omegahypermean and shape 1/omegahyperinvshape)
 	double OmegaLogPrior()	const {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
@@ -231,22 +279,45 @@ class SingleOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
+    //! \brief const access to array of length-pathsuffstats across branches
+    //!
+    //! Useful for resampling branch lengths conditional on the current substitution mapping
     const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
-        return lengthsuffstatarray;
+        return lengthpathsuffstatarray;
     }
 
+    //! \brief const acess to nuc-pathsuffstat
+    //! 
+    //! Useful for resampling nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat)
+    //! conditional on the current substitution mapping.
     const NucPathSuffStat& GetNucPathSuffStat() const {
         return nucpathsuffstat;
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process
+    //!
+    //! Calculated using pathsuffstat (which summarizes all information about the substitution mapping)
+    //! and the codonmatrix.
+    //! Both pathsuffstat and codonmatrix are assumed to be updated.
 	double PathSuffStatLogProb() const {
 		return pathsuffstat.GetLogProb(*codonmatrix);
 	}
 
+    //! \brief return log prob of current substitution mapping, as a function of branch lengths
+    //!
+    //! Calculated using the lengthpathsuffstat
+    //! (which summarizes all information about how the prob of the substitution mapping depends on branch lengths).
+    //! lengthpathsuffstat is assumed to be updated.
 	double BranchLengthsHyperSuffStatLogProb()	const {
 		return lambdasuffstat.GetLogProb(1.0,lambda);
 	}
 
+    //! \brief return log prob of current substitution mapping, as a function of nucleotide parameters (nucrelrate and nucstat)
+    //!
+    //! Calculated using nucpathsuffstat 
+    //! (which summarizes all information about how the probability of the substitution mapping depends on nucleotide mutation rates)
+    //! and the nucmatrix.
+    //! Both nucpathsuffstat and nucmatrix are assumed to be updated.
     double NucRatesSuffStatLogProb() const {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
@@ -255,12 +326,16 @@ class SingleOmegaModel : public ProbModel {
     //  Log probs for MH moves
     //-------------------
 
-    // for moving branch lengths hyperparameter lambda
+    //! \brief log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
+    //!
+    //! simply: BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb()
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
-    // for moving nuc rates
+    //! \brief log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
+    //!
+    //! simply: NucRatesLogPrior() + NucRatesSuffStatLogProb();
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
     }
@@ -269,17 +344,20 @@ class SingleOmegaModel : public ProbModel {
     //  Moves 
     //-------------------
 
+    //! \brief complete MCMC move schedule
 	double Move()	{
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
 	}
 
+    //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac)   {
-        UpdateMatrices();
+        TouchMatrices();
 		phyloprocess->Move(frac);
     }
 
+    //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
@@ -293,16 +371,19 @@ class SingleOmegaModel : public ProbModel {
 		}
     }
 
+    //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+		phyloprocess->AddLengthSuffStat(*lengthpathsuffstatarray);
     }
 
+    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveBranchLengthsHyperParameter()	{
 
 		lambdasuffstat.Clear();
@@ -312,12 +393,13 @@ class SingleOmegaModel : public ProbModel {
 		branchlength->SetScale(lambda);
 	}
 
+    //! collect generic sufficient statistics from substitution mappings
 	void CollectPathSuffStat()	{
-
 		pathsuffstat.Clear();
 		phyloprocess->AddPathSuffStat(pathsuffstat);
 	}
 
+    //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)
 	void MoveOmega()	{
 
 		omegasuffstat.Clear();
@@ -325,41 +407,43 @@ class SingleOmegaModel : public ProbModel {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
 		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
-		UpdateCodonMatrix();
+		TouchCodonMatrix();
 	}
 
+    //! collect sufficient statistics for moving nucleotide rates (based on generic sufficient statistics stored in pathsuffstat)
     void CollectNucPathSuffStat()    {
-        UpdateMatrices();
+        TouchMatrices();
         nucpathsuffstat.Clear();
         nucpathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
     }
 
+    //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
 	void MoveNucRates()	{
 
         CollectNucPathSuffStat();
 
-        ProfileMove(nucrelrate,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.03,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucrelrate,0.01,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucrelrate,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucrelrate,0.03,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucrelrate,0.01,3,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::TouchNucMatrix,this);
 
-        ProfileMove(nucstat,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
-        ProfileMove(nucstat,0.01,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::UpdateNucMatrix,this);
+        ProfileMove(nucstat,0.1,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::TouchNucMatrix,this);
+        ProfileMove(nucstat,0.01,1,3,&SingleOmegaModel::NucRatesLogProb,&SingleOmegaModel::TouchNucMatrix,this);
 
-        UpdateMatrices();
+        TouchMatrices();
 	}
 
     //-------------------
     // Traces and Monitors
     // ------------------
 
-	void TraceHeader(std::ostream& os) const {
+	void TraceHeader(ostream& os) const override {
 		os << "#logprior\tlnL\tlength\tlambda\t";
 		os << "omega\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
 
-	void Trace(ostream& os) const {	
+	void Trace(ostream& os) const override {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
