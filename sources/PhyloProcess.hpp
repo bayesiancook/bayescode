@@ -16,27 +16,73 @@
 // its responsibility is to create a random branch/site path
 // for each branch/site pair
 
+/**
+ * \brief The core class of phylogenetic likelihood calculation and stochastic mapping of substitution histories
+ *
+ * PhyloProcess takes as an input a tree, a sequence alignment (data), a set of branch lengths, of site-specific rates and a selector of substitution matrices across sites and branches.
+ * It is then responsible for organizing all likelihood calculations by pruning, as stochastic mapping of substitution histories.
+ */
+
 class PhyloProcess	{
 
 public:
 
-	// generic constructor
+	//! \brief generic constructor
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray);
 
-	// branch and site homogeneous
+	//! \brief special (short-cut) constructor for branch-homogeneous and site-homogeneous model
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix);
 
-	// branch homogeneous, site heterogeneous
+	//! \brief special (short-cut) constructor for branch-homogeneous and site-heterogeneous model
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray);
 
 	~PhyloProcess();
 
-	// accessors
+    //! return log likelihood (integrated over all substitution histories, by pruning, Felsenstein 1981)
+	double GetLogProb() const;              
 
+	double GetFastLogProb() const;
+
+	double SiteLogLikelihood(int site) const;
+	double FastSiteLogLikelihood(int site) const;
+
+    //! perform stochastic mapping of substitution events under current parameter configuration
+	void ResampleSub();
+
+    //! perform stochastic mapping of substitution events for a given (random) fraction of all sites
+	double Move(double fraction);
+
+    //! unfold all data structures, do the likelihood computation and stochastic mapping of substitution histories
+	void Unfold();
+
+    //! delete data structures
+	void Cleanup();
+
+	//! homogeneous across sites and branches
+	void AddPathSuffStat(PathSuffStat& suffstat);
+	//! heterogeneeous across sites, homogeneous across branches
+	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
+	//! heterogeneeous across sites, branches partitioned into conditions
+	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
+	//! homogeneous across sites
+	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
+
+	// homogeneous across branches
+	// void AddPoissonSuffStat(Array<PoissonSuffStat>& poissonsuffstatarray);
+	// homogeneous across sites, heterogeneous across branches
+	// void AddSuffStat(BranchArray<PathSuffStat>& branchsuffstatarray, PathSuffStat& rootsuffstat);
+	// heterogeneous across sites and branches
+	// void AddSuffStat(BranchSiteArray<PathSuffStat>& branchsitesuffstatarray);
+
+
+    private:
+
+    //! return branch length for given branch
 	double GetBranchLength(int branch) const {
 		return branchlength->GetVal(branch);
 	}
 
+    //! return site rate for given site (if no rates-across-sites array was given to phyloprocess, returns 1)
 	double GetSiteRate(int site) const {
 		if (! siterate)	{
 			return 1.0;
@@ -44,6 +90,7 @@ public:
 		return siterate->GetVal(site);
 	}
 
+    //! return matrix that should be used 
 	const SubMatrix& GetSubMatrix(int branch, int site) const {
 		return submatrixarray->GetVal(branch,site);
 	}
@@ -51,9 +98,6 @@ public:
 	const EVector& GetRootFreq(int site) const {
 		return rootsubmatrixarray->GetVal(site).GetStationary();
 	}
-
-	double SiteLogLikelihood(int site) const;
-	double FastSiteLogLikelihood(int site) const;
 
 	const StateSpace* GetStateSpace() const { return data->GetStateSpace(); }
 	const TaxonSet* GetTaxonSet() const { return data->GetTaxonSet(); }
@@ -85,56 +129,20 @@ public:
 		return GetStateSpace()->isCompatible(GetData(taxon, site), state);
 	}
 
-	// probability, pruning, sampling
-	double GetLogProb() const;                        // likelihood Felsenstein 1981
-	double GetFastLogProb() const;                            // likelihood Felsenstein 1981
-
-	double Move(double fraction);
 	void DrawSites(double fraction); // draw a fraction of sites which will be resampled
-	void ResampleSub();  // clamped Nielsen
 	void ResampleSub(int site);
 
-	// basic building blocks for compiling suffstats...
-
-    /*
-	void AddRootSuffStat(int site, PathSuffStat& suffstat);
-	void AddPathSuffStat(const Link* link, int site, PathSuffStat& suffstat);
-	void AddLengthSuffStat(const Link* link, int site, PoissonSuffStat& suffstat);
-    */
-	// void AddPoissonSuffStat(const Link* link, int site, PoissonSuffStat& suffstat);
-
-	// ... which are then used for looping over branches and sites
-    //
-    // void PrintMissing(const Link* from, int site);
-
-	// homogeneous across sites and branches
-	void AddPathSuffStat(PathSuffStat& suffstat);
 	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
 	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
 
-	// heterogeneeous across sites, homogeneous across branches
-	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
 	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
 	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
 
-	// heterogeneeous across sites, branches partitioned into conditions
-	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
 	void RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
 	void LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond);
 
-	// homogeneous across sites, heterogeneous across branches
-	// void AddSuffStat(BranchArray<PathSuffStat>& branchsuffstatarray, PathSuffStat& rootsuffstat);
-
-	// heterogeneous across sites and branches
-	// void AddSuffStat(BranchSiteArray<PathSuffStat>& branchsitesuffstatarray);
-
-	// homogeneous across sites
-	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
 	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
 	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat);
-
-	// homogeneous across branches
-	// void AddPoissonSuffStat(Array<PoissonSuffStat>& poissonsuffstatarray);
 
 	void PostPredSample(bool rootprior = false);  // unclamped Nielsen
 	void PostPredSample(int site, bool rootprior = false);
@@ -171,11 +179,6 @@ public:
 
 	double GetPruningTime() const { return pruningchrono.GetTime(); }
 	double GetResampleTime() const { return resamplechrono.GetTime(); }
-
-	void Unfold();
-	void Cleanup();
-
-	protected:
 
 	void RecursiveCreate(const Link *from);
 	void RecursiveDelete(const Link *from);
@@ -222,8 +225,6 @@ public:
 	    }
 	    return pathmap[node][site];
 	}
-
-	private:
 
 	mutable std::map<const Link *, double *> condlmap;
 	std::map<const Node*, BranchSitePath **> pathmap;
