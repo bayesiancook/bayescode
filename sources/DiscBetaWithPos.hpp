@@ -53,7 +53,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
 
     const vector<double>& GetWeights() const {return weight;}
 
-    double GetPostProbArray(const OmegaSuffStat& suffstat, vector<double>& postprob) const {
+    double GetPostProbArray(const OmegaPathSuffStat& suffstat, vector<double>& postprob) const {
 
             double logp[GetSize()];
             double max = 0;
@@ -87,7 +87,7 @@ class DiscBetaWithPos : public SimpleArray<double>  {
             return ret;
     }
 
-    double GetPostProbArray(OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
+    double GetPostProbArray(OmegaPathSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
 
         double total = 0;
         for (int i=0; i<suffstatarray.GetSize(); i++)   {

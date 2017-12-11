@@ -39,7 +39,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
     double omegahypermean;
     double omegahyperinvshape;
 	double omega;
-	OmegaSuffStat omegasuffstat;
+	OmegaPathSuffStat omegapathsuffstat;
 	
     // mixture over amino-acid fitness profiles
 
@@ -417,12 +417,12 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
 	void MoveOmega()	{
 
-		omegasuffstat.Clear();
-		//omegasuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
-		omegasuffstat.AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+		omegapathsuffstat.Clear();
+		//omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
+		omegapathsuffstat.AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
+		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
 		UpdateCodonMatrices();
 	}
 

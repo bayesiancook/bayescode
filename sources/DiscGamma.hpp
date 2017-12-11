@@ -27,7 +27,7 @@ class DiscGamma : public SimpleArray<double>  {
 
     const vector<double>& GetWeights() const {return weight;}
 
-    double GetPostProbArray(OmegaSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
+    double GetPostProbArray(OmegaPathSuffStatArray& suffstatarray, vector<vector<double> >& postprobarray)  const {
 
         double total = 0;
         for (int i=0; i<GetNcat(); i++)   {
@@ -36,7 +36,7 @@ class DiscGamma : public SimpleArray<double>  {
         return total;
     }
 
-    double GetPostProbArray(const OmegaSuffStat& suffstat, vector<double>& postprob) const {
+    double GetPostProbArray(const OmegaPathSuffStat& suffstat, vector<double>& postprob) const {
 
             double logp[GetNcat()];
             double max = 0;

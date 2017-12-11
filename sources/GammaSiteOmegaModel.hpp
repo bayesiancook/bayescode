@@ -55,7 +55,7 @@ class GammaSiteOmegaModel : public ProbModel {
     NucPathSuffStat nucpathsuffstat;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
-	OmegaSuffStatArray* omegasuffstatarray;
+	OmegaPathSuffStatArray* omegapathsuffstatarray;
 
     // suffstat for resampling mean and invshape of distribution of omega's across sites
     GammaSuffStat omegahypersuffstat;
@@ -114,7 +114,7 @@ class GammaSiteOmegaModel : public ProbModel {
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
         omegaarray = new IIDGamma(Nsite,alpha,beta);
-		omegasuffstatarray = new OmegaSuffStatArray(Nsite);
+		omegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
 
 		codonmatrixarray = new MGOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, omegaarray);
 
@@ -330,9 +330,9 @@ class GammaSiteOmegaModel : public ProbModel {
 
 	void MoveOmega()	{
 
-		omegasuffstatarray->Clear();
-		omegasuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
-		omegaarray->GibbsResample(*omegasuffstatarray);
+		omegapathsuffstatarray->Clear();
+		omegapathsuffstatarray->AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
+		omegaarray->GibbsResample(*omegapathsuffstatarray);
 		UpdateCodonMatrices();
 	}
 

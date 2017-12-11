@@ -223,15 +223,15 @@ class NucPathSuffStat : public SuffStat	{
  * When Q itself is codon model with an omega=dN/dS acting as a multiplier in front of all non-synonymous substitutions,
  * then the probability of S as a function of omega can be expressed in very compact form:
  * p(S | omega) propto omega^count exp(-beta * omega), where count (integer) and beta (positive real number) are the suff stats.
- * Note that this is in fact analogous to a Poisson distribution, with mean omega, and thus, OmegaSuffStat derives from PoissonSuffStat.
+ * Note that this is in fact analogous to a Poisson distribution, with mean omega, and thus, OmegaPathSuffStat derives from PoissonSuffStat.
  */
 
-class OmegaSuffStat : public PoissonSuffStat {
+class OmegaPathSuffStat : public PoissonSuffStat {
 
 	public:
 
-	OmegaSuffStat() {}
-	~OmegaSuffStat() {}
+	OmegaPathSuffStat() {}
+	~OmegaPathSuffStat() {}
 
 	//! \brief tease out syn and non-syn substitutions and sum up count and beta stats from a 61x61 codon path suffstat
     //!
@@ -287,22 +287,22 @@ class OmegaSuffStat : public PoissonSuffStat {
  * \brief An array of omega suff stats
  */
 
-class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<PoissonSuffStat>    {
+class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>, public Array<PoissonSuffStat>    {
 
 	public:
 
     //! constructor (param: array size)
-	OmegaSuffStatArray(int insize) : SimpleArray<OmegaSuffStat>(insize) {}
-	~OmegaSuffStatArray() {}
+	OmegaPathSuffStatArray(int insize) : SimpleArray<OmegaPathSuffStat>(insize) {}
+	~OmegaPathSuffStatArray() {}
 
-    //! need to redefine GetSize(), because of mutiple inheritance, as an array of PoissonSuffstat and OmegaSuffStat
+    //! need to redefine GetSize(), because of mutiple inheritance, as an array of PoissonSuffstat and OmegaPathSuffStat
     int GetSize() const /*override*/ {return array.size();}
 
-    //! need to re-define GetVal(), by explicitly returning a const OmegaSuffStat&, because of multiple inheritance
-    const OmegaSuffStat& GetVal(int i) const /*override*/ {return array[i];}
+    //! need to re-define GetVal(), by explicitly returning a const OmegaPathSuffStat&, because of multiple inheritance
+    const OmegaPathSuffStat& GetVal(int i) const /*override*/ {return array[i];}
 
-    //! need to re-define operator[], by explicitly returning an OmegaSuffStat&, because of multiple inheritance
-    OmegaSuffStat& operator[](int i) /*override*/ {return array[i];}
+    //! need to re-define operator[], by explicitly returning an OmegaPathSuffStat&, because of multiple inheritance
+    OmegaPathSuffStat& operator[](int i) /*override*/ {return array[i];}
 
     //! set all suff stats to 0
 	void Clear()	{
@@ -328,7 +328,7 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
     //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument (mixture models)
     //!
     //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] += suffstatarray[i]
-	void Add(const Selector<OmegaSuffStat>& suffstatarray, const Selector<int>& alloc) {
+	void Add(const Selector<OmegaPathSuffStat>& suffstatarray, const Selector<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
 			(*this)[alloc.GetVal(i)].Add(suffstatarray.GetVal(i));
 		}

@@ -138,7 +138,7 @@ class AAMutSelM2aModel : public ProbModel {
 	double PathSuffStatLogProb(int site) const;
 	double LambdaHyperSuffStatLogProb() const;
     //double NucRatesSuffStatLogProb() const;
-	double OmegaSuffStatLogProb() const;
+	double OmegaPathSuffStatLogProb() const;
     double AAHyperSuffStatLogProb() const;
 	
     void CollectPathSuffStat();
@@ -184,7 +184,7 @@ class AAMutSelM2aModel : public ProbModel {
     }
 
     double OmegaLogProb() const {
-        return OmegaLogPrior() + OmegaSuffStatLogProb();
+        return OmegaLogPrior() + OmegaPathSuffStatLogProb();
     }
 
     double AAHyperLogProb() const   {
@@ -216,7 +216,7 @@ class AAMutSelM2aModel : public ProbModel {
 	//void CollectComponentPathSuffStat();
 	void CollectSiteOmegaPathSuffStat();
 	void MoveOmega();
-	void CollectOmegaSuffStat();
+	void CollectOmegaPathSuffStat();
 	void ResampleAlloc();
     double DrawBetaPosWeight();
 	double SwitchPosWeight(int nrep);
@@ -323,7 +323,7 @@ class AAMutSelM2aModel : public ProbModel {
 
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat hyperlengthsuffstat;
-	OmegaSuffStatArray* siteomegasuffstatarray;
+	OmegaPathSuffStatArray* siteomegapathsuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	//PathSuffStatArray* componentpathsuffstatarray;
 

@@ -39,7 +39,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double omegahypermean;
     double omegahyperinvshape;
 	double omega;
-	OmegaSuffStat omegasuffstat;
+	OmegaPathSuffStat omegapathsuffstat;
 	
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet distributions
 
@@ -547,11 +547,11 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 	void MoveOmega()	{
 
-		omegasuffstat.Clear();
-		omegasuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
+		omegapathsuffstat.Clear();
+		omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
+		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
 		UpdateCodonMatrices();
 	}
 

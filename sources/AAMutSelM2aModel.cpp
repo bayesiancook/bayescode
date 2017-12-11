@@ -103,7 +103,7 @@ void AAMutSelM2aModel::Allocate()	{
     lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
     sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
     //componentpathsuffstatarray = new PathSuffStatArray(2);
-    siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
+    siteomegapathsuffstatarray = new OmegaPathSuffStatArray(GetNsite());
 }
 
 void AAMutSelM2aModel::Update()    {
@@ -231,9 +231,9 @@ double AAMutSelM2aModel::PathSuffStatLogProb(int site) const {
     return sitepathsuffstatarray->GetVal(site).GetLogProb(sitecodonmatrixarray->GetVal(site));
 }
 
-double AAMutSelM2aModel::OmegaSuffStatLogProb() const {
+double AAMutSelM2aModel::OmegaPathSuffStatLogProb() const {
     componentomegaarray->SetParameters(dposom+1,posw);
-    return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
+    return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray,sitepostprobarray);
 }
     
 double AAMutSelM2aModel::AAHyperSuffStatLogProb() const   {
@@ -439,7 +439,7 @@ void AAMutSelM2aModel::CollectPathSuffStat()	{
 
 void AAMutSelM2aModel::MoveOmega() 	{
 
-    CollectOmegaSuffStat();
+    CollectOmegaPathSuffStat();
 
     //SlidingMove(purom,0.1,10,0,1,&AAMutSelM2aModel::OmegaLogProb,&AAMutSelM2aModel::NoUpdate,this);
     //SlidingMove(purw,1.0,10,0,1,&AAMutSelM2aModel::OmegaLogProb,&AAMutSelM2aModel::NoUpdate,this);
@@ -453,14 +453,14 @@ void AAMutSelM2aModel::MoveOmega() 	{
     ResampleAlloc();
 }
 
-void AAMutSelM2aModel::CollectOmegaSuffStat()	{
+void AAMutSelM2aModel::CollectOmegaPathSuffStat()	{
 
-    siteomegasuffstatarray->Clear();
-    siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    siteomegapathsuffstatarray->Clear();
+    siteomegapathsuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
 }
 
 void AAMutSelM2aModel::ResampleAlloc()	{
-    OmegaSuffStatLogProb();
+    OmegaPathSuffStatLogProb();
     sitealloc->GibbsResample(sitepostprobarray);
     UpdateMatrices();
 }
@@ -477,14 +477,14 @@ double AAMutSelM2aModel::SwitchPosWeight(int nrep)	{
     double ntot = 0;
     for (int rep=0; rep<nrep; rep++)	{
         double bkposw = posw;
-        double deltalogprob = - PosSwitchLogProb() - OmegaSuffStatLogProb();
+        double deltalogprob = - PosSwitchLogProb() - OmegaPathSuffStatLogProb();
         if (posw)   {
             posw = 0;
         }
         else    {
             posw = DrawBetaPosWeight();
         }
-        deltalogprob += PosSwitchLogProb() + OmegaSuffStatLogProb();
+        deltalogprob += PosSwitchLogProb() + OmegaPathSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;

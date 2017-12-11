@@ -38,7 +38,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
     double omegahypermean;
     double omegahyperinvshape;
 	double omega;
-	OmegaSuffStat omegasuffstat;
+	OmegaPathSuffStat omegapathsuffstat;
 	
     // mixture components
     // set of Ncat Dirichlet densities
@@ -498,11 +498,11 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
 	void MoveOmega()	{
 
-		omegasuffstat.Clear();
-		omegasuffstat.AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
+		omegapathsuffstat.Clear();
+		omegapathsuffstat.AddSuffStat(*codonmatrixarray,*pathsuffstatarray);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
+		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
 		UpdateCodonMatrices();
 	}
 

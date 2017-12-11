@@ -68,7 +68,7 @@ class SingleOmegaModel : public ProbModel {
     NucPathSuffStat nucpathsuffstat;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
-	OmegaSuffStat omegasuffstat;
+	OmegaPathSuffStat omegapathsuffstat;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
@@ -403,11 +403,11 @@ class SingleOmegaModel : public ProbModel {
     //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)
 	void MoveOmega()	{
 
-		omegasuffstat.Clear();
-		omegasuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
+		omegapathsuffstat.Clear();
+		omegapathsuffstat.AddSuffStat(*codonmatrix,pathsuffstat);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegasuffstat.GetCount(), beta + omegasuffstat.GetBeta());
+		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
 		TouchCodonMatrix();
 	}
 

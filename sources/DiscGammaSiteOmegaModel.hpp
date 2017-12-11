@@ -76,7 +76,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
     // per site
-	OmegaSuffStatArray* siteomegasuffstatarray;
+	OmegaPathSuffStatArray* siteomegapathsuffstatarray;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
@@ -144,7 +144,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         componentpathsuffstatarray = new PathSuffStatArray(Ncat);
-        siteomegasuffstatarray = new OmegaSuffStatArray(Nsite);
+        siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
 	}
 
     void Unfold()   {
@@ -305,9 +305,9 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
 
-    double OmegaSuffStatLogProb() const    {
+    double OmegaPathSuffStatLogProb() const    {
         componentomegaarray->SetParameters(omegamean,omegainvshape);
-        return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
+        return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray,sitepostprobarray);
     }
 
     //-------------------
@@ -326,7 +326,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
     // for moving omegamean and invshape
     double OmegaLogProb() const {
-        return OmegaLogPrior() + OmegaSuffStatLogProb();
+        return OmegaLogPrior() + OmegaPathSuffStatLogProb();
     }
 
     //-------------------
@@ -388,19 +388,19 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
     }
 
-    void CollectOmegaSuffStat() {
-        siteomegasuffstatarray->Clear();
-        siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    void CollectOmegaPathSuffStat() {
+        siteomegapathsuffstatarray->Clear();
+        siteomegapathsuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
     }
 
     void ResampleAlloc()    {
-        OmegaSuffStatLogProb();
+        OmegaPathSuffStatLogProb();
         sitealloc->GibbsResample(sitepostprobarray);
     }
 
     void MoveOmega() {
 
-        CollectOmegaSuffStat();
+        CollectOmegaPathSuffStat();
 
         ScalingMove(omegamean,1.0,10,&DiscGammaSiteOmegaModel::OmegaLogProb,&DiscGammaSiteOmegaModel::NoUpdate,this);
         ScalingMove(omegamean,0.3,10,&DiscGammaSiteOmegaModel::OmegaLogProb,&DiscGammaSiteOmegaModel::NoUpdate,this);

@@ -31,7 +31,7 @@
  * These path suffstats can be used for any Markovian substitution process (any Q).
  * In some cases (i.e. for Muse and Gaut codon models),
  * they can be furthered simplified, as a function of the nucleotide rate parameters or the omega parameter of the Q matrix,
- * leading to even more compact suff stats (see OmegaSuffStat and NucPathSuffStat).
+ * leading to even more compact suff stats (see OmegaPathSuffStat and NucPathSuffStat).
  *
  * In terms of implementation, these suffstats are encoded as sparse data structures 
  * (since a very small subset of all possible pairs of codons will typcially be visited

@@ -94,7 +94,7 @@ void CodonM2aModel::Allocate()	{
     lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
     sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
     componentpathsuffstatarray = new PathSuffStatArray(3);
-    siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
+    siteomegapathsuffstatarray = new OmegaPathSuffStatArray(GetNsite());
 }
 
 void CodonM2aModel::Update()    {
@@ -252,9 +252,9 @@ double CodonM2aModel::PathSuffStatLogProb() const {
     return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 }
 
-double CodonM2aModel::OmegaSuffStatLogProb() const {
+double CodonM2aModel::OmegaPathSuffStatLogProb() const {
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
-    return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
+    return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray,sitepostprobarray);
 }
 
 //
@@ -441,7 +441,7 @@ void CodonM2aModel::CollectComponentPathSuffStat()	{
 
 void CodonM2aModel::MoveOmega() 	{
 
-    CollectOmegaSuffStat();
+    CollectOmegaPathSuffStat();
 
     SlidingMove(purom,0.1,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
     SlidingMove(purw,1.0,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
@@ -455,14 +455,14 @@ void CodonM2aModel::MoveOmega() 	{
     ResampleAlloc();
 }
 
-void CodonM2aModel::CollectOmegaSuffStat()	{
+void CodonM2aModel::CollectOmegaPathSuffStat()	{
 
-    siteomegasuffstatarray->Clear();
-    siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    siteomegapathsuffstatarray->Clear();
+    siteomegapathsuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
 }
 
 void CodonM2aModel::ResampleAlloc()	{
-    OmegaSuffStatLogProb();
+    OmegaPathSuffStatLogProb();
     sitealloc->GibbsResample(sitepostprobarray);
 }
 
@@ -478,14 +478,14 @@ double CodonM2aModel::SwitchPosWeight(int nrep)	{
     double ntot = 0;
     for (int rep=0; rep<nrep; rep++)	{
         double bkposw = posw;
-        double deltalogprob = - PosSwitchLogProb() - OmegaSuffStatLogProb();
+        double deltalogprob = - PosSwitchLogProb() - OmegaPathSuffStatLogProb();
         if (posw)   {
             posw = 0;
         }
         else    {
             posw = DrawBetaPosWeight();
         }
-        deltalogprob += PosSwitchLogProb() + OmegaSuffStatLogProb();
+        deltalogprob += PosSwitchLogProb() + OmegaPathSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;

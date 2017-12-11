@@ -84,9 +84,9 @@ class DPOmegaModel : public ProbModel {
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
     // per site
-	OmegaSuffStatArray* siteomegasuffstatarray;
+	OmegaPathSuffStatArray* siteomegapathsuffstatarray;
     // per component
-	OmegaSuffStatArray* componentomegasuffstatarray;
+	OmegaPathSuffStatArray* componentomegapathsuffstatarray;
 
     // for moving omegamean and invshape
     GammaSuffStat omegahypersuffstat;
@@ -168,8 +168,8 @@ class DPOmegaModel : public ProbModel {
 		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         componentpathsuffstatarray = new PathSuffStatArray(Ncat);
-        siteomegasuffstatarray = new OmegaSuffStatArray(Nsite);
-        componentomegasuffstatarray = new OmegaSuffStatArray(Ncat);
+        siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
+        componentomegapathsuffstatarray = new OmegaPathSuffStatArray(Ncat);
 	}
 
     void Unfold()   {
@@ -396,7 +396,7 @@ class DPOmegaModel : public ProbModel {
     }
 
     void MoveOmega() {
-        CollectSiteOmegaSuffStat();
+        CollectSiteOmegaPathSuffStat();
         for (int rep=0; rep<10; rep++)  {
             ResampleOmega();
             ResampleAlloc();
@@ -410,25 +410,25 @@ class DPOmegaModel : public ProbModel {
         occupancy->AddSuffStat(*sitealloc);
     }
 
-    void CollectSiteOmegaSuffStat() {
-        siteomegasuffstatarray->Clear();
-        siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    void CollectSiteOmegaPathSuffStat() {
+        siteomegapathsuffstatarray->Clear();
+        siteomegapathsuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
     }
 
-    void CollectComponentOmegaSuffStat()    {
-        componentomegasuffstatarray->Clear();
-        componentomegasuffstatarray->Add(*siteomegasuffstatarray,*sitealloc);
+    void CollectComponentOmegaPathSuffStat()    {
+        componentomegapathsuffstatarray->Clear();
+        componentomegapathsuffstatarray->Add(*siteomegapathsuffstatarray,*sitealloc);
     }
 
     void ResampleOmega()    {
-        CollectComponentOmegaSuffStat();
-        componentomegaarray->GibbsResample(*componentomegasuffstatarray);
+        CollectComponentOmegaPathSuffStat();
+        componentomegaarray->GibbsResample(*componentomegapathsuffstatarray);
     }
 
     void ResampleAlloc()    {
         vector<double> postprob(Ncat,0);
         for (int i=0; i<Nsite; i++) {
-            componentomegaarray->GetAllocPostProb(siteomegasuffstatarray->GetVal(i),weight->GetArray(),postprob);
+            componentomegaarray->GetAllocPostProb(siteomegapathsuffstatarray->GetVal(i),weight->GetArray(),postprob);
             sitealloc->GibbsResample(i,postprob);
         }
         UpdateOccupancies();

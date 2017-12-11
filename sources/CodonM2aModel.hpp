@@ -174,7 +174,7 @@ class CodonM2aModel : public ProbModel {
 	double PathSuffStatLogProb() const;
 	double LambdaHyperSuffStatLogProb() const;
     double NucRatesSuffStatLogProb() const;
-	double OmegaSuffStatLogProb() const;
+	double OmegaPathSuffStatLogProb() const;
 
     //-------------------
     // Priors
@@ -212,7 +212,7 @@ class CodonM2aModel : public ProbModel {
     }
 
     double OmegaLogProb() const {
-        return OmegaLogPrior() + OmegaSuffStatLogProb();
+        return OmegaLogPrior() + OmegaPathSuffStatLogProb();
     }
 
     //-------------------
@@ -240,7 +240,7 @@ class CodonM2aModel : public ProbModel {
 
 	void CollectComponentPathSuffStat();
 	void MoveOmega();
-	void CollectOmegaSuffStat();
+	void CollectOmegaPathSuffStat();
 	void ResampleAlloc();
     double DrawBetaPosWeight();
 	double SwitchPosWeight(int nrep);
@@ -345,7 +345,7 @@ class CodonM2aModel : public ProbModel {
 
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat hyperlengthsuffstat;
-	OmegaSuffStatArray* siteomegasuffstatarray;
+	OmegaPathSuffStatArray* siteomegapathsuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;
 
