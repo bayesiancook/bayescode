@@ -15,11 +15,11 @@ class Chrono {
 
     inline int operator++() { return N++; }
 
-    inline double GetTime() { return TotalTime; }
+    inline double GetTime() const { return TotalTime; }
 
-    inline double GetTimePerCount() { return TotalTime / N; }
+    inline double GetTimePerCount() const { return TotalTime / N; }
 
-    inline int GetCount() { return N; }
+    inline int GetCount() const { return N; }
 
   private:
     // this is in milli seconds

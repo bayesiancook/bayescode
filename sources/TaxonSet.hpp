@@ -10,17 +10,36 @@
 class Tree;
 class Link;
 
+/**
+ * \brief A set of taxa (simply, a bi-directional correspondance between taxon names and integers between 0 and Ntaxa-1)
+ *
+ * TaxonSet implements a globally consistent correspondance of taxon names and indices between trees and sequence alignments.
+ * Each Tree and SequenceAlignment object has a pointer to a TaxonSet.
+ * Typically, a SequenceAlignment is created by reading from a file;
+ * the TaxonSet is created at that step, by the SequenceAlignment constructor itself.
+ * Then, a Tree is read from file and is registered with the taxon set given by the sequence alignment.
+ * Once this is done, both objects have mutually consistent indexing systems and can work together (e.g. to calculate a likelihood).
+ *
+ * Of note: some work to do here to ensure proper destruction of TaxonSet (smart pointers?)
+ */
+
 class TaxonSet {
   public:
+
+    //! constructor, based on a vector of taxon names
     TaxonSet(const std::vector<std::string>& names);
-    TaxonSet(const Tree* tree, const Link *subgroup = nullptr);
+    //! default constructor
     ~TaxonSet() = default;
 
+    //! return number of taxa
     int GetNtaxa() const {return Ntaxa;}
+    //! return taxon name, given the index
     std::string GetTaxon(int index) const {return taxlist[index];}
+    //! return taxon index, given the name
     int GetTaxonIndex(std::string intaxon) const;
+    //! return taxon index, given incomplete name (first part)
     int GetTaxonIndexWithIncompleteName(std::string taxname) const;
-
+    //! formatted output to stream
     void ToStream(std::ostream &os) const;
 
   private:

@@ -86,15 +86,15 @@ void CodonM2aModel::Allocate()	{
 
     componentcodonmatrixarray = new MGOmegaCodonSubMatrixArray((CodonStateSpace*) codondata->GetStateSpace(),nucmatrix,componentomegaarray);
 
-    sitesubmatrixarray = new ConstMixtureArray<SubMatrix>(componentcodonmatrixarray,sitealloc);
-    sitecodonmatrixarray = new ConstMixtureArray<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
+    sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
+    sitecodonmatrixarray = new MixtureSelector<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
     phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
-    lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+    lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
     sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
     componentpathsuffstatarray = new PathSuffStatArray(3);
-    siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
+    siteomegapathsuffstatarray = new OmegaPathSuffStatArray(GetNsite());
 }
 
 void CodonM2aModel::Update()    {
@@ -113,7 +113,7 @@ void CodonM2aModel::Update()    {
 // setting model features and (hyper)parameters
 //
 
-void CodonM2aModel::SetBranchLengths(const ConstBranchArray<double>& inbranchlength)    {
+void CodonM2aModel::SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
     branchlength->Copy(inbranchlength);
 }
 
@@ -121,7 +121,7 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) const 
     inbranchlength.Copy(*branchlength);
 }
 
-void CodonM2aModel::SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape) {
+void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
     branchlength->SetShape(1.0 / blhyperinvshape);
 }
@@ -194,8 +194,7 @@ void CodonM2aModel::UpdateMatrices()   {
 //
 
 double CodonM2aModel::GetLogLikelihood() const {
-    // return GetIntegratedLogLikelihood();
-    return phyloprocess->GetLogProb();
+    return phyloprocess->GetLogLikelihood();
 }
 
 double CodonM2aModel::GetIntegratedLogLikelihood() const {
@@ -233,12 +232,12 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
 // Suff Stat and suffstatlogprobs
 //
 
-const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray() const {
-    return lengthsuffstatarray;
+const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthPathSuffStatArray() const {
+    return lengthpathsuffstatarray;
 }
 
 double CodonM2aModel::LambdaHyperSuffStatLogProb() const {
-    return lambdasuffstat.GetLogProb(1.0,lambda);
+    return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 }
 
 const NucPathSuffStat& CodonM2aModel::GetNucPathSuffStat() const {
@@ -253,9 +252,9 @@ double CodonM2aModel::PathSuffStatLogProb() const {
     return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 }
 
-double CodonM2aModel::OmegaSuffStatLogProb() const {
+double CodonM2aModel::OmegaPathSuffStatLogProb() const {
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
-    return componentomegaarray->GetPostProbArray(*siteomegasuffstatarray,sitepostprobarray);
+    return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray,sitepostprobarray);
 }
 
 //
@@ -406,23 +405,21 @@ void CodonM2aModel::MoveBranchLengths()    {
 void CodonM2aModel::ResampleBranchLengths()	{
 
     CollectLengthSuffStat();
-    branchlength->GibbsResample(*lengthsuffstatarray);
+    branchlength->GibbsResample(*lengthpathsuffstatarray);
 }
 
 void CodonM2aModel::CollectLengthSuffStat()    {
 
-    lengthsuffstatarray->Clear();
-    phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+    lengthpathsuffstatarray->Clear();
+    lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
 }
 
 void CodonM2aModel::MoveLambda()	{
 
-    lambdasuffstat.Clear();
-    branchlength->AddSuffStat(lambdasuffstat);
-
+    hyperlengthsuffstat.Clear();
+    hyperlengthsuffstat.AddSuffStat(*branchlength);
     ScalingMove(lambda,1.0,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
     ScalingMove(lambda,0.3,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
-
     blhypermean->SetAllBranches(1.0/lambda);
 }
 
@@ -433,18 +430,18 @@ void CodonM2aModel::MoveLambda()	{
 void CodonM2aModel::CollectPathSuffStat()	{
 
     sitepathsuffstatarray->Clear();
-    phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
+    sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 }
 
 void CodonM2aModel::CollectComponentPathSuffStat()	{
 
     componentpathsuffstatarray->Clear();
-    sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
+    componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
 }
 
 void CodonM2aModel::MoveOmega() 	{
 
-    CollectOmegaSuffStat();
+    CollectOmegaPathSuffStat();
 
     SlidingMove(purom,0.1,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
     SlidingMove(purw,1.0,10,0,1,&CodonM2aModel::OmegaLogProb,&CodonM2aModel::NoUpdate,this);
@@ -458,14 +455,14 @@ void CodonM2aModel::MoveOmega() 	{
     ResampleAlloc();
 }
 
-void CodonM2aModel::CollectOmegaSuffStat()	{
+void CodonM2aModel::CollectOmegaPathSuffStat()	{
 
-    siteomegasuffstatarray->Clear();
-    siteomegasuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    siteomegapathsuffstatarray->Clear();
+    siteomegapathsuffstatarray->AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
 }
 
 void CodonM2aModel::ResampleAlloc()	{
-    OmegaSuffStatLogProb();
+    OmegaPathSuffStatLogProb();
     sitealloc->GibbsResample(sitepostprobarray);
 }
 
@@ -481,14 +478,14 @@ double CodonM2aModel::SwitchPosWeight(int nrep)	{
     double ntot = 0;
     for (int rep=0; rep<nrep; rep++)	{
         double bkposw = posw;
-        double deltalogprob = - PosSwitchLogProb() - OmegaSuffStatLogProb();
+        double deltalogprob = - PosSwitchLogProb() - OmegaPathSuffStatLogProb();
         if (posw)   {
             posw = 0;
         }
         else    {
             posw = DrawBetaPosWeight();
         }
-        deltalogprob += PosSwitchLogProb() + OmegaSuffStatLogProb();
+        deltalogprob += PosSwitchLogProb() + OmegaPathSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;
@@ -546,7 +543,6 @@ void CodonM2aModel::Trace(ostream& os) const {
     os << purom << '\t' << dposom+1 << '\t' << purw << '\t' << posw << '\t';
     os << Random::GetEntropy(nucstat) << '\t';
     os << Random::GetEntropy(nucrelrate) << '\n';
-    SubMatrix::diagerr = 0;
 }
 
 void CodonM2aModel::TracePostProb(ostream& os) const {

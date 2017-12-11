@@ -7,10 +7,10 @@
 #include "BranchAllocationSystem.hpp"
 #include "SubMatrix.hpp"
 
-class SubMatrixSelector : public ConstBranchSiteArray<SubMatrix> {
+class SubMatrixSelector : public BranchSiteSelector<SubMatrix> {
 
     public:
-    SubMatrixSelector(const ConstBidimArray<SubMatrix>& inmatrixbidimarray, const BranchAllocationSystem& inbranchalloc) : 
+    SubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray, const BranchAllocationSystem& inbranchalloc) : 
         matrixbidimarray(inmatrixbidimarray), branchalloc(inbranchalloc)    {
 
     }
@@ -23,15 +23,15 @@ class SubMatrixSelector : public ConstBranchSiteArray<SubMatrix> {
     }
 
     private:
-    const ConstBidimArray<SubMatrix>& matrixbidimarray;
+    const BidimSelector<SubMatrix>& matrixbidimarray;
     const BranchAllocationSystem& branchalloc;
 };
 
-class RootSubMatrixSelector : public ConstArray<SubMatrix>  {
+class RootSubMatrixSelector : public Selector<SubMatrix>  {
 
     public:
 
-    RootSubMatrixSelector(const ConstBidimArray<SubMatrix>& inmatrixbidimarray) :
+    RootSubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray) :
         matrixbidimarray(inmatrixbidimarray) {}
 
     ~RootSubMatrixSelector() {}
@@ -40,7 +40,7 @@ class RootSubMatrixSelector : public ConstArray<SubMatrix>  {
     virtual const SubMatrix& GetVal(int site) const override {return matrixbidimarray.GetVal(0,site);}
 
     private:
-    const ConstBidimArray<SubMatrix>& matrixbidimarray;
+    const BidimSelector<SubMatrix>& matrixbidimarray;
 };
 
 #endif

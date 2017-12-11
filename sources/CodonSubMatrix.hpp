@@ -6,17 +6,27 @@
 
 const double omegamin = 1e-10;
 
-// a general class representing all codon matrices
-// this is still an abstract class
+/**
+ * \brief A general class representing all codon matrices
+ *
+ * Provides a few generic methods for dealing with codon-specific issues (syn, non syn, etc).
+ * However, still needs to be specialized into actual classes
+ * (the two most important being MGOmegaCodonSubMatrix and AAMutSelOmegaCodonSubMatrix)
+ */
+
 class CodonSubMatrix : public virtual SubMatrix {
   public:
+    //! constructor parameterized by codon state space (itself specifying the genetic code)
     CodonSubMatrix(const CodonStateSpace *instatespace, bool innormalise)
         : SubMatrix(instatespace->GetNstate(), innormalise), statespace(instatespace) {}
 
     const CodonStateSpace *GetCodonStateSpace() const { return statespace; }
 
+    //! see CodonStateSpace::Synonymous
     bool Synonymous(int codon1, int codon2) const { return statespace->Synonymous(codon1, codon2); }
+    //! see CodonStateSpace::GetCodonPosition
     int GetCodonPosition(int pos, int codon) const { return statespace->GetCodonPosition(pos, codon); }
+    //! see CodonStateSpace::GetDifferingPosition
     int GetDifferingPosition(int codon1, int codon2) const {
         return statespace->GetDifferingPosition(codon1, codon2);
     }
@@ -25,11 +35,14 @@ class CodonSubMatrix : public virtual SubMatrix {
     const CodonStateSpace *statespace;
 };
 
-// most codon matrices rely on a mutation process at the level of nucleotides
-// thus we create a NucCodonSubMatrix, which takes a substitution matrix
-// representing the nucleotide
-// 4x4 mutation process
-// this is still an abstract class
+/**
+ * \brief A generic class for codon matrices based on an underlying nucleotide rate matrix
+ *
+ * Most codon matrices rely on a mutation process at the level of nucleotides.
+ * NucCodonSubMatrix takes a const pointer to a nucleotide substitution matrix
+ * representing the nucleotide 4x4 mutation process.
+ * Still an abstract class.
+ */
 class NucCodonSubMatrix : public virtual CodonSubMatrix {
   public:
     NucCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, bool innormalise)
@@ -53,6 +66,10 @@ class NucCodonSubMatrix : public virtual CodonSubMatrix {
     const SubMatrix *NucMatrix;
 };
 
+/**
+ * \brief A generic class for codon matrices with an omega parameter, acting as a multiplier in front of all rates between non-synonynmous codons
+ */
+
 class OmegaCodonSubMatrix : public virtual CodonSubMatrix   {
 
     public:
@@ -67,11 +84,13 @@ class OmegaCodonSubMatrix : public virtual CodonSubMatrix   {
 
 };
 
-// The Muse and Gaut codon substitution process
-// The simplest codon model based on a pure nucleotide mutation process (with
-// stops excluded)
-// look at how ComputeArray and ComputeStationary are implemented in
-// CodonSubMatrix.cpp
+/**
+ * \brief A Muse and Gaut codon substitution process (Muse and Gaut, 1994).
+ *
+ * The simplest codon model based on a pure nucleotide mutation process (with stops excluded).
+ * Without omega.
+ */
+
 class MGCodonSubMatrix : public NucCodonSubMatrix {
   public:
     MGCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
@@ -79,81 +98,21 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           NucCodonSubMatrix(instatespace, inNucMatrix, innormalise) {
-	/*
-        synnucarray = new double *[Nnuc];
-        nonsynnucarray = new double *[Nnuc];
-        for (int i = 0; i < Nnuc; i++) {
-            synnucarray[i] = new double[Nnuc];
-            nonsynnucarray[i] = new double[Nnuc];
-            for (int j = 0; j < Nnuc; j++) {
-                synnucarray[i][j] = 0;
-                nonsynnucarray[i][j] = 0;
-            }
-        }
-        nucflag = false;
-	*/
     }
-
-    ~MGCodonSubMatrix() /*override*/ {
-	/*
-        for (int i = 0; i < Nnuc; i++) {
-            delete[] synnucarray[i];
-            delete[] nonsynnucarray[i];
-        }
-	*/
-    }
-
-    /*
-    const double **GetSynNucArray() const {
-        if (!nucflag) {
-            ComputeNucArrays();
-            nucflag = true;
-        }
-        return synnucarray;
-    }
-
-    const double **GetNonSynNucArray() const {
-        if (!nucflag) {
-            ComputeNucArrays();
-            nucflag = true;
-        }
-        return nonsynnucarray;
-    }
-
-    double GetNormStat() {
-        if (!nucflag) {
-            ComputeNucArrays();
-            nucflag = true;
-        }
-        return 1 - stopstat;
-    }
-    */
 
     void CorruptMatrix() /*override*/ {
-        // nucflag = false;
         SubMatrix::CorruptMatrix();
     }
 
   protected:
-    // look at how ComputeArray and ComputeStationary are implemented in
-    // CodonSubMatrix.cpp
     void ComputeArray(int i) const /*override*/;
     void ComputeStationary() const /*override*/;
 
-    /*
-    virtual void ComputeNucArrays();
-
-    double **synnucarray;
-    double **nonsynnucarray;
-    double stopstat;
-    bool nucflag;
-    */
 };
 
-// The Muse and Gaut codon substitution process
-// with an omgea = dN/dS parameter
-// look at how ComputeArray and ComputeStationary are implemented in
-// CodonSubMatrix.cpp
+/**
+ * \brief A Muse and Gaut codon substitution process with an omgea = dN/dS parameter
+ */
 
 class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix {
   public:
@@ -165,19 +124,7 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatri
           OmegaCodonSubMatrix(instatespace,inomega,innormalise) {}
 
   protected:
-    // look at how ComputeArray and ComputeStationary are implemented in
-    // CodonSubMatrix.cpp
     void ComputeArray(int i) const /*override*/;
-
-    // void ComputeNucArrays() const /*override*/;
-
-    void ToStream(std::ostream &os) const /*override*/ {
-        os << "Omega : " << omega << '\n';
-        os << "nuc matrix\n";
-        GetNucMatrix()->ToStream(os);
-        os << '\n';
-        SubMatrix::ToStream(os);
-    }
 };
 
 #endif

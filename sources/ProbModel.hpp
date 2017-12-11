@@ -6,31 +6,58 @@
 #include "Random.hpp"
 using namespace std;
 
+/**
+ * \brief A generic interface for MCMC probabilistic models
+ *
+ * ProbModel provides an interface for the fundamental methods that any model should implement in BayesCode:
+ * - Move: make a complete cycle of MCMC moves
+ * - GetLogProb: return the log prob of the current model configuration
+ * - Update: update the entire model (e.g. after reading an instance from file)
+ * - FromStream / ToStream: intput output of entire model configuration
+ * - Trace / TraceHeader / Monitor: tracing and monitoring the model
+ * Currently, ProbModel does not declare those methods pure virtual (although this could perhaps be enforced)
+ *
+ * In addition, ProbModel proposes three templates for sliding, scaling and profile moves on model parameters.
+ *
+ */
+
 class ProbModel {
   public:
     ProbModel() {}
     ~ProbModel() {}
 
+    //! make a complete cycle of MCMC moves -- in principle, should return average success rate (although rarely does so in practice)
     virtual double Move() {return 1;}
 
-    // void NoUpdate() {}
+    //! update the entire model
     virtual void Update() {}
+
+    //! return lof prob of the current model configuration
     virtual double GetLogProb() const {return 0;}
 
-    // save model configuration to stream
-    virtual void ToStream(std::ostream &os) const {}
-    // get model configuration from stream
-    virtual void FromStream(std::istream &is) {}
+    //! save model configuration to stream
+    virtual void ToStream(ostream &os) const {}
+    //! get model configuration from stream
+    virtual void FromStream(istream &is) {}
 
-    // monitoring the run
-    virtual void Trace(std::ostream & /*unused*/) const {}
-    virtual void TraceHeader(std::ostream & /*unused*/) const {}
-    virtual void Monitor(std::ostream &os) const {}
+    //! write one line of trace of the current parameter configuration into trace file
+    virtual void Trace(ostream & /*unused*/) const {}
+    //! write one line of header for the trace file
+    virtual void TraceHeader(ostream & /*unused*/) const {}
+    //! output statistics monitoring the MCMC
+    virtual void Monitor(ostream &os) const {}
 
-    // templates for Metropolis Hastings Moves
+    //! new type name for a const method of class C taking no argument and returning a double (intended: a log prob function)
     template<class C> using LogProbF = double (C::*)(void) const;
+    //! new type name for a non-const method of class C taking no argument and with no return (intended: an update function)
     template<class C> using UpdateF = void (C::*)(void);
 
+    //! \brief template for Metropolis Hastings sliding move on parameter x
+    //!
+    //! Parameterized by a tuning parameter, un number of iterations (nrep),
+    //! and lower and upper constraint (min and max; if max<min, then no constraint is enforced).
+    //! Should also give a pointer to a log prob and an update functions, as well as a pointer to the model itself.
+    //! Returns success rate.
 	template<class C> double SlidingMove(double& x, double tuning, int nrep, double min, double max, LogProbF<C> logprobf, UpdateF<C> updatef, C* This) {
     
         // C* This = dynamic_cast<C*>(this);
@@ -66,6 +93,12 @@ class ProbModel {
         return nacc/ntot;
     }
 
+    //! \brief template for Metropolis Hastings scaling move on parameter x
+    //!
+    //! Parameterized by a tuning parameter, un number of iterations (nrep),
+    //! and lower and upper constraint (min and max; if max<min, then no constraint is enforced).
+    //! Should also give a pointer to a log prob and an update functions, as well as a pointer to the model itself.
+    //! Returns success rate.
 	template<class C> double ScalingMove(double& x, double tuning, int nrep, LogProbF<C> logprobf, UpdateF<C> updatef, C* This) {
     
         double nacc = 0;
@@ -91,6 +124,12 @@ class ProbModel {
         return nacc/ntot;
     }
 
+    //! \brief template for Metropolis Hastings move on a frequency vector (profile) x of the model
+    //!
+    //! Parameterized by a real and an integer tuning parameters (tuning and n), a number of iterations (nrep),
+    //! and lower and upper constraint (min and max; if max<min, then no constraint is enforced).
+    //! Should also give a pointer to a log prob and an update functions, as well as a pointer to the model itself.
+    //! Returns success rate.
     template<class C> double ProfileMove(vector<double>& x, double tuning, int n, int nrep, LogProbF<C> logprobf, UpdateF<C> updatef, C* This)	{
 
         double nacc = 0;

@@ -8,7 +8,7 @@ using namespace std;
 // c++11
 #define nullptr 0 
 
-Chain::Chain() {
+Chain::Chain()  {
     every = 1;
     until = -1;
     size = 0;

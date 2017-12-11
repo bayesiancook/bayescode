@@ -4,81 +4,96 @@
 #include <string>
 #include "ProbModel.hpp"
 
-/// Chain is a Monte Carlo Markov Chain
-//  it is responsible for creating a model, applying it to data
-//  running a MCMC, to obtain a sample approximately from the posterior
-//  distribution
-//  saving the sample onto a file, restarting a run
-//
-// file nomenclature:
-// <chainname>.param   : current state
-// <chainname>.chain   : list of all points since the beginning of the Monte
-// Carlo (burnin included)
-// <chainname>.trace   : trace file, each row corresponding to one point of the
-// .chain file
-// <chainname>.monitor : monitoring the success rate, time spent in each move,
-// numerical errors, etc
-// <chainname>.run     : put 0 in this file to stop the chain
+/**
+ * \brief A generic interface for a Monte Carlo Markov Chain
+ *
+ * Chain is responsible for creating a model, 
+ * by calling the model constructor with the relevant settings,
+ * and then running the MCMC, regularly saving samples into a file.
+ * A chain can be stopped, and then restarted from file.
+ *
+ * The files have the following extensions:
+ * - <chainname>.param   : current state (detailed settings and complete model configuration)
+ * - <chainname>.chain   : list of all saved points since the beginning of the MCMC (burnin included)
+ * - <chainname>.trace   : trace file, each row corresponding to one point of the points saved during the MCMC
+ * - <chainname>.monitor : monitoring the success rate, time spent in each move, numerical errors, etc
+ * - <chainname>.run     : put 0 in this file to stop the chain
+ */
 
 class Chain {
   public:
+
     Chain();
 
     virtual ~Chain() = default;
 
-    virtual void MakeFiles(int force = 0);
-    // overwrites files if force == 1
-
-    virtual void Monitor();
-    // write the .trace and .monitor files
-
-    virtual void SavePoint();
-    // save one point in the .chain file
-
-    virtual void Reset(int force = 0);
-    // initialise model and make the files (overwrite if force == 1)
-
-    virtual void Move();
-    // perform one cycle of Monte Carlo "moves" (updates)
-
-    virtual void Start();
-    // start Monte Carlo
-
-    virtual int GetRunningStatus();
-    // returns 0 (means STOP) if one the following conditions holds true
-    // 	.run file contains a 0 ("echo 0 > <chainname>.run" is the proper way to
-    // stop a chain from a
-    // shell)
-    // 	size >= until (and until != -1)
-
-    virtual void Run();
-    // Move, Monitor amd Save while running status == 1
-
+    //! \brief return model type
+    //!
+    //! each derived class should define a unique string for each type of model
+    //! (typically used to check that a chain restarted from file is from correct model),
+    //! and then override this pure virtual function to return the type.
     virtual std::string GetModelType() = 0;
-    // std::string meant as a check when opening files (model name)
-    // you should give different names to chains based on different models
 
+    //! make new chain (force == 1 : overwrite already existing files with same name)
     virtual void New(int force = 0) = 0;
-    // new chain (force = 1 : this will overwrite files)
 
+    //! open chain from file
     virtual void Open() = 0;
-    // open a chain from files
 
+    //! save chain to file
     virtual void Save() = 0;
-    // save a chain to files
 
-    std::string GetName() { return name; }
+    //! initialise model and make the files (force == 1: overwrite existing files with same name)
+    virtual void Reset(int force = 0);
 
+    //! create all files (chain, trace, monitor; called when creating a new chain)
+    virtual void MakeFiles(int force = 0);
+
+    //! start the MCMC
+    virtual void Start();
+
+    //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
+    virtual void Run();
+
+    //! perform one cycle of Monte Carlo "moves" (updates)
+    virtual void Move();
+
+    //! save one point in the .chain file (called after each cycle)
+    virtual void SavePoint();
+
+    //! write current trace and monitoring statistics in the .trace and .monitor files (called after each cycle)
+    virtual void Monitor();
+
+    //! \brief returns running status (1: run should continue / 0: run should now stop)
+    //!
+    //! returns 1 (means continue) if one the following conditions holds true
+    //! - <chainname>.run file contains a 1
+    //! - size < until, or until == -1
+    //!
+    //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
+    virtual int GetRunningStatus();
+
+    //! return chain name: i.e. base name for all files corresponding to that chain
+    string GetName() { return name; }
+
+    //! return pointer to underlying model
     ProbModel *GetModel() { return model; }
+
+    //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }
 
   protected:
-    int every;         // saving frequency
-    int until;         // intended size of the run (number of saved points)
-    int size;          // current size
-    ProbModel *model;  // the model
-    std::string name;  // the name of the chain in the filesystem
-                       // all files for this chain will be of the form : <name>.<ext>
+
+    //! saving frequency (i.e. number of move cycles performed between each point saved to file)
+    int every;         
+    //! intended final size of the chain (until==-1 means no a priori specified upper limit)
+    int until;         
+    //! current size (number of points saved to file)
+    int size;          
+    //! pointer to the underlying model
+    ProbModel *model;  
+    //! base name for all files corresponding to that chain
+    string name;  
 };
 
 #endif  // CHAIN_H

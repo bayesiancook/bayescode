@@ -1,8 +1,9 @@
 #include <algorithm>
 #include "PhyloProcess.hpp"
+#include "PathSuffStat.hpp"
 using namespace std;
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstBranchSiteArray<SubMatrix>* insubmatrixarray, const ConstArray<SubMatrix>* inrootsubmatrixarray)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray)	{
 
     tree = intree;
     data = indata;
@@ -16,7 +17,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     allocrootsubmatrixarray = false;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const SubMatrix* insubmatrix)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix)	{
 
     tree = intree;
     data = indata;
@@ -24,13 +25,13 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     maxtrial = DEFAULTMAXTRIAL;
     branchlength = inbranchlength;
     siterate = insiterate;
-    submatrixarray = new HomogeneousBranchSiteArray<SubMatrix>(*tree,GetNsite(),*insubmatrix);
+    submatrixarray = new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree,GetNsite(),*insubmatrix);
     allocsubmatrixarray = true;
-    rootsubmatrixarray = new HomogeneousArray<SubMatrix>(GetNsite(),*insubmatrix);
+    rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(),*insubmatrix);
     allocrootsubmatrixarray = true;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const ConstBranchArray<double>* inbranchlength, const ConstArray<double>* insiterate, const ConstArray<SubMatrix>* insubmatrixarray)	{
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray)	{
 
     tree = intree;
     data = indata;
@@ -42,7 +43,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
         std::cerr << "error in PhyloProcess constructor: size of matrix array does not match alignment size\n";
         exit(1);
     }
-    submatrixarray = new BranchHomogeneousSiteHeterogeneousArray<SubMatrix>(*tree,*insubmatrixarray);
+    submatrixarray = new BranchHomogeneousSiteHeterogeneousSelector<SubMatrix>(*tree,*insubmatrixarray);
     allocsubmatrixarray = true;
     rootsubmatrixarray = insubmatrixarray;
     allocrootsubmatrixarray = false;
@@ -292,7 +293,7 @@ double PhyloProcess::GetFastLogProb() const {
     return total;
 }
 
-double PhyloProcess::GetLogProb() const {
+double PhyloProcess::GetLogLikelihood() const {
 #if DEBUG > 1
     MeasureTime timer;
 #endif
@@ -733,11 +734,11 @@ BranchSitePath* PhyloProcess::ResampleUniformized(int stateup, int statedown, do
 
 }
 
-void PhyloProcess::AddPathSuffStat(PathSuffStat& suffstat)	{
+void PhyloProcess::AddPathSuffStat(PathSuffStat& suffstat) const {
 	RecursiveAddPathSuffStat(GetRoot(),suffstat);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat)	{
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const {
 
     LocalAddPathSuffStat(from,suffstat);
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
@@ -745,7 +746,7 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suff
 	}
 }
 
-void PhyloProcess::LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat)   {
+void PhyloProcess::LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const {
 
     int nodeindex = from->GetNode()->GetIndex();
     for (int i=0; i<GetNsite(); i++)    {
@@ -762,11 +763,11 @@ void PhyloProcess::LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat
     }
 }
 
-void PhyloProcess::AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc)	{
+void PhyloProcess::AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc) const {
 	RecursiveAddPathSuffStat(GetRoot(),suffstatarray,branchalloc);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc)	{
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc) const {
 
     if (from->isRoot()) {
         LocalAddPathSuffStat(from,suffstatarray,0);
@@ -779,7 +780,7 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuf
 	}
 }
 
-void PhyloProcess::LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond)   {
+void PhyloProcess::LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond) const {
 
     int nodeindex = from->GetNode()->GetIndex();
     for (int i=0; i<GetNsite(); i++)    {
@@ -796,11 +797,11 @@ void PhyloProcess::LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffSta
     }
 }
 
-void PhyloProcess::AddPathSuffStat(Array<PathSuffStat>& suffstatarray)	{
+void PhyloProcess::AddPathSuffStat(Array<PathSuffStat>& suffstatarray) const {
 	RecursiveAddPathSuffStat(GetRoot(),suffstatarray);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray)	{
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const {
 
     LocalAddPathSuffStat(from,suffstatarray);
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
@@ -808,7 +809,7 @@ void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat
 	}
 }
 
-void PhyloProcess::LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray)   {
+void PhyloProcess::LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const {
 
     int nodeindex = from->GetNode()->GetIndex();
     for (int i=0; i<GetNsite(); i++)    {
@@ -825,22 +826,22 @@ void PhyloProcess::LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& s
     }
 }
 
-void PhyloProcess::AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
+void PhyloProcess::AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const {
 
-	RecursiveAddLengthSuffStat(GetRoot(),branchlengthsuffstatarray);
+	RecursiveAddLengthSuffStat(GetRoot(),branchlengthpathsuffstatarray);
 }
 
-void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
+void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const {
 
     if (! from->isRoot())   {
-        LocalAddLengthSuffStat(from,branchlengthsuffstatarray[from->GetBranch()->GetIndex()]);
+        LocalAddLengthSuffStat(from,branchlengthpathsuffstatarray[from->GetBranch()->GetIndex()]);
     }
 	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-		RecursiveAddLengthSuffStat(link->Out(),branchlengthsuffstatarray);
+		RecursiveAddLengthSuffStat(link->Out(),branchlengthpathsuffstatarray);
 	}
 }
 
-void PhyloProcess::LocalAddLengthSuffStat(const Link* link, PoissonSuffStat& suffstat)	{
+void PhyloProcess::LocalAddLengthSuffStat(const Link* link, PoissonSuffStat& suffstat) const {
 
     int nodeindex = link->GetNode()->GetIndex();
     for (int i=0; i<GetNsite(); i++)    {
@@ -849,74 +850,4 @@ void PhyloProcess::LocalAddLengthSuffStat(const Link* link, PoissonSuffStat& suf
         }
     }
 }
-
-/*
-void PhyloProcess::AddRootSuffStat(int site, PathSuffStat& suffstat)	{
-	suffstat.IncrementRootCount(GetState(GetRoot()->GetNode(),site));
-}
-
-void PhyloProcess::AddPathSuffStat(const Link* link, int site, PathSuffStat& suffstat)	{
-	pathmap[link->GetNode()][site]->AddPathSuffStat(suffstat,GetBranchLength(link->GetBranch()->GetIndex()) * GetSiteRate(site));
-}
-
-void PhyloProcess::AddLengthSuffStat(const Link* link, int site, PoissonSuffStat& suffstat)	{
-	pathmap[link->GetNode()][site]->AddLengthSuffStat(suffstat,GetSiteRate(site),GetSubMatrix(link->GetBranch()->GetIndex(),site));
-}
-
-void PhyloProcess::AddPathSuffStat(PathSuffStat& suffstat)	{
-
-	for (int i=0; i<GetNsite(); i++)	{
-		AddRootSuffStat(i,suffstat);
-	}
-	RecursiveAddPathSuffStat(GetRoot(),suffstat);
-}
-
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat)	{
-
-	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-		for (int i=0; i<GetNsite(); i++)	{
-			AddPathSuffStat(link,i,suffstat);
-		}
-		RecursiveAddPathSuffStat(link->Out(),suffstat);
-	}
-}
-
-void PhyloProcess::AddPathSuffStat(Array<PathSuffStat>& suffstatarray)	{
-	RecursiveAddPathSuffStat(GetRoot(),suffstatarray);
-}
-
-void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray)	{
-
-    if (from->isRoot()) {
-        for (int i=0; i<GetNsite(); i++)	{
-            AddRootSuffStat(i,suffstatarray[i]);
-        }
-    }
-    else    {
-		for (int i=0; i<GetNsite(); i++)	{
-			AddPathSuffStat(from,i,suffstatarray[i]);
-		}
-    }
-	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-		RecursiveAddPathSuffStat(link->Out(),suffstatarray);
-	}
-}
-
-void PhyloProcess::AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
-
-	RecursiveAddLengthSuffStat(GetRoot(),branchlengthsuffstatarray);
-}
-
-void PhyloProcess::RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray)	{
-
-    if (! from->isRoot())   {
-		for (int i=0; i<GetNsite(); i++)	{
-			AddLengthSuffStat(from,i,branchlengthsuffstatarray[from->GetBranch()->GetIndex()]);
-		}
-    }
-	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-		RecursiveAddLengthSuffStat(link->Out(),branchlengthsuffstatarray);
-	}
-}
-*/
 

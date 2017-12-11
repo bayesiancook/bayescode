@@ -3,6 +3,11 @@
 
 #include "BranchSitePath.hpp"
 
+#include "SuffStat.hpp"
+#include "PoissonSuffStat.hpp"
+#include "PathSuffStat.hpp"
+#include "SubMatrix.hpp"
+
 using namespace std;
 
 //-------------------------------------------------------------------------
@@ -11,13 +16,13 @@ using namespace std;
 
 BranchSitePath::BranchSitePath() {
     init = last = new Plink;
-    bkinit = bklast = new Plink;
+    // bkinit = bklast = new Plink;
     nsub = 0;
 }
 
 BranchSitePath::BranchSitePath(int state)	{
     init = last = new Plink;
-    bkinit = bklast = new Plink;
+    // bkinit = bklast = new Plink;
     nsub = 0;
     init->SetState(state);
     init->SetRelativeTime(0);
@@ -27,7 +32,7 @@ BranchSitePath::BranchSitePath(int state)	{
 BranchSitePath::~BranchSitePath() {
     Reset(0);
     delete init;
-    delete bkinit;
+    // delete bkinit;
 }
 
 void BranchSitePath::Reset(int state) {
@@ -43,6 +48,7 @@ void BranchSitePath::Reset(int state) {
     last = init;
 }
 
+/*
 void BranchSitePath::BKReset(int state) {
     Plink *link = bklast;
     while (link != bkinit) {
@@ -78,7 +84,6 @@ void BranchSitePath::RestorePath() {
     nsub = bknsub;
 }
 
-/*
 string BranchSitePath::ToString(bool redundant) {
     ostringstream s;
     if (redundant) {

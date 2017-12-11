@@ -8,8 +8,8 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
 
     public:
 
-    DiffSelFitnessArray(const ConstArray<vector<double> >& inbaseline, const ConstBidimArray<vector<double> >& indelta, int inNlevel) : 
-    // DiffSelFitnessArray(const ConstArray<vector<double> >& inbaseline, const ConstBidimArray<vector<double> >& indelta, const vector<vector<int> >& inpattern) :
+    DiffSelFitnessArray(const Selector<vector<double> >& inbaseline, const BidimSelector<vector<double> >& indelta, int inNlevel) : 
+    // DiffSelFitnessArray(const Selector<vector<double> >& inbaseline, const BidimSelector<vector<double> >& indelta, const vector<vector<int> >& inpattern) :
         SimpleBidimArray<vector<double> >(indelta.GetNrow()+1,indelta.GetNcol(),vector<double>(indelta.GetVal(0,0).size(),0)),
         baseline(inbaseline), delta(indelta), Nlevel(inNlevel)  {
         // baseline(inbaseline), delta(indelta), pattern(inpattern) {
@@ -68,8 +68,8 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
 
     protected:
 
-    const ConstArray<vector<double> >& baseline;
-    const ConstBidimArray<vector<double> >& delta;
+    const Selector<vector<double> >& baseline;
+    const BidimSelector<vector<double> >& delta;
     // const vector<vector<int> >& pattern;
     int Nlevel;
 };

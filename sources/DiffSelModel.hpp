@@ -37,10 +37,9 @@ license and that you accept its terms.*/
 #include "AAMutSelCodonMatrixArray.hpp"
 #include "SubMatrixSelector.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
-
-const int Nrr = Nnuc * (Nnuc - 1) / 2;
-const int Nstate = 61;
+#include "PathSuffStat.hpp"
 
 class DiffSelModel : public ProbModel {
 
@@ -129,11 +128,11 @@ class DiffSelModel : public ProbModel {
     PathSuffStatBidimArray* suffstatarray;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
   public:
 
@@ -227,7 +226,7 @@ class DiffSelModel : public ProbModel {
         // branch lengths
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // nucleotide matrix
 		nucrelrate.assign(Nrr,0);
@@ -306,7 +305,7 @@ class DiffSelModel : public ProbModel {
     void Update() override {
         fitnessprofile->Update();
         CorruptMatrices();
-        phyloprocess->GetLogProb();
+        phyloprocess->GetLogLikelihood();
     }
 
     void UpdateAll() {
@@ -368,7 +367,6 @@ class DiffSelModel : public ProbModel {
     }
 
     double BaselineLogPrior() const {
-        // return baseline->GetLogProb();
         return Nsite * Random::logGamma((double)Naa);
     }
 
@@ -381,8 +379,7 @@ class DiffSelModel : public ProbModel {
     }
 
     double GetLogLikelihood() const { 
-        return phyloprocess->GetLogProb();
-        // return phyloprocess->GetFastLogProb();
+        return phyloprocess->GetLogLikelihood();
     }
 
     double GetLogProb() const {
@@ -397,12 +394,12 @@ class DiffSelModel : public ProbModel {
     // see SuffStat.hpp
     void CollectPathSuffStat() {
         suffstatarray->Clear();
-        phyloprocess->AddPathSuffStat(*suffstatarray,*branchalloc);
+        suffstatarray->AddSuffStat(*phyloprocess,*branchalloc);
     }
 
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
     double SuffStatLogProb() const   {
@@ -418,7 +415,7 @@ class DiffSelModel : public ProbModel {
     }
 
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     // ---------------
@@ -478,13 +475,13 @@ class DiffSelModel : public ProbModel {
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
 		branchlength->SetScale(lambda);

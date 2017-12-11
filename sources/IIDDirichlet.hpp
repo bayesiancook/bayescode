@@ -28,6 +28,10 @@ class DirichletSuffStat : public SuffStat	{
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             if (pi[i] <= 0) {
                 cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
+                for (unsigned int j=0; j<sumlog.size(); j++)    {
+                    cerr << pi[j] << '\t';
+                }
+                cerr << '\n';
                 exit(1);
             }
             sumlog[i] += log(pi[i]);
@@ -132,7 +136,7 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
         return *this;
     }
 
-    unsigned int GetMPISize() const {return GetDim() * GetSize();}
+    unsigned int GetMPISize() const {return GetSize() * GetVal(0).GetMPISize();}
 
     void MPIPut(MPIBuffer& buffer) const    {
 		for (int i=0; i<GetSize(); i++)	{
@@ -214,17 +218,17 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
-	void AddSuffStat(DirichletSuffStat& suffstat, const vector<int>& occupancy) const {
+	void AddSuffStat(DirichletSuffStat& suffstat, const Selector<int>& occupancy) const   {
 		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy[i])   {
+            if (occupancy.GetVal(i))   {
                 suffstat.AddSuffStat(GetVal(i));
             }
 		}
 	}
 
-    void PriorResample(const vector<int>& occupancy) {
+    void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
-            if (! occupancy[i]) {
+            if (! occupancy.GetVal(i)) {
                 Random::DirichletSample((*this)[i],center,concentration);
             }
 		}
@@ -271,7 +275,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	public: 
 
-	MultiDirichlet(const ConstArray<vector<double> >* incenterarray, const ConstArray<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
+	MultiDirichlet(const Selector<vector<double> >* incenterarray, const Selector<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
         if (centerarray->GetSize() != concentrationarray->GetSize())    {
             cerr << "error in multi dirichlet: center and concentration arrays should have same size\n";
             exit(1);
@@ -295,6 +299,27 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
+    bool CheckPositivity()  {
+        int allpos = 1;
+		for (int i=0; i<GetSize(); i++)	{
+            int pos = 1;
+            for (int j=0; j<GetDim(); j++)  {
+                if (! GetVal(i)[j]) {
+                    pos = 0;
+                }
+            }
+            if (! pos)  {
+                allpos = 0;
+                for (int j=0; j<GetDim(); j++)  {
+                    cerr << GetVal(i)[j] << '\t';
+                }
+                cerr << '\n';
+                cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
+            }
+        }
+        return allpos;
+    }
+
 	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -307,11 +332,37 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
         return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
 	}
 
-    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Array<int>& alloc) {
+    void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Selector<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstatarray[alloc.GetVal(i)].AddSuffStat(GetVal(i));
 		}
 	}
+
+    void PriorResample(const Selector<int>& occupancy)    {
+		for (int i=0; i<GetSize(); i++)	{
+            if (! occupancy.GetVal(i)) {
+                Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
+                /*
+                int pos = 1;
+                for (int j=0; j<GetDim(); j++)  {
+                    if (! GetVal(i)[j]) {
+                        pos = 0;
+                    }
+                }
+                if (! pos)  {
+                    cerr << "in MultiDirichlet::PriorResample\n";
+                    for (int j=0; j<GetDim(); j++)  {
+                        cerr << GetVal(i)[j] << '\t';
+                    }
+                    cerr << '\n';
+                    cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
+                    exit(1);
+                }
+                */
+            }
+		}
+    }
+
 
     double GetMeanEntropy() const   {
 
@@ -347,8 +398,8 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	protected:
     int dim;
-    const ConstArray<vector<double> >* centerarray;
-    const ConstArray<double>* concentrationarray;
+    const Selector<vector<double> >* centerarray;
+    const Selector<double>* concentrationarray;
 };
 
 #endif

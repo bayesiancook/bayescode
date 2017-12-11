@@ -8,161 +8,57 @@
 #include "PoissonSuffStat.hpp"
 #include "MPIBuffer.hpp"
 
-class GammaSuffStat : public SuffStat	{
-
-	public:
-	GammaSuffStat() {}
-	~GammaSuffStat() {}
-
-	void Clear()	{
-		sum = 0;
-		sumlog = 0;
-		n = 0;
-	}
-
-	void AddSuffStat(double x, double logx, int c = 1)	{
-		sum += x;
-		sumlog += logx;
-		n += c;
-	}
-
-    void Add(const GammaSuffStat& from) {
-        sum += from.GetSum();
-        sumlog += from.GetSumLog();
-        n += from.GetN();
-    }
-
-    GammaSuffStat& operator+=(const GammaSuffStat& from)    {
-        Add(from);
-        return *this;
-    }
-
-    unsigned int GetMPISize() const {return 3;}
-
-    void MPIPut(MPIBuffer& buffer) const    {
-        buffer << sum << sumlog << n;
-    }
-
-    void MPIGet(const MPIBuffer& buffer)    {
-        buffer >> sum >> sumlog >> n;
-    }
-
-    void Add(const MPIBuffer& buffer)   {
-        double temp;
-        buffer >> temp;
-        sum += temp;
-        buffer >> temp;
-        sumlog += temp;
-
-        int tmp;
-        buffer >> tmp;
-        n += tmp;
-    }
-
-	double GetLogProb(double shape, double scale) const {
-		return n*(shape*log(scale) - Random::logGamma(shape)) + (shape-1)*sumlog - scale*sum;
-	}
-	
-    double GetSum() const {return sum;}
-    double GetSumLog() const {return sumlog;}
-    int GetN() const {return n;}
-
-	private:
-
-	double sum;
-	double sumlog;
-	int n;
-};
-
-class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
-
-    public:
-	GammaSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
-    ~GammaSuffStatBranchArray() {}
-
-    void Add(const GammaSuffStatBranchArray& from)  {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Add(from.GetVal(i));
-        }
-    }
-
-    GammaSuffStatBranchArray& operator+=(const GammaSuffStatBranchArray& from)  {
-        Add(from);
-        return *this;
-    }
-
-    unsigned int GetMPISize() const {return 3*GetNbranch();}
-
-    void MPIPut(MPIBuffer& buffer) const    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            buffer << GetVal(i);
-        }
-    }
-
-    void MPIGet(const MPIBuffer& buffer)    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            buffer >> (*this)[i];
-        }
-    }
-
-    void Add(const MPIBuffer& buffer)    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Add(buffer);
-        }
-    }
-
-    void Clear()    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Clear();
-        }
-    }
-
-    double GetLogProb(const ConstBranchArray<double>& blmean, double invshape) const {
-
-        double total = 0;
-        for (int i=0; i<GetNbranch(); i++)  {
-            double shape = 1.0 / invshape;
-            double scale = 1.0 / blmean.GetVal(i);
-            total += GetVal(i).GetLogProb(shape,scale);
-        }
-        return total;
-    }
-};
+/**
+ * \brief An array of IID gamma random variables
+ *
+ * One should be careful about the fact that the shape and scale parameters are given by copy (not by ref) to the array.
+ * Thus, each time the shape and scale parameters are modified during the MCMC,
+ * the new values should be given to the array (using the SetShape and SetScale methods).
+ */
 
 class IIDGamma: public SimpleArray<double>	{
 
 	public: 
 
+    //! constructor specifies array size and initial shape and scale parameters
 	IIDGamma(int insize, double inshape, double inscale) : SimpleArray<double>(insize), shape(inshape), scale(inscale)	{
 		Sample();
 	}
 
 	~IIDGamma() {}
 
+    //! return shape parameter
 	double GetShape() const {return shape;}
+
+    //! return scale parameter
 	double GetScale() const {return scale;}
 
+    //! set shape parameter to a new value
 	void SetShape(double inshape)	{
 		shape = inshape;
 	}
 
+    //! set scale parameter to a new value
 	void SetScale(double inscale)	{
 		scale = inscale;
 	}
 
+    //! sample all entries, given current shape and scale params
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
 			(*this)[i] = Random::GammaSample(shape,scale);
 		}
 	}
 
-	void GibbsResample(const ConstArray<PoissonSuffStat>& suffstatarray)	{
+    //! resample all entries, given current shape and scale parameters and given an array of Poisson sufficient statistics of same size
+	void GibbsResample(const Selector<PoissonSuffStat>& suffstatarray)	{
 		for (int i=0; i<GetSize(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
 			(*this)[i] = Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
 		}
 	}
 
+    //! return total log prob (summed over the array) given current shape and scale params
 	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -171,10 +67,14 @@ class IIDGamma: public SimpleArray<double>	{
 		return total;
 	}
 
+    //! return log prob of one specific entry
 	double GetLogProb(int index) const {
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
 
+    //! \brief given a Poisson suffstat S, calculates postprob[i] propto weight[i] * p(S | (*this)[i]), for i=0..GetSize()-1.
+    //!
+    //! interpretation: postprob[i] = posterior probability that the data summarized by S have been produced by a process of rate (*this)[i], for i=0..GetSize()-1
     void GetAllocPostProb(const PoissonSuffStat& suffstat, const vector<double>& weight, vector<double>& postprob) const {
 
         double max = 0;
@@ -198,37 +98,17 @@ class IIDGamma: public SimpleArray<double>	{
 
     }
 
-	void AddSuffStat(GammaSuffStat& suffstat) const {
+    //! resample all entries for which occupancy[i] == 0 from the prior (from a Gamma(shape,scale))
+    void PriorResample(const Selector<int>& occupancy)	{
 		for (int i=0; i<GetSize(); i++)	{
-			suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-		}
-	}
-
-	void AddSuffStat(GammaSuffStat& suffstat, const vector<int>& occupancy) const {
-		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy[i])   {
-                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-            }
-		}
-	}
-
-    void PriorResample(const vector<int>& occupancy) {
-		for (int i=0; i<GetSize(); i++)	{
-            if (! occupancy[i]) {
+            if (! occupancy.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);
             }
 		}
     }
 
-	void AddSuffStat(GammaSuffStat& suffstat, const ConstArray<double>& poswarray) const {
-		for (int i=0; i<GetSize(); i++)	{
-            if (poswarray.GetVal(i)) {
-                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-            }
-		}
-	}
-
-    void PriorResample(const ConstArray<double>& poswarray) {
+    //! resample all entries for which poswarray[i] == 0 from the prior (from a Gamma(shape,scale))
+    void PriorResample(const Selector<double>& poswarray) {
         cerr << "in prior resample\n";
         cerr << "check that\n";
         exit(1);
@@ -239,6 +119,7 @@ class IIDGamma: public SimpleArray<double>	{
 		}
     }
 
+    //! get mean over the array
     double GetMean() const {
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {
@@ -248,6 +129,7 @@ class IIDGamma: public SimpleArray<double>	{
         return m1;
     }
 
+    //! get variance over the array
     double GetVar() const {
         double m1 = 0;
         double m2 = 0;
@@ -265,6 +147,14 @@ class IIDGamma: public SimpleArray<double>	{
 	double shape;
 	double scale;
 };
+
+/**
+ * \brief A tree-structured branch-wise array of iid Gamma variables (tree-stuctured version of IIDGamma)
+ *
+ * One should be careful about the fact that the shape and scale parameters are given by copy (not by ref) to the array.
+ * Thus, each time the shape and scale parameters are modified during the MCMC,
+ * the new values should be given to the array (using the SetShape and SetScale methods).
+ */
 
 class BranchIIDGamma: public SimpleBranchArray<double>	{
 
@@ -287,18 +177,21 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		scale = inscale;
 	}
 
+    //! set all entries equal to inval
 	void SetAllBranches(double inval)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			(*this)[i] = inval;
 		}
 	}
 
+    //! sample all entries from prior
 	void Sample()	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			(*this)[i] = Random::GammaSample(shape,scale);
 		}
 	}
 
+    //! resample all entries from posterior, conditional on BranchArray of PoissonSuffStat
 	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
@@ -306,6 +199,7 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		}
 	}
 
+    //! get total log prob summed over all branches
 	double GetLogProb()	{
 		double total = 0;
 		for (int i=0; i<GetNbranch(); i++)	{
@@ -314,10 +208,12 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 		return total;
 	}
 
+    //! get log prob for a given branch
 	double GetLogProb(int index)	{
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
 
+    //! get sum over all entries (name is rather specialized... could change..)
     double GetTotalLength() const {
         double m1 = 0;
         for (int i=0; i<GetNbranch(); i++) {
@@ -326,12 +222,7 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
         return m1;
     }
 
-	void AddSuffStat(GammaSuffStat& suffstat)	{
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
-		}
-	}
-
+    //! get mean over the array
     double GetMean() const {
         double m1 = 0;
         for (int i=0; i<GetNbranch(); i++) {
@@ -341,6 +232,7 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
         return m1;
     }
 
+    //! get variance over the array
     double GetVar() const {
         double m1 = 0;
         double m2 = 0;
@@ -359,11 +251,18 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 	double scale;
 };
 
+/**
+ * \brief A tree-structured branch-wise array of Gamma variables, with branch-specific means but same shape parameter
+ *
+ * One should be careful about the fact that the shape parameter is given by copy (not by ref) to the array.
+ * Thus, each time the shape parameter is modified during the MCMC,
+ * the new value should be given to the array (using the SetShape method).
+ */
 class GammaWhiteNoise: public SimpleBranchArray<double>	{
 
 	public: 
 
-	GammaWhiteNoise(const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape)	{
+	GammaWhiteNoise(const Tree& intree, const BranchSelector<double>& inblmean, double inshape) : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape)	{
 		Sample();
 	}
 
@@ -375,6 +274,7 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 		shape = inshape;
 	}
 
+    //! sample all entries from prior
 	void Sample()	{
 		for (int i=0; i<GetNbranch(); i++)	{
             double scale = shape / blmean.GetVal(i);
@@ -382,6 +282,7 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 		}
 	}
 
+    //! resample entries based on a BranchArray of PoissonSuffStat
 	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
@@ -390,6 +291,7 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 		}
 	}
 
+    //! return total log prob summed over all entries
 	double GetLogProb()	{
 		double total = 0;
 		for (int i=0; i<GetNbranch(); i++)	{
@@ -398,22 +300,11 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 		return total;
 	}
 
+    //! return log prob for one entry
 	double GetLogProb(int index) const {
         double scale = shape / blmean.GetVal(index);
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
-
-	void AddSuffStat(GammaSuffStat& suffstat)	{
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
-		}
-	}
-
-    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray)   {
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstatarray[i].AddSuffStat((*this)[i],log((*this)[i]));
-		}
-    }
 
     double GetTotalLength() const {
         double m1 = 0;
@@ -424,15 +315,25 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
     }
 
 	protected:
-    const ConstBranchArray<double>& blmean;
+    const BranchSelector<double>& blmean;
 	double shape;
 };
+
+/**
+ * \brief An array of GammaWhiteNoise
+ *
+ * This is an Array of BranchArray's. It is used for implementing modulations of branch-lengths across genes,
+ * while implementing some basic shrinkage.
+ * Specifically, for a given branch j,
+ * the branch-lengths across genes are gamma of mean blmean[j] and shape parameter uniform across all branches.
+ */
 
 class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
 
     public:
 
-    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const ConstBranchArray<double>& inblmean, double inshape) : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*) 0)    {
+    //! constructor: parameterized by the number of genes, the tree, the means over branches and the shape parameter
+    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const BranchSelector<double>& inblmean, double inshape) : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*) 0)    {
         
         for (int gene=0; gene<Ngene; gene++)    {
             blarray[gene] = new GammaWhiteNoise(tree,blmean,shape);
@@ -445,6 +346,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
         }
     }
 
+    //! set the shape parameter (should be called whenever the shape parameter has changed during the MCMC)
     void SetShape(double inshape)   {
         shape = inshape;
         for (int gene=0; gene<Ngene; gene++)    {
@@ -452,26 +354,32 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
         }
     }
 
+    //! return total number of entries (number of genes)
     int GetSize() const {
         return Ngene;
     }
 
-    const GammaWhiteNoise& GetVal(int gene) const {
-        return *blarray[gene];
-    }
-
-    GammaWhiteNoise& operator[](int gene)  {
-        return *blarray[gene];
-    }
-
+    //! return total number of genes
     int GetNgene() const {
         return Ngene;
     }
 
+    //! return total number of branches of the underlying tree
     int GetNbranch() const {
         return blarray[0]->GetNbranch();
     }
 
+    //! const access to the GammaWhiteNoise BranchArray for the given gene
+    const GammaWhiteNoise& GetVal(int gene) const {
+        return *blarray[gene];
+    }
+
+    //! non-const access to the GammaWhiteNoise BranchArray for the given gene
+    GammaWhiteNoise& operator[](int gene)  {
+        return *blarray[gene];
+    }
+
+    //! return mean tree length over genes
     double GetMeanLength() const {
         double tot = 0;
         for (int j=0; j<GetNbranch(); j++)   {
@@ -486,6 +394,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
         return tot;
     }
 
+    //! return variance of tree length across genes
     double GetVarLength() const {
         double tot = 0;
         for (int j=0; j<GetNbranch(); j++)   {
@@ -505,6 +414,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
         return tot;
     }
 
+    //! return total log prob (over all genes and over all branches)
     double GetLogProb() const {
         double total = 0;
         for (int gene=0; gene<GetNgene(); gene++)  {
@@ -513,17 +423,11 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
         return total;
     }
 
-    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray) const    {
-        for (int gene=0; gene<GetNgene(); gene++)  {
-            blarray[gene]->AddSuffStat(suffstatarray);
-        }
-    }
-
     private:
 
     int Ngene;
     const Tree& tree;
-    const ConstBranchArray<double>& blmean;
+    const BranchSelector<double>& blmean;
 	double shape;
     vector<GammaWhiteNoise*> blarray;
 };

@@ -42,14 +42,12 @@
 #include "CodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "CodonSubMatrixArray.hpp"
 #include "M2aMix.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "ProbModel.hpp"
-
-const int Nrr = Nnuc * (Nnuc-1) / 2;
-const int Nstate = 61;
 
 class CodonM2aModel : public ProbModel {
 
@@ -113,10 +111,10 @@ class CodonM2aModel : public ProbModel {
         nucmode = innucmode;
     }
 
-    void SetBranchLengths(const ConstBranchArray<double>& inbranchlength);
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength);
     void GetBranchLengths(BranchArray<double>& inbranchlength) const;
 
-    void SetBranchLengthsHyperParameters(const ConstBranchArray<double>& inblmean, double inblinvshape);
+    void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape);
 
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat);
     void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const;
@@ -170,13 +168,13 @@ class CodonM2aModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const;
     const NucPathSuffStat& GetNucPathSuffStat() const;
 
 	double PathSuffStatLogProb() const;
 	double LambdaHyperSuffStatLogProb() const;
     double NucRatesSuffStatLogProb() const;
-	double OmegaSuffStatLogProb() const;
+	double OmegaPathSuffStatLogProb() const;
 
     //-------------------
     // Priors
@@ -214,7 +212,7 @@ class CodonM2aModel : public ProbModel {
     }
 
     double OmegaLogProb() const {
-        return OmegaLogPrior() + OmegaSuffStatLogProb();
+        return OmegaLogPrior() + OmegaPathSuffStatLogProb();
     }
 
     //-------------------
@@ -242,7 +240,7 @@ class CodonM2aModel : public ProbModel {
 
 	void CollectComponentPathSuffStat();
 	void MoveOmega();
-	void CollectOmegaSuffStat();
+	void CollectOmegaPathSuffStat();
 	void ResampleAlloc();
     double DrawBetaPosWeight();
 	double SwitchPosWeight(int nrep);
@@ -336,18 +334,18 @@ class CodonM2aModel : public ProbModel {
 	// two versions differing only by their exact type
 
 	// used for collecting omega suffstats: need to have access to the *codon* matrix for each site
-	ConstMixtureArray<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
+	MixtureSelector<MGOmegaCodonSubMatrix>* sitecodonmatrixarray;
 
-	// used by PhyloProcess: has to be a ConstArray<SubMatrix>
-	ConstMixtureArray<SubMatrix>* sitesubmatrixarray;
+	// used by PhyloProcess: has to be a Selector<SubMatrix>
+	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
 	// suffstats
 
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
-	GammaSuffStat lambdasuffstat;
-	OmegaSuffStatArray* siteomegasuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+	GammaSuffStat hyperlengthsuffstat;
+	OmegaPathSuffStatArray* siteomegapathsuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;
 

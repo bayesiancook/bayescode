@@ -21,14 +21,14 @@ CPPFLAGS= -std=c++0x -g -Wall -O3 $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp 
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= globom multigeneglobom codonm2a multigenecodonm2a diffsel
+ALL= globom codonm2a diffsel
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -66,17 +66,9 @@ codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
 $(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
 	$(CC) CodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-multigenecodonm2a$(EXEEXT): $(PROGSDIR)/multigenecodonm2a$(EXEEXT)
-$(PROGSDIR)/multigenecodonm2a$(EXEEXT): MultiGeneCodonM2a.o $(OBJS)
-	$(CC) MultiGeneCodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
 	$(CC) SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-multigeneglobom$(EXEEXT): $(PROGSDIR)/multigeneglobom$(EXEEXT)
-$(PROGSDIR)/multigeneglobom$(EXEEXT): MultiGeneSingleOmega.o $(OBJS)
-	$(CC) MultiGeneSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 diffsel$(EXEEXT): $(PROGSDIR)/diffsel$(EXEEXT)
 $(PROGSDIR)/diffsel$(EXEEXT): DiffSel.o $(OBJS)

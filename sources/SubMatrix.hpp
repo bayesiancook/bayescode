@@ -11,28 +11,98 @@
 // using EVector = Eigen::VectorXd;
 //
 
+/** \brief A generic substitution matrix class.
+ *
+ * SubMatrix represents the generator a Nstate*Nstate Markovian substitution process.
+ * It implements most of the standard methods that are necessary for likelihood calculation
+ * and stochastic character mapping along phylogenies (diagonalisation, exponentiation, 
+ * drawing a waiting time until next event, choosing next event conditional on current event, etc).
+ * Specific substitution processes can be implemented by deriving them from this abstact class
+ * (see for instance GTRSubMatrix or MGOmegaCodonSubMatrix).
+ * This essentially requires to implement the two following pure virtual functions of SubMatrix:
+ * ComputeArray(int s), which is in charge of computing row s of the rate matrix,
+ * and ComputeStationary(), which should calculate the equilbrium frequencies of the process.
+ */
 
 class SubMatrix {
 
-  protected:
-    // these 2 pure virtual functions are the most essential component of the
-    // SubMatrix class
-    // see GTRSubMatrix.cpp and CodonSubMatrix.cpp for examples
-
-    // ComputeArray(int state) is in charge of computing the row of the rate
-    // matrix
-    // corresponding to all possible rates of substitution AWAY from state
-    //
-    virtual void ComputeArray(int state) const = 0;
-
-    // ComputeStationary() is in charge of computing the vector of stationary
-    // probabilities
-    // (equilibirum frequencies)
-    // of the substitution process
-    virtual void ComputeStationary() const = 0;
-
   public:
 
+    //! \brief base constructor: should always give the dimension (Nstate) of the matrix and whether we want it to be normalized
+    SubMatrix(int inNstate, bool innormalise = false);
+    virtual ~SubMatrix();
+
+    //! const access to entry at ith row and jth column (checked for current update status, see UpdateMatrix)
+    double operator()(int /*i*/, int /*j*/) const;
+    //! const access to a row of the matrix (checked for current update status)
+    EVector GetRow(int i) const;
+
+    //! const access to equilbrium frequency of state i (checked for current update status)
+    double Stationary(int i) const;
+
+    //! const access to equilbrium frequency vector (checked for current update status)
+    const EVector &GetStationary() const;
+
+    //! dimension of the statespace
+    int GetNstate() const { return Nstate; }
+
+    //! compute the row of the generator corresponding to rates away from given state (should be defined in derived classes)
+    virtual void ComputeArray(int state) const = 0;
+
+    //! compute the vector of stationary probabilities (equilibrium frequencies -- should be defined in derived classes)
+    virtual void ComputeStationary() const = 0;
+
+    //! whether or not the matrix is normalized (i.e. the expected rate of substitution per unit of time is 1)
+    bool isNormalised() const { return normalise; }
+
+    //! normalize the matrix
+    void Normalise() const;
+
+    //! get the normalization factor
+    double GetRate() const;
+
+    //! multiply all entries by a scalar e
+    void ScalarMul(double e);
+
+    //! set the flags telling the matrix that it should recalculate its rates and all dependent variables
+    virtual void CorruptMatrix();
+
+    //! \brief recalculate all rates and dependent variables
+    //!
+    //! access to rates, equilibrium frequencies or exponentiation/diagonalisation variables (see methods GetRow, GetStationary, etc)
+    //! is first checked for correct update of all rates and dependent variables, as follows:
+    //! if CorruptMatrix has been called before the last access, then, corrupt flags are active, 
+    //! und Update functions are called automatically before giving access.
+    //! Note that update can in practice be partial (only the rows that are required are recalculated). 
+    //! This is implemented by way of an array of update flags.
+    void UpdateMatrix() const;
+
+    //! a simple output stream function (mostly useful for tracing and debugging)
+    virtual void ToStream(std::ostream &os) const;
+
+    //! propagate a conditional likelihood vector in the tip-to-root direction (pruning algorithm)
+    void BackwardPropagate(const double *up, double *down, double length) const;
+    //! propagate a conditional likelihood vector in the root-to-tip direction (pruning algorithm)
+    void ForwardPropagate(const double *down, double *up, double length) const;
+
+    //! get vector of finite time transition probabilities from given state to all possible states down, along branch of efflength=length*rate
+	void GetFiniteTimeTransitionProb(int state, double* down, double efflength) const;
+
+    //! return the transition probability between stateup and statedown along branch of efflength = length*rate
+	double 			GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength) const;
+	//! draw the uniformized number of transitions along the branch, conditional on begin and end states
+	int 			DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength) const;
+    //! draw the state of the next event, given current state and given that total number of events until reaching statedown is n
+	int 			DrawUniformizedTransition(int state, int statedown, int n) const;
+
+    //! draw state of next event given current state
+	int 			DrawOneStep(int state) const;
+    //! draw waiting time until next event, given current state
+	double			DrawWaitingTime(int state) const;
+    //! draw state from equilibrium frequencies
+	int 			DrawFromStationary() const;
+
+  protected:
 
     static const int UniSubNmax = 500;
 	static int		nunisubcount;
@@ -45,67 +115,21 @@ class SubMatrix {
 
     static double GetMeanUni() { return ((double)nunimax) / nuni; }
 
-    SubMatrix(int inNstate, bool innormalise = false);
-    virtual ~SubMatrix();
-
     void Create();
-
-    double operator()(int /*i*/, int /*j*/) const;
-    // const double *GetRow(int i) const;
-    EVector GetRow(int i) const;
-
-    double Stationary(int i) const;
-
-    const EVector &GetStationary() const;
-
-    int GetNstate() const { return Nstate; }
-
-    double GetRate() const;
-    void ScalarMul(double e);
-
-    bool isNormalised() const { return normalise; }
-    void Normalise() const;
-
-    virtual void CorruptMatrix();
-    void UpdateMatrix() const;
 
     void ActivatePowers() const;
     void InactivatePowers() const;
     double Power(int n, int i, int j) const;
     double GetUniformizationMu() const;
 
-    virtual void ToStream(std::ostream &os) const;
     void CheckReversibility() const;
 
     int GetDiagStat() const { return ndiagfailed; }
-
-    void BackwardPropagate(const double *up, double *down, double length) const;
-    void ForwardPropagate(const double *down, double *up, double length) const;
-    // virtual void     FiniteTime(int i0, double* down, double length);
-
-    // double **GetQ() const { return Q; }
 
     static double meanz;
     static double maxz;
     static double nz;
 
-	// uniformization resampling methods
-	// CPU level 1
-	void GetFiniteTimeTransitionProb(int state, double* down, double efflength) const;
-	double 			GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength) const;
-	int 			DrawUniformizedTransition(int state, int statedown, int n) const;
-	int 			DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength) const;
-	//
-
-	// used by accept-reject resampling method
-	// CPU level 1
-	int 			DrawOneStep(int state) const;
-	double			DrawWaitingTime(int state) const;
-	int 			DrawFromStationary() const;
-
-	// double SuffStatLogProb(SuffStat* suffstat);
-
-  protected:
     void UpdateRow(int state) const;
     void UpdateStationary() const;
 
