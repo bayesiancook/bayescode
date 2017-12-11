@@ -728,7 +728,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     void UpdateOccupancies()    {
         occupancy->Clear();
-        sitealloc->AddSuffStat(*occupancy);
+        occupancy->AddSuffStat(*sitealloc);
     }
 
     void GetAllocPostProb(int site, vector<double>& postprob)    {
@@ -868,7 +868,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     void UpdateBaseOccupancies()    {
         baseoccupancy->Clear();
-        componentalloc->AddSuffStat(*baseoccupancy);
+        baseoccupancy->AddSuffStat(*componentalloc);
     }
 
     void GetBaseAllocPostProb(int cat, vector<double>& postprob)    {

@@ -485,7 +485,7 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
 
     void UpdateOccupancies()    {
         occupancy->Clear();
-        sitealloc->AddSuffStat(*occupancy);
+        occupancy->AddSuffStat(*sitealloc);
     }
 
     void GetAllocPostProb(int site, vector<double>& postprob)    {

@@ -47,6 +47,12 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat   {
         (*this)[i]++;
     }
 
+    void AddSuffStat(const Selector<int>& alloc)  {
+        for (int i=0; i<alloc.GetSize(); i++)   {
+            (*this)[alloc.GetVal(i)]++;
+        }
+    }
+
     unsigned int GetMPISize() const {return GetSize();}
 
     void MPIPut(MPIBuffer& buffer) const    {

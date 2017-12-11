@@ -20,12 +20,6 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 		}
 	}
 	
-    void AddSuffStat(OccupancySuffStat& suffstat) const {
-        for (int i=0; i<GetSize(); i++) {
-            suffstat.Increment(GetVal(i));
-        }
-    }
-
     void GibbsResample(int i, const vector<double>& postprob)   {
         (*this)[i] = Random::DrawFromDiscreteDistribution(postprob);
     }

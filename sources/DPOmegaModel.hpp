@@ -407,7 +407,7 @@ class DPOmegaModel : public ProbModel {
 
     void UpdateOccupancies()    {
         occupancy->Clear();
-        sitealloc->AddSuffStat(*occupancy);
+        occupancy->AddSuffStat(*sitealloc);
     }
 
     void CollectSiteOmegaSuffStat() {
