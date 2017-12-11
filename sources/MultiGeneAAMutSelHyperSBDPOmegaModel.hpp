@@ -25,7 +25,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 	GammaSuffStat omegahypersuffstat;
 
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
     // mixture components
     // set of Ncat Dirichlet densities
@@ -296,7 +296,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
     // suff stat for moving branch lengths hyperparameter (lambda)
 	double BranchLengthsHyperSuffStatLogProb() const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     // suff stats for moving omega hyper parameters
@@ -606,8 +606,8 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
 
         ScalingMove(lambda,1.0,10,&MultiGeneAAMutSelHyperSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&MultiGeneAAMutSelHyperSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::NoUpdate,this);
@@ -618,7 +618,7 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     void MoveOmegaHyperParameters()  {
 
 		omegahypersuffstat.Clear();
-		omegaarray->AddSuffStat(omegahypersuffstat);
+		omegahypersuffstat.AddSuffStat(*omegaarray);
 
         ScalingMove(omegahypermean,1.0,10,&MultiGeneAAMutSelHyperSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::NoUpdate,this);
         ScalingMove(omegahypermean,0.3,10,&MultiGeneAAMutSelHyperSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelHyperSBDPOmegaModel::NoUpdate,this);

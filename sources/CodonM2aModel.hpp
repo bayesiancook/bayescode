@@ -42,6 +42,7 @@
 #include "CodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "CodonSubMatrixArray.hpp"
 #include "M2aMix.hpp"
@@ -343,7 +344,7 @@ class CodonM2aModel : public ProbModel {
 	// suffstats
 
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 	OmegaSuffStatArray* siteomegasuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;

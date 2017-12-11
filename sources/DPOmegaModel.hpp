@@ -6,6 +6,7 @@
 #include "CodonSubMatrixArray.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
 #include "MultinomialAllocationVector.hpp"
@@ -95,7 +96,7 @@ class DPOmegaModel : public ProbModel {
 
     // suff stats for branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
 	public:
 
@@ -298,7 +299,7 @@ class DPOmegaModel : public ProbModel {
 	}
 
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     double NucRatesSuffStatLogProb() const {
@@ -375,8 +376,8 @@ class DPOmegaModel : public ProbModel {
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&DPOmegaModel::BranchLengthsHyperLogProb,&DPOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&DPOmegaModel::BranchLengthsHyperLogProb,&DPOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);
@@ -511,7 +512,7 @@ class DPOmegaModel : public ProbModel {
     void MoveOmegaHyperParameters() {
 
         omegahypersuffstat.Clear();
-        componentomegaarray->AddSuffStat(omegahypersuffstat,*occupancy);
+        omegahypersuffstat.AddSuffStat(*componentomegaarray,*occupancy);
         ScalingMove(omegamean,1.0,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);
         ScalingMove(omegamean,0.3,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);
         ScalingMove(omegainvshape,1.0,10,&DPOmegaModel::OmegaHyperLogProb,&DPOmegaModel::NoUpdate,this);

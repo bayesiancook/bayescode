@@ -237,7 +237,7 @@ const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthPathSuffStatArray() co
 }
 
 double CodonM2aModel::LambdaHyperSuffStatLogProb() const {
-    return lambdasuffstat.GetLogProb(1.0,lambda);
+    return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 }
 
 const NucPathSuffStat& CodonM2aModel::GetNucPathSuffStat() const {
@@ -416,12 +416,10 @@ void CodonM2aModel::CollectLengthSuffStat()    {
 
 void CodonM2aModel::MoveLambda()	{
 
-    lambdasuffstat.Clear();
-    branchlength->AddSuffStat(lambdasuffstat);
-
+    hyperlengthsuffstat.Clear();
+    hyperlengthsuffstat.AddSuffStat(*branchlength);
     ScalingMove(lambda,1.0,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
     ScalingMove(lambda,0.3,10,&CodonM2aModel::LambdaHyperLogProb,&CodonM2aModel::NoUpdate,this);
-
     blhypermean->SetAllBranches(1.0/lambda);
 }
 

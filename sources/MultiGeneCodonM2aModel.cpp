@@ -578,12 +578,10 @@ void MultiGeneCodonM2aModel::ResampleBranchLengths()    {
 
 void MultiGeneCodonM2aModel::MoveLambda()	{
 
-    lambdasuffstat.Clear();
-    branchlength->AddSuffStat(lambdasuffstat);
-
+    hyperlengthsuffstat.Clear();
+    hyperlengthsuffstat.AddSuffStat(*branchlength);
     ScalingMove(lambda,1.0,10,&MultiGeneCodonM2aModel::LambdaHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     ScalingMove(lambda,0.3,10,&MultiGeneCodonM2aModel::LambdaHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
-
     branchlength->SetScale(lambda);
 }
 
@@ -851,7 +849,7 @@ void MultiGeneCodonM2aModel::MasterReceiveBranchLengthsSuffStat()  {
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat()   {
 
     lengthhypersuffstatarray->Clear();
-    branchlengtharray->AddSuffStat(*lengthhypersuffstatarray);
+    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
     SlaveSendAdditive(*lengthhypersuffstatarray);
 }
 
@@ -888,7 +886,7 @@ void MultiGeneCodonM2aModel::SlaveSendMixtureHyperSuffStat()  {
     SlaveSendAdditive(puromsuffstat);
 
     dposomsuffstat.Clear();
-    dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
+    dposomsuffstat.AddSuffStat(*dposomarray,*poswarray);
     SlaveSendAdditive(dposomsuffstat);
 
     purwsuffstat.Clear();

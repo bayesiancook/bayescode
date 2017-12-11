@@ -37,6 +37,7 @@ license and that you accept its terms.*/
 #include "AAMutSelCodonMatrixArray.hpp"
 #include "SubMatrixSelector.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
 #include "PathSuffStat.hpp"
 
@@ -131,7 +132,7 @@ class DiffSelModel : public ProbModel {
 
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
   public:
 
@@ -414,7 +415,7 @@ class DiffSelModel : public ProbModel {
     }
 
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     // ---------------
@@ -479,8 +480,8 @@ class DiffSelModel : public ProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
 		branchlength->SetScale(lambda);

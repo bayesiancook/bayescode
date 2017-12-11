@@ -7,6 +7,7 @@
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
 #include "CodonSuffStat.hpp"
 #include "CodonSubMatrixArray.hpp"
@@ -321,7 +322,7 @@ class AAMutSelM2aModel : public ProbModel {
 	// suffstats
 
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 	OmegaSuffStatArray* siteomegasuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;
 	//PathSuffStatArray* componentpathsuffstatarray;

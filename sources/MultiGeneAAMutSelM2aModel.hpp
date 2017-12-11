@@ -152,7 +152,7 @@ class MultiGeneAAMutSelM2aModel : public MultiGeneMPIModule, public ProbModel	{
 
     // suff stat for global branch lengths, as a function of lambda
 	double LambdaHyperSuffStatLogProb() const {
-        return lambdasuffstat.GetLogProb(1.0,lambda);
+        return hyperlengthsuffstat.GetLogProb(1.0,lambda);
     }
 
     // suff stat for gene-specific branch lengths, as a function of bl hyperparameters
@@ -338,7 +338,7 @@ class MultiGeneAAMutSelM2aModel : public MultiGeneMPIModule, public ProbModel	{
 
 	double lambda;
 	BranchIIDGamma* branchlength;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 	
     double blhyperinvshape;
     GammaWhiteNoiseArray* branchlengtharray;

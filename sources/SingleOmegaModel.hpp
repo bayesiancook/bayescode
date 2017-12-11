@@ -7,6 +7,7 @@
 #include "IIDGamma.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
+#include "GammaSuffStat.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon model
@@ -74,7 +75,7 @@ class SingleOmegaModel : public ProbModel {
 
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
 	public:
 
@@ -309,7 +310,7 @@ class SingleOmegaModel : public ProbModel {
     //! (which summarizes all information about how the prob of the substitution mapping depends on branch lengths).
     //! lengthpathsuffstat is assumed to be updated.
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     //! \brief return log prob of current substitution mapping, as a function of nucleotide parameters (nucrelrate and nucstat)
@@ -386,8 +387,8 @@ class SingleOmegaModel : public ProbModel {
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);;
         ScalingMove(lambda,1.0,10,&SingleOmegaModel::BranchLengthsHyperLogProb,&SingleOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&SingleOmegaModel::BranchLengthsHyperLogProb,&SingleOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);

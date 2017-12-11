@@ -29,7 +29,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
 
     // branch lengths shared across genes
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
     std::vector<AAMutSelSBDPOmegaModel*> geneprocess;
 
@@ -219,7 +219,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
 
     // suff stat for moving branch lengths hyperparameter (lambda)
 	double BranchLengthsHyperSuffStatLogProb() const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     // suff stats for moving omega hyper parameters
@@ -308,8 +308,8 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
 
         ScalingMove(lambda,1.0,10,&MultiGeneAAMutSelSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelSBDPOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&MultiGeneAAMutSelSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelSBDPOmegaModel::NoUpdate,this);
@@ -320,7 +320,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
     void MoveOmegaHyperParameters()  {
 
 		omegahypersuffstat.Clear();
-		omegaarray->AddSuffStat(omegahypersuffstat);
+		omegahypersuffstat.AddSuffStat(*omegaarray);
 
         ScalingMove(omegahypermean,1.0,10,&MultiGeneAAMutSelSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelSBDPOmegaModel::NoUpdate,this);
         ScalingMove(omegahypermean,0.3,10,&MultiGeneAAMutSelSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelSBDPOmegaModel::NoUpdate,this);

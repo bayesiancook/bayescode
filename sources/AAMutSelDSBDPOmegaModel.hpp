@@ -6,6 +6,7 @@
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
@@ -28,7 +29,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	double lambda;
 	BranchIIDGamma* branchlength;
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
 	std::vector<double> nucstat;
 	std::vector<double> nucrelrate;
@@ -423,7 +424,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
 	double BranchLengthsHyperSuffStatLogProb() const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     double BaseSuffStatLogProb(int k) const   {
@@ -537,8 +538,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&AAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&AAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);

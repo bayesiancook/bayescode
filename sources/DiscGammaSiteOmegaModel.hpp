@@ -6,6 +6,7 @@
 #include "CodonSubMatrixArray.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
 #include "DiscGamma.hpp"
@@ -82,7 +83,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
     // suff stats for branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
 	public:
 
@@ -297,7 +298,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 	}
 
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     double NucRatesSuffStatLogProb() const {
@@ -368,8 +369,8 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&DiscGammaSiteOmegaModel::BranchLengthsHyperLogProb,&DiscGammaSiteOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&DiscGammaSiteOmegaModel::BranchLengthsHyperLogProb,&DiscGammaSiteOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);

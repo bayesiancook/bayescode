@@ -580,12 +580,10 @@ void MultiGeneAAMutSelM2aModel::ResampleBranchLengths()    {
 
 void MultiGeneAAMutSelM2aModel::MoveLambda()	{
 
-    lambdasuffstat.Clear();
-    branchlength->AddSuffStat(lambdasuffstat);
-
+    hyperlengthsuffstat.Clear();
+    hyperlengthsuffstat.AddSuffStat(*branchlength);
     ScalingMove(lambda,1.0,10,&MultiGeneAAMutSelM2aModel::LambdaHyperLogProb,&MultiGeneAAMutSelM2aModel::NoUpdate,this);
     ScalingMove(lambda,0.3,10,&MultiGeneAAMutSelM2aModel::LambdaHyperLogProb,&MultiGeneAAMutSelM2aModel::NoUpdate,this);
-
     branchlength->SetScale(lambda);
 }
 
@@ -855,7 +853,7 @@ void MultiGeneAAMutSelM2aModel::MasterReceiveBranchLengthsSuffStat()  {
 void MultiGeneAAMutSelM2aModel::SlaveSendBranchLengthsHyperSuffStat()   {
 
     lengthhypersuffstatarray->Clear();
-    branchlengtharray->AddSuffStat(*lengthhypersuffstatarray);
+    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
     SlaveSendAdditive(*lengthhypersuffstatarray);
 }
 
@@ -865,25 +863,6 @@ void MultiGeneAAMutSelM2aModel::MasterReceiveBranchLengthsHyperSuffStat()   {
     MasterReceiveAdditive(*lengthhypersuffstatarray);
 }
 
-/*void MultiGeneCodonM2aModel::SlaveSendNucRatesHyperSuffStat()   {
-
-    nucrelratesuffstat.Clear();
-    nucrelratearray->AddSuffStat(nucrelratesuffstat);
-    SlaveSendAdditive(nucrelratesuffstat);
-
-    nucstatsuffstat.Clear();
-    nucstatarray->AddSuffStat(nucstatsuffstat);
-    SlaveSendAdditive(nucstatsuffstat);
-}
-
-void MultiGeneCodonM2aModel::MasterReceiveNucRatesHyperSuffStat()   {
-
-    nucrelratesuffstat.Clear();
-    MasterReceiveAdditive(nucrelratesuffstat);
-
-    nucstatsuffstat.Clear();
-    MasterReceiveAdditive(nucstatsuffstat);
-}*/
 
 void MultiGeneAAMutSelM2aModel::SlaveSendMixtureHyperSuffStat()  {
 
@@ -892,7 +871,7 @@ void MultiGeneAAMutSelM2aModel::SlaveSendMixtureHyperSuffStat()  {
     //SlaveSendAdditive(puromsuffstat);
 
     dposomsuffstat.Clear();
-    dposomarray->AddSuffStat(dposomsuffstat,*poswarray);
+    dposomsuffstat.AddSuffStat(*dposomarray,*poswarray);
     SlaveSendAdditive(dposomsuffstat);
 
     //purwsuffstat.Clear();

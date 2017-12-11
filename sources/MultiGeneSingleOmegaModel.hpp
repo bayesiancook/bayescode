@@ -53,7 +53,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // suffstats for paths, as a function of branch lengths
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
     // suff stats for branch lengths, as a function of lambda
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
     // suffstats for paths, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
@@ -252,7 +252,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     // suff stat for moving branch lengths hyperparameter (lambda)
 	double BranchLengthsHyperSuffStatLogProb() const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     // suff stats for moving nuc rates
@@ -379,8 +379,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
 
         ScalingMove(lambda,1.0,10,&MultiGeneSingleOmegaModel::BranchLengthsHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&MultiGeneSingleOmegaModel::BranchLengthsHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
@@ -391,7 +391,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     void MoveOmegaHyperParameters()  {
 
 		omegahypersuffstat.Clear();
-		omegaarray->AddSuffStat(omegahypersuffstat);
+		omegahypersuffstat.AddSuffStat(*omegaarray);
 
         ScalingMove(omegahypermean,1.0,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);
         ScalingMove(omegahypermean,0.3,10,&MultiGeneSingleOmegaModel::OmegaHyperLogProb,&MultiGeneSingleOmegaModel::NoUpdate,this);

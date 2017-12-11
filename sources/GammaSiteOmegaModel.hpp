@@ -6,6 +6,7 @@
 #include "CodonSubMatrixArray.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "ProbModel.hpp"
 
@@ -64,7 +65,7 @@ class GammaSiteOmegaModel : public ProbModel {
 
     // suff stats for branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat lambdasuffstat;
+	GammaSuffStat hyperlengthsuffstat;
 
 	public:
 
@@ -241,7 +242,7 @@ class GammaSiteOmegaModel : public ProbModel {
 	}
 
 	double BranchLengthsHyperSuffStatLogProb()	const {
-		return lambdasuffstat.GetLogProb(1.0,lambda);
+		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
     double NucRatesSuffStatLogProb() const {
@@ -314,8 +315,8 @@ class GammaSiteOmegaModel : public ProbModel {
 
 	void MoveBranchLengthsHyperParameter()	{
 
-		lambdasuffstat.Clear();
-		branchlength->AddSuffStat(lambdasuffstat);
+		hyperlengthsuffstat.Clear();
+		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&GammaSiteOmegaModel::BranchLengthsHyperLogProb,&GammaSiteOmegaModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&GammaSiteOmegaModel::BranchLengthsHyperLogProb,&GammaSiteOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);
@@ -338,7 +339,7 @@ class GammaSiteOmegaModel : public ProbModel {
     void MoveOmegaHyperParameters() {
 
         omegahypersuffstat.Clear();
-        omegaarray->AddSuffStat(omegahypersuffstat);
+        omegahypersuffstat.AddSuffStat(*omegaarray);
         ScalingMove(omegamean,1.0,10,&GammaSiteOmegaModel::OmegaHyperLogProb,&GammaSiteOmegaModel::NoUpdate,this);
         ScalingMove(omegamean,0.3,10,&GammaSiteOmegaModel::OmegaHyperLogProb,&GammaSiteOmegaModel::NoUpdate,this);
         ScalingMove(omegainvshape,1.0,10,&GammaSiteOmegaModel::OmegaHyperLogProb,&GammaSiteOmegaModel::NoUpdate,this);

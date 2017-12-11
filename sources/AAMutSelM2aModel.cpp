@@ -211,7 +211,7 @@ const PoissonSuffStatBranchArray* AAMutSelM2aModel::GetLengthPathSuffStatArray()
 }
 
 double AAMutSelM2aModel::LambdaHyperSuffStatLogProb() const {
-    return lambdasuffstat.GetLogProb(1.0,lambda);
+    return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 }
 
 //const NucPathSuffStat& AAMutSelM2aModel::GetNucPathSuffStat() const {
@@ -418,8 +418,8 @@ void AAMutSelM2aModel::CollectLengthSuffStat()    {
 
 void AAMutSelM2aModel::MoveLambda()	{
 
-    lambdasuffstat.Clear();
-    branchlength->AddSuffStat(lambdasuffstat);
+    hyperlengthsuffstat.Clear();
+    hyperlengthsuffstat.AddSuffStat(*branchlength);
 
     ScalingMove(lambda,1.0,10,&AAMutSelM2aModel::LambdaHyperLogProb,&AAMutSelM2aModel::NoUpdate,this);
     ScalingMove(lambda,0.3,10,&AAMutSelM2aModel::LambdaHyperLogProb,&AAMutSelM2aModel::NoUpdate,this);

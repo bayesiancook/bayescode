@@ -9,168 +9,6 @@
 #include "MPIBuffer.hpp"
 
 /**
- * \brief A sufficient statistic for a collection of gamma variates, as a function of the shape and scale parameters
- *
- * Suppose you have x = (x_i)_i=1..N, iid Gamma(shape,scale).
- * Then, p(X | shape,scale) can be expressed as a function of compact sufficient statistics: sum x_i's, sum log(x_i)'s and N.
- * GammaSuffStat implements this idea, by providing methods for collecting these suff stats and returning the log prob for a given
- * value for the shape and scale parameters.
- */
-
-class GammaSuffStat : public SuffStat	{
-
-	public:
-	GammaSuffStat() {}
-	~GammaSuffStat() {}
-
-    //! set suff stats to 0
-	void Clear()	{
-		sum = 0;
-		sumlog = 0;
-		n = 0;
-	}
-
-    //! add the contribution of one gamma variate (x) to this suffstat
-	void AddSuffStat(double x, double logx, int c = 1)	{
-		sum += x;
-		sumlog += logx;
-		n += c;
-	}
-
-    //! (*this) += from
-    void Add(const GammaSuffStat& from) {
-        sum += from.GetSum();
-        sumlog += from.GetSumLog();
-        n += from.GetN();
-    }
-
-    //! (*this) += from, operator version
-    GammaSuffStat& operator+=(const GammaSuffStat& from)    {
-        Add(from);
-        return *this;
-    }
-
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const {return 3;}
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer& buffer) const    {
-        buffer << sum << sumlog << n;
-    }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer& buffer)    {
-        buffer >> sum >> sumlog >> n;
-    }
-
-    //! read a GammaSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer& buffer)   {
-        double temp;
-        buffer >> temp;
-        sum += temp;
-        buffer >> temp;
-        sumlog += temp;
-
-        int tmp;
-        buffer >> tmp;
-        n += tmp;
-    }
-
-    //! return log prob, as a function of the given shape and scale parameters
-	double GetLogProb(double shape, double scale) const {
-		return n*(shape*log(scale) - Random::logGamma(shape)) + (shape-1)*sumlog - scale*sum;
-	}
-	
-    //! return sum x_i's
-    double GetSum() const {return sum;}
-    //! return sum log x_i's
-    double GetSumLog() const {return sumlog;}
-    //! return N, total number of gamma variates contributing to the suff stat
-    int GetN() const {return n;}
-
-	private:
-
-	double sum;
-	double sumlog;
-	int n;
-};
-
-/**
- * \brief A tree-structured branch-wise array of gamma sufficient statistics
- *
- * Useful for gene-specific branch lengths (see for instance MultiGeneCodonM2aModel).
- * In this model,
- * for a given branch of the tree,
- * genes have differing lengths, which are iid Gamma, of shape and scale that are branch-specific.
- * Thus, it is useful to collect suff stats across genes, and do this branchwise (storing the result into a branch-wise array). 
- * This array of suffstats can then be used to do fast MCMC moves on the hyperparameters of the distribution of 
- * branch lengths across genes.
- */
-
-class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat>    {
-
-    public:
-	GammaSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
-    ~GammaSuffStatBranchArray() {}
-
-    //! member-wise addition between the two arrays ((*this) += from)
-    void Add(const GammaSuffStatBranchArray& from)  {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Add(from.GetVal(i));
-        }
-    }
-
-    //! member-wise addition between the two arrays, operator version
-    GammaSuffStatBranchArray& operator+=(const GammaSuffStatBranchArray& from)  {
-        Add(from);
-        return *this;
-    }
-
-    //! return array size, when put into an MPI buffer
-    unsigned int GetMPISize() const {return 3*GetNbranch();}
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer& buffer) const    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            buffer << GetVal(i);
-        }
-    }
-
-    //! read array from MPI buffer
-    void MPIGet(const MPIBuffer& buffer)    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            buffer >> (*this)[i];
-        }
-    }
-
-    //! read from MPI buffer and add to current array
-    void Add(const MPIBuffer& buffer)    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Add(buffer);
-        }
-    }
-
-    //! set all suff stats to 0
-    void Clear()    {
-        for (int i=0; i<GetNbranch(); i++)  {
-            (*this)[i].Clear();
-        }
-    }
-
-    //! get total log prob
-    double GetLogProb(const BranchSelector<double>& blmean, double invshape) const {
-
-        double total = 0;
-        for (int i=0; i<GetNbranch(); i++)  {
-            double shape = 1.0 / invshape;
-            double scale = 1.0 / blmean.GetVal(i);
-            total += GetVal(i).GetLogProb(shape,scale);
-        }
-        return total;
-    }
-};
-
-/**
  * \brief An array of IID gamma random variables
  *
  * One should be careful about the fact that the shape and scale parameters are given by copy (not by ref) to the array.
@@ -260,22 +98,6 @@ class IIDGamma: public SimpleArray<double>	{
 
     }
 
-    //! add all entries to a GammaSuffStat
-	void AddSuffStat(GammaSuffStat& suffstat) const {
-		for (int i=0; i<GetSize(); i++)	{
-			suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-		}
-	}
-
-    //! add all entries for which occupancy[i] != 0 to a GammaSuffStat
-	void AddSuffStat(GammaSuffStat& suffstat, const Selector<int>& occupancy) const	{
-		for (int i=0; i<GetSize(); i++)	{
-            if (occupancy.GetVal(i))   {
-                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-            }
-		}
-	}
-
     //! resample all entries for which occupancy[i] == 0 from the prior (from a Gamma(shape,scale))
     void PriorResample(const Selector<int>& occupancy)	{
 		for (int i=0; i<GetSize(); i++)	{
@@ -284,15 +106,6 @@ class IIDGamma: public SimpleArray<double>	{
             }
 		}
     }
-
-    //! add all entries for which poswarray[i] > 0 to a GammaSuffStat
-	void AddSuffStat(GammaSuffStat& suffstat, const Selector<double>& poswarray) const {
-		for (int i=0; i<GetSize(); i++)	{
-            if (poswarray.GetVal(i)) {
-                suffstat.AddSuffStat(GetVal(i),log(GetVal(i)));
-            }
-		}
-	}
 
     //! resample all entries for which poswarray[i] == 0 from the prior (from a Gamma(shape,scale))
     void PriorResample(const Selector<double>& poswarray) {
@@ -409,13 +222,6 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
         return m1;
     }
 
-    //! add all entries to a GammaSuffStat
-	void AddSuffStat(GammaSuffStat& suffstat)	{
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
-		}
-	}
-
     //! get mean over the array
     double GetMean() const {
         double m1 = 0;
@@ -499,20 +305,6 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
         double scale = shape / blmean.GetVal(index);
         return Random::logGammaDensity(GetVal(index),shape,scale);
 	}
-
-    //! add entries to a BranchArray of GammaSuffStat (!! valid only if all blmean[i]'s are the same across all branches)
-	void AddSuffStat(GammaSuffStat& suffstat)	{
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstat.AddSuffStat((*this)[i],log((*this)[i]));
-		}
-	}
-
-    //! add entries to a BranchArray of GammaSuffStat
-    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray)   {
-		for (int i=0; i<GetNbranch(); i++)	{
-			suffstatarray[i].AddSuffStat((*this)[i],log((*this)[i]));
-		}
-    }
 
     double GetTotalLength() const {
         double m1 = 0;
@@ -629,13 +421,6 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise>    {
             total += blarray[gene]->GetLogProb();
         }
         return total;
-    }
-
-    //! add all gamma variates to a BranchArray of GammaSuffStat (gene-wise sum, separately for each branch)
-    void AddSuffStat(GammaSuffStatBranchArray& suffstatarray) const    {
-        for (int gene=0; gene<GetNgene(); gene++)  {
-            blarray[gene]->AddSuffStat(suffstatarray);
-        }
     }
 
     private:
