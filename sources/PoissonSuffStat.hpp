@@ -264,7 +264,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
         return *this;
     }
 
-    //! add length path suff stat from PhyloProcess
+    //! add path sufficient statistics for resampling branch lengths from PhyloProcess
     void AddLengthPathSuffStat(const PhyloProcess& process)   {
         process.AddLengthSuffStat(*this);
     }

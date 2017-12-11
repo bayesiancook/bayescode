@@ -73,6 +73,7 @@ class PathSuffStat : public SuffStat	{
 		waitingtime[state] += in;
 	}
 
+    //! add path sufficient statistics from PhyloProcess (site-homogeneous case)
     void AddSuffStat(const PhyloProcess& process)   {
         process.AddPathSuffStat(*this);
     }
@@ -166,6 +167,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		}
 	}
 
+    //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
     void AddSuffStat(const PhyloProcess& process)   {
         process.AddPathSuffStat(*this);
     }
@@ -215,6 +217,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
         }
 	}
 
+    //! add path sufficient statistics from PhyloProcess (site- and condition-heterogeneous case)
     void AddSuffStat(const PhyloProcess& process, const BranchAllocationSystem& branchalloc)   {
         process.AddPathSuffStat(*this,branchalloc);
     }
