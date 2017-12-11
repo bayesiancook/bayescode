@@ -28,7 +28,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 	IIDGamma* omegaarray;
 	GammaSuffStat omegahypersuffstat;
 
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 
     // mixture components
@@ -107,7 +107,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-        lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -613,7 +613,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void ResampleBranchLengths()    {
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -732,17 +732,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // branch length suff stat
 
     void SlaveSendLengthSuffStat()  {
-        lengthsuffstatarray->Clear();
+        lengthpathsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectLengthSuffStat();
-            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
+            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         }
-        SlaveSendAdditive(*lengthsuffstatarray);
+        SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
     void MasterReceiveLengthSuffStat()  {
-        lengthsuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthsuffstatarray);
+        lengthpathsuffstatarray->Clear();
+        MasterReceiveAdditive(*lengthpathsuffstatarray);
     }
 
     // log probs

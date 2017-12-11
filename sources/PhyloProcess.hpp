@@ -27,6 +27,11 @@ class PhyloProcess	{
 
 public:
 
+    friend class PathSuffStat;
+    friend class PathSuffStatArray;
+    friend class PathSuffStatBidimArray;
+    friend class PoissonSuffStatBranchArray;
+
 	//! \brief generic constructor
     //!
     //! Constructor takes as parameters (pointers):
@@ -75,23 +80,7 @@ public:
     //! delete data structures
 	void Cleanup();
 
-	//! compute path sufficient statistics across all sites and branches and add them to suffstat (site-branch-homogeneous model)
-	void AddPathSuffStat(PathSuffStat& suffstat);
-	//! compute path sufficient statistics across all sites and branches and add them to suffstatarray (site-heterogeneous branch-homogeneous model)
-	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
-	//! compute path sufficient statistics across all sites and branches and add them to bidim suffstatarray (branches partitioned into conditions, see DiffSelModel)
-	//! heterogeneeous across sites, branches partitioned into conditions
-	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
-
-	//! compute path sufficient statistics for resampling branch lengths add them to branchlengthsuffstatarray
-	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
-
-	// homogeneous across branches
-	// void AddPoissonSuffStat(Array<PoissonSuffStat>& poissonsuffstatarray);
-	// homogeneous across sites, heterogeneous across branches
-	// void AddSuffStat(BranchArray<PathSuffStat>& branchsuffstatarray, PathSuffStat& rootsuffstat);
-	// heterogeneous across sites and branches
-	// void AddSuffStat(BranchSiteArray<PathSuffStat>& branchsitesuffstatarray);
+    private:
 
     //! \brief const access to substitution history (BranchSitePath) for given node and given site
     //! 
@@ -112,7 +101,6 @@ public:
 	    return path;
 	}
 
-    private:
 
 	double GetFastLogProb() const;
 	double FastSiteLogLikelihood(int site) const;
@@ -161,6 +149,7 @@ public:
 	void UnclampData() { clampdata = false; }
 
 	int& GetState(const Node *node, int site) { return statemap[node][site]; }
+	const int& GetState(const Node *node, int site) const { return statemap[node][site]; }
 
 	void GetLeafData(SequenceAlignment *data);
 	void RecursiveGetLeafData(const Link *from, SequenceAlignment *data);
@@ -172,17 +161,28 @@ public:
 	void DrawSites(double fraction); // draw a fraction of sites which will be resampled
 	void ResampleSub(int site);
 
-	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
-	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat);
+	//! compute path sufficient statistics across all sites and branches and add them to suffstat (site-branch-homogeneous model)
+	void AddPathSuffStat(PathSuffStat& suffstat) const;
+	//! compute path sufficient statistics across all sites and branches and add them to suffstatarray (site-heterogeneous branch-homogeneous model)
+	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray) const;
+	//! compute path sufficient statistics across all sites and branches and add them to bidim suffstatarray (branches partitioned into conditions, see DiffSelModel)
+	//! heterogeneeous across sites, branches partitioned into conditions
+	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc) const;
 
-	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
-	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray);
+	//! compute path sufficient statistics for resampling branch lengths add them to branchlengthpathsuffstatarray
+	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const;
 
-	void RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
-	void LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond);
+	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
+	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
 
-	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
-	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat);
+	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const;
+	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const;
+
+	void RecursiveAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc) const;
+	void LocalAddPathSuffStat(const Link* from, BidimArray<PathSuffStat>& suffstatarray, int cond) const;
+
+	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const;
+	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat) const;
 
 	void PostPredSample(bool rootprior = false);  // unclamped Nielsen
 	void PostPredSample(int site, bool rootprior = false);
@@ -267,8 +267,8 @@ public:
 	}
 
 	mutable std::map<const Link *, double *> condlmap;
-	std::map<const Node*, BranchSitePath **> pathmap;
-	std::map<const Node *, int *> statemap;
+	mutable std::map<const Node*, BranchSitePath **> pathmap;
+	mutable std::map<const Node *, int *> statemap;
 	// std::map<const Node *, int> totmissingmap;
 
     int** missingmap;

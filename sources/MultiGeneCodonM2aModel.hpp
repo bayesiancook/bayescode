@@ -377,7 +377,7 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
 	
     double blhyperinvshape;
     GammaWhiteNoiseArray* branchlengtharray;
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
     GammaSuffStatBranchArray* lengthhypersuffstatarray;
 
     vector<double> mixhyperparam;

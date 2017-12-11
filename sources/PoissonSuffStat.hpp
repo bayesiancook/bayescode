@@ -5,6 +5,7 @@
 #include "SuffStat.hpp"
 #include "Array.hpp"
 #include "BranchArray.hpp"
+#include "PhyloProcess.hpp"
 #include <cmath>
 #include "MPIBuffer.hpp"
 
@@ -261,6 +262,11 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>	{
     PoissonSuffStatBranchArray& operator+=(const PoissonSuffStatBranchArray& from)  {
         Add(from);
         return *this;
+    }
+
+    //! add length path suff stat from PhyloProcess
+    void AddLengthPathSuffStat(const PhyloProcess& process)   {
+        process.AddLengthSuffStat(*this);
     }
 
     //! return array size when put into an MPI buffer

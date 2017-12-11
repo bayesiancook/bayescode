@@ -27,7 +27,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 	double lambda;
 	BranchIIDGamma* branchlength;
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 
 	std::vector<double> nucstat;
@@ -161,7 +161,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
@@ -237,8 +237,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return omega;
     }
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
-        return lengthsuffstatarray;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
     }
 
     const DirichletSuffStatArray* GetBaseSuffStatArray() const   {
@@ -467,7 +467,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // per site
 	void CollectSitePathSuffStat()	{
 		sitepathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
+        sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
     // per component of the mixture
@@ -477,8 +477,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+		lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
     //-------------------
@@ -533,7 +533,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
 	void MoveBranchLengthsHyperParameter()	{

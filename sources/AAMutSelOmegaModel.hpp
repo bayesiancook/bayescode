@@ -24,7 +24,7 @@ class AAMutSelOmegaModel : public ProbModel {
 
 	double lambda;
 	BranchIIDGamma* branchlength;
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 
 	std::vector<double> nucstat;
@@ -142,7 +142,7 @@ class AAMutSelOmegaModel : public ProbModel {
 
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
@@ -178,8 +178,8 @@ class AAMutSelOmegaModel : public ProbModel {
         return omega;
     }
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
-        return lengthsuffstatarray;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
     }
 
     //-------------------
@@ -362,13 +362,13 @@ class AAMutSelOmegaModel : public ProbModel {
 	}
 
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -383,7 +383,7 @@ class AAMutSelOmegaModel : public ProbModel {
 	void CollectPathSuffStat()	{
 
 		pathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(*pathsuffstatarray);
+        pathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
 	void MoveOmega()	{

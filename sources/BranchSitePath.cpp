@@ -3,6 +3,11 @@
 
 #include "BranchSitePath.hpp"
 
+#include "SuffStat.hpp"
+#include "PoissonSuffStat.hpp"
+#include "PathSuffStat.hpp"
+#include "SubMatrix.hpp"
+
 using namespace std;
 
 //-------------------------------------------------------------------------

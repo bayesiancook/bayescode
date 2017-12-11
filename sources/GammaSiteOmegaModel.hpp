@@ -60,7 +60,7 @@ class GammaSiteOmegaModel : public ProbModel {
     GammaSuffStat omegahypersuffstat;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 
     // suff stats for branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
@@ -98,7 +98,7 @@ class GammaSiteOmegaModel : public ProbModel {
 
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
@@ -228,8 +228,8 @@ class GammaSiteOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
-        return lengthsuffstatarray;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
     }
 
     const NucPathSuffStat& GetNucPathSuffStat() const {
@@ -303,13 +303,13 @@ class GammaSiteOmegaModel : public ProbModel {
     }
 
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -324,7 +324,7 @@ class GammaSiteOmegaModel : public ProbModel {
 	void CollectPathSuffStat()	{
 
 		pathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(*pathsuffstatarray);
+        pathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
 	void MoveOmega()	{

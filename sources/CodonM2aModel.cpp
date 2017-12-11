@@ -91,7 +91,7 @@ void CodonM2aModel::Allocate()	{
 
     phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
-    lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+    lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
     sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
     componentpathsuffstatarray = new PathSuffStatArray(3);
     siteomegasuffstatarray = new OmegaSuffStatArray(GetNsite());
@@ -232,8 +232,8 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
 // Suff Stat and suffstatlogprobs
 //
 
-const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthSuffStatArray() const {
-    return lengthsuffstatarray;
+const PoissonSuffStatBranchArray* CodonM2aModel::GetLengthPathSuffStatArray() const {
+    return lengthpathsuffstatarray;
 }
 
 double CodonM2aModel::LambdaHyperSuffStatLogProb() const {
@@ -405,13 +405,13 @@ void CodonM2aModel::MoveBranchLengths()    {
 void CodonM2aModel::ResampleBranchLengths()	{
 
     CollectLengthSuffStat();
-    branchlength->GibbsResample(*lengthsuffstatarray);
+    branchlength->GibbsResample(*lengthpathsuffstatarray);
 }
 
 void CodonM2aModel::CollectLengthSuffStat()    {
 
-    lengthsuffstatarray->Clear();
-    phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+    lengthpathsuffstatarray->Clear();
+    lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
 }
 
 void CodonM2aModel::MoveLambda()	{
@@ -432,7 +432,7 @@ void CodonM2aModel::MoveLambda()	{
 void CodonM2aModel::CollectPathSuffStat()	{
 
     sitepathsuffstatarray->Clear();
-    phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
+    sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 }
 
 void CodonM2aModel::CollectComponentPathSuffStat()	{

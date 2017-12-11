@@ -60,13 +60,13 @@ void MultiGeneAAMutSelM2aModel::Allocate() {
     branchlength = new BranchIIDGamma(*tree,1.0,lambda);
     blhyperinvshape = 1.0;
     if (blmode == 2)    {
-        lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
         lengthhypersuffstatarray = 0;
     }
     else    {
         branchlength->SetAllBranches(1.0/lambda);
         branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
-        lengthsuffstatarray = 0;
+        lengthpathsuffstatarray = 0;
         lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
     }
 
@@ -575,7 +575,7 @@ void MultiGeneAAMutSelM2aModel::MoveGeneParameters(int nrep)  {
 }
 
 void MultiGeneAAMutSelM2aModel::ResampleBranchLengths()    {
-    branchlength->GibbsResample(*lengthsuffstatarray);
+    branchlength->GibbsResample(*lengthpathsuffstatarray);
 }
 
 void MultiGeneAAMutSelM2aModel::MoveLambda()	{
@@ -838,18 +838,18 @@ void MultiGeneCodonM2aModel::SlaveReceiveNucRatesHyperParameters()   {
 
 void MultiGeneAAMutSelM2aModel::SlaveSendBranchLengthsSuffStat()  {
 
-    lengthsuffstatarray->Clear();
+    lengthpathsuffstatarray->Clear();
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         geneprocess[gene]->CollectLengthSuffStat();
-        lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
+        lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
     }
-    SlaveSendAdditive(*lengthsuffstatarray);
+    SlaveSendAdditive(*lengthpathsuffstatarray);
 }
 
 void MultiGeneAAMutSelM2aModel::MasterReceiveBranchLengthsSuffStat()  {
 
-    lengthsuffstatarray->Clear();
-    MasterReceiveAdditive(*lengthsuffstatarray);
+    lengthpathsuffstatarray->Clear();
+    MasterReceiveAdditive(*lengthpathsuffstatarray);
 }
 
 void MultiGeneAAMutSelM2aModel::SlaveSendBranchLengthsHyperSuffStat()   {

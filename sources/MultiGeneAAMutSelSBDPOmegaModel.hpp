@@ -28,7 +28,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
 	GammaSuffStat omegahypersuffstat;
 
     // branch lengths shared across genes
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 
     std::vector<AAMutSelSBDPOmegaModel*> geneprocess;
@@ -79,7 +79,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
 
         // will collect suff stats from genes
-        lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // these 2 hyperparameters will be resampled at the global level
         omegahypermean = 1.0;
@@ -303,7 +303,7 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void ResampleBranchLengths()    {
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -387,17 +387,17 @@ class MultiGeneAAMutSelSBDPOmegaModel : public MultiGeneProbModel {
     // branch length suff stat
 
     void SlaveSendLengthSuffStat()  {
-        lengthsuffstatarray->Clear();
+        lengthpathsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectLengthSuffStat();
-            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
+            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         }
-        SlaveSendAdditive(*lengthsuffstatarray);
+        SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
     void MasterReceiveLengthSuffStat()  {
-        lengthsuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthsuffstatarray);
+        lengthpathsuffstatarray->Clear();
+        MasterReceiveAdditive(*lengthpathsuffstatarray);
     }
 
     // log probs

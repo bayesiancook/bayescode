@@ -6,10 +6,10 @@
 #include <map>
 using namespace std;
 
-#include "SuffStat.hpp"
-#include "PoissonSuffStat.hpp"
-#include "PathSuffStat.hpp"
-#include "SubMatrix.hpp"
+class SuffStat;
+class PoissonSuffStat;
+class PathSuffStat;
+class SubMatrix;
 
 /**
  * \brief The building block for substitution histories, or paths (BranchSitePath class)

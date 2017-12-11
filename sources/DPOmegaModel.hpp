@@ -91,7 +91,7 @@ class DPOmegaModel : public ProbModel {
     GammaSuffStat omegahypersuffstat;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 
     // suff stats for branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
@@ -164,7 +164,7 @@ class DPOmegaModel : public ProbModel {
         phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 
         // suff stats
-		lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         componentpathsuffstatarray = new PathSuffStatArray(Ncat);
         siteomegasuffstatarray = new OmegaSuffStatArray(Nsite);
@@ -285,8 +285,8 @@ class DPOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
-        return lengthsuffstatarray;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
     }
 
     const NucPathSuffStat& GetNucPathSuffStat() const {
@@ -365,13 +365,13 @@ class DPOmegaModel : public ProbModel {
     }
 
     void CollectLengthSuffStat()    {
-		lengthsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthsuffstatarray);
+		lengthpathsuffstatarray->Clear();
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -385,7 +385,7 @@ class DPOmegaModel : public ProbModel {
     // per site
 	void CollectSitePathSuffStat()	{
 		sitepathsuffstatarray->Clear();
-		phyloprocess->AddPathSuffStat(*sitepathsuffstatarray);
+        sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
     // per component of the mixture

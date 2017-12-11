@@ -51,7 +51,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 	GammaSuffStat omegahypersuffstat;
 
     // suffstats for paths, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
     // suff stats for branch lengths, as a function of lambda
 	GammaSuffStat lambdasuffstat;
 
@@ -102,7 +102,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-        lengthsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
@@ -374,7 +374,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void ResampleBranchLengths()    {
-		branchlength->GibbsResample(*lengthsuffstatarray);
+		branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
 	void MoveBranchLengthsHyperParameter()	{
@@ -479,18 +479,18 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // branch length suff stat
 
     void SlaveSendLengthSuffStat()  {
-        lengthsuffstatarray->Clear();
+        lengthpathsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectLengthSuffStat();
-            lengthsuffstatarray->Add(*geneprocess[gene]->GetLengthSuffStatArray());
+            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         }
-        SlaveSendAdditive(*lengthsuffstatarray);
+        SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
     void MasterReceiveLengthSuffStat()  {
 
-        lengthsuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthsuffstatarray);
+        lengthpathsuffstatarray->Clear();
+        MasterReceiveAdditive(*lengthpathsuffstatarray);
     }
 
     // nuc rate suff stat

@@ -130,7 +130,7 @@ class AAMutSelM2aModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const;
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const;
     const NucPathSuffStat& GetNucPathSuffStat() const;
 
 	double PathSuffStatLogProb() const;
@@ -320,7 +320,7 @@ class AAMutSelM2aModel : public ProbModel {
 
 	// suffstats
 
-	PoissonSuffStatBranchArray* lengthsuffstatarray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat lambdasuffstat;
 	OmegaSuffStatArray* siteomegasuffstatarray;
 	PathSuffStatArray* sitepathsuffstatarray;

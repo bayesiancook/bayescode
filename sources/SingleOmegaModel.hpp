@@ -282,7 +282,7 @@ class SingleOmegaModel : public ProbModel {
     //! \brief const access to array of length-pathsuffstats across branches
     //!
     //! Useful for resampling branch lengths conditional on the current substitution mapping
-    const PoissonSuffStatBranchArray* GetLengthSuffStatArray() const {
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
         return lengthpathsuffstatarray;
     }
 
@@ -374,7 +374,7 @@ class SingleOmegaModel : public ProbModel {
     //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat()    {
 		lengthpathsuffstatarray->Clear();
-		phyloprocess->AddLengthSuffStat(*lengthpathsuffstatarray);
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
@@ -396,7 +396,7 @@ class SingleOmegaModel : public ProbModel {
     //! collect generic sufficient statistics from substitution mappings
 	void CollectPathSuffStat()	{
 		pathsuffstat.Clear();
-		phyloprocess->AddPathSuffStat(pathsuffstat);
+        pathsuffstat.AddSuffStat(*phyloprocess);
 	}
 
     //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)

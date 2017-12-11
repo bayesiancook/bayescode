@@ -8,6 +8,7 @@
 #include "BidimArray.hpp"
 #include <map>
 // #include "BranchSitePath.hpp"
+#include "PhyloProcess.hpp"
 
 
 /**
@@ -72,19 +73,9 @@ class PathSuffStat : public SuffStat	{
 		waitingtime[state] += in;
 	}
 
-    /*
-    void AddSuffStat(const BranchSitePath& path, double factor)    {
-        const Plink* link = path.Init();
-        while (link)    {
-            int state = link->GetState();
-            AddWaitingTime(state,GetRelativeTime(link) * factor);
-            if (link != path.Last())    {
-                IncrementPairCount(state,link->Next()->GetState());
-            }
-            link = link->Next();
-        }
+    void AddSuffStat(const PhyloProcess& process)   {
+        process.AddPathSuffStat(*this);
     }
-    */
 
     //! add this suff stat to the suffstat given as an argument
 	void AddTo(PathSuffStat& suffstat) const {
@@ -175,6 +166,10 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		}
 	}
 
+    void AddSuffStat(const PhyloProcess& process)   {
+        process.AddPathSuffStat(*this);
+    }
+
     //! return total log prob (summed over all items), given an array of rate matrices
 	double GetLogProb(const Selector<SubMatrix>& matrixarray) const	{
 
@@ -219,6 +214,10 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
             }
         }
 	}
+
+    void AddSuffStat(const PhyloProcess& process, const BranchAllocationSystem& branchalloc)   {
+        process.AddPathSuffStat(*this,branchalloc);
+    }
 
     //! return total log prob (summed over all items), given a bi-dimensional array of rate matrices
     double GetLogProb(const BidimSelector<SubMatrix>& matrixarray) const  {
