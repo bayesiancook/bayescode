@@ -7,6 +7,7 @@
 #include "Array.hpp"
 #include "BidimArray.hpp"
 #include <map>
+// #include "BranchSitePath.hpp"
 
 
 /**
@@ -70,6 +71,20 @@ class PathSuffStat : public SuffStat	{
 	void AddWaitingTime(int state, double in)	{
 		waitingtime[state] += in;
 	}
+
+    /*
+    void AddSuffStat(const BranchSitePath& path, double factor)    {
+        const Plink* link = path.Init();
+        while (link)    {
+            int state = link->GetState();
+            AddWaitingTime(state,GetRelativeTime(link) * factor);
+            if (link != path.Last())    {
+                IncrementPairCount(state,link->Next()->GetState());
+            }
+            link = link->Next();
+        }
+    }
+    */
 
     //! add this suff stat to the suffstat given as an argument
 	void AddTo(PathSuffStat& suffstat) const {

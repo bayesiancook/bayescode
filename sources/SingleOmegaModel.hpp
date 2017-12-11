@@ -138,7 +138,7 @@ class SingleOmegaModel : public ProbModel {
 
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogProb() << '\n';
+		cerr << phyloprocess->GetLogLikelihood() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
     }
@@ -244,7 +244,7 @@ class SingleOmegaModel : public ProbModel {
 
     //! return current value of likelihood (pruning-style, i.e. integrated over all substitution histories)
 	double GetLogLikelihood() const {
-		return phyloprocess->GetLogProb();
+		return phyloprocess->GetLogLikelihood();
 	}
 
     //! return joint log prob (log prior + log likelihood)

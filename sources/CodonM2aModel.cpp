@@ -194,8 +194,7 @@ void CodonM2aModel::UpdateMatrices()   {
 //
 
 double CodonM2aModel::GetLogLikelihood() const {
-    // return GetIntegratedLogLikelihood();
-    return phyloprocess->GetLogProb();
+    return phyloprocess->GetLogLikelihood();
 }
 
 double CodonM2aModel::GetIntegratedLogLikelihood() const {

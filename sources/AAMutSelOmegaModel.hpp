@@ -132,7 +132,7 @@ class AAMutSelOmegaModel : public ProbModel {
 
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogProb() << '\n';
+		cerr << phyloprocess->GetLogLikelihood() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
 		// Trace(cerr);
@@ -243,7 +243,7 @@ class AAMutSelOmegaModel : public ProbModel {
     }
 
 	double GetLogLikelihood() const {
-		return phyloprocess->GetLogProb();
+		return phyloprocess->GetLogLikelihood();
 	}
 
     double GetLogProb() const   {

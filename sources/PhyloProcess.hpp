@@ -28,43 +28,62 @@ class PhyloProcess	{
 public:
 
 	//! \brief generic constructor
+    //!
+    //! Constructor takes as parameters (pointers):
+    //! - tree
+    //! - sequence alignment
+    //! - a BranchSelector of branch lengths
+    //! - a site Selector of site rates (if pointer is null, then rates across sites are all equal to 1)
+    //! - a BranchSiteSelector specifying which substitution matrix should be used for each branch site pair
+    //! - a site Selector of substitution matrices, specifying which matrix should be used for getting the equilibrium frequencies at each site, from which to draw the root state
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray, const Selector<SubMatrix>* inrootsubmatrixarray);
 
 	//! \brief special (short-cut) constructor for branch-homogeneous and site-homogeneous model
+    //!
+    //! Compared to the generic constructor, this constructor takes a pointer to a single substitution matrix.
+    //! The branch/site and site selectors of substitution matrices (submatrixarray and rootsubmatrixarray)
+    //! are then internally allocated by PhyloProcess based on this matrix.
+    //! If insiterate pointer is null, then rates across sites are all equal to 1.
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const SubMatrix* insubmatrix);
 
 	//! \brief special (short-cut) constructor for branch-homogeneous and site-heterogeneous model
+    //!
+    //! Compared to the generic constructor, this constructor takes a pointer to a (site) Selector<SubMatrix>* insubmatrixarray.
+    //! The branch/site selector of substitution matrices (submatrixarray)
+    //! is then internally allocated by PhyloProcess based on this matrix based on this array,
+    //! while rootmatrixarray is set to insubmatrixarray.
+    //! If insiterate pointer is null, then rates across sites are all equal to 1.
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray);
 
 	~PhyloProcess();
 
-    //! return log likelihood (integrated over all substitution histories, by pruning, Felsenstein 1981)
-	double GetLogProb() const;              
+    //! return log likelihood (computed using the pruning algorithm, Felsenstein 1981)
+	double GetLogLikelihood() const;              
 
-	double GetFastLogProb() const;
-
+    //! return log likelihood for given site
 	double SiteLogLikelihood(int site) const;
-	double FastSiteLogLikelihood(int site) const;
 
-    //! perform stochastic mapping of substitution events under current parameter configuration
+    //! stochastic sampling of substitution history under current parameter configuration
 	void ResampleSub();
 
-    //! perform stochastic mapping of substitution events for a given (random) fraction of all sites
+    //! stochastic sampling of substitution history for given random fraction of sites
 	double Move(double fraction);
 
-    //! unfold all data structures, do the likelihood computation and stochastic mapping of substitution histories
+    //! create all data structures necessary for computation
 	void Unfold();
 
     //! delete data structures
 	void Cleanup();
 
-	//! homogeneous across sites and branches
+	//! compute path sufficient statistics across all sites and branches and add them to suffstat (site-branch-homogeneous model)
 	void AddPathSuffStat(PathSuffStat& suffstat);
-	//! heterogeneeous across sites, homogeneous across branches
+	//! compute path sufficient statistics across all sites and branches and add them to suffstatarray (site-heterogeneous branch-homogeneous model)
 	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray);
+	//! compute path sufficient statistics across all sites and branches and add them to bidim suffstatarray (branches partitioned into conditions, see DiffSelModel)
 	//! heterogeneeous across sites, branches partitioned into conditions
 	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc);
-	//! homogeneous across sites
+
+	//! compute path sufficient statistics for resampling branch lengths add them to branchlengthsuffstatarray
 	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthsuffstatarray);
 
 	// homogeneous across branches
@@ -74,8 +93,29 @@ public:
 	// heterogeneous across sites and branches
 	// void AddSuffStat(BranchSiteArray<PathSuffStat>& branchsitesuffstatarray);
 
+    //! \brief const access to substitution history (BranchSitePath) for given node and given site
+    //! 
+    //! Substitution histories are indexed by node (not by branch);
+    //! root node also has a substitution history (starting state).
+	const BranchSitePath* GetPath(const Node* node, int site) const {
+
+        map<const Node*, BranchSitePath **>::const_iterator it =  pathmap.find(node);
+        if (it == pathmap.end())    {
+            std::cerr << "error in phyloprocess::did not find entry for node in branch site path\n";
+            exit(1);
+        }
+        const BranchSitePath* path = it->second[site];
+        if (path == nullptr)    {
+            std::cerr << "error in phyloprocess::getpath: null path\n";
+            exit(1);
+	    }
+	    return path;
+	}
 
     private:
+
+	double GetFastLogProb() const;
+	double FastSiteLogLikelihood(int site) const;
 
     //! return branch length for given branch
 	double GetBranchLength(int branch) const {

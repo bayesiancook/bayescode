@@ -303,7 +303,7 @@ class DiffSelModel : public ProbModel {
     void Update() override {
         fitnessprofile->Update();
         CorruptMatrices();
-        phyloprocess->GetLogProb();
+        phyloprocess->GetLogLikelihood();
     }
 
     void UpdateAll() {
@@ -365,7 +365,6 @@ class DiffSelModel : public ProbModel {
     }
 
     double BaselineLogPrior() const {
-        // return baseline->GetLogProb();
         return Nsite * Random::logGamma((double)Naa);
     }
 
@@ -378,8 +377,7 @@ class DiffSelModel : public ProbModel {
     }
 
     double GetLogLikelihood() const { 
-        return phyloprocess->GetLogProb();
-        // return phyloprocess->GetFastLogProb();
+        return phyloprocess->GetLogLikelihood();
     }
 
     double GetLogProb() const {

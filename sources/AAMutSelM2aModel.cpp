@@ -199,8 +199,7 @@ void AAMutSelM2aModel::UpdateMatrices()   {
 //
 
 double AAMutSelM2aModel::GetLogLikelihood() const {
-    // return GetIntegratedLogLikelihood();
-    return phyloprocess->GetLogProb();
+    return phyloprocess->GetLogLikelihood();
 }
 
 //

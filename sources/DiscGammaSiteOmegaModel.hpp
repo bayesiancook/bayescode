@@ -150,7 +150,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
 		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogProb() << '\n';
+		cerr << phyloprocess->GetLogLikelihood() << '\n';
 		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
     }
@@ -222,7 +222,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
     // conditional on site allocations
 	double GetLogLikelihood() const {
-		return phyloprocess->GetLogProb();
+		return phyloprocess->GetLogLikelihood();
 	}
 
     // integrated over site allocations

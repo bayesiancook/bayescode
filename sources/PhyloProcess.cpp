@@ -292,7 +292,7 @@ double PhyloProcess::GetFastLogProb() const {
     return total;
 }
 
-double PhyloProcess::GetLogProb() const {
+double PhyloProcess::GetLogLikelihood() const {
 #if DEBUG > 1
     MeasureTime timer;
 #endif
