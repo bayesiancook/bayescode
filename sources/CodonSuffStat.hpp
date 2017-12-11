@@ -284,7 +284,7 @@ class OmegaSuffStat : public PoissonSuffStat {
 };
 
 /**
- * An array of omega suff stats
+ * \brief An array of omega suff stats
  */
 
 class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<PoissonSuffStat>    {
@@ -325,12 +325,12 @@ class OmegaSuffStatArray : public SimpleArray<OmegaSuffStat>, public Array<Poiss
 		}
 	}
 
-    //! \brief add current suff stats to an array of suffstats, according to the allocations specified by the second argument
+    //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument (mixture models)
     //!
-    //! specifically: suffstatarray[alloc[i]] += (*this)[i]
-	void AddToComponents(Array<OmegaSuffStat>& suffstatarray, const Array<int>& alloc)	const {
+    //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] += suffstatarray[i]
+	void Add(const Selector<OmegaSuffStat>& suffstatarray, const Selector<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
-			suffstatarray[alloc.GetVal(i)].Add(GetVal(i));
+			(*this)[alloc.GetVal(i)].Add(suffstatarray.GetVal(i));
 		}
 	}
 

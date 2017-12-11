@@ -436,7 +436,7 @@ void CodonM2aModel::CollectPathSuffStat()	{
 void CodonM2aModel::CollectComponentPathSuffStat()	{
 
     componentpathsuffstatarray->Clear();
-    sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
+    componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
 }
 
 void CodonM2aModel::MoveOmega() 	{

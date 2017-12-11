@@ -363,12 +363,6 @@ class AAMutSelSBDPOmegaSitewiseModel : public ProbModel {
         sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
-    // per component of the mixture
-	//void CollectComponentPathSuffStat()	{
-    //    componentpathsuffstatarray->Clear();
-    //   sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
-    //}
-
     void CollectLengthSuffStat()    {
 		lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);

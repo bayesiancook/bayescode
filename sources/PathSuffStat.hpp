@@ -78,18 +78,23 @@ class PathSuffStat : public SuffStat	{
         process.AddPathSuffStat(*this);
     }
 
-    //! add this suff stat to the suffstat given as an argument
-	void AddTo(PathSuffStat& suffstat) const {
-		for (std::map<int,int>::const_iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
-			suffstat.AddRootCount(i->first,i->second);
+    void Add(const PathSuffStat& suffstat)  {
+		for (std::map<int,int>::const_iterator i = suffstat.GetRootCountMap().begin(); i!= suffstat.GetRootCountMap().end(); i++)	{
+			AddRootCount(i->first,i->second);
 		}
-		for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
-            suffstat.AddPairCount(i->first.first,i->first.second,i->second);
+		for (std::map<pair<int,int>, int>::const_iterator i = suffstat.GetPairCountMap().begin(); i!= suffstat.GetPairCountMap().end(); i++)	{
+            AddPairCount(i->first.first,i->first.second,i->second);
 		}
-		for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
-            suffstat.AddWaitingTime(i->first,i->second);
+		for (std::map<int,double>::const_iterator i = suffstat.GetWaitingTimeMap().begin(); i!= suffstat.GetWaitingTimeMap().end(); i++)	{
+            AddWaitingTime(i->first,i->second);
         }
 	}
+
+
+    PathSuffStat& operator+=(const PathSuffStat& from)  {
+        Add(from);
+        return *this;
+    }
 
 	int GetRootCount(int state) const {
         std::map<int,int>::const_iterator i = rootcount.find(state);
@@ -182,14 +187,14 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
 		return total;
 	}
 
-    //! \brief add this array of suff stat to suffstatarray, based on the allocations provided as the second argument (used for mixture models)
+    //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument (mixture models)
     //!
-    //! specifically, for each i=0..GetSize()-1, suffstatarray[alloc[i]] += (*this)[i]
-	void AddToComponents(Array<PathSuffStat>& suffstatarray, const Array<int>& alloc)	const {
-		for (int i=0; i<GetSize(); i++)	{
-			GetVal(i).AddTo(suffstatarray[alloc.GetVal(i)]);
-		}
-	}
+    //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] += suffstatarray[i]
+    void Add(const Selector<PathSuffStat>& suffstatarray, const Selector<int>& alloc)   {
+        for (int i=0; i<suffstatarray.GetSize(); i++) {
+            (*this)[alloc.GetVal(i)] += suffstatarray.GetVal(i);
+        }
+    }
 };
 
 

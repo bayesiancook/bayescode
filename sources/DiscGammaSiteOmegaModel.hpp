@@ -385,7 +385,7 @@ class DiscGammaSiteOmegaModel : public ProbModel {
     // per component of the mixture
 	void CollectComponentPathSuffStat()	{
         componentpathsuffstatarray->Clear();
-        sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
+        componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
     }
 
     void CollectOmegaSuffStat() {

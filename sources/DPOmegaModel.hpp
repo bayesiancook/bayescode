@@ -392,7 +392,7 @@ class DPOmegaModel : public ProbModel {
     // per component of the mixture
 	void CollectComponentPathSuffStat()	{
         componentpathsuffstatarray->Clear();
-        sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
+        componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
     }
 
     void MoveOmega() {
@@ -417,7 +417,7 @@ class DPOmegaModel : public ProbModel {
 
     void CollectComponentOmegaSuffStat()    {
         componentomegasuffstatarray->Clear();
-        siteomegasuffstatarray->AddToComponents(*componentomegasuffstatarray,*sitealloc);
+        componentomegasuffstatarray->Add(*siteomegasuffstatarray,*sitealloc);
     }
 
     void ResampleOmega()    {

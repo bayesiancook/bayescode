@@ -437,12 +437,6 @@ void AAMutSelM2aModel::CollectPathSuffStat()	{
     sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 }
 
-//void AAMutSelM2aModel::CollectComponentPathSuffStat()	{
-//
-//    componentpathsuffstatarray->Clear();
-//    sitepathsuffstatarray->AddToComponents(*componentpathsuffstatarray,*sitealloc);
-//}
-
 void AAMutSelM2aModel::MoveOmega() 	{
 
     CollectOmegaSuffStat();
