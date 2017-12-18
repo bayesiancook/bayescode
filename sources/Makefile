@@ -75,6 +75,7 @@ $(PROGSDIR)/diffsel$(EXEEXT): DiffSel.o $(OBJS)
 	$(CC) DiffSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 clean:
-	-rm -f *.o *.d *.d.*
+	-rm -f *.o *.d *.d.* codonm8/*.o codonm8/*.d
 	-rm -f $(PROGS)
+	-rm -rf html/ latex/
 
