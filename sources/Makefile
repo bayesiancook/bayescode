@@ -1,6 +1,9 @@
 CC=mpic++
 CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -O3
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
+# CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -fprofile-arcs -ftest-coverage
+LDFLAGS =
+# LDFLAGS = -fprofile-arcs -ftest-coverage
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
@@ -34,10 +37,10 @@ $(PROGSDIR)/globom: SingleOmega.o $(OBJS)
 $(PROGSDIR)/diffsel: DiffSel.o $(OBJS)
 
 $(PROGS):
-	$(CC) $^ -o $@
+	$(CC) $^ $(LDFLAGS) -o $@
 
 clean:
-	-rm -f *.o *.d *.d.* *.gcno codonm8/*.o codonm8/*.d
+	-rm -f *.o *.d *.d.* *.gcno codonm8/*.o codonm8/*.d *.gcda *.gcov
 	-rm -f $(PROGS)
 	-rm -rf html/ latex/
 
