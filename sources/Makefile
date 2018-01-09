@@ -1,26 +1,5 @@
-#To compile with gsl, reactivate the following line (remove '#')
-#USE_GSL=-DGSL
-
-#To statically build the executables, uncomment the following line
-#STATIC=-static
-
-ifdef USE_GSL
-#GSLLIB=-lgsl -lgslcblas
-else
-GSLLIB=
-endif
-
-LIBS=$(GSLLIB)
-#LIBS=$(GSLLIB) -lboost_regex
-
 CC=mpic++
-SYSLIB=
-INCLUDES=
-#CPPFLAGS= $(USE_GSL) $(INCLUDES)
-CPPFLAGS= -std=c++0x -g -Wall -O3 $(USE_GSL) $(INCLUDES)
-LDFLAGS=$(STATIC)
-INSTALL_DIR=
-INSTALL_LIB=
+CPPFLAGS= -std=c++11 -g -Wall -O3
 SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
@@ -31,25 +10,14 @@ PROGSDIR=../data
 ALL= globom codonm2a diffsel
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
-# If we are on a windows platform, executables are .exe files
-# [S.Bigaret] we assume here that we are compiling w/ MinGW, not Cygwin
-EXEEXT=
-uname := $(shell uname -s 2>/dev/null)
-ifeq (MINGW,$(findstring MINGW,$(uname)))
-	EXEEXT=.exe
-	PROGS=$(addsuffix $(EXEEXT), $(ALL))
-endif
-
 .PHONY: all clean
 all: $(PROGS)
 
-# Rules for generate the dependencies automatically
-
+# Rules to generate the dependencies automatically
 %.d: %.cpp
 	@echo "Generating dependencies for $<..."; \
 	 set -e; rm -f $@; $(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
 	 sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; rm -f $@.$$$$
-
 
 # Rules to create .o files from .cpp files
 %.o: %.cpp %.d
@@ -61,21 +29,17 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
+$(PROGSDIR)/codonm2a: CodonM2a.o $(OBJS)
+$(PROGSDIR)/globom: SingleOmega.o $(OBJS)
+$(PROGSDIR)/diffsel: DiffSel.o $(OBJS)
 
-codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
-$(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
-	$(CC) CodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
-$(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
-	$(CC) SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-diffsel$(EXEEXT): $(PROGSDIR)/diffsel$(EXEEXT)
-$(PROGSDIR)/diffsel$(EXEEXT): DiffSel.o $(OBJS)
-	$(CC) DiffSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+$(PROGS):
+	$(CC) $^ -o $@
 
 clean:
 	-rm -f *.o *.d *.d.* codonm8/*.o codonm8/*.d
 	-rm -f $(PROGS)
 	-rm -rf html/ latex/
 
+format:
+	clang-format -i $(ALL_SRC)
