@@ -1,4 +1,6 @@
 *.o
 *.d
 *.gcno
+*.gcda
+*.gcov
 data/*
