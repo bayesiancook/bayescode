@@ -1,8 +1,8 @@
 
 #include "cdf.hpp"
 #include <math.h>
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
 using namespace std;
 
 // const double PI = 3.1415926535;
@@ -12,91 +12,85 @@ const double SQRT2 = 1.414214;
 // log gamma using the Lanczos approximation
 // must have x > 0
 double logGamma(double x) {
-  const double c[8] = { 676.5203681218851, -1259.1392167224028,
-			 771.32342877765313, -176.61502916214059, 
-			 12.507343278686905, -0.13857109526572012, 
-			 9.9843695780195716e-6, 1.5056327351493116e-7 };
-  double sum = 0.99999999999980993;
-  double y = x;
-  for (int j = 0; j < 8; j++)
-    sum += c[j] / ++y;
-  return log(SQRT2PI * sum / x) - (x + 7.5) + (x + 0.5) * log(x + 7.5);
+    const double c[8] = {676.5203681218851,  -1259.1392167224028,  771.32342877765313,    -176.61502916214059,
+                         12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7};
+    double sum = 0.99999999999980993;
+    double y = x;
+    for (int j = 0; j < 8; j++) sum += c[j] / ++y;
+    return log(SQRT2PI * sum / x) - (x + 7.5) + (x + 0.5) * log(x + 7.5);
 }
 
 // helper function for incomplete beta
 // computes continued fraction
 // source: Numerical Recipes in C
 double betaContFrac(double a, double b, double x) {
-  const int MAXIT = 1000;
-  const double EPS = 3e-7;
-  const double FPMIN = 1e-30;
-  double qab = a + b;
-  double qap = a + 1;
-  double qam = a - 1;
-  double c = 1;
-  double d = 1 - qab * x / qap;
-  if (fabs(d) < FPMIN) d = FPMIN;
-  d = 1 / d;
-  double h = d;
-  int m;
-  for (m = 1; m <= MAXIT; m++) {
-    int m2 = 2 * m;
-    double aa = m * (b-m) * x / ((qam + m2) * (a + m2));
-    d = 1 + aa * d;
+    const int MAXIT = 1000;
+    const double EPS = 3e-7;
+    const double FPMIN = 1e-30;
+    double qab = a + b;
+    double qap = a + 1;
+    double qam = a - 1;
+    double c = 1;
+    double d = 1 - qab * x / qap;
     if (fabs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (fabs(c) < FPMIN) c = FPMIN;
     d = 1 / d;
-    h *= (d * c);
-    aa = -(a+m) * (qab+m) * x / ((a+m2) * (qap+m2));
-    d = 1 + aa * d;
-    if (fabs(d) < FPMIN) d = FPMIN;
-    c = 1 + aa / c;
-    if (fabs(c) < FPMIN) c = FPMIN;
-    d = 1 / d;
-    double del = d*c;
-    h *= del;
-    if (fabs(del - 1) < EPS) break;
-  }
-  if (m > MAXIT) {
-    cerr << "betaContFrac: too many iterations\n";
-  }
-  return h;
+    double h = d;
+    int m;
+    for (m = 1; m <= MAXIT; m++) {
+        int m2 = 2 * m;
+        double aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+        d = 1 + aa * d;
+        if (fabs(d) < FPMIN) d = FPMIN;
+        c = 1 + aa / c;
+        if (fabs(c) < FPMIN) c = FPMIN;
+        d = 1 / d;
+        h *= (d * c);
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+        d = 1 + aa * d;
+        if (fabs(d) < FPMIN) d = FPMIN;
+        c = 1 + aa / c;
+        if (fabs(c) < FPMIN) c = FPMIN;
+        d = 1 / d;
+        double del = d * c;
+        h *= del;
+        if (fabs(del - 1) < EPS) break;
+    }
+    if (m > MAXIT) {
+        cerr << "betaContFrac: too many iterations\n";
+    }
+    return h;
 }
 
 // incomplete beta function
 // must have 0 <= x <= 1
 double betaInc(double a, double b, double x) {
-  if (x == 0)
-    return 0;
-  else if (x == 1)
-    return 1;
-  else {
-    double logBeta = logGamma(a+b) - logGamma(a) - logGamma(b)
-      + a * log(x) + b * log(1-x);
-    if (x < (a+1) / (a+b+2))
-      return exp(logBeta) * betaContFrac(a, b, x) / a;
-    else
-      return 1 - exp(logBeta) * betaContFrac(b, a, 1-x) / b;
-  }
+    if (x == 0)
+        return 0;
+    else if (x == 1)
+        return 1;
+    else {
+        double logBeta = logGamma(a + b) - logGamma(a) - logGamma(b) + a * log(x) + b * log(1 - x);
+        if (x < (a + 1) / (a + b + 2))
+            return exp(logBeta) * betaContFrac(a, b, x) / a;
+        else
+            return 1 - exp(logBeta) * betaContFrac(b, a, 1 - x) / b;
+    }
 }
 
 double invbetaInc(double a, double b, double p) {
-
     double x1 = 0;
     double x2 = 1;
     double eps = 1e-8;
-    while (x2-x1 > eps) {
-        double xmid = (x1+x2)/2;
-        double pmid = betaInc(a,b,xmid);
-        if (p < pmid)   {
+    while (x2 - x1 > eps) {
+        double xmid = (x1 + x2) / 2;
+        double pmid = betaInc(a, b, xmid);
+        if (p < pmid) {
             x2 = xmid;
-        }
-        else    {
+        } else {
             x1 = xmid;
         }
     }
-    return (x1+x2)/2;
+    return (x1 + x2) / 2;
 }
 
 /*

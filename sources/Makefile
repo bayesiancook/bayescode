@@ -1,5 +1,5 @@
 CC=mpic++
-CPPFLAGS= -std=c++11 -g -Wall -O3
+CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -O3
 SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
@@ -10,7 +10,7 @@ PROGSDIR=../data
 ALL= globom codonm2a diffsel
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
-.PHONY: all clean
+.PHONY: all clean format
 all: $(PROGS)
 
 # Rules to generate the dependencies automatically
@@ -42,4 +42,4 @@ clean:
 	-rm -rf html/ latex/
 
 format:
-	clang-format -i $(ALL_SRC)
+	clang-format -i $(ALL_SRCS)

@@ -148,8 +148,7 @@ string CodonStateSpace::GetState(int codon) const {
 }
 
 int CodonStateSpace::GetState(string word) const {
-    return GetCodonFromDNA(GetDNAStateSpace()->GetState(word.substr(0, 1)),
-                           GetDNAStateSpace()->GetState(word.substr(1, 1)),
+    return GetCodonFromDNA(GetDNAStateSpace()->GetState(word.substr(0, 1)), GetDNAStateSpace()->GetState(word.substr(1, 1)),
                            GetDNAStateSpace()->GetState(word.substr(2, 1)));
 }
 
@@ -158,8 +157,7 @@ bool CodonStateSpace::CheckStop(int pos1, int pos2, int pos3) const {
         return false;
     }
     int l = 0;
-    while ((l < Nstop) &&
-           ((pos1 != StopPos1[l]) || (pos2 != StopPos2[l]) || (pos3 != StopPos3[l]))) {
+    while ((l < Nstop) && ((pos1 != StopPos1[l]) || (pos2 != StopPos2[l]) || (pos3 != StopPos3[l]))) {
         l++;
     }
     return (l < Nstop);
@@ -171,8 +169,7 @@ int CodonStateSpace::GetCodonFromDNA(int pos1, int pos2, int pos3) const {
     }
     int l = 0;
     while ((l < GetNstate()) &&
-           ((pos1 != GetCodonPosition(0, l)) || (pos2 != GetCodonPosition(1, l)) ||
-            (pos3 != GetCodonPosition(2, l)))) {
+           ((pos1 != GetCodonPosition(0, l)) || (pos2 != GetCodonPosition(1, l)) || (pos3 != GetCodonPosition(2, l)))) {
         l++;
     }
     if (l == GetNstate()) {
@@ -182,9 +179,8 @@ int CodonStateSpace::GetCodonFromDNA(int pos1, int pos2, int pos3) const {
         // <<
         // GetDNAStateSpace()->GetState(pos3) << '\n';
         return -1;
-        cerr << "warning in CodonStateSpace::GetCodonFromDNA : out of bound : "
-             << GetDNAStateSpace()->GetState(pos1) << GetDNAStateSpace()->GetState(pos2)
-             << GetDNAStateSpace()->GetState(pos3) << '\n';
+        cerr << "warning in CodonStateSpace::GetCodonFromDNA : out of bound : " << GetDNAStateSpace()->GetState(pos1)
+             << GetDNAStateSpace()->GetState(pos2) << GetDNAStateSpace()->GetState(pos3) << '\n';
         if (code == Universal) {
             cerr << "universal\n";
         } else if (code == MtMam) {
@@ -199,32 +195,27 @@ int CodonStateSpace::GetCodonFromDNA(int pos1, int pos2, int pos3) const {
 
 int CodonStateSpace::GetDifferingPosition(int i, int j) const {
     // identical
-    if ((GetCodonPosition(0, i) == GetCodonPosition(0, j)) &&
-        (GetCodonPosition(1, i) == GetCodonPosition(1, j)) &&
+    if ((GetCodonPosition(0, i) == GetCodonPosition(0, j)) && (GetCodonPosition(1, i) == GetCodonPosition(1, j)) &&
         (GetCodonPosition(2, i) == GetCodonPosition(2, j))) {
         return -1;
     }
     if (GetCodonPosition(0, i) != GetCodonPosition(0, j)) {
-        if ((GetCodonPosition(1, i) == GetCodonPosition(1, j)) &&
-            (GetCodonPosition(2, i) == GetCodonPosition(2, j))) {
+        if ((GetCodonPosition(1, i) == GetCodonPosition(1, j)) && (GetCodonPosition(2, i) == GetCodonPosition(2, j))) {
             return 0;
         }
         return 3;
     }
     if (GetCodonPosition(1, i) != GetCodonPosition(1, j)) {
-        if ((GetCodonPosition(0, i) == GetCodonPosition(0, j)) &&
-            (GetCodonPosition(2, i) == GetCodonPosition(2, j))) {
+        if ((GetCodonPosition(0, i) == GetCodonPosition(0, j)) && (GetCodonPosition(2, i) == GetCodonPosition(2, j))) {
             return 1;
         }
         return 3;
     }
     if (GetCodonPosition(2, i) != GetCodonPosition(2, j)) {
-        if ((GetCodonPosition(1, i) == GetCodonPosition(1, j)) &&
-            (GetCodonPosition(0, i) == GetCodonPosition(0, j))) {
+        if ((GetCodonPosition(1, i) == GetCodonPosition(1, j)) && (GetCodonPosition(0, i) == GetCodonPosition(0, j))) {
             return 2;
         }
         return 3;
     }
     return 3;
 }
-
