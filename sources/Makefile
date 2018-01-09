@@ -37,7 +37,7 @@ $(PROGS):
 	$(CC) $^ -o $@
 
 clean:
-	-rm -f *.o *.d *.d.* codonm8/*.o codonm8/*.d
+	-rm -f *.o *.d *.d.* *.gcno codonm8/*.o codonm8/*.d
 	-rm -f $(PROGS)
 	-rm -rf html/ latex/
 
