@@ -23,8 +23,11 @@ all: $(PROGS)
 	 sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; rm -f $@.$$$$
 
 # Rules to create .o files from .cpp files
-%.o: %.cpp %.d
+%.o: %.cpp %.d tinycompo.hpp
 	$(CC) -c $(CPPFLAGS) $*.cpp
+
+tinycompo.hpp:
+	curl https://raw.githubusercontent.com/vlanore/tinycompo/master/tinycompo.hpp > $@
 
 # Include the dependencies unless the request was to clean eveything up
 ifneq ($(MAKECMDGOALS),clean)

@@ -3,4 +3,5 @@
 *.gcno
 *.gcda
 *.gcov
+tinycompo.hpp
 data/*
