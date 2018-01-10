@@ -6,6 +6,9 @@
 template <class Type>
 struct Wrapper : tc::Component {
     Type data;
+
+    template <class... Args>
+    Wrapper(Args... args) : data(args...) {}
 };
 
 #endif

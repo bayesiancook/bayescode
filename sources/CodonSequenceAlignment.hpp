@@ -9,7 +9,7 @@
  * \brief A codon sequence alignment (created from a nucleotide sequence alignment)
  */
 
-class CodonSequenceAlignment : public SequenceAlignment, public tc::Component {
+class CodonSequenceAlignment : public SequenceAlignment {
   public:
     //! \brief Constructor: takes a (const pointer to a) nucleotide sequence alignment and a genetic code.
     //!

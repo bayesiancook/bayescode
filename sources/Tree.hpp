@@ -6,7 +6,6 @@
 #include <string>
 #include "Random.hpp"
 #include "StringStreamUtils.hpp"
-#include "tinycompo.hpp"
 using namespace std;
 
 class TaxonSet;  // forward decl
@@ -178,7 +177,7 @@ class Link {
  *
  */
 
-class Tree : public tc::Component {
+class Tree {
   public:
     //! default constructor: set member pointers to 0
     Tree();

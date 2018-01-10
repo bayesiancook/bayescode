@@ -3,14 +3,14 @@ CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -O3
 # CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -fprofile-arcs -ftest-coverage
 LDFLAGS =
 # LDFLAGS = -fprofile-arcs -ftest-coverage
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp Chain.cpp CodonM2aModel.cpp AAMutSelOmegaCodonSubMatrix.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp Chain.cpp AAMutSelOmegaCodonSubMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= globom codonm2a diffsel
+ALL= globom
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 .PHONY: all clean format
@@ -35,9 +35,7 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
-$(PROGSDIR)/codonm2a: CodonM2a.o $(OBJS)
 $(PROGSDIR)/globom: SingleOmega.o $(OBJS)
-$(PROGSDIR)/diffsel: DiffSel.o $(OBJS)
 
 $(PROGS):
 	$(CC) $^ $(LDFLAGS) -o $@

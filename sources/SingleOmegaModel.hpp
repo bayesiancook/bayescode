@@ -9,6 +9,8 @@
 #include "ProbModel.hpp"
 #include "Tree.hpp"
 #include "component_defs.hpp"
+
+using namespace tc;
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon model
  *
@@ -40,8 +42,8 @@ class SingleOmegaModel : public ProbModel {
     BranchIIDGamma* branchlength;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
-    std::vector<double> nucrelrate;
-    std::vector<double> nucstat;
+    vector<double> nucrelrate;
+    vector<double> nucstat;
 
     // omega has a Gamma prior
     // of mean omegahypermean and inverse shape parameter omegahyperinvshape
@@ -91,7 +93,7 @@ class SingleOmegaModel : public ProbModel {
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
 
-        std::cerr << "-- Number of sites: " << Nsite << std::endl;
+        cerr << "-- Number of sites: " << Nsite << endl;
 
         taxonset = codondata->GetTaxonSet();
 
@@ -103,6 +105,23 @@ class SingleOmegaModel : public ProbModel {
 
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
+    }
+
+    void ComponentModel(string datafile, string treefile) {
+        Model model;
+
+        double lambda = 10;
+        model.component<BranchIIDGamma>("branchlength", *tree, 1, lambda);
+        model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", *tree);
+
+        model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
+        // Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        model.component<Wrapper<vector<double>>>("nucstat", Nnuc, 0);
+        // Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+
+        model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
+            .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
+            .connect<Use<vector<double>>>("CopyStationary", "nucstat");
     }
 
     //! model allocation
@@ -117,7 +136,7 @@ class SingleOmegaModel : public ProbModel {
         nucstat.assign(Nnuc, 0);
         Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
 
-        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
+        // nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true); // FIXME
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -134,7 +153,7 @@ class SingleOmegaModel : public ProbModel {
         cerr << "-- unfold\n";
         phyloprocess->Unfold();
         cerr << phyloprocess->GetLogLikelihood() << '\n';
-        std::cerr << "-- mapping substitutions\n";
+        cerr << "-- mapping substitutions\n";
         phyloprocess->ResampleSub();
     }
 
@@ -177,7 +196,7 @@ class SingleOmegaModel : public ProbModel {
     //! \brief set nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat) to a new value
     //!
     //! Notifies corruption to the nucleotide and the codon matrices
-    void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
+    void SetNucRates(const vector<double>& innucrelrate, const vector<double>& innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
@@ -188,7 +207,7 @@ class SingleOmegaModel : public ProbModel {
     //! The matrix is not directly updated at that step. Instead, corruption is notified,
     //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
     void TouchNucMatrix() {
-        nucmatrix->CopyStationary(nucstat);
+        nucmatrix->CopyStationary(&nucstat);
         nucmatrix->CorruptMatrix();
     }
 

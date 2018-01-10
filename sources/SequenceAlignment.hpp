@@ -4,7 +4,6 @@
 #include <vector>
 #include "StateSpace.hpp"
 #include "TaxonSet.hpp"
-#include "tinycompo.hpp"
 
 /**
  * \brief Generic interface for a multiple sequence alignment
@@ -136,7 +135,7 @@ class SequenceAlignment {
  * \brief A sequence alignment created by reading from a file (Phylip-like or Nexus format)
  */
 
-class FileSequenceAlignment : public SequenceAlignment, public tc::Component {
+class FileSequenceAlignment : public SequenceAlignment {
   public:
     FileSequenceAlignment(std::string filename);
 
