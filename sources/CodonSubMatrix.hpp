@@ -27,9 +27,7 @@ class CodonSubMatrix : public virtual SubMatrix {
     //! see CodonStateSpace::GetCodonPosition
     int GetCodonPosition(int pos, int codon) const { return statespace->GetCodonPosition(pos, codon); }
     //! see CodonStateSpace::GetDifferingPosition
-    int GetDifferingPosition(int codon1, int codon2) const {
-        return statespace->GetDifferingPosition(codon1, codon2);
-    }
+    int GetDifferingPosition(int codon1, int codon2) const { return statespace->GetDifferingPosition(codon1, codon2); }
 
   protected:
     const CodonStateSpace *statespace;
@@ -46,8 +44,7 @@ class CodonSubMatrix : public virtual SubMatrix {
 class NucCodonSubMatrix : public virtual CodonSubMatrix {
   public:
     NucCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, bool innormalise)
-        : SubMatrix(instatespace->GetNstate(), innormalise),
-          CodonSubMatrix(instatespace, innormalise) {
+        : SubMatrix(instatespace->GetNstate(), innormalise), CodonSubMatrix(instatespace, innormalise) {
         SetNucMatrix(inNucMatrix);
     }
 
@@ -67,21 +64,23 @@ class NucCodonSubMatrix : public virtual CodonSubMatrix {
 };
 
 /**
- * \brief A generic class for codon matrices with an omega parameter, acting as a multiplier in front of all rates between non-synonynmous codons
+ * \brief A generic class for codon matrices with an omega parameter, acting as a multiplier in front of all rates between
+ * non-synonynmous codons
  */
 
-class OmegaCodonSubMatrix : public virtual CodonSubMatrix   {
-
-    public:
-    OmegaCodonSubMatrix(const CodonStateSpace* instatespace, double inomega, bool innormalise) : SubMatrix(instatespace->GetNstate(),innormalise), CodonSubMatrix(instatespace,normalise), omega(inomega)   {
-    }
+class OmegaCodonSubMatrix : public virtual CodonSubMatrix {
+  public:
+    OmegaCodonSubMatrix(const CodonStateSpace *instatespace, double inomega, bool innormalise)
+        : SubMatrix(instatespace->GetNstate(), innormalise), CodonSubMatrix(instatespace, normalise), omega(inomega) {}
 
     double GetOmega() const { return omega + omegamin; }
-    void SetOmega(double inomega) { omega = inomega; CorruptMatrix();}
+    void SetOmega(double inomega) {
+        omega = inomega;
+        CorruptMatrix();
+    }
 
-    protected:
+  protected:
     double omega;
-
 };
 
 /**
@@ -93,21 +92,16 @@ class OmegaCodonSubMatrix : public virtual CodonSubMatrix   {
 
 class MGCodonSubMatrix : public NucCodonSubMatrix {
   public:
-    MGCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
-                     bool innormalise = false)
+    MGCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, bool innormalise = false)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
-          NucCodonSubMatrix(instatespace, inNucMatrix, innormalise) {
-    }
+          NucCodonSubMatrix(instatespace, inNucMatrix, innormalise) {}
 
-    void CorruptMatrix() /*override*/ {
-        SubMatrix::CorruptMatrix();
-    }
+    void CorruptMatrix() /*override*/ { SubMatrix::CorruptMatrix(); }
 
   protected:
     void ComputeArray(int i) const /*override*/;
     void ComputeStationary() const /*override*/;
-
 };
 
 /**
@@ -121,7 +115,7 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatri
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           MGCodonSubMatrix(instatespace, inNucMatrix, innormalise),
-          OmegaCodonSubMatrix(instatespace,inomega,innormalise) {}
+          OmegaCodonSubMatrix(instatespace, inomega, innormalise) {}
 
   protected:
     void ComputeArray(int i) const /*override*/;

@@ -42,8 +42,8 @@ class MeasureTime : public std::stringstream {
 
     void stop() {
         stopped = true;
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::high_resolution_clock::now() - counter);
+        duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - counter);
     }
 
     template <int i>
@@ -52,8 +52,7 @@ class MeasureTime : public std::stringstream {
             stop();
         }
         std::string left(2 * i, ' ');
-        std::cout << left << "* " << message << str() << "Time: " << duration.count() << "ms."
-                  << std::endl;
+        std::cout << left << "* " << message << str() << "Time: " << duration.count() << "ms." << std::endl;
         str("");
         start();
     }

@@ -45,4 +45,4 @@ clean:
 	-rm -rf html/ latex/
 
 format:
-	clang-format -i $(ALL_SRCS)
+	clang-format -i $(ALL_SRCS) *.hpp

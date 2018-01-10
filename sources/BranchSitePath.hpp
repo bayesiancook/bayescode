@@ -1,9 +1,9 @@
 #ifndef SITEPATH_H
 #define SITEPATH_H
 
+#include <map>
 #include <string>
 #include "StateSpace.hpp"
-#include <map>
 using namespace std;
 
 class SuffStat;
@@ -14,9 +14,10 @@ class SubMatrix;
 /**
  * \brief The building block for substitution histories, or paths (BranchSitePath class)
  *
- * A substitution history over some period of time, and with n substitution events in total, 
+ * A substitution history over some period of time, and with n substitution events in total,
  * is encoded as doubly-linked chains of n+1 Plink objects (see BranchSitePath for an example).
- * Each Plink encodes the current state and the relative waiting time (relative to total time t) until either the next event or the endpoint.
+ * Each Plink encodes the current state and the relative waiting time (relative to total time t) until either the next event
+ * or the endpoint.
  * Each Plink points to the previous Plink (Plink* prev) or to the next (Plink* next).
  * The first Plink has prev=null and the last Pling has next=null;
  *
@@ -67,7 +68,7 @@ class Plink {
 /**
  * \brief A doubly-linked structure specifying the detailed substitution history over a branch, for a given site
  *
- * A substitution history over some period of time, and with n substitution events in total, 
+ * A substitution history over some period of time, and with n substitution events in total,
  * is encoded as doubly-linked chains of n+1 Plink objects.
  * Thus, for instance
  * the following history, over a total time of t=10 units: A---C--T-----
@@ -77,9 +78,8 @@ class Plink {
  */
 
 class BranchSitePath {
-
   public:
-      //
+    //
     //! default constructor
     BranchSitePath();
 
@@ -90,7 +90,8 @@ class BranchSitePath {
     //! const access to first Plink (at time 0)
     const Plink *Init() const;
 
-    //! const access to last Plink (at the time of the last substitution event -- can be the same as the first Plink if no event occured)
+    //! const access to last Plink (at the time of the last substitution event -- can be the same as the first Plink if no
+    //! event occured)
     const Plink *Last() const;
 
     //! non-const access to first Plink
@@ -110,17 +111,21 @@ class BranchSitePath {
     //! give the relative time for the event encoded by given Plink (0 if link==init)
     double GetRelativeTime(const Plink *link) const { return link->GetRelativeTime(); }
 
-    //! \brief push up the sufficient statistics for this substitution history, as a function of the effective branch length, into the PoissonSuffStat given as first argument
+    //! \brief push up the sufficient statistics for this substitution history, as a function of the effective branch length,
+    //! into the PoissonSuffStat given as first argument
     //!
-    //! The sufficient statistic is: the total number of substitution events and the total effective rate over the whole branch.
+    //! The sufficient statistic is: the total number of substitution events and the total effective rate over the whole
+    //! branch.
     //! Note that this suff stat depends on the substitution process, such as specified by the SubMatrix.
-    void AddLengthSuffStat(PoissonSuffStat& suffstat, double factor, const SubMatrix& mat) const;
+    void AddLengthSuffStat(PoissonSuffStat &suffstat, double factor, const SubMatrix &mat) const;
 
-    //! \brief push up the sufficient statistics for this substitution history, as a function of the substitution matrix, into the PathSuffStat given as first argument
+    //! \brief push up the sufficient statistics for this substitution history, as a function of the substitution matrix,
+    //! into the PathSuffStat given as first argument
     //!
-    //! The sufficient statistic is: the total number of events from i->j for any (i,j) pair, and the total waiting time in state i, for each i.
+    //! The sufficient statistic is: the total number of events from i->j for any (i,j) pair, and the total waiting time in
+    //! state i, for each i.
     //! The factor given as second argument acts as a scaling factor for the waiting times.
-    void AddPathSuffStat(PathSuffStat& suffstat, double factor) const;
+    void AddPathSuffStat(PathSuffStat &suffstat, double factor) const;
 
     //! delete the current substitution history and create a new one starting with given initial state
     void Reset(int state);
@@ -162,8 +167,7 @@ class BranchSitePath {
 //-------------------------------------------------------------------------
 
 inline Plink::Plink() : next(nullptr), prev(nullptr), state(0), rel_time(0) {}
-inline Plink::Plink(int instate, double inrel_time)
-    : next(nullptr), prev(nullptr), state(instate), rel_time(inrel_time) {}
+inline Plink::Plink(int instate, double inrel_time) : next(nullptr), prev(nullptr), state(instate), rel_time(inrel_time) {}
 inline Plink::~Plink() { Splice(); }
 
 inline Plink *Plink::Prev() { return prev; }

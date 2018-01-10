@@ -8,38 +8,32 @@
 #include "SubMatrix.hpp"
 
 class SubMatrixSelector : public BranchSiteSelector<SubMatrix> {
+  public:
+    SubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray, const BranchAllocationSystem& inbranchalloc)
+        : matrixbidimarray(inmatrixbidimarray), branchalloc(inbranchalloc) {}
 
-    public:
-    SubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray, const BranchAllocationSystem& inbranchalloc) : 
-        matrixbidimarray(inmatrixbidimarray), branchalloc(inbranchalloc)    {
+    virtual const Tree& GetTree() const override { return branchalloc.GetTree(); }
+    virtual int GetSize() const override { return matrixbidimarray.GetNcol(); }
 
+    virtual const SubMatrix& GetVal(int branch, int site) const override {
+        return matrixbidimarray.GetVal(branchalloc.GetBranchAlloc(branch), site);
     }
 
-	virtual const Tree& GetTree() const override {return branchalloc.GetTree();}
-	virtual int GetSize() const override {return matrixbidimarray.GetNcol();}
-
-	virtual const SubMatrix& GetVal(int branch, int site) const override    {
-        return matrixbidimarray.GetVal(branchalloc.GetBranchAlloc(branch),site);
-    }
-
-    private:
+  private:
     const BidimSelector<SubMatrix>& matrixbidimarray;
     const BranchAllocationSystem& branchalloc;
 };
 
-class RootSubMatrixSelector : public Selector<SubMatrix>  {
-
-    public:
-
-    RootSubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray) :
-        matrixbidimarray(inmatrixbidimarray) {}
+class RootSubMatrixSelector : public Selector<SubMatrix> {
+  public:
+    RootSubMatrixSelector(const BidimSelector<SubMatrix>& inmatrixbidimarray) : matrixbidimarray(inmatrixbidimarray) {}
 
     ~RootSubMatrixSelector() {}
 
-    virtual int GetSize() const override {return matrixbidimarray.GetNcol();}
-    virtual const SubMatrix& GetVal(int site) const override {return matrixbidimarray.GetVal(0,site);}
+    virtual int GetSize() const override { return matrixbidimarray.GetNcol(); }
+    virtual const SubMatrix& GetVal(int site) const override { return matrixbidimarray.GetVal(0, site); }
 
-    private:
+  private:
     const BidimSelector<SubMatrix>& matrixbidimarray;
 };
 

@@ -5,61 +5,57 @@
 // #include "Array.hpp"
 #include "BidimArray.hpp"
 
-class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
-
-    public:
-
-    BidimIIDMVNormal(int inncol, int indim, const Selector<double>& invar) : 
-        SimpleBidimArray(invar.GetSize(),inncol,vector<double>(indim,0)), dim(indim), var(invar) {
+class BidimIIDMVNormal : public SimpleBidimArray<vector<double> > {
+  public:
+    BidimIIDMVNormal(int inncol, int indim, const Selector<double>& invar)
+        : SimpleBidimArray(invar.GetSize(), inncol, vector<double>(indim, 0)), dim(indim), var(invar) {
         Sample();
     }
 
-    int GetDim() const {return dim;}
+    int GetDim() const { return dim; }
 
-    void Sample()   {
-        for (int i=0; i<GetNrow(); i++)  {
-            for (int j=0; j<GetNcol(); j++)   {
-                Sample(i,j);
+    void Sample() {
+        for (int i = 0; i < GetNrow(); i++) {
+            for (int j = 0; j < GetNcol(); j++) {
+                Sample(i, j);
             }
         }
     }
 
-    void Sample(int i, int j)   {
-        vector<double>& x = (*this)(i,j);
+    void Sample(int i, int j) {
+        vector<double>& x = (*this)(i, j);
         double v = var.GetVal(i);
-        for (int k=0; k<GetDim(); k++) {
-            x[k] = sqrt(v)*Random::sNormal();
+        for (int k = 0; k < GetDim(); k++) {
+            x[k] = sqrt(v) * Random::sNormal();
         }
     }
 
-    double GetMeanVar(int k) const  {
-
+    double GetMeanVar(int k) const {
         double mean = 0;
-        for (int j=0; j<GetNcol(); j++) {
-            mean += GetVar(k,j);
+        for (int j = 0; j < GetNcol(); j++) {
+            mean += GetVar(k, j);
         }
         mean /= GetNcol();
         return mean;
     }
 
-    double GetVar(int k, int j) const   {
-
+    double GetVar(int k, int j) const {
         double mean = 0;
         double var = 0;
-        const vector<double>& x = GetVal(k,j);
-        for (int l=0; l<GetDim(); l++)  {
+        const vector<double>& x = GetVal(k, j);
+        for (int l = 0; l < GetDim(); l++) {
             mean += x[l];
-            var += x[l]*x[l];
+            var += x[l] * x[l];
         }
         mean /= GetDim();
         var /= GetDim();
-        var -= mean*mean;
+        var -= mean * mean;
         return var;
     }
 
     double GetLogProb() const {
         double total = 0;
-        for (int j=0; j<GetNcol(); j++)   {
+        for (int j = 0; j < GetNcol(); j++) {
             total += GetColumnLogProb(j);
         }
         return total;
@@ -67,25 +63,25 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
 
     double GetRowLogProb(int i) const {
         double total = 0;
-        for (int j=0; j<GetNcol(); j++)   {
-            total += GetLogProb(i,j);
+        for (int j = 0; j < GetNcol(); j++) {
+            total += GetLogProb(i, j);
         }
         return total;
     }
 
-    double GetColumnLogProb(int j) const  {
+    double GetColumnLogProb(int j) const {
         double total = 0;
-        for (int i=0; i<GetNrow(); i++)  {
-            total += GetLogProb(i,j);
+        for (int i = 0; i < GetNrow(); i++) {
+            total += GetLogProb(i, j);
         }
         return total;
     }
 
-    double GetColumnLogProb(int j, const vector<int>& flag) const   {
+    double GetColumnLogProb(int j, const vector<int>& flag) const {
         double total = 0;
-        for (int i=0; i<GetNrow(); i++)  {
-            if (flag[i])    {
-                total += GetLogProb(i,j);
+        for (int i = 0; i < GetNrow(); i++) {
+            if (flag[i]) {
+                total += GetLogProb(i, j);
             }
         }
         return total;
@@ -93,30 +89,29 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
 
     double GetLogProb(int i, int j) const {
         double total = 0;
-        const vector<double>& x = GetVal(i,j);
+        const vector<double>& x = GetVal(i, j);
         double v = var.GetVal(i);
-        for (int k=0; k<GetDim(); k++) {
-            total += x[k]*x[k];
+        for (int k = 0; k < GetDim(); k++) {
+            total += x[k] * x[k];
         }
-        return -0.5*(total/v + GetDim()*log(2*Pi*v));
+        return -0.5 * (total / v + GetDim() * log(2 * Pi * v));
     }
 
-    protected:
-
+  protected:
     int dim;
     const Selector<double>& var;
 };
-
 
 /*
 class IIDMVNormal : public SimpleArray<vector<double >    {
 
     public:
 
-    IIDMVNormal(int insize, int indim, double invar) : SimpleArray<vector<double> >(insize,vector<double>(indim,0)), dim(indim), var(invar)  {
+    IIDMVNormal(int insize, int indim, double invar) : SimpleArray<vector<double> >(insize,vector<double>(indim,0)),
+dim(indim), var(invar)  {
         Sample();
     }
-    
+
     ~IIDMVNormal() {}
 
     void Sample()   {
@@ -162,4 +157,3 @@ class IIDMVNormal : public SimpleArray<vector<double >    {
 */
 
 #endif
-

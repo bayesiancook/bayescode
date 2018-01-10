@@ -7,7 +7,7 @@
 /**
  * \brief A generic interface for a Monte Carlo Markov Chain
  *
- * Chain is responsible for creating a model, 
+ * Chain is responsible for creating a model,
  * by calling the model constructor with the relevant settings,
  * and then running the MCMC, regularly saving samples into a file.
  * A chain can be stopped, and then restarted from file.
@@ -22,7 +22,6 @@
 
 class Chain {
   public:
-
     Chain();
 
     virtual ~Chain() = default;
@@ -83,17 +82,16 @@ class Chain {
     int GetSize() { return size; }
 
   protected:
-
     //! saving frequency (i.e. number of move cycles performed between each point saved to file)
-    int every;         
+    int every;
     //! intended final size of the chain (until==-1 means no a priori specified upper limit)
-    int until;         
+    int until;
     //! current size (number of points saved to file)
-    int size;          
+    int size;
     //! pointer to the underlying model
-    ProbModel *model;  
+    ProbModel *model;
     //! base name for all files corresponding to that chain
-    string name;  
+    string name;
 };
 
 #endif  // CHAIN_H

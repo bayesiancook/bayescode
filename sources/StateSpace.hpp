@@ -7,7 +7,8 @@
 /**
  * \brief Generic interface for a state space (nucleotide, codons, etc)
  *
- * In practice, states are encoded as integers ranging from 0 to Nstate-1, where Nstate=4 for nucleotides, 61 for codons (universal code), etc.
+ * In practice, states are encoded as integers ranging from 0 to Nstate-1, where Nstate=4 for nucleotides, 61 for codons
+ * (universal code), etc.
  * This is true in particular for matrix calculation (SubMatrix), for sequence alignments (SequenceAlignment).
  * However, the StateSpace class provides the general interface for converting integer states into strings or conversely.
  * Specialized versions, such as DNAStateSpace or CodonStateSpace provide context-specific additional methods.
@@ -17,7 +18,7 @@ class StateSpace {
   public:
     virtual ~StateSpace() = default;
 
-    //! return size of state space 
+    //! return size of state space
     virtual int GetNstate() const = 0;
 
     //! return integer for a given string-formatted state
@@ -105,7 +106,6 @@ class RYStateSpace : public SimpleStateSpace {
 
 class GenericStateSpace : public SimpleStateSpace {
   public:
-
     GenericStateSpace(int inNstate, char *inAlphabet, int inNAlphabetSet, char *inAlphabetSet) {
         Nstate = inNstate;
         Alphabet = new char[Nstate];

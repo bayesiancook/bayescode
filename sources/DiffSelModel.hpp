@@ -25,24 +25,22 @@ more generally, to use and operate it in the same conditions as regards security
 The fact that you are presently reading this means that you have had knowledge of the CeCILL-C
 license and that you accept its terms.*/
 
-
-#include "CodonSequenceAlignment.hpp"
-#include "GTRSubMatrix.hpp"
-#include "PhyloProcess.hpp"
-#include "ProbModel.hpp"
-#include "Tree.hpp"
-#include "IIDMVNormal.hpp"
-#include "DiffSelFitnessArray.hpp"
-#include "BranchAllocationSystem.hpp"
 #include "AAMutSelCodonMatrixArray.hpp"
-#include "SubMatrixSelector.hpp"
-#include "IIDGamma.hpp"
+#include "BranchAllocationSystem.hpp"
+#include "CodonSequenceAlignment.hpp"
+#include "DiffSelFitnessArray.hpp"
+#include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
+#include "IIDGamma.hpp"
+#include "IIDMVNormal.hpp"
 #include "PathSuffStat.hpp"
+#include "PhyloProcess.hpp"
+#include "ProbModel.hpp"
+#include "SubMatrixSelector.hpp"
+#include "Tree.hpp"
 
 class DiffSelModel : public ProbModel {
-
     // -----
     // model selectors
     // -----
@@ -89,13 +87,13 @@ class DiffSelModel : public ProbModel {
 
     // branch lengths iid expo (gamma of shape 1 and scale lambda)
     // where lambda is a hyperparameter
-	double lambda;
-	BranchIIDGamma* branchlength;
+    double lambda;
+    BranchIIDGamma* branchlength;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
-	std::vector<double> nucrelrate;
-	std::vector<double> nucstat;
-	GTRSubMatrix* nucmatrix;
+    std::vector<double> nucrelrate;
+    std::vector<double> nucstat;
+    GTRSubMatrix* nucmatrix;
 
     // baseline (global) fitness profiles across sites
     IIDDirichlet* baseline;
@@ -128,17 +126,15 @@ class DiffSelModel : public ProbModel {
     PathSuffStatBidimArray* suffstatarray;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+    PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat hyperlengthsuffstat;
+    GammaSuffStat hyperlengthsuffstat;
 
   public:
-
-    DiffSelModel(const std::string& datafile, const std::string& treefile, int inNcond,
-                 int inNlevel, int infixglob, int infixvar, int incodonmodel) {
-
+    DiffSelModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int infixglob,
+                 int infixvar, int incodonmodel) {
         fixglob = infixglob;
         if (!fixglob) {
             cerr << "error: free hyperparameters for baseline (global profile) not yet "
@@ -159,7 +155,7 @@ class DiffSelModel : public ProbModel {
         MakePattern();
 
         // specifies which condition for which branch
-        branchalloc = new BranchAllocationSystem(*tree,Ncond);
+        branchalloc = new BranchAllocationSystem(*tree, Ncond);
         std::cerr << "-- conditions over branches ok\n";
     }
 
@@ -200,8 +196,8 @@ class DiffSelModel : public ProbModel {
         std::cerr << "-- Tree and data fit together\n";
     }
 
-    void MakePattern()  {
-        condalloc.assign(Ncond,vector<int>(Ncond,0));
+    void MakePattern() {
+        condalloc.assign(Ncond, vector<int>(Ncond, 0));
         for (int l = 0; l < Ncond; l++) {
             condalloc[0][l] = 1;
         }
@@ -216,7 +212,6 @@ class DiffSelModel : public ProbModel {
     }
 
     void Allocate() {
-
         // ----------
         // construction of the model
         // ----------
@@ -224,45 +219,45 @@ class DiffSelModel : public ProbModel {
         // allocating data structures and sampling initial configuration
 
         // branch lengths
-		lambda = 10;
-		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        lambda = 10;
+        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // nucleotide matrix
-		nucrelrate.assign(Nrr,0);
-        Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
-		nucstat.assign(Nnuc,0);
-        Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
-		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
+        nucrelrate.assign(Nrr, 0);
+        Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        nucstat.assign(Nnuc, 0);
+        Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
         // baseline (global) profile
         // uniform Dirichlet distributed
-        vector<double> center(20,1.0/20);
+        vector<double> center(20, 1.0 / 20);
         double concentration = 20.0;
-        baseline = new IIDDirichlet(Nsite,center,concentration);
+        baseline = new IIDDirichlet(Nsite, center, concentration);
 
         // variance parameters (one for each condition, 1..Ncond)
         double shape = 1.0;
         double scale = 1.0;
-        varsel = new IIDGamma(Ncond-1,shape,scale);
-        for (int k=0; k<Ncond-1; k++)   {
+        varsel = new IIDGamma(Ncond - 1, shape, scale);
+        for (int k = 0; k < Ncond - 1; k++) {
             (*varsel)[k] = 1.0;
         }
 
         // differential selection effects
         // normally distributed
-        delta = new BidimIIDMVNormal(Nsite,20,*varsel);
+        delta = new BidimIIDMVNormal(Nsite, 20, *varsel);
 
         // fitnessprofiles...
-        fitnessprofile = new DiffSelFitnessArray(*baseline,*delta,Nlevel);
+        fitnessprofile = new DiffSelFitnessArray(*baseline, *delta, Nlevel);
         // fitnessprofile = new DiffSelFitnessArray(*baseline,*delta,condalloc);
 
         // codon matrices
         // per condition and per site
-        condsubmatrixarray = new AAMutSelCodonMatrixArray(*fitnessprofile,*GetCodonStateSpace(),*nucmatrix);
+        condsubmatrixarray = new AAMutSelCodonMatrixArray(*fitnessprofile, *GetCodonStateSpace(), *nucmatrix);
 
         // sub matrices per branch and per site
-        submatrixarray = new SubMatrixSelector(*condsubmatrixarray,*branchalloc);
+        submatrixarray = new SubMatrixSelector(*condsubmatrixarray, *branchalloc);
         // sub matrices for root, across sites
         rootsubmatrixarray = new RootSubMatrixSelector(*condsubmatrixarray);
 
@@ -270,11 +265,10 @@ class DiffSelModel : public ProbModel {
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
 
         // create suffstat arrays
-        suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
+        suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
     }
 
-    void Unfold(bool sample)   {
-
+    void Unfold(bool sample) {
         // unfold phyloprocess (allocate conditional likelihood vectors, etc)
         std::cerr << "-- unfolding\n";
         phyloprocess->Unfold();
@@ -292,7 +286,7 @@ class DiffSelModel : public ProbModel {
 
     void NoUpdate() {}
 
-    void CorruptMatrices()  {
+    void CorruptMatrices() {
         CorruptNucMatrix();
         condsubmatrixarray->Corrupt();
     }
@@ -318,9 +312,9 @@ class DiffSelModel : public ProbModel {
         condsubmatrixarray->CorruptColumn(i);
     }
 
-    void UpdateSiteCond(int i, int k)   {
-        fitnessprofile->UpdateColumn(i,condalloc[k+1]);
-        condsubmatrixarray->CorruptColumn(i,condalloc[k+1]);
+    void UpdateSiteCond(int i, int k) {
+        fitnessprofile->UpdateColumn(i, condalloc[k + 1]);
+        condsubmatrixarray->CorruptColumn(i, condalloc[k + 1]);
     }
 
     // ---------------
@@ -349,14 +343,12 @@ class DiffSelModel : public ProbModel {
         return total;
     }
 
-	double BranchLengthsHyperLogPrior()	const {
+    double BranchLengthsHyperLogPrior() const {
         // exponential of mean 10
-		return -lambda / 10;
-	}
+        return -lambda / 10;
+    }
 
-	double BranchLengthsLogPrior()	const {
-		return branchlength->GetLogProb();
-	}
+    double BranchLengthsLogPrior() const { return branchlength->GetLogProb(); }
 
     double NucRatesLogPrior() const {
         // uniform on relrates and nucstat
@@ -366,25 +358,15 @@ class DiffSelModel : public ProbModel {
         return total;
     }
 
-    double BaselineLogPrior() const {
-        return Nsite * Random::logGamma((double)Naa);
-    }
+    double BaselineLogPrior() const { return Nsite * Random::logGamma((double)Naa); }
 
-    double DeltaLogPrior() const {
-        return delta->GetLogProb();
-    }
+    double DeltaLogPrior() const { return delta->GetLogProb(); }
 
-    double VarSelLogPrior() const {
-        return varsel->GetLogProb();
-    }
+    double VarSelLogPrior() const { return varsel->GetLogProb(); }
 
-    double GetLogLikelihood() const { 
-        return phyloprocess->GetLogLikelihood();
-    }
+    double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
-    double GetLogProb() const {
-        return GetLogPrior() + GetLogLikelihood();
-    }
+    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
     // ---------------
     // collecting suff stats
@@ -394,41 +376,31 @@ class DiffSelModel : public ProbModel {
     // see SuffStat.hpp
     void CollectPathSuffStat() {
         suffstatarray->Clear();
-        suffstatarray->AddSuffStat(*phyloprocess,*branchalloc);
+        suffstatarray->AddSuffStat(*phyloprocess, *branchalloc);
     }
 
-    void CollectLengthSuffStat()    {
-		lengthpathsuffstatarray->Clear();
+    void CollectLengthSuffStat() {
+        lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
-    double SuffStatLogProb() const   {
-        return suffstatarray->GetLogProb(*condsubmatrixarray);
+    double SuffStatLogProb() const { return suffstatarray->GetLogProb(*condsubmatrixarray); }
+
+    double SiteSuffStatLogProb(int site) const { return suffstatarray->GetLogProb(site, *condsubmatrixarray); }
+
+    double SiteCondSuffStatLogProb(int site, int k) {
+        return suffstatarray->GetLogProb(site, condalloc[k + 1], *condsubmatrixarray);
     }
 
-    double SiteSuffStatLogProb(int site) const   {
-        return suffstatarray->GetLogProb(site,*condsubmatrixarray);
-    }
-
-    double SiteCondSuffStatLogProb(int site,int k)  {
-        return suffstatarray->GetLogProb(site,condalloc[k+1],*condsubmatrixarray);
-    }
-
-	double BranchLengthsHyperSuffStatLogProb()	const {
-		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
-	}
+    double BranchLengthsHyperSuffStatLogProb() const { return hyperlengthsuffstat.GetLogProb(1.0, lambda); }
 
     // ---------------
     // log probs for MH moves
     // ---------------
 
-    double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
-    }
+    double BranchLengthsHyperLogProb() const { return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb(); }
 
-    double NucRatesLogProb() const {
-        return NucRatesLogPrior() + SuffStatLogProb();
-    }
+    double NucRatesLogProb() const { return NucRatesLogPrior() + SuffStatLogProb(); }
 
     // ---------------
     // Moves
@@ -437,12 +409,10 @@ class DiffSelModel : public ProbModel {
     // move cycle schedule
     // does not yet implement any monitoring (success rates, time spent, etc)
     double Move() override {
-
         int nrep0 = 3;
         int nrep = 20;
 
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-
             CollectLengthSuffStat();
 
             ResampleBranchLengths();
@@ -457,7 +427,6 @@ class DiffSelModel : public ProbModel {
                 MoveDelta();
                 if (!fixvar) {
                     MoveVarSel();
-
                 }
             }
             MoveNucRates();
@@ -469,52 +438,43 @@ class DiffSelModel : public ProbModel {
         return 1.0;
     }
 
-    void ResampleSub(double frac)   {
-		phyloprocess->Move(frac);
-    }
+    void ResampleSub(double frac) { phyloprocess->Move(frac); }
 
-	void ResampleBranchLengths()	{
+    void ResampleBranchLengths() {
         CollectLengthSuffStat();
-		branchlength->GibbsResample(*lengthpathsuffstatarray);
-	}
-
-	void MoveBranchLengthsHyperParameter()	{
-
-		hyperlengthsuffstat.Clear();
-		hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda,1.0,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
-        ScalingMove(lambda,0.3,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
-		branchlength->SetScale(lambda);
-	}
-
-	void MoveNucRates()	{
-
-        CorruptMatrices();
-
-        ProfileMove(nucrelrate,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.03,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.01,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-
-        ProfileMove(nucstat,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucstat,0.01,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-
-        CorruptMatrices();
-	}
-
-    void MoveBaseline() {
-        MoveBaseline(0.15, 10, 1);
+        branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
+
+    void MoveBranchLengthsHyperParameter() {
+        hyperlengthsuffstat.Clear();
+        hyperlengthsuffstat.AddSuffStat(*branchlength);
+        ScalingMove(lambda, 1.0, 10, &DiffSelModel::BranchLengthsHyperLogProb, &DiffSelModel::NoUpdate, this);
+        ScalingMove(lambda, 0.3, 10, &DiffSelModel::BranchLengthsHyperLogProb, &DiffSelModel::NoUpdate, this);
+        branchlength->SetScale(lambda);
+    }
+
+    void MoveNucRates() {
+        CorruptMatrices();
+
+        ProfileMove(nucrelrate, 0.1, 1, 10, &DiffSelModel::NucRatesLogProb, &DiffSelModel::CorruptMatrices, this);
+        ProfileMove(nucrelrate, 0.03, 3, 10, &DiffSelModel::NucRatesLogProb, &DiffSelModel::CorruptMatrices, this);
+        ProfileMove(nucrelrate, 0.01, 3, 10, &DiffSelModel::NucRatesLogProb, &DiffSelModel::CorruptMatrices, this);
+
+        ProfileMove(nucstat, 0.1, 1, 10, &DiffSelModel::NucRatesLogProb, &DiffSelModel::CorruptMatrices, this);
+        ProfileMove(nucstat, 0.01, 1, 10, &DiffSelModel::NucRatesLogProb, &DiffSelModel::CorruptMatrices, this);
+
+        CorruptMatrices();
+    }
+
+    void MoveBaseline() { MoveBaseline(0.15, 10, 1); }
 
     double MoveBaseline(double tuning, int n, int nrep) {
-
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa,0);
+        vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
-
             for (int i = 0; i < Nsite; i++) {
-
                 bk = (*baseline)[i];
 
                 double deltalogprob = -baseline->GetLogProb(i) - SiteSuffStatLogProb(i);
@@ -538,9 +498,9 @@ class DiffSelModel : public ProbModel {
         return nacc / ntot;
     }
 
-    void MoveDelta()    {
-        for (int k =0; k < Ncond-1; k++) {
-        // for (int k = 1; k < Ncond; k++) {
+    void MoveDelta() {
+        for (int k = 0; k < Ncond - 1; k++) {
+            // for (int k = 1; k < Ncond; k++) {
             MoveDelta(k, 5, 1, 10);
             MoveDelta(k, 3, 5, 10);
             MoveDelta(k, 1, 10, 10);
@@ -551,21 +511,21 @@ class DiffSelModel : public ProbModel {
     double MoveDelta(int k, double tuning, int n, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa,0);
+        vector<double> bk(Naa, 0);
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                bk = delta->GetVal(k,i);
-                double deltalogprob = -delta->GetLogProb(k,i) - SiteCondSuffStatLogProb(i,k);
-                double loghastings = Random::RealVectorProposeMove((*delta)(k,i), Naa, tuning, n);
+                bk = delta->GetVal(k, i);
+                double deltalogprob = -delta->GetLogProb(k, i) - SiteCondSuffStatLogProb(i, k);
+                double loghastings = Random::RealVectorProposeMove((*delta)(k, i), Naa, tuning, n);
                 deltalogprob += loghastings;
-                UpdateSiteCond(i,k);
-                deltalogprob += delta->GetLogProb(k,i) + SiteCondSuffStatLogProb(i,k);
+                UpdateSiteCond(i, k);
+                deltalogprob += delta->GetLogProb(k, i) + SiteCondSuffStatLogProb(i, k);
                 int accepted = (log(Random::Uniform()) < deltalogprob);
                 if (accepted) {
                     nacc++;
                 } else {
-                    (*delta)(k,i) = bk;
-                    UpdateSiteCond(i,k);
+                    (*delta)(k, i) = bk;
+                    UpdateSiteCond(i, k);
                 }
                 ntot++;
             }
@@ -573,7 +533,7 @@ class DiffSelModel : public ProbModel {
         return nacc / ntot;
     }
 
-    void MoveVarSel()   {
+    void MoveVarSel() {
         MoveVarSel(1.0, 10);
         MoveVarSel(0.3, 10);
     }
@@ -605,9 +565,7 @@ class DiffSelModel : public ProbModel {
     // Accessors
     // ------------------
 
-	CodonStateSpace* GetCodonStateSpace() const {
-		return (CodonStateSpace*) codondata->GetStateSpace();
-	}
+    CodonStateSpace* GetCodonStateSpace() const { return (CodonStateSpace*)codondata->GetStateSpace(); }
 
     int GetNsite() { return Nsite; }
     int GetNcond() { return Ncond; }
@@ -631,7 +589,7 @@ class DiffSelModel : public ProbModel {
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
         os << baseline->GetMeanEntropy() << '\t';
-        for (int k = 0; k < Ncond-1; k++) {
+        for (int k = 0; k < Ncond - 1; k++) {
             os << delta->GetMeanVar(k) << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
