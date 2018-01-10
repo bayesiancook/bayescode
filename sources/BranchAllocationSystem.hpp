@@ -2,6 +2,8 @@
 #ifndef BRANCHALLOC_H
 #define BRANCHALLOC_H
 
+#include "Tree.hpp"
+
 class BranchAllocationSystem {
   public:
     BranchAllocationSystem(const Tree& intree, int inNcond)
