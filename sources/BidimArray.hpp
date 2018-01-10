@@ -3,7 +3,9 @@
 #define BIDIMARRAY_H
 
 #include <vector>
+#include <iostream>
 #include "MPIBuffer.hpp"
+using namespace std;
 
 template <class T>
 class BidimSelector {

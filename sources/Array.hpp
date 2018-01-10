@@ -3,8 +3,9 @@
 #define ARRAY_H
 
 #include <vector>
+#include <iostream>
 #include "MPIBuffer.hpp"
-
+using namespace std;
 /**
  * \brief An interface for an abstract indexed array of constant references over objects of type T
  *
