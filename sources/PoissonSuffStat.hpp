@@ -204,7 +204,7 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
  * Each suff stat might still be summing over subcases (e.g. across all sites for a given branch)
  */
 
-class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
+class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>, public tc::Component {
   public:
     //! constructor parameterized by underlying treee
     PoissonSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<PoissonSuffStat>(intree) {}

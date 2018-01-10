@@ -14,7 +14,7 @@
  * value for the shape and scale parameters.
  */
 
-class GammaSuffStat : public SuffStat {
+class GammaSuffStat : public SuffStat, public tc::Component {
   public:
     GammaSuffStat() {}
     ~GammaSuffStat() {}

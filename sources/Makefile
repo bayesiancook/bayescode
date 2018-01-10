@@ -46,6 +46,7 @@ clean:
 	-rm -f *.o *.d *.d.* *.gcno codonm8/*.o codonm8/*.d *.gcda *.gcov
 	-rm -f $(PROGS)
 	-rm -rf html/ latex/
+	-rm tinycompo.hpp
 
 format:
 	clang-format -i $(ALL_SRCS) *.hpp

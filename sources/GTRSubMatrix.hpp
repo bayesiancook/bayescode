@@ -3,6 +3,7 @@
 
 #include "BiologicalSequences.hpp"  //FIXME only used for Naa (const int)
 #include "SubMatrix.hpp"
+#include "tinycompo.hpp"
 
 /**
  * \brief A general time reversible substitution matrix
@@ -11,7 +12,7 @@
  * (size Nstate)
  */
 
-class GTRSubMatrix : public virtual SubMatrix {
+class GTRSubMatrix : public virtual SubMatrix, public tc::Component {
   public:
     //! constructor parameterized by an array of relative rates (size Nstate*(Nstate-1)/2) and an array of equilibrium
     //! frequencies (size Nstate)

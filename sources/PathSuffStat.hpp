@@ -9,6 +9,7 @@
 #include "SuffStat.hpp"
 // #include "BranchSitePath.hpp"
 #include "PhyloProcess.hpp"
+#include "tinycompo.hpp"
 
 /**
  * \brief A general sufficient statistic for substitution histories, as a function of the substitution rate matrix.

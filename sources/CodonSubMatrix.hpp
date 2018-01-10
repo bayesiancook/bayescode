@@ -3,6 +3,7 @@
 
 #include "CodonStateSpace.hpp"
 #include "SubMatrix.hpp"
+#include "tinycompo.hpp"
 
 const double omegamin = 1e-10;
 
@@ -108,7 +109,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
  * \brief A Muse and Gaut codon substitution process with an omgea = dN/dS parameter
  */
 
-class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix {
+class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix, public tc::Component {
   public:
     MGOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, double inomega,
                           bool innormalise = false)

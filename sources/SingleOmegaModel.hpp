@@ -8,7 +8,7 @@
 #include "ProbModel.hpp"
 #include "ProbModel.hpp"
 #include "Tree.hpp"
-
+#include "component_defs.hpp"
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon model
  *
@@ -60,13 +60,13 @@ class SingleOmegaModel : public ProbModel {
 
     // suff stats for substitution paths
     // summed over all branches and over all sites
-    PathSuffStat pathsuffstat;
+    PathSuffStat pathsuffstat;  // FIXME not component for now because undergoes copies
 
     // path suff stat can be summarized in terms of 4x4 suff stats, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
-    OmegaPathSuffStat omegapathsuffstat;
+    OmegaPathSuffStat omegapathsuffstat;  // FIXME not component for now because undergoes copies
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
     PoissonSuffStatBranchArray* lengthpathsuffstatarray;

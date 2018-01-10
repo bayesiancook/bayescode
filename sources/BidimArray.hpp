@@ -2,8 +2,8 @@
 #ifndef BIDIMARRAY_H
 #define BIDIMARRAY_H
 
-#include <vector>
 #include <iostream>
+#include <vector>
 #include "MPIBuffer.hpp"
 using namespace std;
 

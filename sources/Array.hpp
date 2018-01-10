@@ -2,8 +2,8 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include <vector>
 #include <iostream>
+#include <vector>
 #include "MPIBuffer.hpp"
 using namespace std;
 /**

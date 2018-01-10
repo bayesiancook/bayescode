@@ -25,7 +25,7 @@
  * histories.
  */
 
-class PhyloProcess {
+class PhyloProcess : public tc::Component {
   public:
     friend class PathSuffStat;
     friend class PathSuffStatArray;

@@ -1,9 +1,8 @@
-
 #ifndef DIFFSELFIT_H
 #define DIFFSELFIT_H
 
-#include "BidimArray.hpp"
 #include "Array.hpp"
+#include "BidimArray.hpp"
 
 class DiffSelFitnessArray : public SimpleBidimArray<vector<double> > {
   public:

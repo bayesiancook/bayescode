@@ -5,7 +5,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#define nullptr 0
+#include "tinycompo.hpp"
 
 class Tree;
 class Link;
@@ -24,7 +24,7 @@ class Link;
  * Of note: some work to do here to ensure proper destruction of TaxonSet (smart pointers?)
  */
 
-class TaxonSet {
+class TaxonSet : public tc::Component {
   public:
     //! constructor, based on a vector of taxon names
     TaxonSet(const std::vector<std::string> &names);

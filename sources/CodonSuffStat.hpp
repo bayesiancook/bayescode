@@ -24,7 +24,7 @@
  * adding them over sites / branches and computing the log p(S | M) for any M.
  */
 
-class NucPathSuffStat : public SuffStat {
+class NucPathSuffStat : public SuffStat, public tc::Component {
   public:
     NucPathSuffStat() : rootcount(4, 0), paircount(4, vector<int>(4, 0)), pairbeta(4, vector<double>(4, 0)) {}
 
@@ -225,7 +225,7 @@ class NucPathSuffStat : public SuffStat {
  * PoissonSuffStat.
  */
 
-class OmegaPathSuffStat : public PoissonSuffStat {
+class OmegaPathSuffStat : public PoissonSuffStat /*, public tc::Component*/ {
   public:
     OmegaPathSuffStat() {}
     ~OmegaPathSuffStat() {}

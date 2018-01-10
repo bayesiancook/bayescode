@@ -148,7 +148,7 @@ class IIDGamma : public SimpleArray<double> {
  * the new values should be given to the array (using the SetShape and SetScale methods).
  */
 
-class BranchIIDGamma : public SimpleBranchArray<double> {
+class BranchIIDGamma : public SimpleBranchArray<double>, public tc::Component {
   public:
     BranchIIDGamma(const Tree& intree, double inshape, double inscale)
         : SimpleBranchArray<double>(intree), shape(inshape), scale(inscale) {
