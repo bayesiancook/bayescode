@@ -122,6 +122,12 @@ class SingleOmegaModel : public ProbModel {
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
             .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
             .connect<Use<vector<double>>>("CopyStationary", "nucstat");
+
+        double omegahypermean = 1.0;
+        double omegahyperinvshape = 1.0;
+        double omega = 1.0;
+
+        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega);
     }
 
     //! model allocation
@@ -141,7 +147,7 @@ class SingleOmegaModel : public ProbModel {
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
         omega = 1.0;
-        codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
+        // codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrix);
     }

@@ -69,7 +69,8 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
   private:
     void Create() {
         for (int i = 0; i < GetSize(); i++) {
-            matrixarray[i] = new MGOmegaCodonSubMatrix(codonstatespace, nucmatrix, omegaarray->GetVal(i));
+            matrixarray[i] = new MGOmegaCodonSubMatrix(codonstatespace->GetNstate(), omegaarray->GetVal(i));
+            matrixarray[i]->set("nucmatrix", nucmatrix);
         }
     }
 
@@ -186,11 +187,13 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<A
     void Create() {
         for (int i = 0; i < GetSize(); i++) {
             if (omegaarray) {
-                matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace, nucmatrix, aafitnessarray->GetVal(i),
+                matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace->GetNstate(), aafitnessarray->GetVal(i),
                                                                  omegaarray->GetVal(i));
+                matrixarray[i]->set("nucmatrix", nucmatrix);
             } else {
                 matrixarray[i] =
-                    new AAMutSelOmegaCodonSubMatrix(codonstatespace, nucmatrix, aafitnessarray->GetVal(i), omega);
+                    new AAMutSelOmegaCodonSubMatrix(codonstatespace->GetNstate(), aafitnessarray->GetVal(i), omega);
+                matrixarray[i]->set("nucmatrix", nucmatrix);
             }
         }
     }
