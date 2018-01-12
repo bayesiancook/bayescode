@@ -5,7 +5,7 @@ using namespace std;
 // ---------------------------------------------------------------------------
 //     GTRSubMatrix
 // ---------------------------------------------------------------------------
-void GTRSubMatrix::CopyStationary(const std::vector<double>* instat) {
+void GTRSubMatrix::CopyStationary(std::vector<double>* instat) {
     for (int k = 0; k < Nstate; k++) {
         mStationary[k] = (*instat)[k];
     }

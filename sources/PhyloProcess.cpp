@@ -3,7 +3,7 @@
 #include "PathSuffStat.hpp"
 using namespace std;
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                            const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray,
                            const Selector<SubMatrix>* inrootsubmatrixarray) {
     tree = intree;
@@ -18,7 +18,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     allocrootsubmatrixarray = false;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                            const Selector<double>* insiterate, const SubMatrix* insubmatrix) {
     tree = intree;
     data = indata;
@@ -32,7 +32,7 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     allocrootsubmatrixarray = true;
 }
 
-PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                            const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray) {
     tree = intree;
     data = indata;
@@ -51,13 +51,14 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
 }
 
 PhyloProcess::~PhyloProcess() {
-    Cleanup();
-    if (allocsubmatrixarray) {
-        delete submatrixarray;
-    }
-    if (allocrootsubmatrixarray) {
-        delete rootsubmatrixarray;
-    }
+    // FIXME FIXME FIXME FIXME
+    // Cleanup();
+    // if (allocsubmatrixarray) {
+    //     delete submatrixarray;
+    // }
+    // if (allocrootsubmatrixarray) {
+    //     delete rootsubmatrixarray;
+    // }
 }
 
 void PhyloProcess::SetData(const SequenceAlignment* indata) { data = indata; }

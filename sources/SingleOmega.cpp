@@ -36,6 +36,7 @@ class SingleOmegaChain : public Chain {
         cout << "NEW\n";
         model = new SingleOmegaModel(datafile, treefile);
         dynamic_cast<SingleOmegaModel*>(model)->ComponentModel();
+        cout << "ENDNEW" << endl;
         // GetModel()->Allocate();
         // GetModel()->Unfold();
         // cerr << "-- Reset" << endl;

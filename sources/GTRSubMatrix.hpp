@@ -13,7 +13,7 @@
  */
 
 class GTRSubMatrix : public virtual SubMatrix, public tc::Component {
-    const vector<double>* mRelativeRate;
+    vector<double>* mRelativeRate;
 
   public:
     //! constructor parameterized by an array of relative rates (size Nstate*(Nstate-1)/2) and an array of equilibrium
@@ -31,7 +31,7 @@ class GTRSubMatrix : public virtual SubMatrix, public tc::Component {
 
     //! make a copy of the entries (not of the pointer) of the equilibrium frequency vector; should be done each time this
     //! vector has been modified
-    void CopyStationary(const std::vector<double>* instat);
+    void CopyStationary(std::vector<double>* instat);
 
   protected:
     void ComputeArray(int i) const /*override*/;

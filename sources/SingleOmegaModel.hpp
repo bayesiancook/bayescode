@@ -108,8 +108,6 @@ class SingleOmegaModel : public ProbModel {
     }
 
     void ComponentModel() {
-        class Yolo : public tc::Component {};
-
         Model model;
 
         double lambda = 10;
@@ -126,22 +124,25 @@ class SingleOmegaModel : public ProbModel {
             .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
             .connect<Use<vector<double>>>("CopyStationary", "nucstat");
 
-        // double omegahypermean = 1.0;
-        // double omegahyperinvshape = 1.0;
-        // double omega = 1.0;
+        // // double omegahypermean = 1.0;
+        // // double omegahyperinvshape = 1.0;
+        // // double omega = 1.0;
 
         model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
             .connect<Set>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
-        model.component<PhyloProcess>("phyloprocess", tree, codondata, branchlength, nullptr, codonmatrix);
-        model.component<PhyloProcess>("phyloprocess", tree, codondata)
-            .connect<Set>("siterate", nullptr)
-            .connect<Use<BranchSelector<double>>>("siterate", "branchlength")
-            .connect<Use<SubMatrix>>("codonmatrix", "codonmatrix");
+        model.component<PhyloProcess>("phyloprocess", tree, codondata);
+        // .connect<Set>("siterate", static_cast<const Selector<double>*>(nullptr))
+        // .connect<Use<BranchSelector<double>>>("branchlength", "branchlength")
+        // .connect<Use<SubMatrix>>("submatrix", "nucmatrix");
 
         cout << "DOT TO FILE\n";
         model.dot_to_file();
+
+        cout << "YO\n";
+        Assembly assembly(model);
+        cout << "LO\n";
     }
 
     //! model allocation

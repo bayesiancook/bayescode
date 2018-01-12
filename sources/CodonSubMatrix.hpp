@@ -32,7 +32,7 @@ class CodonSubMatrix : public virtual SubMatrix, public tc::Component {
     int GetDifferingPosition(int codon1, int codon2) const { return statespace->GetDifferingPosition(codon1, codon2); }
 
   protected:
-    const CodonStateSpace *statespace;
+    CodonStateSpace *statespace;
 };
 
 /**
@@ -53,7 +53,7 @@ class NucCodonSubMatrix : public virtual CodonSubMatrix {
     const SubMatrix *GetNucMatrix() const { return NucMatrix; }
 
   protected:
-    void SetNucMatrix(const SubMatrix *inmatrix) {
+    void SetNucMatrix(SubMatrix *inmatrix) {
         NucMatrix = inmatrix;
         if (NucMatrix->GetNstate() != Nnuc) {
             std::cerr << "error in CodonSubMatrix: underyling mutation process "
@@ -62,7 +62,7 @@ class NucCodonSubMatrix : public virtual CodonSubMatrix {
         }
     }
 
-    const SubMatrix *NucMatrix;
+    SubMatrix *NucMatrix;
 };
 
 /**

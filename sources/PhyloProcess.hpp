@@ -42,7 +42,7 @@ class PhyloProcess : public tc::Component {
     //! - a BranchSiteSelector specifying which substitution matrix should be used for each branch site pair
     //! - a site Selector of substitution matrices, specifying which matrix should be used for getting the equilibrium
     //! frequencies at each site, from which to draw the root state
-    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                  const Selector<double>* insiterate, const BranchSiteSelector<SubMatrix>* insubmatrixarray,
                  const Selector<SubMatrix>* inrootsubmatrixarray);
 
@@ -52,18 +52,18 @@ class PhyloProcess : public tc::Component {
     //! The branch/site and site selectors of substitution matrices (submatrixarray and rootsubmatrixarray)
     //! are then internally allocated by PhyloProcess based on this matrix.
     //! If insiterate pointer is null, then rates across sites are all equal to 1.
-    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                  const Selector<double>* insiterate, const SubMatrix* insubmatrix);
 
     // Component-compatible version (separated in two)
     PhyloProcess(const Tree* intree, const SequenceAlignment* indata)
         : tree(intree), data(indata), Nstate(data->GetNstate()), maxtrial(DEFAULTMAXTRIAL) {
+        port("branchlength", &PhyloProcess::branchlength);
         port("siterate", &PhyloProcess::siterate);
-        port("submatrixarray", &PhyloProcess::submatrixarray);
-        port("nucmatrix", &PhyloProcess::set_nucmatrix);
+        port("submatrix", &PhyloProcess::set_submatrix);
     }
 
-    void set_nucmatrix(const SubMatrix* insubmatrix) {
+    void set_submatrix(SubMatrix* insubmatrix) {
         submatrixarray = new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree, GetNsite(), *insubmatrix);
         allocsubmatrixarray = true;
         rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(), *insubmatrix);
@@ -78,7 +78,7 @@ class PhyloProcess : public tc::Component {
     //! is then internally allocated by PhyloProcess based on this matrix based on this array,
     //! while rootmatrixarray is set to insubmatrixarray.
     //! If insiterate pointer is null, then rates across sites are all equal to 1.
-    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
+    PhyloProcess(const Tree* intree, const SequenceAlignment* indata, BranchSelector<double>* inbranchlength,
                  const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray);
 
     ~PhyloProcess();
@@ -259,7 +259,7 @@ class PhyloProcess : public tc::Component {
 
     const Tree* tree;
     const SequenceAlignment* data;
-    const BranchSelector<double>* branchlength;
+    BranchSelector<double>* branchlength;
     const Selector<double>* siterate;
     const BranchSiteSelector<SubMatrix>* submatrixarray;
     const Selector<SubMatrix>* rootsubmatrixarray;

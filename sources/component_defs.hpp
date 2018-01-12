@@ -4,11 +4,9 @@
 #include "tinycompo.hpp"
 
 template <class Type>
-struct Wrapper : tc::Component {
-    Type data;
-
+struct Wrapper : tc::Component, public Type {
     template <class... Args>
-    Wrapper(Args... args) : data(args...) {}
+    Wrapper(Args... args) : Type(args...) {}
 };
 
 #endif
