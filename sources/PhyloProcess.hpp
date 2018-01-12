@@ -55,6 +55,21 @@ class PhyloProcess : public tc::Component {
     PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength,
                  const Selector<double>* insiterate, const SubMatrix* insubmatrix);
 
+    // Component-compatible version (separated in two)
+    PhyloProcess(const Tree* intree, const SequenceAlignment* indata)
+        : tree(intree), data(indata), Nstate(data->GetNstate()), maxtrial(DEFAULTMAXTRIAL) {
+        port("siterate", &PhyloProcess::siterate);
+        port("submatrixarray", &PhyloProcess::submatrixarray);
+        port("nucmatrix", &PhyloProcess::set_nucmatrix);
+    }
+
+    void set_nucmatrix(const SubMatrix* insubmatrix) {
+        submatrixarray = new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree, GetNsite(), *insubmatrix);
+        allocsubmatrixarray = true;
+        rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(), *insubmatrix);
+        allocrootsubmatrixarray = true;
+    }
+
     //! \brief special (short-cut) constructor for branch-homogeneous and site-heterogeneous model
     //!
     //! Compared to the generic constructor, this constructor takes a pointer to a (site) Selector<SubMatrix>*

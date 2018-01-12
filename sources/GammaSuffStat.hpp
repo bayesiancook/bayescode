@@ -140,7 +140,7 @@ class GammaSuffStat : public SuffStat, public tc::Component {
 
 class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
   public:
-    GammaSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
+    GammaSuffStatBranchArray(const Tree* intree) : SimpleBranchArray<GammaSuffStat>(intree) {}
     ~GammaSuffStatBranchArray() {}
 
     //! member-wise addition between the two arrays ((*this) += from)

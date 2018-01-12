@@ -107,12 +107,15 @@ class SingleOmegaModel : public ProbModel {
         Nbranch = tree->GetNbranch();
     }
 
-    void ComponentModel(string datafile, string treefile) {
+    void ComponentModel() {
+        class Yolo : public tc::Component {};
+
         Model model;
 
         double lambda = 10;
-        model.component<BranchIIDGamma>("branchlength", *tree, 1, lambda);
-        model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", *tree);
+        model.component<BranchIIDGamma>("branchlength", tree, 1.0, lambda);
+        model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
+        cout << "FIRST" << endl;
 
         model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
         // Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
@@ -123,22 +126,29 @@ class SingleOmegaModel : public ProbModel {
             .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
             .connect<Use<vector<double>>>("CopyStationary", "nucstat");
 
-        double omegahypermean = 1.0;
-        double omegahyperinvshape = 1.0;
-        double omega = 1.0;
+        // double omegahypermean = 1.0;
+        // double omegahyperinvshape = 1.0;
+        // double omega = 1.0;
 
         model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
             .connect<Set>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
         model.component<PhyloProcess>("phyloprocess", tree, codondata, branchlength, nullptr, codonmatrix);
+        model.component<PhyloProcess>("phyloprocess", tree, codondata)
+            .connect<Set>("siterate", nullptr)
+            .connect<Use<BranchSelector<double>>>("siterate", "branchlength")
+            .connect<Use<SubMatrix>>("codonmatrix", "codonmatrix");
+
+        cout << "DOT TO FILE\n";
+        model.dot_to_file();
     }
 
     //! model allocation
     void Allocate() {
         lambda = 10;
-        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
-        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        // branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
+        // lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         nucrelrate.assign(Nrr, 0);
         Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));

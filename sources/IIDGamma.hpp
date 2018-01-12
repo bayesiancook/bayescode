@@ -1,4 +1,3 @@
-
 #ifndef IIDGAMMA_H
 #define IIDGAMMA_H
 
@@ -150,7 +149,7 @@ class IIDGamma : public SimpleArray<double> {
 
 class BranchIIDGamma : public SimpleBranchArray<double>, public tc::Component {
   public:
-    BranchIIDGamma(const Tree& intree, double inshape, double inscale)
+    BranchIIDGamma(const Tree* intree, double inshape, double inscale)
         : SimpleBranchArray<double>(intree), shape(inshape), scale(inscale) {
         Sample();
     }
@@ -245,7 +244,7 @@ class BranchIIDGamma : public SimpleBranchArray<double>, public tc::Component {
  */
 class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
-    GammaWhiteNoise(const Tree& intree, const BranchSelector<double>& inblmean, double inshape)
+    GammaWhiteNoise(const Tree* intree, const BranchSelector<double>& inblmean, double inshape)
         : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape) {
         Sample();
     }
@@ -313,7 +312,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means over branches and the shape parameter
-    GammaWhiteNoiseArray(int inNgene, const Tree& intree, const BranchSelector<double>& inblmean, double inshape)
+    GammaWhiteNoiseArray(int inNgene, const Tree* intree, const BranchSelector<double>& inblmean, double inshape)
         : Ngene(inNgene), tree(intree), blmean(inblmean), shape(inshape), blarray(Ngene, (GammaWhiteNoise*)0) {
         for (int gene = 0; gene < Ngene; gene++) {
             blarray[gene] = new GammaWhiteNoise(tree, blmean, shape);
@@ -395,7 +394,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
 
   private:
     int Ngene;
-    const Tree& tree;
+    const Tree* tree;
     const BranchSelector<double>& blmean;
     double shape;
     vector<GammaWhiteNoise*> blarray;

@@ -149,18 +149,18 @@ template <class T>
 class SimpleBranchArray : public BranchArray<T> {
   public:
     //! Constructor (with only the tree given as argument)
-    SimpleBranchArray(const Tree& intree) : tree(intree), array(intree.GetNbranch()) {}
+    SimpleBranchArray(const Tree* intree) : tree(intree), array(intree->GetNbranch()) {}
 
     //! Constructor with tree and initializer value
-    SimpleBranchArray(const Tree& intree, const T& initval) : tree(intree), array(intree.GetNbranch(), initval) {}
+    SimpleBranchArray(const Tree* intree, const T& initval) : tree(intree), array(intree->GetNbranch(), initval) {}
     virtual ~SimpleBranchArray() {}
 
-    const Tree& GetTree() const /*override*/ { return tree; }
+    const Tree& GetTree() const /*override*/ { return *tree; }
     T& operator[](int index) /*override*/ { return array[index]; }
     const T& GetVal(int index) const /*override*/ { return array[index]; }
 
   private:
-    const Tree& tree;
+    const Tree* tree;
     vector<T> array;
 };
 

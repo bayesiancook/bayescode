@@ -207,7 +207,7 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
 class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat>, public tc::Component {
   public:
     //! constructor parameterized by underlying treee
-    PoissonSuffStatBranchArray(const Tree& intree) : SimpleBranchArray<PoissonSuffStat>(intree) {}
+    PoissonSuffStatBranchArray(const Tree* intree) : SimpleBranchArray<PoissonSuffStat>(intree) {}
     ~PoissonSuffStatBranchArray() {}
 
     //! set all suff stats to 0
