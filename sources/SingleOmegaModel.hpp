@@ -127,7 +127,11 @@ class SingleOmegaModel : public ProbModel {
         double omegahyperinvshape = 1.0;
         double omega = 1.0;
 
-        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega);
+        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
+            .connect<Set>("statespace", GetCodonStateSpace())
+            .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
+
+        model.component<PhyloProcess>("phyloprocess", tree, codondata, branchlength, nullptr, codonmatrix);
     }
 
     //! model allocation

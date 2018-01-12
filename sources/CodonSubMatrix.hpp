@@ -18,8 +18,7 @@ const double omegamin = 1e-10;
 class CodonSubMatrix : public virtual SubMatrix, public tc::Component {
   public:
     //! constructor parameterized by codon state space (itself specifying the genetic code)
-    CodonSubMatrix(int inNstate, bool innormalise)
-        : SubMatrix(inNstate, innormalise) {
+    CodonSubMatrix(int inNstate, bool innormalise) : SubMatrix(inNstate, innormalise) {
         port("statespace", &CodonSubMatrix::statespace);
     }
 
@@ -113,8 +112,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 
 class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix {
   public:
-    MGOmegaCodonSubMatrix(int inNstate, double inomega,
-                          bool innormalise = false)
+    MGOmegaCodonSubMatrix(int inNstate, double inomega, bool innormalise = false)
         : SubMatrix(inNstate, innormalise),
           CodonSubMatrix(inNstate, innormalise),
           MGCodonSubMatrix(inNstate, innormalise),

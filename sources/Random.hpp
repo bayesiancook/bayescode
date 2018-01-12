@@ -15,9 +15,6 @@ using namespace std;
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
 
-// c++11
-#define nullptr 0
-
 const double Pi = 3.1415926535897932384626;
 
 class Random {
