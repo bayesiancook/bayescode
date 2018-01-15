@@ -3,10 +3,10 @@
 
 #include "BranchSitePath.hpp"
 
-#include "SuffStat.hpp"
-#include "PoissonSuffStat.hpp"
 #include "PathSuffStat.hpp"
+#include "PoissonSuffStat.hpp"
 #include "SubMatrix.hpp"
+#include "SuffStat.hpp"
 
 using namespace std;
 
@@ -20,14 +20,13 @@ BranchSitePath::BranchSitePath() {
     nsub = 0;
 }
 
-BranchSitePath::BranchSitePath(int state)	{
+BranchSitePath::BranchSitePath(int state) {
     init = last = new Plink;
     // bkinit = bklast = new Plink;
     nsub = 0;
     init->SetState(state);
     init->SetRelativeTime(0);
 }
-   
 
 BranchSitePath::~BranchSitePath() {
     Reset(0);
@@ -36,9 +35,9 @@ BranchSitePath::~BranchSitePath() {
 }
 
 void BranchSitePath::Reset(int state) {
-    Plink *link = last;
+    Plink* link = last;
     while (link != init) {
-        Plink *prev = link->Prev();
+        Plink* prev = link->Prev();
         delete link;
         link = prev;
     }
@@ -106,27 +105,27 @@ string BranchSitePath::ToString(bool redundant) {
 */
 
 void BranchSitePath::AddPathSuffStat(PathSuffStat& suffstat, double factor) const {
-	const Plink* link = Init();
-	while (link)	{
-		int state = link->GetState();
-		suffstat.AddWaitingTime(state,GetRelativeTime(link) * factor);
-		if (link != last)	{
-			suffstat.IncrementPairCount(state,link->Next()->GetState());
-		}
-		link = link->Next();
-	}
+    const Plink* link = Init();
+    while (link) {
+        int state = link->GetState();
+        suffstat.AddWaitingTime(state, GetRelativeTime(link) * factor);
+        if (link != last) {
+            suffstat.IncrementPairCount(state, link->Next()->GetState());
+        }
+        link = link->Next();
+    }
 }
 
 void BranchSitePath::AddLengthSuffStat(PoissonSuffStat& suffstat, double factor, const SubMatrix& mat) const {
-	const Plink* link = Init();
-	while (link)	{
-		int state = link->GetState();
-		suffstat.AddBeta(-GetRelativeTime(link) * factor * mat(state,state));
-		if (link != last)	{
-			suffstat.IncrementCount();
-		}
-		link = link->Next();
-	}
+    const Plink* link = Init();
+    while (link) {
+        int state = link->GetState();
+        suffstat.AddBeta(-GetRelativeTime(link) * factor * mat(state, state));
+        if (link != last) {
+            suffstat.IncrementCount();
+        }
+        link = link->Next();
+    }
 }
 
 /*

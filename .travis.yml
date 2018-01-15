@@ -1,0 +1,53 @@
+language: cpp
+
+sudo: false
+
+matrix:
+  include:
+
+    - os: osx
+      compiler: clang
+      env:
+        - COMPILER=clang++
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+      env:
+        - COMPILER=g++-5
+      before_script:
+        - export CXX=$COMPILER
+        # - make build-coverage
+      after_success:
+        # - make mvcov
+        # - bash <(curl -s https://codecov.io/bash)
+
+    - os: linux
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.6
+          packages:
+            - clang-3.6
+            - g++-5
+      env:
+        - COMPILER=clang++-3.6
+
+before_install:
+  - export PATH=$HOME/.local/bin:$PATH
+
+before_script:
+  - export CXX=$COMPILER
+  - $CXX -v
+
+script:
+  - cd sources
+  - make
+  - make test

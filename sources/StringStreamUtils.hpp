@@ -88,7 +88,7 @@ inline void GoPastNextLine(std::istream &is, const std::string inLine) {
     } while (EquivalentStrings(theLine, inLine) == 0);
 }
 
-// c++11 
+// c++11
 /*
 inline std::string StringReplace(char c, std::string by, std::string s) {
     std::string tmp;
@@ -103,17 +103,16 @@ inline std::string StringReplace(char c, std::string by, std::string s) {
 }
 */
 
-inline std::string StringReplace(char c, std::string by, std::string s)	{
-	std::string tmp;
-	for (unsigned int i=0; i<s.length(); i++)	{
-		if (s[i] == c)	{
-			tmp += by;
-		}
-		else	{
-			tmp += s[i];
-		}
-	}
-	return tmp;
+inline std::string StringReplace(char c, std::string by, std::string s) {
+    std::string tmp;
+    for (unsigned int i = 0; i < s.length(); i++) {
+        if (s[i] == c) {
+            tmp += by;
+        } else {
+            tmp += s[i];
+        }
+    }
+    return tmp;
 }
 
 inline int EmptyLine(std::string s) {
@@ -137,15 +136,14 @@ inline std::string Filter(std::string input, char c) {
 }
 */
 
-inline std::string Filter(std::string input, char c)	{
-
-	std::string temp = "";
-	for (int unsigned i=0; i<input.length(); i++)	{
-		if (input[i] != c)	{
-			temp += input[i];
-		}
-	}
-	return temp;
+inline std::string Filter(std::string input, char c) {
+    std::string temp = "";
+    for (int unsigned i = 0; i < input.length(); i++) {
+        if (input[i] != c) {
+            temp += input[i];
+        }
+    }
+    return temp;
 }
 
 inline int IsInt(std::string s) {

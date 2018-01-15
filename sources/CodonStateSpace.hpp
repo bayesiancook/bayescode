@@ -15,12 +15,12 @@
  * If a method takes or returns codons including stops, then, this is made explicit in the method's name
  */
 
-
 class CodonStateSpace : public StateSpace {
   public:
     static const int Npos = 3;
 
-    //! constructor: should always specify the genetic code (en enum type: Universal, MtMam or MtInv, see BiologicalSequences.h)
+    //! constructor: should always specify the genetic code (en enum type: Universal, MtMam or MtInv, see
+    //! BiologicalSequences.h)
     CodonStateSpace(GeneticCodeType type);
     ~CodonStateSpace() /*override*/;
 
@@ -51,7 +51,8 @@ class CodonStateSpace : public StateSpace {
     //! codons should not be stop codons;
     //! returns -1 if codons are identical;
     //! returns 3 if codons differ at more than one position;
-    //! otherwise, returns the position at which codons differ (i.e. returns 0,1 or 2 if the codons differ at position 1,2 or 3).
+    //! otherwise, returns the position at which codons differ (i.e. returns 0,1 or 2 if the codons differ at position 1,2 or
+    //! 3).
     int GetDifferingPosition(int i, int j) const;
 
     //! return the integer encoding for the nucleotide at requested position pos=0,1, or 2
@@ -82,25 +83,24 @@ class CodonStateSpace : public StateSpace {
     bool CheckStop(int pos1, int pos2, int pos3) const;
 
     //! computes the sum of nuc stats over stop codons (S) and returns 1-S
-    double GetNormStat(const EVector& nucstat) const {
+    double GetNormStat(const EVector &nucstat) const {
         double stopstat = 0;
-        for (int i=0; i<Nstop; i++) {
+        for (int i = 0; i < Nstop; i++) {
             stopstat += nucstat[StopPos1[i]] * nucstat[StopPos2[i]] * nucstat[StopPos3[i]];
         }
         return 1.0 - stopstat;
     }
 
     //! computes the sum of nuc stats over stop codons (S) and returns 1-S
-    double GetNormStat(const double* nucstat) const {
+    double GetNormStat(const double *nucstat) const {
         double stopstat = 0;
-        for (int i=0; i<Nstop; i++) {
+        for (int i = 0; i < Nstop; i++) {
             stopstat += nucstat[StopPos1[i]] * nucstat[StopPos2[i]] * nucstat[StopPos3[i]];
         }
         return 1.0 - stopstat;
     }
 
   private:
-
     // number of stop codons under this genetic code (typically 3 for the Universal code)
     int GetNstop() const { return Nstop; }
 
@@ -109,7 +109,6 @@ class CodonStateSpace : public StateSpace {
     const int *GetStopPos2() const { return StopPos2; }
 
     const int *GetStopPos3() const { return StopPos3; }
-
 
     GeneticCodeType code;
     const DNAStateSpace *nucstatespace;

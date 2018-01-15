@@ -1,0 +1,13 @@
+codecov:
+  branch: vlanore-dev
+
+coverage:
+  range: 50..75
+  status:
+    patch: false
+    project:
+      default:
+        threshold: 5
+
+ignore:
+  - "utils"

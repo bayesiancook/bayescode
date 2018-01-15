@@ -5,8 +5,7 @@
 #include "Random.hpp"
 using namespace std;
 
-CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool force_stops,
-                                               GeneticCodeType type) {
+CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool force_stops, GeneticCodeType type) {
     try {
         DNAsource = from;
 
@@ -24,16 +23,14 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
 
         // make my own arrays
         // make translation
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
         for (int i = 0; i < Ntaxa; i++) {
             for (int j = 0; j < Nsite; j++) {
                 try {
                     Data[i][j] = GetCodonStateSpace()->GetCodonFromDNA(
-                        DNAsource->GetState(i, 3 * j), DNAsource->GetState(i, 3 * j + 1),
-                        DNAsource->GetState(i, 3 * j + 2));
+                        DNAsource->GetState(i, 3 * j), DNAsource->GetState(i, 3 * j + 1), DNAsource->GetState(i, 3 * j + 2));
                     if (Data[i][j] == -1) {
-                        if ((DNAsource->GetState(i, 3 * j) != -1) &&
-                            (DNAsource->GetState(i, 3 * j + 1) != -1) &&
+                        if ((DNAsource->GetState(i, 3 * j) != -1) && (DNAsource->GetState(i, 3 * j + 1) != -1) &&
                             (DNAsource->GetState(i, 3 * j + 2) != -1)) {
                             // cerr << "in CodonSequenceAlignment: taxon " <<
                             // taxset->GetTaxon(i) <<
@@ -120,4 +117,3 @@ void CodonSequenceAlignment::ToStream(ostream &os, int pos) {
     }
     os << '\n';
 }
-

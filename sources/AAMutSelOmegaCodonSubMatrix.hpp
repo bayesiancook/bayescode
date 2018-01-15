@@ -10,7 +10,8 @@ using namespace std;
 /**
  * \brief A mutation-selection codon substitution process.
  *
- * This codon substitution process describes the evolution of a coding position, under a constant fitness landscape over the 20 amino-acids.
+ * This codon substitution process describes the evolution of a coding position, under a constant fitness landscape over the
+ * 20 amino-acids.
  * The model is parameterized by a nucleotide matrix, specifying the mutation process,
  * and a vector of 20 scaled fitness parameters (summing to 1), for the 20 amino-acids.
  * The process also takes a real parameter, omega, which acts as a multiplier in front of all non-synonymous substitutions.
@@ -20,26 +21,24 @@ using namespace std;
 
 class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public virtual OmegaCodonSubMatrix {
   public:
-
-    //! constructor, parameterized by a codon state space (genetic code), a nucleotide mutation matrix, a 20-vector of amino-acid fitnesss, and a positive real parameter omega (=1 in the standard model).
-    AAMutSelOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, const vector<double>& inaa, double inomega,
-                          bool innormalise = false)
-        : SubMatrix(instatespace->GetNstate(), innormalise),
-          CodonSubMatrix(instatespace, innormalise),
-          NucCodonSubMatrix(instatespace, inNucMatrix, innormalise),
-          OmegaCodonSubMatrix(instatespace,inomega,innormalise),
+    //! constructor, parameterized by a codon state space (genetic code), a nucleotide mutation matrix, a 20-vector of
+    //! amino-acid fitnesss, and a positive real parameter omega (=1 in the standard model).
+    AAMutSelOmegaCodonSubMatrix(int inNstate, const vector<double>& inaa, double inomega, bool innormalise = false)
+        : SubMatrix(inNstate, innormalise),
+          CodonSubMatrix(inNstate, innormalise),
+          NucCodonSubMatrix(inNstate, innormalise),
+          OmegaCodonSubMatrix(inNstate, inomega, innormalise),
           aa(inaa) {}
 
     //! const access (by reference) to amino-acid fitness vector
-    const vector<double>& GetAAFitnessProfile() const {return aa;}
+    const vector<double>& GetAAFitnessProfile() const { return aa; }
 
     //! \brief access by copy to fitness of a given amino-acid
     //!
     //! Note: to avoid numerical errors, this function returns aa[a] + 1e-8.
-    double GetFitness(int a) const {return aa[a] + 1e-8;}
+    double GetFitness(int a) const { return aa[a] + 1e-8; }
 
   protected:
-
     void ComputeArray(int i) const /*override*/;
     void ComputeStationary() const /*override*/;
 
@@ -49,5 +48,3 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public vir
 };
 
 #endif
-
-

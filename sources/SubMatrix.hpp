@@ -15,7 +15,7 @@
  *
  * SubMatrix represents the generator a Nstate*Nstate Markovian substitution process.
  * It implements most of the standard methods that are necessary for likelihood calculation
- * and stochastic character mapping along phylogenies (diagonalisation, exponentiation, 
+ * and stochastic character mapping along phylogenies (diagonalisation, exponentiation,
  * drawing a waiting time until next event, choosing next event conditional on current event, etc).
  * Specific substitution processes can be implemented by deriving them from this abstact class
  * (see for instance GTRSubMatrix or MGOmegaCodonSubMatrix).
@@ -25,10 +25,9 @@
  */
 
 class SubMatrix {
-
   public:
-
-    //! \brief base constructor: should always give the dimension (Nstate) of the matrix and whether we want it to be normalized
+    //! \brief base constructor: should always give the dimension (Nstate) of the matrix and whether we want it to be
+    //! normalized
     SubMatrix(int inNstate, bool innormalise = false);
     virtual ~SubMatrix();
 
@@ -69,11 +68,12 @@ class SubMatrix {
 
     //! \brief recalculate all rates and dependent variables
     //!
-    //! access to rates, equilibrium frequencies or exponentiation/diagonalisation variables (see methods GetRow, GetStationary, etc)
+    //! access to rates, equilibrium frequencies or exponentiation/diagonalisation variables (see methods GetRow,
+    //! GetStationary, etc)
     //! is first checked for correct update of all rates and dependent variables, as follows:
-    //! if CorruptMatrix has been called before the last access, then, corrupt flags are active, 
+    //! if CorruptMatrix has been called before the last access, then, corrupt flags are active,
     //! und Update functions are called automatically before giving access.
-    //! Note that update can in practice be partial (only the rows that are required are recalculated). 
+    //! Note that update can in practice be partial (only the rows that are required are recalculated).
     //! This is implemented by way of an array of update flags.
     void UpdateMatrix() const;
 
@@ -85,28 +85,29 @@ class SubMatrix {
     //! propagate a conditional likelihood vector in the root-to-tip direction (pruning algorithm)
     void ForwardPropagate(const double *down, double *up, double length) const;
 
-    //! get vector of finite time transition probabilities from given state to all possible states down, along branch of efflength=length*rate
-	void GetFiniteTimeTransitionProb(int state, double* down, double efflength) const;
+    //! get vector of finite time transition probabilities from given state to all possible states down, along branch of
+    //! efflength=length*rate
+    void GetFiniteTimeTransitionProb(int state, double *down, double efflength) const;
 
     //! return the transition probability between stateup and statedown along branch of efflength = length*rate
-	double 			GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength) const;
-	//! draw the uniformized number of transitions along the branch, conditional on begin and end states
-	int 			DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength) const;
-    //! draw the state of the next event, given current state and given that total number of events until reaching statedown is n
-	int 			DrawUniformizedTransition(int state, int statedown, int n) const;
+    double GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength) const;
+    //! draw the uniformized number of transitions along the branch, conditional on begin and end states
+    int DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength) const;
+    //! draw the state of the next event, given current state and given that total number of events until reaching statedown
+    //! is n
+    int DrawUniformizedTransition(int state, int statedown, int n) const;
 
     //! draw state of next event given current state
-	int 			DrawOneStep(int state) const;
+    int DrawOneStep(int state) const;
     //! draw waiting time until next event, given current state
-	double			DrawWaitingTime(int state) const;
+    double DrawWaitingTime(int state) const;
     //! draw state from equilibrium frequencies
-	int 			DrawFromStationary() const;
+    int DrawFromStationary() const;
 
   protected:
-
     static const int UniSubNmax = 500;
-	static int		nunisubcount;
-	static int		GetUniSubCount() {return nunisubcount;}
+    static int nunisubcount;
+    static int GetUniSubCount() { return nunisubcount; }
 
     static int nuni;
     static int nunimax;
@@ -158,7 +159,7 @@ class SubMatrix {
 
     // Q : the infinitesimal generator matrix
     mutable double **ptrQ;
-    mutable EMatrix Q;            // Q : the infinitesimal generator matrix
+    mutable EMatrix Q;  // Q : the infinitesimal generator matrix
 
     // the stationary probabilities of the matrix
     mutable double *ptrStationary;
@@ -172,7 +173,6 @@ class SubMatrix {
     mutable double **aux;
 
   protected:
-
     mutable double **ptru;
     mutable double **ptrinvu;
     mutable double *ptrv;
@@ -214,7 +214,7 @@ inline const double *SubMatrix::GetRow(int i) const {
 */
 
 inline const EVector &SubMatrix::GetStationary() const {
-// inline const double *SubMatrix::GetStationary() const {
+    // inline const double *SubMatrix::GetStationary() const {
     if (!statflag) {
         UpdateStationary();
     }
@@ -263,7 +263,7 @@ inline void SubMatrix::UpdateRow(int state) const {
 }
 
 inline void SubMatrix::BackwardPropagate(const double *up, double *down, double length) const {
-    if (! diagflag)  {
+    if (!diagflag) {
         Diagonalise();
     }
 
@@ -276,7 +276,7 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
     }
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            aux[i] += invu(i,j) * up[j];
+            aux[i] += invu(i, j) * up[j];
             // aux[i] += invu[i][j] * up[j];
         }
     }
@@ -291,7 +291,7 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            down[i] += u(i,j) * aux[j];
+            down[i] += u(i, j) * aux[j];
             // down[i] += u[i][j] * aux[j];
         }
     }
@@ -342,8 +342,7 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
 }
 
 inline void SubMatrix::ForwardPropagate(const double *down, double *up, double length) const {
-
-    if (! diagflag)  {
+    if (!diagflag) {
         Diagonalise();
     }
 
@@ -355,7 +354,7 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            aux[i] += down[j] * u(j,i);
+            aux[i] += down[j] * u(j, i);
             // aux[i] += down[j] * u[j][i];
         }
     }
@@ -370,7 +369,7 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            up[i] += aux[j] * invu(j,i);
+            up[i] += aux[j] * invu(j, i);
             // up[i] += aux[j] * invu[j][i];
         }
     }
@@ -378,149 +377,141 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
     delete[] aux;
 }
 
-inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength)	const {
-
-    if (! diagflag) {
+inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown, double efflength) const {
+    if (!diagflag) {
         Diagonalise();
     }
 
-	double tot = 0;
-	for (int i=0; i<GetNstate(); i++)	{
-		tot += u(stateup,i) * exp(efflength * v[i]) * invu(i,statedown);
-		// tot += invu[stateup][i] * exp(efflength * v[i]) * invu[i][statedown];
-	}
-	return tot;
+    double tot = 0;
+    for (int i = 0; i < GetNstate(); i++) {
+        tot += u(stateup, i) * exp(efflength * v[i]) * invu(i, statedown);
+        // tot += invu[stateup][i] * exp(efflength * v[i]) * invu[i][statedown];
+    }
+    return tot;
 }
 
-inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double* p, double efflength)	const {
-
-	double* p1 = new double[GetNstate()];
-	for (int k=0; k<GetNstate(); k++)	{
-		p1[k] = 0;
-	}
-	p1[state] = 1;
-	ForwardPropagate(p1,p,efflength);
-	double tot = 0;
-	for (int k=0; k<GetNstate(); k++)	{
-		tot += p[k];
-	}
-	delete[] p1;
-	if (fabs(1 - tot) > 1e-5)	{
-		std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot) << '\n';
-		std::cerr << "eff length : " << efflength << '\n';
+inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double *p, double efflength) const {
+    double *p1 = new double[GetNstate()];
+    for (int k = 0; k < GetNstate(); k++) {
+        p1[k] = 0;
+    }
+    p1[state] = 1;
+    ForwardPropagate(p1, p, efflength);
+    double tot = 0;
+    for (int k = 0; k < GetNstate(); k++) {
+        tot += p[k];
+    }
+    delete[] p1;
+    if (fabs(1 - tot) > 1e-5) {
+        std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot) << '\n';
+        std::cerr << "eff length : " << efflength << '\n';
         std::cerr << "diag error: " << CheckDiag() << '\n';
-		// ToStream(std::cerr);
-		exit(1);
-	}
+        // ToStream(std::cerr);
+        exit(1);
+    }
 }
 
-inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n)	const {
+inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n) const {
+    double *p = new double[GetNstate()];
+    double tot = 0;
+    for (int l = 0; l < GetNstate(); l++) {
+        tot += Power(1, state, l) * Power(n, l, statedown);
+        p[l] = tot;
+    }
 
-	double* p = new double[GetNstate()];
-	double tot = 0;
-	for (int l=0; l<GetNstate(); l++)	{
-		tot += Power(1,state,l) * Power(n,l,statedown);
-		p[l] = tot;
-	}
-
-	double s = tot * Random::Uniform();
-	int k = 0;
-	while ((k<GetNstate()) && (s > p[k]))	{
-		k++;
-	}
-	delete[] p;
-	if (k == GetNstate())	{
-		std::cerr << "error in DrawUniformizedTransition: overflow\n";
-		throw;
-	}
-	return k;
+    double s = tot * Random::Uniform();
+    int k = 0;
+    while ((k < GetNstate()) && (s > p[k])) {
+        k++;
+    }
+    delete[] p;
+    if (k == GetNstate()) {
+        std::cerr << "error in DrawUniformizedTransition: overflow\n";
+        throw;
+    }
+    return k;
 }
 
-inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength)	const {
+inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedown, double efflength) const {
+    double mu = GetUniformizationMu();
+    double fact = exp(-efflength * mu);
+    int m = 0;
+    double total = (stateup == statedown) * fact;
+    double Z = GetFiniteTimeTransitionProb(stateup, statedown, efflength);
+    double q = Random::Uniform() * Z;
 
-	double mu = GetUniformizationMu();
-	double fact = exp(- efflength * mu);
-	int m = 0;
-	double total = (stateup==statedown) * fact;
-	double Z = GetFiniteTimeTransitionProb(stateup,statedown,efflength);
-	double q = Random::Uniform() * Z;
-	
-	while ((m<UniSubNmax) && (total < q)) 	{
-		m++;
-		fact *= mu * efflength / m;
-		total += Power(m,stateup,statedown) * fact;
-		if ((total-Z)>1e-8)	{
-			std::cerr << "error in DrawUniformizedSubstitutionNumber: normalising constant\n";
-			std::cerr << total << '\t' << Z << '\n';
-			std::cerr << mu << '\n';
-			std::cerr << m << '\n';
-			std::cerr << stateup << '\t' << statedown << '\n';
+    while ((m < UniSubNmax) && (total < q)) {
+        m++;
+        fact *= mu * efflength / m;
+        total += Power(m, stateup, statedown) * fact;
+        if ((total - Z) > 1e-8) {
+            std::cerr << "error in DrawUniformizedSubstitutionNumber: normalising constant\n";
+            std::cerr << total << '\t' << Z << '\n';
+            std::cerr << mu << '\n';
+            std::cerr << m << '\n';
+            std::cerr << stateup << '\t' << statedown << '\n';
 
-			CheckReversibility();
+            CheckReversibility();
             std::cerr << "diag error: " << CheckDiag() << '\n';
-			// ToStream(std::cerr);
-			throw;
-		}
-	}
-	if (m == UniSubNmax)	{
-		nunisubcount++;
-	}
-	return m;
+            // ToStream(std::cerr);
+            throw;
+        }
+    }
+    if (m == UniSubNmax) {
+        nunisubcount++;
+    }
+    return m;
 }
 
-inline double SubMatrix::DrawWaitingTime(int state)	const {
-
+inline double SubMatrix::DrawWaitingTime(int state) const {
     EVector row = GetRow(state);
-	// const double* row = GetRow(state);
-	double t = Random::sExpo() / (-row[state]);
-	return t;
+    // const double* row = GetRow(state);
+    double t = Random::sExpo() / (-row[state]);
+    return t;
 }
 
-inline int SubMatrix::DrawOneStep(int state)	const {
-
+inline int SubMatrix::DrawOneStep(int state) const {
     EVector row = GetRow(state);
-	double p = -row[state] * Random::Uniform();
-	int k = -1;
-	double tot = 0;
-	do	{
-		k++;
-		if (k != state)	{
-			tot += row[k];
-		}
-	}
-	while ((k<GetNstate()) && (tot < p));
-	if (k == GetNstate())	{
-		std::cerr << "error in DrawOneStep\n";
-		std::cerr << GetNstate() << '\n';
-		for (int k=0; k<GetNstate(); k++)	{
-			std::cerr << row[k] << '\n';
-		}
-		exit(1);
-	}
-	return k;
+    double p = -row[state] * Random::Uniform();
+    int k = -1;
+    double tot = 0;
+    do {
+        k++;
+        if (k != state) {
+            tot += row[k];
+        }
+    } while ((k < GetNstate()) && (tot < p));
+    if (k == GetNstate()) {
+        std::cerr << "error in DrawOneStep\n";
+        std::cerr << GetNstate() << '\n';
+        for (int k = 0; k < GetNstate(); k++) {
+            std::cerr << row[k] << '\n';
+        }
+        exit(1);
+    }
+    return k;
 }
 
-inline int SubMatrix::DrawFromStationary()	const {
-
-	double p = Random::Uniform();
-	int k = 0;
-	double tot = mStationary[k];
-	while ((k<GetNstate()) && (tot < p))	{
-		k++;
-		if (k == GetNstate())	{
-			std::cerr << "error in DrawFromStationary\n";
-			double tot = 0;
-			for (int l=0; l<GetNstate(); l++)	{
-				std::cerr << mStationary[l] << '\t';
-				tot += mStationary[l];
-			}
-			std::cerr << '\n';
-			std::cerr << "total : " << tot << '\t' << 1-tot << '\n';
-			exit(1);
-		}
-		tot += mStationary[k];
-	}
-	return k;
+inline int SubMatrix::DrawFromStationary() const {
+    double p = Random::Uniform();
+    int k = 0;
+    double tot = mStationary[k];
+    while ((k < GetNstate()) && (tot < p)) {
+        k++;
+        if (k == GetNstate()) {
+            std::cerr << "error in DrawFromStationary\n";
+            double tot = 0;
+            for (int l = 0; l < GetNstate(); l++) {
+                std::cerr << mStationary[l] << '\t';
+                tot += mStationary[l];
+            }
+            std::cerr << '\n';
+            std::cerr << "total : " << tot << '\t' << 1 - tot << '\n';
+            exit(1);
+        }
+        tot += mStationary[k];
+    }
+    return k;
 }
 
 #endif  // SUBMATRIX_H

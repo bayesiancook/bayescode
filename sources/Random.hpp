@@ -15,9 +15,6 @@ using namespace std;
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
 
-// c++11
-#define nullptr 0 
-
 const double Pi = 3.1415926535897932384626;
 
 class Random {
@@ -40,10 +37,10 @@ class Random {
     static double sGammanew(double);
 
     static int Choose(int);
-    static int FiniteDiscrete(int n, const double *probarray);
-    static void DrawFromUrn(int *, int n, int N);
+    static int FiniteDiscrete(int n, const double* probarray);
+    static void DrawFromUrn(int*, int n, int N);
     static int DrawFromDiscreteDistribution(const EVector& prob, int nstate);
-    static int DrawFromDiscreteDistribution(const double *prob, int nstate);
+    static int DrawFromDiscreteDistribution(const double* prob, int nstate);
     static int DrawFromDiscreteDistribution(const std::vector<double>& prob);
 
     static double logGamma(double alpha);

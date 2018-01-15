@@ -1,14 +1,11 @@
 #include "Chain.hpp"
 #include <fstream>
 #include <iostream>
-#include "ProbModel.hpp"
 #include "Chrono.hpp"
+#include "ProbModel.hpp"
 using namespace std;
 
-// c++11
-#define nullptr 0 
-
-Chain::Chain()  {
+Chain::Chain() {
     every = 1;
     until = -1;
     size = 0;

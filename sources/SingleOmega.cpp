@@ -8,16 +8,17 @@ using namespace std;
  * \brief Chain object for running an MCMC under SingleOmegaModel
  */
 
-class SingleOmegaChain : public Chain  {
-
+class SingleOmegaChain : public Chain {
   private:
     // Chain parameters
     string modeltype;
     string datafile, treefile;
 
   public:
-    //! constructor for a new chain: datafile, treefile, saving frequency, final chain size, chain name and overwrite flag -- calls New
-    SingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force) : modeltype("SINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
+    //! constructor for a new chain: datafile, treefile, saving frequency, final chain size, chain name and overwrite flag --
+    //! calls New
+    SingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force)
+        : modeltype("SINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -32,13 +33,16 @@ class SingleOmegaChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new SingleOmegaModel(datafile,treefile);
-        GetModel()->Allocate();
-        GetModel()->Unfold();
-        cerr << "-- Reset" << endl;
-        Reset(force);
-        cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
-        model->Trace(cerr);
+        cout << "NEW\n";
+        model = new SingleOmegaModel(datafile, treefile);
+        dynamic_cast<SingleOmegaModel*>(model)->ComponentModel();
+        cout << "ENDNEW" << endl;
+        // GetModel()->Allocate();
+        // GetModel()->Unfold();
+        // cerr << "-- Reset" << endl;
+        // Reset(force);
+        // cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
+        // model->Trace(cerr);
     }
 
     void Open() override {
@@ -58,10 +62,9 @@ class SingleOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "SINGLEOMEGA") {
-            model = new SingleOmegaModel(datafile,treefile);
+            model = new SingleOmegaModel(datafile, treefile);
         } else {
-            cerr << "-- Error when opening file " << name
-                 << " : does not recognise model type : " << modeltype << '\n';
+            cerr << "-- Error when opening file " << name << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
         GetModel()->Allocate();
@@ -82,18 +85,13 @@ class SingleOmegaChain : public Chain  {
     }
 
     //! return the model, with its derived type (unlike ProbModel::GetModel)
-    SingleOmegaModel* GetModel() {
-        return static_cast<SingleOmegaModel*>(model);
-    }
+    SingleOmegaModel* GetModel() { return static_cast<SingleOmegaModel*>(model); }
 
     //! return model type
-    string GetModelType() override  {
-        return modeltype;
-    }
+    string GetModelType() override { return modeltype; }
 };
 
-int main(int argc, char* argv[])	{
-
+int main(int argc, char* argv[]) {
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
@@ -106,7 +104,7 @@ int main(int argc, char* argv[])	{
     }
 
     // new chain
-    else    {
+    else {
         string datafile = "";
         string treefile = "";
         string name = "";
@@ -114,60 +112,53 @@ int main(int argc, char* argv[])	{
         int every = 1;
         int until = -1;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == ""))	{
+            if ((datafile == "") || (treefile == "") || (name == "")) {
                 throw(0);
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "globom -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        SingleOmegaChain* chain = new SingleOmegaChain(datafile,treefile,every,until,name,force);
-        cerr << "chain " << name << " started\n";
-        chain->Start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+        cout << "Finished\n";
+        // cerr << "chain " << name << " started\n";
+        // chain->Start();
+        // cerr << "chain " << name << " stopped\n";
+        // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        // chain->GetModel()->Trace(cerr);
     }
 }
-
-

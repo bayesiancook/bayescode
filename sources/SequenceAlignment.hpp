@@ -11,11 +11,10 @@
 
 class SequenceAlignment {
   public:
-
     //! default constructor
     SequenceAlignment() {}
 
-    virtual ~SequenceAlignment()    {
+    virtual ~SequenceAlignment() {
         delete taxset;
         delete statespace;
     }
@@ -44,11 +43,11 @@ class SequenceAlignment {
     //! Phylip-like formatted output to stream
     void ToStream(std::ostream &os) const;
 
-    //! set the state to a new value (note: should really re-consider this option, currently used by PhyloProcess to simulate new data)
+    //! set the state to a new value (note: should really re-consider this option, currently used by PhyloProcess to simulate
+    //! new data)
     void SetState(int taxon, int site, int state) { Data[taxon][site] = state; }
 
   protected:
-
     bool AllMissingColumn(int site) const {
         bool ret = true;
         int tax = 0;
@@ -60,7 +59,6 @@ class SequenceAlignment {
     }
 
   private:
-
     // replace all entries by missing entries
     void Unclamp() {
         for (int i = 0; i < Ntaxa; i++) {
@@ -126,7 +124,6 @@ class SequenceAlignment {
     // data fields
 
   protected:
-
     int Ntaxa;
     int Nsite;
     const TaxonSet *taxset;

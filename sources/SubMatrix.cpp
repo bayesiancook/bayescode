@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include "linalg.hpp"
 using namespace std;
 
 int SubMatrix::nuni = 0;
@@ -27,7 +26,6 @@ SubMatrix::SubMatrix(int inNstate, bool innormalise) : Nstate(inNstate), normali
 }
 
 void SubMatrix::Create() {
-
     Q = EMatrix(Nstate, Nstate);
     u = EMatrix(Nstate, Nstate);
     invu = EMatrix(Nstate, Nstate);
@@ -41,7 +39,7 @@ void SubMatrix::Create() {
     ptrv = nullptr;
     ptrStationary = nullptr;
 
-    if (! witheigen)    {
+    if (!witheigen) {
         ptrQ = new double *[Nstate];
         for (int i = 0; i < Nstate; i++) {
             ptrQ[i] = new double[Nstate];
@@ -81,8 +79,7 @@ void SubMatrix::Create() {
 // ---------------------------------------------------------------------------
 
 SubMatrix::~SubMatrix() {
-
-    if (! witheigen)    {
+    if (!witheigen) {
         for (int i = 0; i < Nstate; i++) {
             delete[] ptrQ[i];
             delete[] ptru[i];
@@ -125,25 +122,22 @@ void SubMatrix::ScalarMul(double e) {
 //     Diagonalise()
 // ---------------------------------------------------------------------------
 
-int SubMatrix::Diagonalise() const  {
-
-    if (witheigen)  {
+int SubMatrix::Diagonalise() const {
+    if (witheigen) {
         EigenDiagonalise();
-    }
-    else    {
+    } else {
         OldDiagonalise();
     }
     return 0;
 }
 
 int SubMatrix::EigenDiagonalise() const {
-
     if (!ArrayUpdated()) {
         UpdateMatrix();
     }
 
     diagcount++;
-    auto& stat = GetStationary();
+    auto &stat = GetStationary();
 
     EMatrix a(Nstate, Nstate);
 
@@ -171,25 +165,24 @@ int SubMatrix::EigenDiagonalise() const {
 
     diagflag = true;
     double err = CheckDiag();
-    if (diagerr < err)  {
+    if (diagerr < err) {
         diagerr = err;
     }
     return 0;
 }
 
 double SubMatrix::CheckDiag() const {
-
     EMatrix tmp(Nstate, Nstate);
     EMatrix D(Nstate, Nstate);
     EMatrix Q2(Nstate, Nstate);
 
     for (int i = 0; i < Nstate; i++) {
         for (int j = 0; j < Nstate; j++) {
-            D(i,j) = 0;
+            D(i, j) = 0;
         }
     }
     for (int i = 0; i < Nstate; i++) {
-        D(i,i) = v[i];
+        D(i, i) = v[i];
     }
 
     tmp = D * invu;
@@ -198,68 +191,13 @@ double SubMatrix::CheckDiag() const {
     double max = 0;
     for (int i = 0; i < Nstate; i++) {
         for (int j = 0; j < Nstate; j++) {
-            double temp = fabs(Q2(i,j) - Q(i,j));
+            double temp = fabs(Q2(i, j) - Q(i, j));
             if (max < temp) {
                 max = temp;
             }
         }
     }
     return max;
-}
-
-// ---------------------------------------------------------------------------
-//     Diagonalise()
-// ---------------------------------------------------------------------------
-
-int SubMatrix::OldDiagonalise() const {
-
-    if (! ptrQ) {
-        cerr << "error: in SubMatrix::OldDiagonalise: ptr not allocated\n";
-        exit(1);
-    }
-
-    if (!ArrayUpdated()) {
-        UpdateMatrix();
-    }
-
-    int nmax = 1000;
-    double epsilon = 1e-20;
-
-    for (int i=0; i<Nstate; i++)    {
-        ptrStationary[i] = mStationary[i];
-    }
-    for (int i=0; i<Nstate; i++)    {
-        for (int j=0; j<Nstate; j++)    {
-            ptrQ[i][j] = Q(i,j);
-        }
-    }
-
-    int n = LinAlg::DiagonalizeRateMatrix(ptrQ, ptrStationary, Nstate, ptrv, ptru, ptrinvu, nmax, epsilon);
-    bool failed = (n == nmax);
-    if (failed) {
-        cerr << "in submatrix: diag failed\n";
-        cerr << "n : " << n << '\t' << nmax << '\n';
-        ofstream os("mat");
-        ToStream(os);
-        exit(1);
-    }
-    diagflag = true;
-
-    for (int i=0; i<Nstate; i++)    {
-        for (int j=0; j<Nstate; j++)    {
-            invu(i,j) = ptrinvu[i][j];
-            u(i,j) = ptru[i][j];
-        }
-    }
-    for (int i=0; i<Nstate; i++)    {
-        v[i] = ptrv[i];
-    }
-
-    double err = CheckDiag();
-    if (diagerr < err)  {
-        diagerr = err;
-    }
-    return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +217,7 @@ double SubMatrix::GetRate() const {
     double norm = 0;
     for (int i = 0; i < Nstate - 1; i++) {
         for (int j = i + 1; j < Nstate; j++) {
-            norm += mStationary[i] * Q(i,j);
+            norm += mStationary[i] * Q(i, j);
         }
     }
     return 2 * norm;
@@ -442,7 +380,7 @@ void SubMatrix::ToStream(ostream &os) const {
     os << "rate matrix\n";
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
-            os << Q(i,j) << '\t';
+            os << Q(i, j) << '\t';
             // os << Q[i][j] << '\t';
         }
         os << '\n';
@@ -461,7 +399,7 @@ void SubMatrix::CheckReversibility() const {
     int jmax = 0;
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = i + 1; j < GetNstate(); j++) {
-            double tmp = fabs(Stationary(i) * Q(i,j) - Stationary(j) * Q(j,i));
+            double tmp = fabs(Stationary(i) * Q(i, j) - Stationary(j) * Q(j, i));
             if (max < tmp) {
                 max = tmp;
                 imax = i;
@@ -471,10 +409,9 @@ void SubMatrix::CheckReversibility() const {
     }
     if (max > 1e-6) {
         cerr << "max irreversibility: " << max << '\n';
-        cerr << imax << '\t' << jmax << '\t' << Stationary(imax) << '\t' << Q(imax,jmax) << '\t'
-             << Stationary(jmax) << '\t' << Q(jmax,imax) << '\n';
+        cerr << imax << '\t' << jmax << '\t' << Stationary(imax) << '\t' << Q(imax, jmax) << '\t' << Stationary(jmax) << '\t'
+             << Q(jmax, imax) << '\n';
         exit(1);
     }
     cerr << "max rev: " << max << '\n';
 }
-

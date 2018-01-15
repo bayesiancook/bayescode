@@ -13,23 +13,20 @@ along with PhyloBayes. If not, see <http://www.gnu.org/licenses/>.
 
 **********************/
 
-
 #ifndef __PARALLELH
-#define __PARALLELH 
+#define __PARALLELH
 
 #include "mpi.h"
 
 const int TAG1 = 97;
 
-enum MESSAGE {KILL};
+enum MESSAGE { KILL };
 
 struct prop_arg {
-  double time;
-  int condalloc;
-  int to;
-  int from;
+    double time;
+    int condalloc;
+    int to;
+    int from;
 };
 
 #endif
-
-

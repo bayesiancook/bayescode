@@ -2,14 +2,14 @@
 #ifndef PATHSUFFSTAT_H
 #define PATHSUFFSTAT_H
 
-#include "SuffStat.hpp"
-#include "SubMatrix.hpp"
+#include <map>
 #include "Array.hpp"
 #include "BidimArray.hpp"
-#include <map>
+#include "SubMatrix.hpp"
+#include "SuffStat.hpp"
 // #include "BranchSitePath.hpp"
 #include "PhyloProcess.hpp"
-
+#include "tinycompo.hpp"
 
 /**
  * \brief A general sufficient statistic for substitution histories, as a function of the substitution rate matrix.
@@ -33,123 +33,109 @@
  * they can be furthered simplified, as a function of the nucleotide rate parameters or the omega parameter of the Q matrix,
  * leading to even more compact suff stats (see OmegaPathSuffStat and NucPathSuffStat).
  *
- * In terms of implementation, these suffstats are encoded as sparse data structures 
+ * In terms of implementation, these suffstats are encoded as sparse data structures
  * (since a very small subset of all possible pairs of codons will typcially be visited
  * by the substitution history of a given site, for instance).
  * This sparse encoding is crucial for efficiency (both in terms of time and in terms of RAM usage).
  */
 
-class PathSuffStat : public SuffStat	{
-
-	public:
-
-	PathSuffStat() {}
-	~PathSuffStat() {}
+class PathSuffStat : public SuffStat {
+  public:
+    PathSuffStat() {}
+    ~PathSuffStat() {}
 
     //! set suff stats to 0
-	void Clear()	{
-		rootcount.clear();
-		paircount.clear();
-		waitingtime.clear();
-	}
-
-	void IncrementRootCount(int state)	{
-		rootcount[state]++;
-	}
-
-	void IncrementPairCount(int state1, int state2)	{
-		paircount[pair<int,int>(state1,state2)]++;
-	}
-
-	void AddRootCount(int state, int in)	{
-		rootcount[state] += in;
-	}
-
-	void AddPairCount(int state1, int state2, int in)	{
-		paircount[pair<int,int>(state1,state2)] += in;
-	}
-	
-	void AddWaitingTime(int state, double in)	{
-		waitingtime[state] += in;
-	}
-
-    //! add path sufficient statistics from PhyloProcess (site-homogeneous case)
-    void AddSuffStat(const PhyloProcess& process)   {
-        process.AddPathSuffStat(*this);
+    void Clear() {
+        rootcount.clear();
+        paircount.clear();
+        waitingtime.clear();
     }
 
-    void Add(const PathSuffStat& suffstat)  {
-		for (std::map<int,int>::const_iterator i = suffstat.GetRootCountMap().begin(); i!= suffstat.GetRootCountMap().end(); i++)	{
-			AddRootCount(i->first,i->second);
-		}
-		for (std::map<pair<int,int>, int>::const_iterator i = suffstat.GetPairCountMap().begin(); i!= suffstat.GetPairCountMap().end(); i++)	{
-            AddPairCount(i->first.first,i->first.second,i->second);
-		}
-		for (std::map<int,double>::const_iterator i = suffstat.GetWaitingTimeMap().begin(); i!= suffstat.GetWaitingTimeMap().end(); i++)	{
-            AddWaitingTime(i->first,i->second);
+    void IncrementRootCount(int state) { rootcount[state]++; }
+
+    void IncrementPairCount(int state1, int state2) { paircount[pair<int, int>(state1, state2)]++; }
+
+    void AddRootCount(int state, int in) { rootcount[state] += in; }
+
+    void AddPairCount(int state1, int state2, int in) { paircount[pair<int, int>(state1, state2)] += in; }
+
+    void AddWaitingTime(int state, double in) { waitingtime[state] += in; }
+
+    //! add path sufficient statistics from PhyloProcess (site-homogeneous case)
+    void AddSuffStat(const PhyloProcess& process) { process.AddPathSuffStat(*this); }
+
+    void Add(const PathSuffStat& suffstat) {
+        for (std::map<int, int>::const_iterator i = suffstat.GetRootCountMap().begin();
+             i != suffstat.GetRootCountMap().end(); i++) {
+            AddRootCount(i->first, i->second);
         }
-	}
+        for (std::map<pair<int, int>, int>::const_iterator i = suffstat.GetPairCountMap().begin();
+             i != suffstat.GetPairCountMap().end(); i++) {
+            AddPairCount(i->first.first, i->first.second, i->second);
+        }
+        for (std::map<int, double>::const_iterator i = suffstat.GetWaitingTimeMap().begin();
+             i != suffstat.GetWaitingTimeMap().end(); i++) {
+            AddWaitingTime(i->first, i->second);
+        }
+    }
 
-
-    PathSuffStat& operator+=(const PathSuffStat& from)  {
+    PathSuffStat& operator+=(const PathSuffStat& from) {
         Add(from);
         return *this;
     }
 
-	int GetRootCount(int state) const {
-        std::map<int,int>::const_iterator i = rootcount.find(state);
-        if (i == rootcount.end())   {
+    int GetRootCount(int state) const {
+        std::map<int, int>::const_iterator i = rootcount.find(state);
+        if (i == rootcount.end()) {
             return 0;
         }
         return i->second;
-	}
+    }
 
-	int GetPairCount(int state1, int state2) const  {
-        std::map<pair<int,int>,int>::const_iterator i = paircount.find(pair<int,int>(state1,state2));
-        if (i == paircount.end())   {
+    int GetPairCount(int state1, int state2) const {
+        std::map<pair<int, int>, int>::const_iterator i = paircount.find(pair<int, int>(state1, state2));
+        if (i == paircount.end()) {
             return 0;
         }
         return i->second;
-	}
+    }
 
-	double GetWaitingTime(int state) const	{
-        std::map<int,double>::const_iterator i = waitingtime.find(state);
+    double GetWaitingTime(int state) const {
+        std::map<int, double>::const_iterator i = waitingtime.find(state);
         if (i == waitingtime.end()) {
             return 0;
         }
         return i->second;
-	}
-	
+    }
+
     //! return log p(S | Q) as a function of the Q matrix given as the argument
-	double GetLogProb(const SubMatrix& mat) const {
-		double total = 0;
-		auto stat = mat.GetStationary();
-		for (std::map<int,int>::const_iterator i = rootcount.begin(); i!= rootcount.end(); i++)	{
-			total += i->second * log(stat[i->first]);
-		}
-		for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
-			total += i->second * mat(i->first,i->first);
-		}
-		for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
-			total += i->second * log(mat(i->first.first, i->first.second));
-		}
-		return total;
-	}
+    double GetLogProb(const SubMatrix& mat) const {
+        double total = 0;
+        auto stat = mat.GetStationary();
+        for (std::map<int, int>::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
+            total += i->second * log(stat[i->first]);
+        }
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end(); i++) {
+            total += i->second * mat(i->first, i->first);
+        }
+        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
+            total += i->second * log(mat(i->first.first, i->first.second));
+        }
+        return total;
+    }
 
     //! const access to the ordered map giving the root count stat (sparse data structure)
-    const std::map<int,int>& GetRootCountMap() const {return rootcount;}
+    const std::map<int, int>& GetRootCountMap() const { return rootcount; }
     //! const access to the ordered map giving the pair count stat (sparse data structure)
-    const std::map<pair<int,int>,int>& GetPairCountMap() const {return paircount;}
+    const std::map<pair<int, int>, int>& GetPairCountMap() const { return paircount; }
     //! const access to the ordered map giving the waiting time stat (sparse data structure)
-    const std::map<int,double>& GetWaitingTimeMap() const {return waitingtime;}
+    const std::map<int, double>& GetWaitingTimeMap() const { return waitingtime; }
 
-	private:
-
-	std::map<int,int> rootcount;
-	std::map<pair<int,int>,int> paircount;
-	std::map<int,double> waitingtime;
+  private:
+    std::map<int, int> rootcount;
+    std::map<pair<int, int>, int> paircount;
+    std::map<int, double> waitingtime;
 };
-
 
 /**
  * \brief An array of substitution path sufficient statistics
@@ -158,45 +144,40 @@ class PathSuffStat : public SuffStat	{
  * each item (each site, or each component of a mixture) has a different rate matrix Q_i
  */
 
-class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
-
-	public:
-
-	PathSuffStatArray(int insize) : SimpleArray<PathSuffStat>(insize) {}
-	~PathSuffStatArray() {}
+class PathSuffStatArray : public SimpleArray<PathSuffStat> {
+  public:
+    PathSuffStatArray(int insize) : SimpleArray<PathSuffStat>(insize) {}
+    ~PathSuffStatArray() {}
 
     //! set all suff stats to 0
-	void Clear()	{
-		for (int i=0; i<GetSize(); i++)	{
-			(*this)[i].Clear();
-		}
-	}
-
-    //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
-    void AddSuffStat(const PhyloProcess& process)   {
-        process.AddPathSuffStat(*this);
+    void Clear() {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i].Clear();
+        }
     }
 
+    //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
+    void AddSuffStat(const PhyloProcess& process) { process.AddPathSuffStat(*this); }
+
     //! return total log prob (summed over all items), given an array of rate matrices
-	double GetLogProb(const Selector<SubMatrix>& matrixarray) const	{
+    double GetLogProb(const Selector<SubMatrix>& matrixarray) const {
+        double total = 0;
+        for (int i = 0; i < GetSize(); i++) {
+            total += GetVal(i).GetLogProb(matrixarray.GetVal(i));
+        }
+        return total;
+    }
 
-		double total = 0;
-		for (int i=0; i<GetSize(); i++)	{
-			total += GetVal(i).GetLogProb(matrixarray.GetVal(i));
-		}
-		return total;
-	}
-
-    //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument (mixture models)
+    //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument
+    //! (mixture models)
     //!
     //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] += suffstatarray[i]
-    void Add(const Selector<PathSuffStat>& suffstatarray, const Selector<int>& alloc)   {
-        for (int i=0; i<suffstatarray.GetSize(); i++) {
+    void Add(const Selector<PathSuffStat>& suffstatarray, const Selector<int>& alloc) {
+        for (int i = 0; i < suffstatarray.GetSize(); i++) {
             (*this)[alloc.GetVal(i)] += suffstatarray.GetVal(i);
         }
     }
 };
-
 
 /**
  * \brief A bi-dimensional array of substitution path sufficient statistics
@@ -206,51 +187,49 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
  * (essentially, the DiffSelModel).
  */
 
-class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
-
-	public:
-
-	PathSuffStatBidimArray(int inncol, int innrow) : SimpleBidimArray<PathSuffStat>(inncol,innrow,PathSuffStat()) {}
-	~PathSuffStatBidimArray() {}
+class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
+  public:
+    PathSuffStatBidimArray(int inncol, int innrow) : SimpleBidimArray<PathSuffStat>(inncol, innrow, PathSuffStat()) {}
+    ~PathSuffStatBidimArray() {}
 
     //! set all suff stats to 0
-	void Clear()	{
-        for (int i=0; i<this->GetNrow(); i++)  {
-            for (int j=0; j<this->GetNcol(); j++)   {
-                (*this)(i,j).Clear();
+    void Clear() {
+        for (int i = 0; i < this->GetNrow(); i++) {
+            for (int j = 0; j < this->GetNcol(); j++) {
+                (*this)(i, j).Clear();
             }
         }
-	}
+    }
 
     //! add path sufficient statistics from PhyloProcess (site- and condition-heterogeneous case)
-    void AddSuffStat(const PhyloProcess& process, const BranchAllocationSystem& branchalloc)   {
-        process.AddPathSuffStat(*this,branchalloc);
+    void AddSuffStat(const PhyloProcess& process, const BranchAllocationSystem& branchalloc) {
+        process.AddPathSuffStat(*this, branchalloc);
     }
 
     //! return total log prob (summed over all items), given a bi-dimensional array of rate matrices
-    double GetLogProb(const BidimSelector<SubMatrix>& matrixarray) const  {
+    double GetLogProb(const BidimSelector<SubMatrix>& matrixarray) const {
         double total = 0;
-        for (int j=0; j<this->GetNcol(); j++)   {
-            total += GetLogProb(j,matrixarray);
+        for (int j = 0; j < this->GetNcol(); j++) {
+            total += GetLogProb(j, matrixarray);
         }
         return total;
     }
 
     //! return log prob summed over a given column
-    double GetLogProb(int j, const BidimSelector<SubMatrix>& matrixarray) const   {
+    double GetLogProb(int j, const BidimSelector<SubMatrix>& matrixarray) const {
         double total = 0;
-        for (int i=0; i<this->GetNrow(); i++)  {
-            total += GetVal(i,j).GetLogProb(matrixarray.GetVal(i,j));
+        for (int i = 0; i < this->GetNrow(); i++) {
+            total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
         }
         return total;
     }
 
     //! return log prob summed over a given column (and only for items for which flag is non 0)
-    double GetLogProb(int j, const vector<int>& flag, const BidimSelector<SubMatrix>& matrixarray) const   {
+    double GetLogProb(int j, const vector<int>& flag, const BidimSelector<SubMatrix>& matrixarray) const {
         double total = 0;
-        for (int i=0; i<this->GetNrow(); i++)  {
-            if (flag[i])    {
-                total += GetVal(i,j).GetLogProb(matrixarray.GetVal(i,j));
+        for (int i = 0; i < this->GetNrow(); i++) {
+            if (flag[i]) {
+                total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
             }
         }
         return total;

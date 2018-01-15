@@ -6,31 +6,27 @@
 using namespace std;
 
 class MPIBuffer {
+  public:
+    MPIBuffer(unsigned int insize) : buffer(0), size(insize), it(0) { buffer = new double[insize]; }
 
-    public:
+    ~MPIBuffer() { delete[] buffer; }
 
-    MPIBuffer(unsigned int insize) :buffer(0), size(insize), it(0) {
-        buffer = new double[insize];
-    }
+    const double* GetBuffer() const { return buffer; }
+    double* GetBuffer() { return buffer; }
 
-    ~MPIBuffer() {
-        delete[] buffer;
-    }
+    unsigned int GetSize() { return size; }
 
-    const double* GetBuffer() const {return buffer;}
-    double* GetBuffer() {return buffer;}
-
-    unsigned int GetSize() {return size;}
-
-    template<class T> void Put(const T& t)  {
+    template <class T>
+    void Put(const T& t) {
         t.MPIPut(*this);
     }
 
-    template<class T> void Get(T& t) const {
+    template <class T>
+    void Get(T& t) const {
         t.MPIGet(*this);
     }
 
-    void PutDouble(const double& d)    {
+    void PutDouble(const double& d) {
         if (it == size) {
             // errror
         }
@@ -50,7 +46,7 @@ class MPIBuffer {
         if (it == size) {
             // errror
         }
-        buffer[it] = ((double) i);
+        buffer[it] = ((double)i);
         it++;
     }
 
@@ -60,11 +56,10 @@ class MPIBuffer {
         }
         double d = buffer[it];
         it++;
-        i = (int) d;
+        i = (int)d;
     }
 
-    private:
-
+  private:
     double* buffer;
     unsigned int size;
     mutable unsigned int it;
@@ -72,60 +67,76 @@ class MPIBuffer {
 
 // MPISize
 
-template<class T> unsigned int MPISize(const T& t)  {
+template <class T>
+unsigned int MPISize(const T& t) {
     return t.GetMPISize();
 }
 
-template<> unsigned int MPISize(const double& d);
-template<> unsigned int MPISize(const int& i);
+template <>
+unsigned int MPISize(const double& d);
+template <>
+unsigned int MPISize(const int& i);
 
-template<class T> unsigned int MPISize(const vector<T>& t)  {
+template <class T>
+unsigned int MPISize(const vector<T>& t) {
     return t.size() * MPISize(t[0]);
 }
 
 // MPI operator << and >>
 
-template<class T> MPIBuffer& operator<<(MPIBuffer& buffer, const T& t) {
+template <class T>
+MPIBuffer& operator<<(MPIBuffer& buffer, const T& t) {
     buffer.Put(t);
     return buffer;
 };
 
-template<class T> const MPIBuffer& operator>>(const MPIBuffer& buffer, T& t)    {
+template <class T>
+const MPIBuffer& operator>>(const MPIBuffer& buffer, T& t) {
     buffer.Get(t);
     return buffer;
 }
 
-template<class T> MPIBuffer& operator<<(MPIBuffer& buffer, const vector<T>& v)  {
-    for (unsigned int i=0; i<v.size(); i++) {
+template <class T>
+MPIBuffer& operator<<(MPIBuffer& buffer, const vector<T>& v) {
+    for (unsigned int i = 0; i < v.size(); i++) {
         buffer << v[i];
     }
     return buffer;
 }
 
-template<class T> const MPIBuffer& operator>>(const MPIBuffer& buffer, vector<T>& v)    {
-    for (unsigned int i=0; i<v.size(); i++) {
+template <class T>
+const MPIBuffer& operator>>(const MPIBuffer& buffer, vector<T>& v) {
+    for (unsigned int i = 0; i < v.size(); i++) {
         buffer >> v[i];
     }
     return buffer;
 }
 
-template<> MPIBuffer& operator<<(MPIBuffer& buffer, const double& t);
-template<> const MPIBuffer& operator>>(const MPIBuffer& buffer, double& t);
-template<> MPIBuffer& operator<<(MPIBuffer& buffer, const int& t);
-template<> const MPIBuffer& operator>>(const MPIBuffer& buffer, int& t);
+template <>
+MPIBuffer& operator<<(MPIBuffer& buffer, const double& t);
+template <>
+const MPIBuffer& operator>>(const MPIBuffer& buffer, double& t);
+template <>
+MPIBuffer& operator<<(MPIBuffer& buffer, const int& t);
+template <>
+const MPIBuffer& operator>>(const MPIBuffer& buffer, int& t);
 
 // MPI operator += with buffer
 
-template<class T> T& operator +=(T& t, const MPIBuffer& buffer) {
+template <class T>
+T& operator+=(T& t, const MPIBuffer& buffer) {
     t.Add(buffer);
     return t;
 }
 
-template<> double& operator +=(double& d, const MPIBuffer& buffer);
-template<> int& operator +=(int& i, const MPIBuffer& buffer);
+template <>
+double& operator+=(double& d, const MPIBuffer& buffer);
+template <>
+int& operator+=(int& i, const MPIBuffer& buffer);
 
-template<> vector<int>& operator += (vector<int>& v, const MPIBuffer& buffer);
-template<> vector<double>& operator += (vector<double>& v, const MPIBuffer& buffer);
+template <>
+vector<int>& operator+=(vector<int>& v, const MPIBuffer& buffer);
+template <>
+vector<double>& operator+=(vector<double>& v, const MPIBuffer& buffer);
 
 #endif
-
