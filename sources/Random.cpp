@@ -599,7 +599,8 @@ double Random::GammaSample(double alpha, double beta) { return Gamma(alpha, beta
 
 void Random::DirichletSample(vector<double>& x, const vector<double>& center, double concentration) {
     if (x.size() != center.size()) {
-        cerr << "error in Random::DirichletSample: non matching vector size\n";
+        cerr << "Error in Random::DirichletSample: non matching vector size.\n"
+             << "Size of x is " << x.size() << " while size of center is " << center.size() << "\n";
         exit(1);
     }
     double tot = 0;

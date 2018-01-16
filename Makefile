@@ -1,8 +1,8 @@
-.PHONY: all clean ready
+.PHONY: all clean ready globom
 
-all: data/globom
+all: globom
 
-data/globom: sources/tinycompo.hpp
+globom: sources/tinycompo.hpp
 	@cd sources && make --no-print-directory -j8
 
 sources/tinycompo.hpp:
@@ -10,6 +10,9 @@ sources/tinycompo.hpp:
 
 clean:
 	@cd sources && make --no-print-directory clean
+
+format:
+	@cd sources && make --no-print-directory format
 
 ready:
 	@cd sources && make format

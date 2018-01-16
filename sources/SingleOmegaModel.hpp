@@ -110,39 +110,36 @@ class SingleOmegaModel : public ProbModel {
     void ComponentModel() {
         Model model;
 
-        model.component<FWrapper<double>>("lambda", 10);
-        model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);  // FIXME point to lambda
+        // model.component<FWrapper<double>>("lambda", 10);
+
+        model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
         model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
-        cout << "FIRST" << endl;
 
         model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
-        // Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        model.connect<DirichletSample>("nucrelrate", vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
         model.component<Wrapper<vector<double>>>("nucstat", Nnuc, 0);
-        // Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        model.connect<DirichletSample>("nucstat", vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
 
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
             .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
             .connect<Use<vector<double>>>("CopyStationary", "nucstat");
 
-        model.component<FWrapper<double>>("omegahypermean", 1);
-        model.component<FWrapper<double>>("omegahyperinvshape", 1);
-        model.component<FWrapper<double>>("omega", 1);
+        // model.component<FWrapper<double>>("omegahypermean", 1);
+        // model.component<FWrapper<double>>("omegahyperinvshape", 1);
+        // model.component<FWrapper<double>>("omega", 1);
 
         model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
             .connect<Set<CodonStateSpace*>>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
         model.component<PhyloProcess>("phyloprocess", tree, codondata)
-            .connect<Set<const Selector<double>*>>("siterate", static_cast<const Selector<double>*>(nullptr))
+            .set("siterate", static_cast<const Selector<double>*>(nullptr))
             .connect<Use<BranchSelector<double>>>("branchlength", "branchlength")
             .connect<Use<SubMatrix>>("submatrix", "nucmatrix");
 
-        cout << "DOT TO FILE\n";
         model.dot_to_file();
 
-        cout << "YO\n";
         Assembly assembly(model);
-        cout << "LO\n";
     }
 
     //! model allocation
