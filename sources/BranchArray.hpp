@@ -127,13 +127,13 @@ template <class T>
 class BranchHomogeneousSelector : public BranchSelector<T> {
   public:
     //! \brief Constructor, taking as its arguments the tree and the value to be returned for any branch
-    BranchHomogeneousSelector(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
+    BranchHomogeneousSelector(const Tree* intree, const T& invalue) : tree(*intree), value(invalue) {}
     ~BranchHomogeneousSelector() {}
 
-    const Tree& GetTree() const /*override*/ { return tree; }
+    const Tree& GetTree() const override { return tree; }
 
     //! return a reference to the same value (i.e. value) for any index
-    const T& GetVal(int index) const /*override*/ { return value; }
+    const T& GetVal(int index) const override { return value; }
 
   private:
     const Tree& tree;

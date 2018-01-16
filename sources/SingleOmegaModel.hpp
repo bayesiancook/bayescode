@@ -272,7 +272,7 @@ class SingleOmegaModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
 
     //! \brief log prior over hyperparameters of prior over branch lengths (here, lambda ~ exponential of rate 10)
     double BranchLengthsHyperLogPrior() const {
@@ -352,7 +352,7 @@ class SingleOmegaModel : public ProbModel {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move() {
+    double Move() override {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
@@ -458,9 +458,9 @@ class SingleOmegaModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void Monitor(ostream& os) const {}
+    void Monitor(ostream& os) const override {}
 
-    void ToStream(ostream& os) const {
+    void ToStream(ostream& os) const override {
         os << lambda << '\n';
         os << *branchlength << '\n';
         os << omega << '\n';
@@ -468,7 +468,7 @@ class SingleOmegaModel : public ProbModel {
         os << nucstat << '\n';
     }
 
-    void FromStream(istream& is) {
+    void FromStream(istream& is) override {
         is >> lambda;
         is >> *branchlength;
         is >> omega;

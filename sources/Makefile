@@ -1,5 +1,5 @@
 CC=$(CXX)
-CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -O3
+CPPFLAGS= -std=c++11 -Wall -Wextra -Wno-unused-parameter -O3
 # CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -fprofile-arcs -ftest-coverage
 LDFLAGS =
 # LDFLAGS = -fprofile-arcs -ftest-coverage

@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
 
-        SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+        /*SingleOmegaChain* chain = new */ SingleOmegaChain(datafile, treefile, every, until, name, force);
         cout << "Finished\n";
         // cerr << "chain " << name << " started\n";
         // chain->Start();
