@@ -1,4 +1,4 @@
-CC=mpic++
+CC=$(CXX)
 CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -O3
 # CPPFLAGS= -std=c++11 -g -Wall -Wextra -Wno-unused-parameter -fprofile-arcs -ftest-coverage
 LDFLAGS =
@@ -26,9 +26,6 @@ all: $(PROGS)
 %.o: %.cpp %.d tinycompo.hpp
 	$(CC) -c $(CPPFLAGS) $*.cpp
 
-tinycompo.hpp:
-	curl https://raw.githubusercontent.com/vlanore/tinycompo/master/tinycompo.hpp > $@
-
 # Include the dependencies unless the request was to clean eveything up
 ifneq ($(MAKECMDGOALS),clean)
 -include $(ALL_OBJS:.o=.d)
@@ -44,7 +41,7 @@ clean:
 	-rm -f *.o *.d *.d.* *.gcno codonm8/*.o codonm8/*.d *.gcda *.gcov
 	-rm -f $(PROGS)
 	-rm -rf html/ latex/
-	-rm tinycompo.hpp
+	-rm -f tinycompo.hpp
 
 format:
 	clang-format -i $(ALL_SRCS) *.hpp
