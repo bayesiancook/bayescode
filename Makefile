@@ -14,6 +14,6 @@ clean:
 format:
 	@cd sources && make --no-print-directory format
 
-ready:
+ready: all
 	@cd sources && make format
 	@git status

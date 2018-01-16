@@ -35,7 +35,7 @@ class SingleOmegaChain : public Chain {
     void New(int force) override {
         cout << "NEW\n";
         model = new SingleOmegaModel(datafile, treefile);
-        dynamic_cast<SingleOmegaModel*>(model)->ComponentModel();
+        dynamic_cast<SingleOmegaModel*>(model)->DeclareModel();
         cout << "ENDNEW" << endl;
         // GetModel()->Allocate();
         // GetModel()->Unfold();
@@ -67,7 +67,7 @@ class SingleOmegaChain : public Chain {
             cerr << "-- Error when opening file " << name << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
-        GetModel()->Allocate();
+        // GetModel()->Allocate();
         model->FromStream(is);
         model->Update();
         GetModel()->Unfold();
