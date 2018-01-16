@@ -38,11 +38,11 @@ class SingleOmegaChain : public Chain {
         dynamic_cast<SingleOmegaModel*>(model)->DeclareModel();
         cout << "ENDNEW" << endl;
         // GetModel()->Allocate();
-        // GetModel()->Unfold();
-        // cerr << "-- Reset" << endl;
-        // Reset(force);
-        // cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
-        // model->Trace(cerr);
+        GetModel()->Unfold();
+        cerr << "-- Reset" << endl;
+        Reset(force);
+        cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
+        model->Trace(cerr);
     }
 
     void Open() override {
@@ -153,12 +153,12 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
 
-        /*SingleOmegaChain* chain = new */ SingleOmegaChain(datafile, treefile, every, until, name, force);
+        SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
         cout << "Finished\n";
-        // cerr << "chain " << name << " started\n";
-        // chain->Start();
-        // cerr << "chain " << name << " stopped\n";
-        // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        // chain->GetModel()->Trace(cerr);
+        cerr << "chain " << name << " started\n";
+        chain->Start();
+        cerr << "chain " << name << " stopped\n";
+        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        chain->GetModel()->Trace(cerr);
     }
 }
