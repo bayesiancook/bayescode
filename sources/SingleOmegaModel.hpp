@@ -110,8 +110,8 @@ class SingleOmegaModel : public ProbModel {
     void ComponentModel() {
         Model model;
 
-        double lambda = 10;
-        model.component<BranchIIDGamma>("branchlength", tree, 1.0, lambda);
+        model.component<FWrapper<double>>("lambda", 10);
+        model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);  // FIXME point to lambda
         model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
         cout << "FIRST" << endl;
 
@@ -124,18 +124,18 @@ class SingleOmegaModel : public ProbModel {
             .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
             .connect<Use<vector<double>>>("CopyStationary", "nucstat");
 
-        // // double omegahypermean = 1.0;
-        // // double omegahyperinvshape = 1.0;
-        // // double omega = 1.0;
+        model.component<FWrapper<double>>("omegahypermean", 1);
+        model.component<FWrapper<double>>("omegahyperinvshape", 1);
+        model.component<FWrapper<double>>("omega", 1);
 
         model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
             .connect<Set<CodonStateSpace*>>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
-        model.component<PhyloProcess>("phyloprocess", tree, codondata);
-        // .connect<Set>("siterate", static_cast<const Selector<double>*>(nullptr))
-        // .connect<Use<BranchSelector<double>>>("branchlength", "branchlength")
-        // .connect<Use<SubMatrix>>("submatrix", "nucmatrix");
+        model.component<PhyloProcess>("phyloprocess", tree, codondata)
+            .connect<Set<const Selector<double>*>>("siterate", static_cast<const Selector<double>*>(nullptr))
+            .connect<Use<BranchSelector<double>>>("branchlength", "branchlength")
+            .connect<Use<SubMatrix>>("submatrix", "nucmatrix");
 
         cout << "DOT TO FILE\n";
         model.dot_to_file();
