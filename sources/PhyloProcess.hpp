@@ -10,6 +10,7 @@
 #include "Tree.hpp"
 #include "BranchSiteSelector.hpp"
 #include "BidimArray.hpp"
+#include "NodeArray.hpp"
 #include "BranchAllocationSystem.hpp"
  
 // PhyloProcess is a dispatcher:
@@ -31,6 +32,7 @@ public:
     friend class PathSuffStatArray;
     friend class PathSuffStatBidimArray;
     friend class PoissonSuffStatBranchArray;
+    friend class PathSuffStatNodeArray;
 
 	//! \brief generic constructor
     //!
@@ -59,6 +61,15 @@ public:
     //! while rootmatrixarray is set to insubmatrixarray.
     //! If insiterate pointer is null, then rates across sites are all equal to 1.
 	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const Selector<SubMatrix>* insubmatrixarray);
+
+	//! \brief special (short-cut) constructor for branch-heterogeneous and site-homogeneous model
+    //!
+    //! Compared to the generic constructor, this constructor takes a pointer to BranchSelector<SubMatrix>* insubmatrixarray
+    //! and a single submatrix (for the root eq frequencies).
+    //! The branch/site and site selectors of substitution matrices (submatrixarray and rootsubmatrixarray)
+    //! are then internally allocated by PhyloProcess based on these parameters.
+    //! If insiterate pointer is null, then rates across sites are all equal to 1.
+	PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSelector<SubMatrix>* insubmatrixbrancharray, const SubMatrix* inrootsubmatrix);
 
 	~PhyloProcess();
 
@@ -165,6 +176,8 @@ public:
 	void AddPathSuffStat(PathSuffStat& suffstat) const;
 	//! compute path sufficient statistics across all sites and branches and add them to suffstatarray (site-heterogeneous branch-homogeneous model)
 	void AddPathSuffStat(Array<PathSuffStat>& suffstatarray) const;
+	//! compute path sufficient statistics across all sites and branches and add them to suffstatarray (branch-heterogeneous site-homogeneous model)
+	void AddPathSuffStat(NodeArray<PathSuffStat>& suffstatarray) const;
 	//! compute path sufficient statistics across all sites and branches and add them to bidim suffstatarray (branches partitioned into conditions, see DiffSelModel)
 	//! heterogeneeous across sites, branches partitioned into conditions
 	void AddPathSuffStat(BidimArray<PathSuffStat>& suffstatarray, const BranchAllocationSystem& branchalloc) const;
@@ -174,6 +187,9 @@ public:
 
 	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
 	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
+
+	void RecursiveAddPathSuffStat(const Link* from, NodeArray<PathSuffStat>& suffstatarray) const;
+	void LocalAddPathSuffStat(const Link* from, NodeArray<PathSuffStat>& suffstatarray) const;
 
 	void RecursiveAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const;
 	void LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& suffstatarray) const;

@@ -49,6 +49,20 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
     allocrootsubmatrixarray = false;
 }
 
+PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, const BranchSelector<double>* inbranchlength, const Selector<double>* insiterate, const BranchSelector<SubMatrix>* insubmatrixbrancharray, const SubMatrix* insubmatrix)	{
+
+    tree = intree;
+    data = indata;
+    Nstate = data->GetNstate();
+    maxtrial = DEFAULTMAXTRIAL;
+    branchlength = inbranchlength;
+    siterate = insiterate;
+    submatrixarray = new BranchHeterogeneousSiteHomogeneousSelector<SubMatrix>(*insubmatrixbrancharray,GetNsite());
+    allocsubmatrixarray = true;
+    rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(),*insubmatrix);
+    allocrootsubmatrixarray = true;
+}
+
 PhyloProcess::~PhyloProcess() { 
 
 	Cleanup(); 
@@ -822,6 +836,35 @@ void PhyloProcess::LocalAddPathSuffStat(const Link* from, Array<PathSuffStat>& s
                 exit(1);
             }
             pathmap[from->GetNode()][i]->AddPathSuffStat(suffstatarray[i],GetBranchLength(from->GetBranch()->GetIndex()) * GetSiteRate(i));
+        }
+    }
+}
+
+void PhyloProcess::AddPathSuffStat(NodeArray<PathSuffStat>& suffstatarray) const {
+	RecursiveAddPathSuffStat(GetRoot(),suffstatarray);
+}
+
+void PhyloProcess::RecursiveAddPathSuffStat(const Link* from, NodeArray<PathSuffStat>& suffstatarray) const {
+
+    LocalAddPathSuffStat(from,suffstatarray);
+	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
+		RecursiveAddPathSuffStat(link->Out(),suffstatarray);
+	}
+}
+
+void PhyloProcess::LocalAddPathSuffStat(const Link* from, NodeArray<PathSuffStat>& suffstatarray) const {
+
+    int nodeindex = from->GetNode()->GetIndex();
+    for (int i=0; i<GetNsite(); i++)    {
+        if (missingmap[nodeindex][i] == 2)   {
+            suffstatarray[nodeindex].IncrementRootCount(GetState(from->GetNode(),i));
+        }
+        else if (missingmap[nodeindex][i] == 1) {
+            if (from->isRoot()) {
+                cerr << "error in missing map\n";
+                exit(1);
+            }
+            pathmap[from->GetNode()][i]->AddPathSuffStat(suffstatarray[nodeindex],GetBranchLength(from->GetBranch()->GetIndex()) * GetSiteRate(i));
         }
     }
 }

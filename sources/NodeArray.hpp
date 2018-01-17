@@ -1,6 +1,6 @@
 
-#ifndef BRANCHARRAY_H
-#define BRANCHARRAY_H
+#ifndef NODEARRAY_H
+#define NODEARRAY_H
 
 #include "Tree.hpp"
 #include <vector>
@@ -11,19 +11,19 @@
  *
  * This abstract class is meant as a general read-only interface
  * returning a reference over a T object for any branch of a given phylogenetic tree (through the GetVal(int index) method).
- * Branches are indexed by integers (ranging from 0 to GetNbranch()-1).
+ * Nodees are indexed by integers (ranging from 0 to GetNnode()-1).
  * This class, and its various implementations/specializations, follows the same logic as the classes deriving from Array,
- * except for the fact that the Branch selectors are meant to define distributions across branches.
+ * except for the fact that the Node selectors are meant to define distributions across branches.
  * 
  */
 
-template<class T> class BranchSelector	{
+template<class T> class NodeSelector	{
 
 	public:
-	virtual ~BranchSelector() {}
+	virtual ~NodeSelector() {}
 
     //! return the number of branches of the underlying tree
-	int GetNbranch() const {return GetTree().GetNbranch();}
+	int GetNnode() const {return GetTree().GetNnode();}
 
     //! return a const reference to the underlying tree
 	virtual const Tree& GetTree() const = 0;
@@ -31,18 +31,18 @@ template<class T> class BranchSelector	{
 	virtual const T& GetVal(int index) const = 0;
 
     //! return size of entire array, when put into an MPI buffer
-    unsigned int GetMPISize() const {return this->GetNbranch() * MPISize(this->GetVal(0));}
+    unsigned int GetMPISize() const {return this->GetNnode() * MPISize(this->GetVal(0));}
 
     //! write array into MPI buffer
     void MPIPut(MPIBuffer& buffer) const {
-        for (int i=0; i<this->GetNbranch(); i++)  {
+        for (int i=0; i<this->GetNnode(); i++)  {
             buffer << this->GetVal(i);
         }
     }
 
     //! write array into generic output stream
     void ToStream(ostream& os) const    {
-        for (int i=0; i<this->GetNbranch(); i++)  {
+        for (int i=0; i<this->GetNnode(); i++)  {
             os << this->GetVal(i) << '\t';
         }
         os << '\n';
@@ -52,25 +52,25 @@ template<class T> class BranchSelector	{
 /**
  * \brief An interface for an abstract tree-structured array (indexed by branches) of references over objects of type T
  *
- * Deriving from BranchSelector, BranchArray gives const access through GetVal(int index).
+ * Deriving from NodeSelector, NodeArray gives const access through GetVal(int index).
  * In addition, it provides a non-const access to through the [] operator.
  * In practice, this class is (should be?) used only for implementing arrays of all-distinct instances of objects of type T.
  * See also Array (and Selector) for a similar class hierarchy.
  */
 
-template<class T> class BranchArray : public BranchSelector<T>	{
+template<class T> class NodeArray : public NodeSelector<T>	{
 
 	public:
-	virtual ~BranchArray() {}
+	virtual ~NodeArray() {}
 
     //! element-by-element copy (arrays should be of same size)
-    void Copy(const BranchSelector<T>& from)  {
+    void Copy(const NodeSelector<T>& from)  {
 
-        if (this->GetNbranch() != from.GetNbranch())    {
+        if (this->GetNnode() != from.GetNnode())    {
             cerr << "error: branch arrays do not have same size\n";
             exit(1);
         }
-        for (int i=0; i<this->GetNbranch(); i++)  {
+        for (int i=0; i<this->GetNnode(); i++)  {
             (*this)[i] = from.GetVal(i);
         }
     }
@@ -80,53 +80,53 @@ template<class T> class BranchArray : public BranchSelector<T>	{
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer& buffer)    {
-        for (int i=0; i<this->GetNbranch(); i++)  {
+        for (int i=0; i<this->GetNnode(); i++)  {
             buffer >> (*this)[i];
         }
     }
 
     //! get array from generic input stream
     void FromStream(istream& is)    {
-        for (int i=0; i<this->GetNbranch(); i++)  {
+        for (int i=0; i<this->GetNnode(); i++)  {
             is >> (*this)[i];
         }
     }
 };
 
 /**
- * \brief output stream operator for a BranchSelector<T>
+ * \brief output stream operator for a NodeSelector<T>
  * 
- * in practice, calls the ToStream method of BranchSelector<T>
+ * in practice, calls the ToStream method of NodeSelector<T>
  */
 
-template<class T> ostream& operator<<(ostream& os, const BranchSelector<T>& array)  {
+template<class T> ostream& operator<<(ostream& os, const NodeSelector<T>& array)  {
     array.ToStream(os);
     return os;
 }
 
 /**
- * \brief input stream operator for a BranchArray<T>
+ * \brief input stream operator for a NodeArray<T>
  *
- * in practice, calls the FromStream method of BranchArray<T>
+ * in practice, calls the FromStream method of NodeArray<T>
  */
 
-template<class T> istream& operator>>(istream& is, BranchArray<T>& array) {
+template<class T> istream& operator>>(istream& is, NodeArray<T>& array) {
     array.FromStream(is);
     return is;
 }
 
 /**
- * \brief A BranchSelector<T> that returns a reference to the same value T for any branch
+ * \brief A NodeSelector<T> that returns a reference to the same value T for any branch
  *
  * Useful for implementing simple models assuming, e.g. the same substitution matrix for all branches.
  */
 
-template<class T> class BranchHomogeneousSelector : public BranchSelector<T>	{
+template<class T> class NodeHomogeneousSelector : public NodeSelector<T>	{
 
 	public:
     //! \brief Constructor, taking as its arguments the tree and the value to be returned for any branch
-	BranchHomogeneousSelector(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
-	~BranchHomogeneousSelector() {}
+	NodeHomogeneousSelector(const Tree* intree, const T& invalue) : tree(intree), value(invalue) {}
+	~NodeHomogeneousSelector() {}
 
 	const Tree& GetTree() const /*override*/ {return tree;}
 
@@ -139,19 +139,19 @@ template<class T> class BranchHomogeneousSelector : public BranchSelector<T>	{
 };
 
 /**
- * \brief The 'standard' implementation of an BranchArray<T>, simply as a std::vector<T>
+ * \brief The 'standard' implementation of an NodeArray<T>, simply as a std::vector<T>
  *
  */
 
-template<class T> class SimpleBranchArray : public BranchArray<T>	{
+template<class T> class SimpleNodeArray : public NodeArray<T>	{
 
 	public:
     //! Constructor (with only the tree given as argument)
-	SimpleBranchArray(const Tree& intree) : tree(intree), array(intree.GetNbranch()) {}
+	SimpleNodeArray(const Tree& intree) : tree(intree), array(intree.GetNnode()) {}
 
     //! Constructor with tree and initializer value
-	SimpleBranchArray(const Tree& intree, const T& initval) : tree(intree), array(intree.GetNbranch(),initval) {}
-	virtual ~SimpleBranchArray() {}
+	SimpleNodeArray(const Tree& intree, const T& initval) : tree(intree), array(intree.GetNnode(),initval) {}
+	virtual ~SimpleNodeArray() {}
 
 	const Tree& GetTree() const /*override*/ {return tree;}
 	T& operator[](int index) /*override*/ {return array[index];}

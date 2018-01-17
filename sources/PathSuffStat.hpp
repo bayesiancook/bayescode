@@ -6,6 +6,8 @@
 #include "SubMatrix.hpp"
 #include "Array.hpp"
 #include "BidimArray.hpp"
+#include "BranchArray.hpp"
+#include "NodeArray.hpp"
 #include <map>
 // #include "BranchSitePath.hpp"
 #include "PhyloProcess.hpp"
@@ -195,6 +197,55 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat>	{
             (*this)[alloc.GetVal(i)] += suffstatarray.GetVal(i);
         }
     }
+};
+
+/**
+ * \brief A NodeArray of substitution path sufficient statistics
+ *
+ * This class provides an interface for dealing with cases where
+ * each branch has a different rate matrix Q_j
+ */
+
+class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat>	{
+
+	public:
+
+	PathSuffStatNodeArray(const Tree& intree) : SimpleNodeArray<PathSuffStat>(intree) {}
+	~PathSuffStatNodeArray() {}
+
+    //! set all suff stats to 0
+	void Clear()	{
+		for (int i=0; i<GetNnode(); i++)	{
+			(*this)[i].Clear();
+		}
+	}
+
+    //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
+    void AddSuffStat(const PhyloProcess& process)   {
+        process.AddPathSuffStat(*this);
+    }
+
+    //! return total log prob (summed over all items), given an array of rate matrices
+	double GetLogProb(const BranchSelector<SubMatrix>& matrixarray, const SubMatrix& rootmatrix) const	{
+
+        double ret = RecursiveGetLogProb(GetTree().GetRoot(),matrixarray,rootmatrix);
+        return ret;
+    }
+
+    double RecursiveGetLogProb(const Link* from, const BranchSelector<SubMatrix>& matrixarray, const SubMatrix& rootmatrix) const   {
+
+        double total = 0;
+        if (from->isRoot()) {
+            total += GetVal(from->GetNode()->GetIndex()).GetLogProb(rootmatrix);
+        }
+        else    {
+            total += GetVal(from->GetNode()->GetIndex()).GetLogProb(matrixarray.GetVal(from->GetBranch()->GetIndex()));
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            total += RecursiveGetLogProb(link->Out(),matrixarray,rootmatrix);
+        }
+		return total;
+	}
 };
 
 
