@@ -192,7 +192,8 @@ class BranchIIDGamma: public SimpleBranchArray<double>	{
 	}
 
     //! resample all entries from posterior, conditional on BranchArray of PoissonSuffStat
-	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
+	// void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
+	void GibbsResample(const BranchArray<PoissonSuffStat>& suffstatarray)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
 			(*this)[i] = Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
