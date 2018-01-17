@@ -120,7 +120,7 @@ class PoissonSuffStat : public SuffStat	{
 		return shape*log(scale) - Random::logGamma(shape) - (shape + count)*log(scale + beta) + Random::logGamma(shape + count);
 	}
 
-	private:
+	protected:
 
 	int count;
 	double beta;

@@ -10,6 +10,7 @@
 #include "ProbModel.hpp"
 #include "BranchProduct.hpp"
 #include "GammaSuffStat.hpp"
+#include "BranchSpecificMeanGammaTree.hpp"
 
 /**
  * \brief A site-homogeneous and branch-heterogeneous Muse and Gaut omega-codon model
@@ -46,15 +47,16 @@ class BranchOmegaModel : public ProbModel {
 	std::vector<double> nucrelrate;
 	std::vector<double> nucstat;
 
+    // all this is fixed, being controlled at the inter-gene level
     double branchvhypermean;
     double branchvhyperinvshape;
     BranchIIDGamma* branchv;
-
-    double genewhypermean;
-    double genewhyperinvshape;
     double genew;
+    BranchProduct* meanomegatree;
+    double omegainvshape;
 
-    BranchProduct* omegatree;
+    // branch-specific omega's
+    BranchSpecificMeanGammaTree* omegatree;
     
     // a nucleotide matrix (parameterized by nucrelrate and nucstat)
 	GTRSubMatrix* nucmatrix;
@@ -72,7 +74,7 @@ class BranchOmegaModel : public ProbModel {
     // path suff stat can be summarized in terms of 4x4 suff stats, as a function of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
-    // or, alternatively, collected as a simple Poisson suff stat, as a function of omega
+    // or, alternatively, collected as Poisson suff stat across all nodes (branches + root), as a function of omega
 	OmegaPathSuffStatBranchArray* omegapathsuffstatarray;
 
     // Poisson suffstats for substitution histories, as a function of branch lengths
@@ -81,10 +83,6 @@ class BranchOmegaModel : public ProbModel {
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
 	GammaSuffStat hyperlengthsuffstat;
-
-    int fixgenew;
-    int fixbranchv;
-    int fixbranchvhyperparams;
 
 	public:
 
@@ -97,10 +95,6 @@ class BranchOmegaModel : public ProbModel {
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
 	BranchOmegaModel(string datafile, string treefile)  {
-
-        fixgenew = 1;
-        fixbranchv = 0;
-        fixbranchvhyperparams = 0;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -142,8 +136,10 @@ class BranchOmegaModel : public ProbModel {
         double alpha = 1.0 / branchvhyperinvshape;
         double beta = alpha / branchvhypermean;
         branchv = new BranchIIDGamma(*tree,alpha,beta);
-        genewhypermean = genewhyperinvshape = genew = 1.0;
-        omegatree = new BranchProduct(*branchv,genew);
+        genew = 1.0;
+        meanomegatree = new BranchProduct(*branchv,genew);
+        omegainvshape = 1.0;
+        omegatree = new BranchSpecificMeanGammaTree(*meanomegatree,omegainvshape);
 
 		codonmatrixtree = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, omegatree);
         rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(),nucmatrix,1.0);
@@ -174,35 +170,21 @@ class BranchOmegaModel : public ProbModel {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
-    double GetW() const {
-        return genew;
+    BranchSpecificMeanGammaTree* GetOmegaTree() const  {
+        return omegatree;
+    }
+
+    void SetOmegaTree(const BranchSelector<double>& from)    {
+        omegatree->Copy(from);
     }
 
     //-------------------
     // Setting and updating
     // ------------------
 
-    void SetFixGeneW(int inmode)    {
-        fixgenew = inmode;
-    }
-
-    void SetFixBranchV(int inmode)  {
-        fixbranchv = inmode;
-    }
-
-    void SetFixBranchVHyperParams(int inmode)   {
-        fixbranchvhyperparams = inmode;
-    }
-
-    void SetW(double inw)   {
+    void SetGeneW(double inw)   {
         genew = inw;
-        omegatree->SetMulVal(genew);
-        codonmatrixtree->UpdateCodonMatrices();
-    }
-
-    void SetWHyperParams(double ingenewhypermean, double ingenewhyperinvshape)   {
-        genewhypermean = ingenewhypermean;
-        genewhyperinvshape = ingenewhyperinvshape;
+        meanomegatree->SetMulVal(genew);
     }
 
     void SetBranchV(const BranchSelector<double>& inbranchv)    {
@@ -212,6 +194,15 @@ class BranchOmegaModel : public ProbModel {
     void SetBranchVHyperParams(double inbranchvhypermean, double inbranchvhyperinvshape)    {
         branchvhypermean = inbranchvhypermean;
         branchvhyperinvshape = inbranchvhyperinvshape;
+        double alpha = 1.0 / branchvhyperinvshape;
+        double beta = alpha / branchvhypermean;
+        branchv->SetShape(alpha);
+        branchv->SetScale(beta);
+    }
+
+    void SetOmegaHyperInvShape(double inomegainvshape)   {
+        omegainvshape = inomegainvshape;
+        omegatree->SetInvShape(omegainvshape);
     }
 
     //! \brief set branch lengths to a new value
@@ -263,9 +254,11 @@ class BranchOmegaModel : public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
+        /*
         total += BranchLengthsHyperLogPrior();
         total += BranchLengthsLogPrior();
         total += NucRatesLogPrior();
+        */
         total += OmegaLogPrior();
         return total;
     }
@@ -296,34 +289,10 @@ class BranchOmegaModel : public ProbModel {
         return 0;
     }
 
-    //! log prior over omega (gamma of mean omegahypermean and shape 1/omegahyperinvshape)
+    //! log prior over omega 
 	double OmegaLogPrior()	const {
-        double total = 0;
-        if (! fixbranchvhyperparams)    {
-            total += BranchVHyperLogPrior();
-        }
-        if (! fixbranchv)   {
-            total += BranchVLogPrior();
-        }
-        if (! fixgenew) {
-            total += GeneWLogPrior();
-        }
-        return total;
+        return omegatree->GetLogProb();
 	}
-
-    double BranchVHyperLogPrior() const {
-        return branchvhypermean + branchvhyperinvshape;
-    }
-
-    double BranchVLogPrior() const {
-        return branchv->GetLogProb();
-    }
-
-    double GeneWLogPrior() const {
-        double alpha = 1.0 / genewhyperinvshape;
-        double beta = alpha / genewhypermean;
-        return Random::logGammaDensity(genew,alpha,beta);
-    }
 
     //-------------------
     // Suff Stat and suffstatlogprobs
@@ -342,6 +311,10 @@ class BranchOmegaModel : public ProbModel {
     //! conditional on the current substitution mapping.
     const NucPathSuffStat& GetNucPathSuffStat() const {
         return nucpathsuffstat;
+    }
+
+    const OmegaPathSuffStatBranchArray* GetOmegaPathSuffStatArray() const   {
+        return omegapathsuffstatarray;
     }
 
     //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process
@@ -372,12 +345,6 @@ class BranchOmegaModel : public ProbModel {
         return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
     }
 
-    double BranchVHyperSuffStatLogProb() const {
-        double alpha = 1.0 / branchvhyperinvshape;
-        double beta = alpha / branchvhypermean;
-        return omegapathsuffstatarray->GetMarginalLogProb(alpha,beta);
-    }
-
     //-------------------
     //  Log probs for MH moves
     //-------------------
@@ -394,10 +361,6 @@ class BranchOmegaModel : public ProbModel {
     //! simply: NucRatesLogPrior() + NucRatesSuffStatLogProb();
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
-    }
-
-    double BranchVHyperLogProb() const  {
-        return BranchVHyperLogPrior() + BranchVHyperSuffStatLogProb();
     }
 
     //-------------------
@@ -423,10 +386,9 @@ class BranchOmegaModel : public ProbModel {
 
 			ResampleBranchLengths();
 			MoveBranchLengthsHyperParameter();
-
 			CollectPathSuffStat();
-
-			MoveOmega();
+            CollectOmegaSuffStat();
+			ResampleOmega();
 			MoveNucRates();
 		}
     }
@@ -464,35 +426,9 @@ class BranchOmegaModel : public ProbModel {
         omegapathsuffstatarray->AddSuffStat(*codonmatrixtree,*rootcodonmatrix,*pathsuffstatarray);
     }
 
-    void MoveBranchVHyperParameters()   {
-        ScalingMove(branchvhypermean,1.0,10,&BranchOmegaModel::BranchVHyperLogProb,&BranchOmegaModel::NoUpdate,this);
-        ScalingMove(branchvhypermean,0.3,10,&BranchOmegaModel::BranchVHyperLogProb,&BranchOmegaModel::NoUpdate,this);
-        ScalingMove(branchvhyperinvshape,1.0,10,&BranchOmegaModel::BranchVHyperLogProb,&BranchOmegaModel::NoUpdate,this);
-        ScalingMove(branchvhyperinvshape,0.3,10,&BranchOmegaModel::BranchVHyperLogProb,&BranchOmegaModel::NoUpdate,this);
-        double alpha = 1.0 / branchvhyperinvshape;
-        double beta = alpha / branchvhypermean;
-        branchv->SetShape(alpha);
-        branchv->SetScale(beta);
-    }
-
-    void GibbsResampleBranchV() {
-        branchv->GibbsResample(*omegapathsuffstatarray);
-    }
-
     //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)
-	void MoveOmega()	{
-        if ((! fixgenew) || (genew != 1.0)) {
-            cerr << "error: move omega with w not equal to 1\n";
-            exit(1);
-        }
-
-        CollectOmegaSuffStat();
-        if (! fixbranchvhyperparams)   {
-            MoveBranchVHyperParameters();
-        }
-        if (! fixbranchv)   {
-            GibbsResampleBranchV();
-        }
+	void ResampleOmega()	{
+        omegatree->GibbsResample(*omegapathsuffstatarray);
         codonmatrixtree->UpdateCodonMatrices();
 	}
 
@@ -524,7 +460,7 @@ class BranchOmegaModel : public ProbModel {
 
 	void TraceHeader(ostream& os) const override {
 		os << "#logprior\tlnL\tlength\t";
-		os << "meanom\tvarom\thypermean\tinvshape\t";
+		os << "meanom\tvarom\t";
 		os << "statent\t";
 		os << "rrent\n";
 	}
@@ -533,8 +469,7 @@ class BranchOmegaModel : public ProbModel {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-		os << branchv->GetMean() << '\t' << branchv->GetVar() << '\t';
-        os << branchvhypermean << '\t' << branchvhyperinvshape << '\t';
+        os << omegatree->GetMean() << '\t' << omegatree->GetVar() << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
@@ -544,15 +479,7 @@ class BranchOmegaModel : public ProbModel {
 	void ToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
-        if (! fixgenew) {
-            os << genew << '\n';
-        }
-        if (! fixbranchvhyperparams)    {
-            os << branchvhypermean << '\t' << branchvhyperinvshape << '\n';
-        }
-        if (! fixbranchv)   {
-            os << *branchv << '\n';
-        }
+        os << *omegatree << '\n';
         os << nucrelrate << '\n';
         os << nucstat << '\n';
     }
@@ -560,15 +487,7 @@ class BranchOmegaModel : public ProbModel {
 	void FromStream(istream& is) {
         is >> lambda;
         is >> *branchlength;
-        if (! fixgenew) {
-            is >> genew;
-        }
-        if (! fixbranchvhyperparams)    {
-            is >> branchvhypermean >> branchvhyperinvshape;
-        }
-        if (! fixbranchv)   {
-            is >> *branchv;
-        }
+        is >> *omegatree;
         is >> nucrelrate;
         is >> nucstat;
     }
