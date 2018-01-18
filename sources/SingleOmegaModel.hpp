@@ -227,6 +227,11 @@ class SingleOmegaModel : public ProbModel {
     //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
+    void Update()   {
+        branchlength->SetScale(lambda);
+        TouchMatrices();
+    }
+
     //-------------------
     // Priors and likelihood
     //-------------------

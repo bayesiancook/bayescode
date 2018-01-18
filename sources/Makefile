@@ -21,14 +21,14 @@ CPPFLAGS= -std=c++0x -g -Wall -O3 $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp MultiGeneAAMutSelM2aModel.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp MultiGeneAAMutSelM2aModel.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigenebranchom branchom globom aamutselddp multigeneaamutselddp aamutsel aamutselhdp aamutseldp multigeneaamutselm2a multigeneaamutseldp multigeneaamutselhdp aamutselm2a aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a multigeneglobom globom chi2
+ALL= multigenebranchom branchom readglobom globom aamutselddp multigeneaamutselddp aamutsel aamutselhdp aamutseldp multigeneaamutselm2a multigeneaamutseldp multigeneaamutselhdp aamutselm2a aamutseldpsw dpom dgamom gammasiteom diffsel multigenecodonm2a codonm2a multigeneglobom globom chi2
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -145,6 +145,10 @@ $(PROGSDIR)/multigenebranchom$(EXEEXT): MultiGeneBranchOmega.o $(OBJS)
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
 	$(CC) SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readglobom$(EXEEXT): $(PROGSDIR)/readglobom$(EXEEXT)
+$(PROGSDIR)/readglobom$(EXEEXT): ReadSingleOmega.o $(OBJS)
+	$(CC) ReadSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 gammasiteom$(EXEEXT): $(PROGSDIR)/gammasiteom$(EXEEXT)
 $(PROGSDIR)/gammasiteom$(EXEEXT): GammaSiteOmega.o $(OBJS)
