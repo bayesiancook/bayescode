@@ -86,6 +86,8 @@ class SingleOmegaModel : public ProbModel {
 
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
+
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(tree);
     }
 
     void DeclareModel() {

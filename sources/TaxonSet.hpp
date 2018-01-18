@@ -53,7 +53,7 @@ class TaxonSet : public tc::Component {
 inline int TaxonSet::GetTaxonIndex(std::string intaxon) const {
     std::map<std::string, int>::const_iterator i = taxmap.find(intaxon);
     if (i == taxmap.end()) {
-        std::cerr << "error in TaxonSet: taxon not found\n";
+        std::cerr << "error in TaxonSet: taxon " << intaxon << " not found\n";
         exit(1);
     }
     return i->second - 1;

@@ -506,6 +506,7 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
             ntaxa++;
         }
         taxset = new TaxonSet(SpeciesNames);
+        cout << "NTAXA = " << ntaxa << endl;
     } catch (...) {
         cerr << "error while reading data file\n";
         exit(1);
