@@ -319,9 +319,22 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
     void NoUpdate() {}
 
+    void FastUpdate()   {
+        meanomegatreearray->Update();
+    }
+
     //-------------------
     // Log Prior and Likelihood
     //-------------------
+    
+
+    double GetOmega(int gene, int branch)   {
+        return omegatreearray->GetVal(gene).GetVal(branch);
+    }
+
+    double GetMeanOmega(int gene, int branch)   {
+        return meanomegatreearray->GetVal(gene).GetVal(branch);
+    }
 
     double GetLogPrior() const {
 		double total = 0;
