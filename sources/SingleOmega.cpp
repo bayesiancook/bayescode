@@ -35,8 +35,8 @@ class SingleOmegaChain : public Chain {
     void New(int force) override {
         cout << "NEW\n";
         model = new SingleOmegaModel(datafile, treefile);
-        dynamic_cast<SingleOmegaModel*>(model)->DeclareModel();
         cout << "ENDNEW" << endl;
+        GetModel()->DeclareModel();  // instead of Allocate
         // GetModel()->Allocate();
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;

@@ -71,6 +71,14 @@ class PhyloProcess : public tc::Component {
         allocrootsubmatrixarray = true;
     }
 
+    string debug() const override {
+        stringstream ss;
+        ss << "PhyloProcess[Nstate:" << Nstate << ", tree:" << tree << ", data:" << data << ", branchlength:" << branchlength
+           << ", siterate:" << siterate << ", submatrixarray:" << submatrixarray << ", rootsubmatrixarray"
+           << rootsubmatrixarray << "]";
+        return ss.str();
+    }
+
     //! \brief special (short-cut) constructor for branch-homogeneous and site-heterogeneous model
     //!
     //! Compared to the generic constructor, this constructor takes a pointer to a (site) Selector<SubMatrix>*
@@ -261,17 +269,17 @@ class PhyloProcess : public tc::Component {
                                          const SubMatrix& matrix);
     BranchSitePath* ResampleUniformized(int stateup, int statedown, double rate, double totaltime, const SubMatrix& matrix);
 
-    const Tree* tree;
-    const SequenceAlignment* data;
-    BranchSelector<double>* branchlength;
-    const Selector<double>* siterate;
-    const BranchSiteSelector<SubMatrix>* submatrixarray;
-    const Selector<SubMatrix>* rootsubmatrixarray;
+    const Tree* tree{nullptr};
+    const SequenceAlignment* data{nullptr};
+    BranchSelector<double>* branchlength{nullptr};
+    const Selector<double>* siterate{nullptr};
+    const BranchSiteSelector<SubMatrix>* submatrixarray{nullptr};
+    const Selector<SubMatrix>* rootsubmatrixarray{nullptr};
     bool allocsubmatrixarray;
     bool allocrootsubmatrixarray;
 
-    int* sitearray;
-    mutable double* sitelnL;
+    int* sitearray{nullptr};
+    mutable double* sitelnL{nullptr};
 
     int Nstate;
 
@@ -290,7 +298,7 @@ class PhyloProcess : public tc::Component {
     mutable std::map<const Node*, int*> statemap;
     // std::map<const Node *, int> totmissingmap;
 
-    int** missingmap;
+    int** missingmap{nullptr};
 
     int maxtrial;
     static const int unknown = -1;

@@ -93,7 +93,7 @@ class SingleOmegaModel : public ProbModel {
         // where lambda is a hyperparameter
         model.component<FWrapper<double>>("lambda", 10);
         model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
-        model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
+        // model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
 
         // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
         model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
@@ -113,8 +113,8 @@ class SingleOmegaModel : public ProbModel {
         model.component<FWrapper<double>>("omega", 1);
 
         // a codon matrix (parameterized by nucmatrix and omega)
-        model
-            .component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), 1)  // 1 = omega ???
+        // 1 = omega
+        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), 1)
             .connect<Set<CodonStateSpace*>>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
@@ -126,6 +126,12 @@ class SingleOmegaModel : public ProbModel {
         model.dot_to_file();
 
         assembly = unique_ptr<Assembly>(new Assembly(model));
+        assembly->print_all();
+        cout << (*assembly->at<Wrapper<vector<double>>>("nucrelrate"))[0] << endl;
+        cout << (*assembly->at<Wrapper<vector<double>>>("nucstat"))[0] << endl;
+        cout << *assembly->at<FWrapper<double>>("omega") << endl;
+        cout << *assembly->at<FWrapper<double>>("lambda") << endl;
+        cout << assembly->at<BranchIIDGamma>("branchlength").GetVal(2) << endl;
     }
 
     //! \brief unfold the model

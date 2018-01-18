@@ -27,6 +27,12 @@ struct FWrapper : tc::Component {
     FWrapper(Args... args) : data(args...) {}
 
     Type& operator*() { return data; }
+
+    std::string debug() const override {
+        stringstream ss;
+        ss << "FWrapper [" << data << "]";
+        return ss.str();
+    }
 };
 
 // Set the value to the value of a wrapped object (if it makes sense)
