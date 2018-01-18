@@ -55,12 +55,19 @@ class BranchProductArray : public Array<BranchProduct>    {
 
     //! const access to the BranchProduct for the given gene
     const BranchProduct& GetVal(int gene) const {
+        // array[gene]->SetMulVal(siteval.GetVal(gene));
         return *array[gene];
     }
 
     //! non-const access to the BranchProduct for the given gene
     BranchProduct& operator[](int gene)  {
         return *array[gene];
+    }
+
+    void Update()   {
+        for (int gene=0; gene<GetSize(); gene++)    {
+            array[gene]->SetMulVal(siteval.GetVal(gene));
+        }
     }
 
     private:

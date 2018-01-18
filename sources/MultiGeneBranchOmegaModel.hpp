@@ -260,7 +260,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 		os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
         os << genewhypermean << '\t' << genewhyperinvshape << '\t';
-        os << genewarray->GetMean() << '\t' << genewarray->GetVar() << '\t';
         os << branchvhyperinvshape << '\t';
         os << omegainvshape << '\t';
 		os << Random::GetEntropy(nucstat) << '\t';
@@ -269,12 +268,49 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     }
 
 	void Monitor(ostream& os) const {}
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) const {}
+
+	void ToStream(ostream& os) const {
+        os << lambda << '\n';
+        os << *branchlength << '\n';
+        os << branchvhypermean << '\t' << branchvhyperinvshape << '\n';
+        os << *branchvarray << '\n';
+        os << genewhypermean << '\t' << genewhyperinvshape << '\n';
+        os << *genewarray << '\n';
+        os << omegainvshape << '\n';
+        os << *omegatreearray << '\n';
+        os << nucrelrate << '\n';
+        os << nucstat << '\n';
+    }
+
+	void FromStream(istream& is) {
+        is >> lambda;
+        is >> *branchlength;
+        is >> branchvhypermean >> branchvhyperinvshape;
+        is >> *branchvarray;
+        is >> genewhypermean >> genewhyperinvshape;
+        is >> *genewarray;
+        is >> omegainvshape;
+        is >> *omegatreearray;
+        is >> nucrelrate;
+        is >> nucstat;
+    }
 
     //-------------------
     // Updates
     //-------------------
+
+    void Update()   {
+        branchlength->SetScale(lambda);
+        double alpha = 1.0 / branchvhyperinvshape;
+        double beta = alpha / branchvhypermean;
+        branchvarray->SetShape(alpha);
+        branchvarray->SetScale(beta);
+        double genealpha = 1.0 / genewhyperinvshape;
+        double genebeta = genealpha / genewhypermean;
+        genewarray->SetShape(genealpha);
+        genewarray->SetScale(genebeta);
+        omegatreearray->SetInvShape(omegainvshape);
+    }
 
 	void TouchNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
@@ -297,9 +333,14 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         total += GeneWHyperLogPrior();
         total += GeneWLogPrior();
         total += OmegaInvShapeLogPrior();
-        // genes cope with that
-		// total += OmegaLogPrior();
+		total += OmegaLogPrior();
 		return total;
+    }
+
+    double OmegaLogPrior() const    {
+        meanomegatreearray->Update();
+        omegatreearray->SetInvShape(omegainvshape);
+        return omegatreearray->GetLogProb();
     }
 
 	double BranchLengthsHyperLogPrior() const {
@@ -499,7 +540,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     void GeneResampleOmega()  {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->ResampleOmega();
-            (*omegatreearray)[gene].Copy(*geneprocess[gene]->GetOmegaTree());
+            // (*omegatreearray)[gene].Copy(*geneprocess[gene]->GetOmegaTree());
         }
     }
 
@@ -643,6 +684,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
                 omegainvshape /= e;
             }
         }
+        omegatreearray->SetInvShape(omegainvshape);
         return nacc/nrep;
     }
 
