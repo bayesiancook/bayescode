@@ -424,6 +424,8 @@ class BranchOmegaModel : public ProbModel {
     void CollectOmegaSuffStat()   {
         omegapathsuffstatarray->Clear();
         omegapathsuffstatarray->AddSuffStat(*codonmatrixtree,*rootcodonmatrix,*pathsuffstatarray);
+        // cerr << "gene: " << omegapathsuffstatarray->GetMeanCount() << '\t' << omegapathsuffstatarray->GetMeanBeta() << '\t';
+        // cerr << omegapathsuffstatarray->GetMeanCount() / omegapathsuffstatarray->GetMeanBeta() << '\n';
     }
 
     //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)
