@@ -51,14 +51,13 @@ PhyloProcess::PhyloProcess(const Tree* intree, const SequenceAlignment* indata, 
 }
 
 PhyloProcess::~PhyloProcess() {
-    // FIXME FIXME FIXME FIXME
-    // Cleanup();
-    // if (allocsubmatrixarray) {
-    //     delete submatrixarray;
-    // }
-    // if (allocrootsubmatrixarray) {
-    //     delete rootsubmatrixarray;
-    // }
+    Cleanup();
+    if (allocsubmatrixarray) {
+        delete submatrixarray;
+    }
+    if (allocrootsubmatrixarray) {
+        delete rootsubmatrixarray;
+    }
 }
 
 void PhyloProcess::SetData(const SequenceAlignment* indata) { data = indata; }

@@ -73,9 +73,9 @@ class PhyloProcess : public tc::Component {
 
     string debug() const override {
         stringstream ss;
-        ss << "PhyloProcess[Nstate:" << Nstate << ", tree:" << tree << ", data:" << data << ", branchlength:" << branchlength
-           << ", siterate:" << siterate << ", submatrixarray:" << submatrixarray << ", rootsubmatrixarray"
-           << rootsubmatrixarray << "]";
+        ss << "PhyloProcess [\n\tNstate:" << Nstate << ",\n\ttree:" << tree << ",\n\tdata:" << data
+           << ",\n\tbranchlength:" << branchlength << ",\n\tsiterate:" << siterate
+           << ",\n\tsubmatrixarray:" << submatrixarray << ",\n\trootsubmatrixarray:" << rootsubmatrixarray << "\n]";
         return ss.str();
     }
 
