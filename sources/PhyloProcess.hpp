@@ -64,7 +64,6 @@ class PhyloProcess : public tc::Component {
     }
 
     void set_submatrix(SubMatrix* insubmatrix) {
-        printf("DEBUG set_submatrix: %p\n", insubmatrix);
         submatrixarray = new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree, GetNsite(), *insubmatrix);
         allocsubmatrixarray = true;
         rootsubmatrixarray = new HomogeneousSelector<SubMatrix>(GetNsite(), *insubmatrix);
@@ -133,10 +132,7 @@ class PhyloProcess : public tc::Component {
     double FastSiteLogLikelihood(int site) const;
 
     //! return branch length for given branch
-    double GetBranchLength(int branch) const {
-        printf("DEBUG GetBranchLength: %p\n", branchlength);
-        return branchlength->GetVal(branch);
-    }
+    double GetBranchLength(int branch) const { return branchlength->GetVal(branch); }
 
     //! return site rate for given site (if no rates-across-sites array was given to phyloprocess, returns 1)
     double GetSiteRate(int site) const {

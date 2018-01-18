@@ -121,7 +121,7 @@ class SingleOmegaModel : public ProbModel {
         model.component<PhyloProcess>("phyloprocess", tree, codondata)
             .set("siterate", static_cast<const Selector<double>*>(nullptr))
             .connect<Use<BranchSelector<double>>>("branchlength", "branchlength")
-            .connect<Use<SubMatrix>>("submatrix", "nucmatrix");
+            .connect<Use<SubMatrix>>("submatrix", "codonmatrix");
 
         model.dot_to_file();
 
