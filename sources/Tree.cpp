@@ -19,6 +19,11 @@ void Tree::ToStream(ostream &os) const {
     os << ";\n";
 }
 
+void Tree::ToStreamWithBranchIndex(ostream &os) const {
+    ToStreamWithBranchIndex(os, GetRoot());
+    os << ";\n";
+}
+
 double Tree::ToStreamSimplified(ostream &os, const Link *from) const {
     if (!from->isLeaf()) {
         if (from->Next()->Next() == from) {
@@ -72,6 +77,25 @@ void Tree::ToStream(ostream &os, const Link *from) const {
         if (brval != "") {
             os << ':' << brval;
         }
+    }
+}
+
+void Tree::ToStreamWithBranchIndex(ostream &os, const Link *from) const {
+    if (!from->isLeaf()) {
+        os << '(';
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            ToStreamWithBranchIndex(os, link->Out());
+            if (link->Next() != from) {
+                os << ',';
+            }
+        }
+        os << ')';
+    }
+    // if (from->isLeaf())	{
+    os << GetNodeName(from);
+    // }
+    if (!from->isRoot()) {
+        os << ':' << from->GetBranch()->GetIndex();
     }
 }
 

@@ -224,6 +224,7 @@ class Tree {
 
     //! output to stream (newick format)
     void ToStream(std::ostream &os) const;
+    void ToStreamWithBranchIndex(std::ostream &os) const;
 
     //! return total number of links
 	int GetNlink() const {
@@ -615,6 +616,7 @@ class Tree {
     int GetNinternalNode() const { return RecursiveGetNinternalNode(GetRoot()); }
 
     void ToStream(std::ostream &os, const Link *from) const;
+    void ToStreamWithBranchIndex(std::ostream &os, const Link *from) const;
     double ToStreamSimplified(std::ostream &os, const Link *from) const;
 
     const Link *GetLeftMostLink(const Link *from) const {

@@ -105,6 +105,23 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
+
+    void MakeFiles(int force) override  {
+        Chain::MakeFiles(force);
+        ofstream gos((name + ".gene").c_str());
+        ofstream bos((name + ".branch").c_str());
+        ofstream bgos((name + ".branchgene").c_str());
+    }
+
+    void SavePoint() override   {
+        Chain::SavePoint();
+        ofstream gos((name + ".gene").c_str(),ios_base::app);
+        GetModel()->PrintGeneEffects(gos);
+        ofstream bos((name + ".branch").c_str(),ios_base::app);
+        GetModel()->PrintBranchEffects(bos);
+        ofstream bgos((name + ".branchgene").c_str(),ios_base::app);
+        GetModel()->PrintDeviations(bgos);
+    }
 };
 
 int main(int argc, char* argv[])	{

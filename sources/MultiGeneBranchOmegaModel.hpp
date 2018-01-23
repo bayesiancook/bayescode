@@ -139,6 +139,8 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
 
+        tree->ToStreamWithBranchIndex(cerr);
+
         if (! myid) {
             std::cerr << "number of taxa : " << Ntaxa << '\n';
             std::cerr << "number of branches : " << Nbranch << '\n';
@@ -267,6 +269,26 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 		os.flush();
     }
 
+    void PrintGeneEffects(ostream& os) const    {
+        os << *genewarray << '\n';
+        os.flush();
+    }
+
+    void PrintBranchEffects(ostream& os) const  {
+        os << *branchvarray << '\n';
+        os.flush();
+    }
+
+    void PrintDeviations(ostream& os) const {
+        for (int j=0; j<GetNbranch(); j++)  {
+            for (int i=0; i<GetNgene(); i++)    {
+                os << GetOmega(i,j) / GetMeanOmega(i,j) << '\t';
+            }
+        }
+        os << '\n';
+        os.flush();
+    }
+
 	void Monitor(ostream& os) const {}
 
 	void ToStream(ostream& os) const {
@@ -328,11 +350,11 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     //-------------------
     
 
-    double GetOmega(int gene, int branch)   {
+    double GetOmega(int gene, int branch) const {
         return omegatreearray->GetVal(gene).GetVal(branch);
     }
 
-    double GetMeanOmega(int gene, int branch)   {
+    double GetMeanOmega(int gene, int branch) const {
         return meanomegatreearray->GetVal(gene).GetVal(branch);
     }
 
