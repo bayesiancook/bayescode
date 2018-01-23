@@ -111,6 +111,9 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         ofstream gos((name + ".gene").c_str());
         ofstream bos((name + ".branch").c_str());
         ofstream bgos((name + ".branchgene").c_str());
+
+        ofstream tos((name + ".branchindices").c_str());
+        GetModel()->GetTree()->ToStreamWithBranchIndex(tos);
     }
 
     void SavePoint() override   {

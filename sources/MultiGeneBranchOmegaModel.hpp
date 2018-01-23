@@ -243,6 +243,10 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         return tree->GetNbranch();
     }
 
+    const Tree* GetTree() const {
+        return tree;
+    }
+
     //-------------------
     // Traces and Monitors
     //-------------------
