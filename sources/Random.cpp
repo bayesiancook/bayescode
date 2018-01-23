@@ -579,6 +579,30 @@ double Random::RealVectorProposeMove(std::vector<double>& x, int dim, double tun
 	}
 	return 0;
 }
+
+double Random::PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n)	{
+    double logh = 0;
+	auto indices = new int[n];
+	Random::DrawFromUrn(indices, n, dim);
+	for (int i=0; i<n; i++)	{
+		double u = tuning * (Random::Uniform() - 0.5);
+		x[indices[i]] *= exp(u);
+        logh += u;
+	}
+	return logh;
+}
+	
+double Random::PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, const vector<int>& toggle)	{
+    double logh = 0;
+	for (int i=0; i<dim; i++)	{
+        if (toggle[i])  {
+            double u = tuning * (Random::Uniform() - 0.5);
+            x[i] *= exp(u);
+            logh += u;
+        }
+	}
+	return logh;
+}
 	
 
 double Random::GetEntropy(const std::vector<double>& profile) {

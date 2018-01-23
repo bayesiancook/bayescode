@@ -52,6 +52,8 @@ class Random {
 
     static double ProfileProposeMove(std::vector<double>& profile, int dim, double tuning, int n);
     static double RealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n);
+    static double PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n);
+    static double PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, const vector<int>& toggle);
 
     static double GetEntropy(const std::vector<double>& profile);
 

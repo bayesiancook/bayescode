@@ -31,8 +31,9 @@ license and that you accept its terms.*/
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "Tree.hpp"
-#include "IIDMVNormal.hpp"
-#include "DiffSelFitnessArray.hpp"
+#include "IIDMultiGamma.hpp"
+#include "IIDMultiBernoulli.hpp"
+#include "DiffSelSparseFitnessArray.hpp"
 #include "BranchAllocationSystem.hpp"
 #include "AAMutSelCodonMatrixArray.hpp"
 #include "SubMatrixSelector.hpp"
@@ -41,7 +42,7 @@ license and that you accept its terms.*/
 #include "IIDDirichlet.hpp"
 #include "PathSuffStat.hpp"
 
-class DiffSelModel : public ProbModel {
+class DiffSelSparseModel : public ProbModel {
 
     // -----
     // model selectors
@@ -71,8 +72,8 @@ class DiffSelModel : public ProbModel {
     // number of levels of the model
     // with 2 levels, structure of the model is as follows:
     // baseline (condition 0)
-    // baseline  * exp(*delta1) (condition 1)
-    // baseline * exp(delta1 + deltak) (for condition k=2..Ncond)
+    // baseline  || fitness1 (for condition 1)
+    // baseline || fitness1  || fitnessk  (for condition k=2..Ncond)
     int Nlevel;
 
     // which branch is under which condition
@@ -97,18 +98,16 @@ class DiffSelModel : public ProbModel {
 	std::vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
 
-    // baseline (global) fitness profiles across sites
-    IIDDirichlet* baseline;
+    double fitnessshape;
+    vector<double> fitnesscenter;
+    BidimIIDMultiGamma* fitness;
 
-    // variance parameters (across conditions k=1..Ncond)
-    IIDGamma* varsel;
-
-    // differential selection factors across conditions k=1..Ncond and across sites
-    BidimIIDMVNormal* delta;
+    vector<double> shiftprob;
+    BidimIIDMultiBernoulli* toggle;
 
     // fitness profiles (combinations of baseline and delta)
     // across conditions and across sites
-    DiffSelFitnessArray* fitnessprofile;
+    DiffSelSparseFitnessArray* fitnessprofile;
 
     // codon substitution matrices
     // across conditions and sites
@@ -136,19 +135,10 @@ class DiffSelModel : public ProbModel {
 
   public:
 
-    DiffSelModel(const std::string& datafile, const std::string& treefile, int inNcond,
-                 int inNlevel, int infixglob, int infixvar, int incodonmodel) {
+    DiffSelSparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) {
 
-        fixglob = infixglob;
-        if (!fixglob) {
-            cerr << "error: free hyperparameters for baseline (global profile) not yet "
-                    "implemented\n";
-            exit(1);
-        }
-        fixvar = infixvar;
         codonmodel = incodonmodel;
         Ncond = inNcond;
-
         Nlevel = inNlevel;
 
         ReadFiles(datafile, treefile);
@@ -159,9 +149,9 @@ class DiffSelModel : public ProbModel {
         std::cerr << "-- conditions over branches ok\n";
     }
 
-    DiffSelModel(const DiffSelModel&) = delete;
+    // DiffSelSparseModel(const DiffSelSparseModel&) = delete;
 
-    ~DiffSelModel() {}
+    ~DiffSelSparseModel() {}
 
     void ReadFiles(string datafile, string treefile) {
         // nucleotide sequence alignment
@@ -231,28 +221,15 @@ class DiffSelModel : public ProbModel {
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-        // baseline (global) profile
-        // uniform Dirichlet distributed
-        vector<double> center(20,1.0/20);
-        double concentration = 20.0;
-        baseline = new IIDDirichlet(Nsite,center,concentration);
+        fitnessshape = 1.0;
+        fitnesscenter.assign(Naa,1.0/Naa);
+        fitness = new BidimIIDMultiGamma(Nsite,Ncond,Naa,fitnessshape,fitnesscenter);
 
-        // variance parameters (one for each condition, 1..Ncond)
-        double shape = 1.0;
-        double scale = 1.0;
-        varsel = new IIDGamma(Ncond-1,shape,scale);
-        for (int k=0; k<Ncond-1; k++)   {
-            (*varsel)[k] = 1.0;
-        }
+        shiftprob.assign(Ncond-1,0.1);
+        toggle = new BidimIIDMultiBernoulli(Nsite,Ncond-1,Naa,shiftprob);
 
-        // differential selection effects
-        // normally distributed
-        delta = new BidimIIDMVNormal(Nsite,20,*varsel);
-
-        // fitnessprofiles...
-        fitnessprofile = new DiffSelFitnessArray(*baseline,*delta,Nlevel);
-        // fitnessprofile = new DiffSelFitnessArray(*baseline,*delta,condalloc);
-
+        fitnessprofile = new DiffSelSparseFitnessArray(*fitness,*toggle,Nlevel);
+        
         // codon matrices
         // per condition and per site
         condsubmatrixarray = new AAMutSelCodonMatrixArray(*fitnessprofile,*GetCodonStateSpace(),*nucmatrix);
@@ -333,14 +310,11 @@ class DiffSelModel : public ProbModel {
         // nuc rates
         total += NucRatesLogPrior();
 
-        // uniform on baseline
-        total += BaselineLogPrior();
+        total += FitnessHyperLogPrior();
+        total += FitnessLogPrior();
 
-        // variance parameters
-        total += VarSelLogPrior();
-
-        // differential selection effects
-        total += DeltaLogPrior();
+        total += ToggleHyperLogPrior();
+        total += ToggleLogPrior();
 
         return total;
     }
@@ -362,16 +336,23 @@ class DiffSelModel : public ProbModel {
         return total;
     }
 
-    double BaselineLogPrior() const {
-        return Nsite * Random::logGamma((double)Naa);
+    double FitnessHyperLogPrior() const {
+        // uniform on center
+        // exponential on shape
+        return -fitnessshape;
     }
 
-    double DeltaLogPrior() const {
-        return delta->GetLogProb();
+    double FitnessLogPrior() const  {
+        return fitness->GetLogProb();
     }
 
-    double VarSelLogPrior() const {
-        return varsel->GetLogProb();
+    // for the moment, uniform prior over shift probs
+    double ToggleHyperLogPrior() const  {
+        return 0;
+    }
+
+    double ToggleLogPrior() const   {
+        return toggle->GetLogProb();
     }
 
     double GetLogLikelihood() const { 
@@ -414,6 +395,22 @@ class DiffSelModel : public ProbModel {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
+    int GetNshift(int cond) const {
+        if (! cond) {
+            cerr << "error: GetNshift called on baseline\n";
+            exit(1);
+        }
+        return toggle->GetRowEventNumber(cond);
+    }
+
+    int GetNshift(int cond, int site) const {
+        if (! cond) {
+            cerr << "error: GetNshift called on baseline\n";
+            exit(1);
+        }
+        return toggle->GetEventNumber(cond,site);
+    }
+
     // ---------------
     // log probs for MH moves
     // ---------------
@@ -449,12 +446,11 @@ class DiffSelModel : public ProbModel {
             UpdateAll();
 
             for (int rep = 0; rep < nrep; rep++) {
-                MoveBaseline();
-                MoveDelta();
-                if (!fixvar) {
-                    MoveVarSel();
-
-                }
+                MoveBaselineFitness();
+                MoveFitnessShifts();
+                MoveShiftToggles();
+                MoveFitnessHyperParameters();
+                ResampleShiftProbs();
             }
             MoveNucRates();
         }
@@ -464,6 +460,10 @@ class DiffSelModel : public ProbModel {
         ResampleSub(1.0);
         return 1.0;
     }
+
+    void MoveFitnessHyperParameters() {}
+    void ResampleShiftProbs() {}
+    void MoveShiftToggles() {}
 
     void ResampleSub(double frac)   {
 		phyloprocess->Move(frac);
@@ -478,8 +478,8 @@ class DiffSelModel : public ProbModel {
 
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda,1.0,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
-        ScalingMove(lambda,0.3,10,&DiffSelModel::BranchLengthsHyperLogProb,&DiffSelModel::NoUpdate,this);
+        ScalingMove(lambda,1.0,10,&DiffSelSparseModel::BranchLengthsHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&DiffSelSparseModel::BranchLengthsHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
 		branchlength->SetScale(lambda);
 	}
 
@@ -487,45 +487,47 @@ class DiffSelModel : public ProbModel {
 
         CorruptMatrices();
 
-        ProfileMove(nucrelrate,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.03,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.01,3,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.1,1,10,&DiffSelSparseModel::NucRatesLogProb,&DiffSelSparseModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.03,3,10,&DiffSelSparseModel::NucRatesLogProb,&DiffSelSparseModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.01,3,10,&DiffSelSparseModel::NucRatesLogProb,&DiffSelSparseModel::CorruptMatrices,this);
 
-        ProfileMove(nucstat,0.1,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
-        ProfileMove(nucstat,0.01,1,10,&DiffSelModel::NucRatesLogProb,&DiffSelModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.1,1,10,&DiffSelSparseModel::NucRatesLogProb,&DiffSelSparseModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.01,1,10,&DiffSelSparseModel::NucRatesLogProb,&DiffSelSparseModel::CorruptMatrices,this);
 
         CorruptMatrices();
 	}
 
-    void MoveBaseline() {
-        MoveBaseline(0.15, 10, 1);
+    void MoveBaselineFitness() {
+        MoveBaselineFitness(0.15, 10, 1);
     }
 
-    double MoveBaseline(double tuning, int n, int nrep) {
+    double MoveBaselineFitness(double tuning, int n, int nrep) {
 
         double nacc = 0;
         double ntot = 0;
         vector<double> bk(Naa,0);
 
-        for (int rep = 0; rep < nrep; rep++) {
 
+        for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
 
-                bk = (*baseline)[i];
+                vector<double>& x = (*fitness)(0,i);
 
-                double deltalogprob = -baseline->GetLogProb(i) - SiteSuffStatLogProb(i);
-                double loghastings = Random::ProfileProposeMove((*baseline)[i], Naa, tuning, n);
+                bk = x;
+
+                double deltalogprob = -fitness->GetLogProb(0,i) - SiteSuffStatLogProb(i);
+                double loghastings = Random::PosRealVectorProposeMove(x, Naa, tuning, n);
                 deltalogprob += loghastings;
 
                 UpdateSite(i);
 
-                deltalogprob += baseline->GetLogProb(i) + SiteSuffStatLogProb(i);
+                deltalogprob += fitness->GetLogProb(0,i) + SiteSuffStatLogProb(i);
 
                 int accepted = (log(Random::Uniform()) < deltalogprob);
                 if (accepted) {
                     nacc++;
                 } else {
-                    (*baseline)[i] = bk;
+                    x = bk;
                     UpdateSite(i);
                 }
                 ntot++;
@@ -534,64 +536,45 @@ class DiffSelModel : public ProbModel {
         return nacc / ntot;
     }
 
-    void MoveDelta()    {
-        for (int k =0; k < Ncond-1; k++) {
-        // for (int k = 1; k < Ncond; k++) {
-            MoveDelta(k, 5, 1, 10);
-            MoveDelta(k, 3, 5, 10);
-            MoveDelta(k, 1, 10, 10);
-            MoveDelta(k, 1, 20, 10);
+    void MoveFitnessShifts()    {
+        for (int k=1; k<Ncond; k++) {
+            MoveFitnessShifts(k,1,3);
+            MoveFitnessShifts(k,0.3,3);
         }
     }
 
-    double MoveDelta(int k, double tuning, int n, int nrep) {
+    double MoveFitnessShifts(int k, double tuning, int nrep) {
+
         double nacc = 0;
         double ntot = 0;
         vector<double> bk(Naa,0);
+
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                bk = delta->GetVal(k,i);
-                double deltalogprob = -delta->GetLogProb(k,i) - SiteCondSuffStatLogProb(i,k);
-                double loghastings = Random::RealVectorProposeMove((*delta)(k,i), Naa, tuning, n);
-                deltalogprob += loghastings;
-                UpdateSiteCond(i,k);
-                deltalogprob += delta->GetLogProb(k,i) + SiteCondSuffStatLogProb(i,k);
-                int accepted = (log(Random::Uniform()) < deltalogprob);
-                if (accepted) {
-                    nacc++;
-                } else {
-                    (*delta)(k,i) = bk;
-                    UpdateSiteCond(i,k);
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
-    }
+                if (GetNshift(k,i))  {
 
-    void MoveVarSel()   {
-        MoveVarSel(1.0, 10);
-        MoveVarSel(0.3, 10);
-    }
+                    vector<double>& x = (*fitness)(k,i);
+                    const vector<int>& s = (*toggle)(k-1,i);
 
-    double MoveVarSel(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int rep = 0; rep < nrep; rep++) {
-            for (int k = 1; k < Ncond; k++) {
-                double deltalogprob = -varsel->GetLogProb(k) - delta->GetRowLogProb(k);
-                double m = tuning * (Random::Uniform() - 0.5);
-                double e = exp(m);
-                (*varsel)[k] *= e;
-                deltalogprob += varsel->GetLogProb(k) + delta->GetRowLogProb(k);
-                deltalogprob += m;
-                int accepted = (log(Random::Uniform()) < deltalogprob);
-                if (accepted) {
-                    nacc++;
-                } else {
-                    (*varsel)[k] /= e;
+                    bk = x;
+
+                    double deltalogprob = -fitness->GetLogProb(k,i,s) - SiteSuffStatLogProb(i);
+                    double loghastings = Random::PosRealVectorProposeMove(x, Naa, tuning, s);
+                    deltalogprob += loghastings;
+
+                    UpdateSite(i);
+
+                    deltalogprob += fitness->GetLogProb(k,i,s) + SiteSuffStatLogProb(i);
+
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted) {
+                        nacc++;
+                    } else {
+                        x = bk;
+                        UpdateSite(i);
+                    }
+                    ntot++;
                 }
-                ntot++;
             }
         }
         return nacc / ntot;
@@ -626,10 +609,12 @@ class DiffSelModel : public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
+        /*
         os << baseline->GetMeanEntropy() << '\t';
         for (int k = 0; k < Ncond-1; k++) {
             os << delta->GetMeanVar(k) << '\t';
         }
+        */
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
@@ -641,9 +626,6 @@ class DiffSelModel : public ProbModel {
         is >> *branchlength;
         is >> nucrelrate;
         is >> nucstat;
-        is >> *baseline;
-        is >> *varsel;
-        is >> *delta;
     }
 
     void ToStream(ostream& os) const override {
@@ -651,8 +633,5 @@ class DiffSelModel : public ProbModel {
         os << *branchlength << '\n';
         os << nucrelrate << '\n';
         os << nucstat << '\n';
-        os << *baseline << '\n';
-        os << *varsel << '\n';
-        os << *delta << '\n';
     }
 };
