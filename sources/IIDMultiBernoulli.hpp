@@ -28,7 +28,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int> >    {
     void Sample(int i, int j)   {
         vector<int>& x = (*this)(i,j);
         for (int k=0; k<GetDim(); k++) {
-            x[k] = (Random::Uniform() < prob[k]);
+            x[k] = (Random::Uniform() < prob[i]);
         }
     }
 
