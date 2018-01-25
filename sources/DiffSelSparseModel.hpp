@@ -33,6 +33,7 @@ license and that you accept its terms.*/
 #include "Tree.hpp"
 #include "IIDMultiGamma.hpp"
 #include "IIDMultiBernoulli.hpp"
+#include "MultiGammaSuffStat.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
 #include "BranchAllocationSystem.hpp"
 #include "AAMutSelCodonMatrixArray.hpp"
@@ -102,7 +103,14 @@ class DiffSelSparseModel : public ProbModel {
     vector<double> fitnesscenter;
     BidimIIDMultiGamma* fitness;
 
+    // shiftprob (across conditions):
+    // either Beta(shiftprobhypermean,shiftprobhyperinvconc), estimated across genes
+    // or mixture 1-pi * 0 + pi * Beta: and this, for each condition separately
+    vector<double> pi;
+    vector<double> shiftprobhypermean;
+    vector<double> shiftprobhyperinvconc;
     vector<double> shiftprob;
+
     BidimIIDMultiBernoulli* toggle;
 
     // fitness profiles (combinations of baseline and delta)
@@ -132,10 +140,11 @@ class DiffSelSparseModel : public ProbModel {
     // suff stats branch lengths, as a function of their hyper parameter lambda
     // (bl are iid gamma, of scale parameter lambda)
 	GammaSuffStat hyperlengthsuffstat;
+    MultiGammaSuffStat hyperfitnesssuffstat;
 
   public:
 
-    DiffSelSparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) {
+    DiffSelSparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) : hyperfitnesssuffstat(Naa) {
 
         codonmodel = incodonmodel;
         Ncond = inNcond;
@@ -221,12 +230,16 @@ class DiffSelSparseModel : public ProbModel {
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-        fitnessshape = 1.0;
+        fitnessshape = 2.0;
         fitnesscenter.assign(Naa,1.0/Naa);
-        fitness = new BidimIIDMultiGamma(Nsite,Ncond,Naa,fitnessshape,fitnesscenter);
+        fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
+        pi.assign(Ncond-1,1.0);
+        shiftprobhypermean.assign(Ncond-1,0.5);
+        shiftprobhyperinvconc.assign(Ncond-1,0.5);
         shiftprob.assign(Ncond-1,0.1);
-        toggle = new BidimIIDMultiBernoulli(Nsite,Ncond-1,Naa,shiftprob);
+
+        toggle = new BidimIIDMultiBernoulli(Ncond-1,Nsite,Naa,shiftprob);
 
         fitnessprofile = new DiffSelSparseFitnessArray(*fitness,*toggle,Nlevel);
         
@@ -262,6 +275,27 @@ class DiffSelSparseModel : public ProbModel {
     // ------------------
     // Update system
     // ------------------
+
+    //! \brief set branch lengths to a new value
+    //! 
+    //! Used in a multigene context.
+    void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
+        branchlength->Copy(inbranchlength);
+    }
+
+    //! \brief set nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat) to a new value
+    //!
+    //! Notifies corruption to the nucleotide and the codon matrices
+    void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
+        CorruptMatrices();
+    }
+
+    void SetShiftProbHyperParams(const vector<double>& inshiftprobhypermean, const vector<double>& inshiftprobhyperinvconc)    {
+        shiftprobhypermean = inshiftprobhypermean;
+        shiftprobhyperinvconc = inshiftprobhyperinvconc;
+    }
 
     void NoUpdate() {}
 
@@ -348,7 +382,13 @@ class DiffSelSparseModel : public ProbModel {
 
     // for the moment, uniform prior over shift probs
     double ToggleHyperLogPrior() const  {
-        return 0;
+        double total = 0;
+        for (int k=1; k<Ncond; k++) {
+            double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+            double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+            total += Random::logBetaDensity(shiftprob[k-1],alpha,beta);
+        }
+        return total;
     }
 
     double ToggleLogPrior() const   {
@@ -366,6 +406,13 @@ class DiffSelSparseModel : public ProbModel {
     // ---------------
     // collecting suff stats
     // ---------------
+
+    //! \brief const access to array of length-pathsuffstats across branches
+    //!
+    //! Useful for resampling branch lengths conditional on the current substitution mapping
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
+    }
 
     // suffstats, per condition and per site
     // see SuffStat.hpp
@@ -395,12 +442,16 @@ class DiffSelSparseModel : public ProbModel {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
+	double FitnessHyperSuffStatLogProb()	const {
+		return hyperfitnesssuffstat.GetLogProb(fitnessshape,fitnesscenter);
+	}
+
     int GetNshift(int cond) const {
         if (! cond) {
             cerr << "error: GetNshift called on baseline\n";
             exit(1);
         }
-        return toggle->GetRowEventNumber(cond);
+        return toggle->GetRowEventNumber(cond-1);
     }
 
     int GetNshift(int cond, int site) const {
@@ -408,7 +459,7 @@ class DiffSelSparseModel : public ProbModel {
             cerr << "error: GetNshift called on baseline\n";
             exit(1);
         }
-        return toggle->GetEventNumber(cond,site);
+        return toggle->GetEventNumber(cond-1,site);
     }
 
     // ---------------
@@ -423,16 +474,22 @@ class DiffSelSparseModel : public ProbModel {
         return NucRatesLogPrior() + SuffStatLogProb();
     }
 
+    double FitnessHyperLogProb() const  {
+        return FitnessHyperLogPrior() + FitnessHyperSuffStatLogProb();
+    }
+
     // ---------------
     // Moves
     // ---------------
 
-    // move cycle schedule
-    // does not yet implement any monitoring (success rates, time spent, etc)
-    double Move() override {
+    //! \brief complete MCMC move schedule
+	double Move() override {
+        ResampleSub(1.0);
+        MoveParameters(3,20);
+        return 1.0;
+	}
 
-        int nrep0 = 3;
-        int nrep = 20;
+    void MoveParameters(int nrep0, int nrep) {
 
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
 
@@ -447,23 +504,16 @@ class DiffSelSparseModel : public ProbModel {
 
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness();
+                CompMoveFitness();
                 MoveFitnessShifts();
                 MoveShiftToggles();
-                MoveFitnessHyperParameters();
-                ResampleShiftProbs();
+                // MoveFitnessHyperParameters();
             }
             MoveNucRates();
         }
 
         UpdateAll();
-
-        ResampleSub(1.0);
-        return 1.0;
     }
-
-    void MoveFitnessHyperParameters() {}
-    void ResampleShiftProbs() {}
-    void MoveShiftToggles() {}
 
     void ResampleSub(double frac)   {
 		phyloprocess->Move(frac);
@@ -498,7 +548,77 @@ class DiffSelSparseModel : public ProbModel {
 	}
 
     void MoveBaselineFitness() {
-        MoveBaselineFitness(0.15, 10, 1);
+        MoveBaselineFitness(1.0, 3, 10);
+        MoveBaselineFitness(1.0, 10, 10);
+        MoveBaselineFitness(1.0, 20, 10);
+        MoveBaselineFitness(0.3, 20, 10);
+    }
+
+    void CompMoveFitness()  {
+        CompMoveFitness(1.0,10);
+    }
+
+    double CompMoveFitness(double tuning, int nrep) {
+
+        double nacc = 0;
+        double ntot = 0;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            for (int i = 0; i < Nsite; i++) {
+
+                double deltalogprob = 0;
+
+                for (int k=0; k<Ncond; k++) {
+                    for (int a=0; a<Naa; a++)   {
+                        if ((!k) || ((*toggle)(k-1,i)[a]))   {
+                            double alpha = fitnessshape*fitnesscenter[a];
+                            deltalogprob -= - Random::logGamma(alpha) + (alpha-1)*log((*fitness)(k,i)[a]) - (*fitness)(k,i)[a];
+                        }
+                    }
+                }
+
+                double m = tuning*(Random::Uniform() - 0.5);
+                double e = exp(m);
+
+                int n = 0;
+                for (int k=0; k<Ncond; k++) {
+                    for (int a=0; a<Naa; a++)   {
+                        if ((!k) || ((*toggle)(k-1,i)[a]))   {
+                            (*fitness)(k,i)[a] *= e;
+                            n++;
+                        }
+                    }
+                }
+
+                double loghastings = n * m;
+
+                for (int k=0; k<Ncond; k++) {
+                    for (int a=0; a<Naa; a++)   {
+                        if ((!k) || ((*toggle)(k-1,i)[a]))   {
+                            double alpha = fitnessshape*fitnesscenter[a];
+                            deltalogprob += - Random::logGamma(alpha) + (alpha-1)*log((*fitness)(k,i)[a]) - (*fitness)(k,i)[a];
+                        }
+                    }
+                }
+
+                deltalogprob += loghastings;
+
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted) {
+                    nacc++;
+                } else {
+                    for (int k=0; k<Ncond; k++) {
+                        for (int a=0; a<Naa; a++)   {
+                            if ((!k) || ((*toggle)(k-1,i)[a]))   {
+                                (*fitness)(k,i)[a] /= e;
+                            }
+                        }
+                    }
+                }
+                ntot++;
+            }
+        }
+        return nacc / ntot;
     }
 
     double MoveBaselineFitness(double tuning, int n, int nrep) {
@@ -538,8 +658,8 @@ class DiffSelSparseModel : public ProbModel {
 
     void MoveFitnessShifts()    {
         for (int k=1; k<Ncond; k++) {
-            MoveFitnessShifts(k,1,3);
-            MoveFitnessShifts(k,0.3,3);
+            MoveFitnessShifts(k,1,10);
+            MoveFitnessShifts(k,0.3,10);
         }
     }
 
@@ -580,6 +700,93 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
+    void MoveFitnessHyperParameters() {
+        // collect suff stats across all active fitness parameters
+        hyperfitnesssuffstat.Clear();
+        hyperfitnesssuffstat.AddSuffStat(*fitness,*toggle);
+
+        /*
+        ScalingMove(fitnessshape,1.0,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        ScalingMove(fitnessshape,0.3,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        ScalingMove(fitnessshape,0.1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        */
+
+        ProfileMove(fitnesscenter,0.3,1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        ProfileMove(fitnesscenter,0.1,1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+        ProfileMove(fitnesscenter,0.1,3,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
+
+		fitness->SetShape(fitnessshape);
+
+    }
+
+    void MoveShiftToggles() {
+        for (int k=1; k<Ncond; k++) {
+            MoveShiftToggles(k,10);
+        }
+    }
+
+    double MoveShiftToggles(int k, int nrep)  {
+
+        int nshift = 0;
+        for (int i=0; i<Nsite; i++) {
+            for (int a=0; a<Naa; a++)   {
+                nshift += (*toggle)(k-1,i)[a];
+            }
+        }
+        int nn = Nsite*Naa;
+
+        double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+        double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+
+        double ntot = 0;
+        double nacc = 0;
+        for (int rep = 0; rep < nrep; rep++) {
+            for (int i = 0; i < Nsite; i++) {
+                int a = (int) (Naa * Random::Uniform());
+
+                if (!(*toggle)(k-1,i)[a])    {
+
+                    double deltalogprob = SiteSuffStatLogProb(i);
+                    (*toggle)(k-1,i)[a] = 1;
+                    (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
+                    // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
+                    UpdateSite(i);
+                    deltalogprob += SiteSuffStatLogProb(i);
+                    deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
+
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted) {
+                        nacc++;
+                        nshift++;
+                    } else {
+                        (*toggle)(k-1,i)[a] = 0;
+                        UpdateSite(i);
+                    }
+                    ntot++;
+                }
+                else    {
+                    double deltalogprob = SiteSuffStatLogProb(i);
+                    (*toggle)(k-1,i)[a] = 0;
+                    UpdateSite(i);
+                    deltalogprob += SiteSuffStatLogProb(i);
+                    deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
+
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted) {
+                        nacc++;
+                        nshift--;
+                    } else {
+                        (*toggle)(k-1,i)[a] = 1;
+                        UpdateSite(i);
+                    }
+                    ntot++;
+                }
+            }
+        }
+        shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+        return nacc / ntot;
+    }
+
     //-------------------
     // Accessors
     // ------------------
@@ -597,9 +804,11 @@ class DiffSelSparseModel : public ProbModel {
 
     void TraceHeader(std::ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
-        os << "globent\t";
+        os << "meanvar0\t";
+        os << "shape\t";
+        os << "center\t";
         for (int k = 1; k < Ncond; k++) {
-            os << "selvar" << k << '\t';
+            os << "prob" << k << '\t';
         }
         os << "statent\t";
         os << "rrent\n";
@@ -609,12 +818,12 @@ class DiffSelSparseModel : public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-        /*
-        os << baseline->GetMeanEntropy() << '\t';
-        for (int k = 0; k < Ncond-1; k++) {
-            os << delta->GetMeanVar(k) << '\t';
+        os << fitness->GetMeanRelVar(0) << '\t';
+        os << fitnessshape << '\t';
+        os << Random::GetEntropy(fitnesscenter) << '\t';
+        for (int k=1; k<Ncond; k++) {
+            os << shiftprob[k-1] << '\t';
         }
-        */
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }

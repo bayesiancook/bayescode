@@ -4,14 +4,15 @@
 
 #include "BidimArray.hpp"
 
+
 class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
 
     public:
 
     // columns: sites
     // rows: conditions
-    BidimIIDMultiGamma(int inncol, int innrow, int indim, double inshape, const vector<double>& incenter) :
-        SimpleBidimArray(inncol,innrow,vector<double>(indim,1.0/indim)), dim(indim), shape(inshape), center(incenter) {
+    BidimIIDMultiGamma(int innrow, int inncol, int indim, double inshape, const vector<double>& incenter) :
+        SimpleBidimArray(innrow,inncol,vector<double>(indim,1.0/indim)), dim(indim), shape(inshape), center(incenter) {
         Sample();
     }
 
@@ -32,21 +33,22 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
     void Sample(int i, int j)   {
         vector<double>& x = (*this)(i,j);
         for (int k=0; k<GetDim(); k++) {
-            x[k] = Random::Gamma(shape,shape/center[k]);
+            x[k] = Random::sGamma(shape*center[k]);
+            // x[k] = Random::Gamma(shape,shape/center[k]);
         }
     }
 
-    double GetMeanVar(int k) const  {
+    double GetMeanRelVar(int k) const  {
 
         double mean = 0;
         for (int j=0; j<GetNcol(); j++) {
-            mean += GetVar(k,j);
+            mean += GetRelVar(k,j);
         }
         mean /= GetNcol();
         return mean;
     }
 
-    double GetVar(int k, int j) const   {
+    double GetRelVar(int k, int j) const   {
 
         double mean = 0;
         double var = 0;
@@ -58,6 +60,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
         mean /= GetDim();
         var /= GetDim();
         var -= mean*mean;
+        var /= mean*mean;
         return var;
     }
 
@@ -99,7 +102,9 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
         const vector<double>& x = GetVal(i,j);
         double total = 0;
         for (int k=0; k<GetDim(); k++) {
-            total += shape * log(shape/center[k]) - Random::logGamma(shape) + (shape-1)*log(x[k]) - shape/center[k]*x[k];
+            double alpha = shape*center[k];
+            total += - Random::logGamma(alpha) + (alpha-1)*log(x[k]) - x[k];
+            // total += shape * log(shape/center[k]) - Random::logGamma(shape) + (shape-1)*log(x[k]) - shape/center[k]*x[k];
         }
         return total;
     }
@@ -109,7 +114,9 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
         double total = 0;
         for (int k=0; k<GetDim(); k++) {
             if (toggle[k])  {
-                total += shape * log(shape/center[k]) - Random::logGamma(shape) + (shape-1)*log(x[k]) - shape/center[k]*x[k];
+                double alpha = shape*center[k];
+                total += - Random::logGamma(alpha) + (alpha-1)*log(x[k]) - x[k];
+                // total += shape * log(shape/center[k]) - Random::logGamma(shape) + (shape-1)*log(x[k]) - shape/center[k]*x[k];
             }
         }
         return total;

@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
 	string datafile = "";
 	string treefile = "";
 	int ncond = 2;
-	int nlevel = 2;
+	int nlevel = 1;
 	int codonmodel = 1;
 
 	string name = "";

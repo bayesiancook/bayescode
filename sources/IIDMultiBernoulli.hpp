@@ -10,9 +10,8 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int> >    {
 
     // columns: sites
     // rows: conditions
-    BidimIIDMultiBernoulli(int inncol, int innrow, int indim, const vector<double>& inprob) :
-    // BidimIIDMultiBernoulli(int inncol, int innrow, int indim, const Selector<double>& inprob) :
-        SimpleBidimArray(inncol,innrow,vector<int>(indim,1)), dim(indim), prob(inprob)    {
+    BidimIIDMultiBernoulli(int innrow, int inncol, int indim, const vector<double>& inprob) :
+        SimpleBidimArray(innrow,inncol,vector<int>(indim,1)), dim(indim), prob(inprob)    {
         Sample();
     }
 
