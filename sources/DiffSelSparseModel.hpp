@@ -49,9 +49,10 @@ class DiffSelSparseModel : public ProbModel {
     // model selectors
     // -----
 
-    int fixglob;
-    int fixvar;
     int codonmodel;
+
+    int fixbl;
+    int fixhyper;
 
     // -----
     // external parameters
@@ -79,11 +80,6 @@ class DiffSelSparseModel : public ProbModel {
 
     // which branch is under which condition
     BranchAllocationSystem* branchalloc;
-
-    // auxiliary array
-    // condalloc[k][l] is 1 iff condition l should recompute its fitness profiles whenever condition k has changed
-    // has changed
-    vector<vector<int> > condalloc;
 
     // -----
     //  model structure
@@ -147,11 +143,14 @@ class DiffSelSparseModel : public ProbModel {
     DiffSelSparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) : hyperfitnesssuffstat(Naa) {
 
         codonmodel = incodonmodel;
+
+        fixbl = 0;
+        fixhyper = 1;
+
         Ncond = inNcond;
         Nlevel = inNlevel;
 
         ReadFiles(datafile, treefile);
-        MakePattern();
 
         // specifies which condition for which branch
         branchalloc = new BranchAllocationSystem(*tree,Ncond);
@@ -193,21 +192,6 @@ class DiffSelSparseModel : public ProbModel {
         std::cerr << "-- Number of branches : " << Nbranch << '\n';
 
         std::cerr << "-- Tree and data fit together\n";
-    }
-
-    void MakePattern()  {
-        condalloc.assign(Ncond,vector<int>(Ncond,0));
-        for (int l = 0; l < Ncond; l++) {
-            condalloc[0][l] = 1;
-        }
-        if (Nlevel == 2) {
-            for (int l = 1; l < Ncond; l++) {
-                condalloc[1][l] = 1;
-            }
-        }
-        for (int l = Nlevel; l < Ncond; l++) {
-            condalloc[l][l] = 1;
-        }
     }
 
     void Allocate() {
@@ -272,6 +256,14 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    void SetFixBL(int in)   {
+        fixbl = in;
+    }
+
+    void SetFixHyper(int in)    {
+        fixhyper = in;
+    }
+
     // ------------------
     // Update system
     // ------------------
@@ -283,16 +275,8 @@ class DiffSelSparseModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
-    //! \brief set nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat) to a new value
-    //!
-    //! Notifies corruption to the nucleotide and the codon matrices
-    void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
-        CorruptMatrices();
-    }
-
-    void SetShiftProbHyperParams(const vector<double>& inshiftprobhypermean, const vector<double>& inshiftprobhyperinvconc)    {
+    void SetShiftProbHyperParameters(const vector<double>& inpi, const vector<double>& inshiftprobhypermean, const vector<double>& inshiftprobhyperinvconc)    {
+        pi = inpi;
         shiftprobhypermean = inshiftprobhypermean;
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
@@ -325,11 +309,6 @@ class DiffSelSparseModel : public ProbModel {
         condsubmatrixarray->CorruptColumn(i);
     }
 
-    void UpdateSiteCond(int i, int k)   {
-        fitnessprofile->UpdateColumn(i,condalloc[k+1]);
-        condsubmatrixarray->CorruptColumn(i,condalloc[k+1]);
-    }
-
     // ---------------
     // log priors
     // ---------------
@@ -338,13 +317,17 @@ class DiffSelSparseModel : public ProbModel {
         double total = 0;
 
         // branchlengths
-        total += BranchLengthsHyperLogPrior();
-        total += BranchLengthsLogPrior();
+        if (! fixbl)    {
+            total += BranchLengthsHyperLogPrior();
+            total += BranchLengthsLogPrior();
+        }
 
         // nuc rates
         total += NucRatesLogPrior();
 
-        total += FitnessHyperLogPrior();
+        if (! fixhyper) {
+            total += FitnessHyperLogPrior();
+        }
         total += FitnessLogPrior();
 
         total += ToggleHyperLogPrior();
@@ -434,10 +417,6 @@ class DiffSelSparseModel : public ProbModel {
         return suffstatarray->GetLogProb(site,*condsubmatrixarray);
     }
 
-    double SiteCondSuffStatLogProb(int site,int k)  {
-        return suffstatarray->GetLogProb(site,condalloc[k+1],*condsubmatrixarray);
-    }
-
 	double BranchLengthsHyperSuffStatLogProb()	const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
@@ -493,10 +472,11 @@ class DiffSelSparseModel : public ProbModel {
 
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
 
-            CollectLengthSuffStat();
-
-            ResampleBranchLengths();
-            MoveBranchLengthsHyperParameter();
+            if (! fixbl)    {
+                CollectLengthSuffStat();
+                ResampleBranchLengths();
+                MoveBranchLengthsHyperParameter();
+            }
 
             CollectPathSuffStat();
 
@@ -507,7 +487,9 @@ class DiffSelSparseModel : public ProbModel {
                 CompMoveFitness();
                 MoveFitnessShifts();
                 MoveShiftToggles();
-                // MoveFitnessHyperParameters();
+                if (! fixhyper) {
+                    MoveFitnessHyperParameters();
+                }
             }
             MoveNucRates();
         }
@@ -717,6 +699,25 @@ class DiffSelSparseModel : public ProbModel {
 
 		fitness->SetShape(fitnessshape);
 
+    }
+
+    void ResampleShiftProb()    {
+
+        for (int k=1; k<Ncond; k++) {
+
+            double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+            double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+
+            int nshift = 0;
+            for (int i=0; i<Nsite; i++) {
+                for (int a=0; a<Naa; a++)   {
+                    nshift += (*toggle)(k-1,i)[a];
+                }
+            }
+            int nn = Nsite*Naa;
+
+            shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+        }
     }
 
     void MoveShiftToggles() {

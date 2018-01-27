@@ -179,6 +179,51 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     double beta;
 };
 
+/*
+class IIDBernoulliBetaArray : public Array<IIDBernoulliBeta>    {
+
+    public:
+
+    IIDBernoulliBetaArray(int inncond, int insize, const vector<double>& inpi, const vector<double>& inmean, const vector<double>& ininvconc) : Ncond(inncond), size(insize), pi(inpi), mean(inmean), invconc(ininvconc), array(inncond) {
+        Create();
+    }
+
+    ~IIDBernoulliBetaArray() {
+        Delete();
+    }
+
+    void Create()   {
+        for (int k=0; k<Ncond; k++) {
+            double alpha = mean[k] / invconc[k];
+            double beta = (1-mean[k]) / invconc[k];
+            array[k] = new IIDBernoulliBeta(size,pi[k],alpha,beta);
+        }
+    }
+
+    void Delete()   {
+        for (int k=0; k<Ncond; k++) {
+            delete array[k];
+        }
+    }
+
+    void SetParameters()    {
+        for (int k=0; k<Ncond; k++) {
+            array[k]->SetPi(pi[k]);
+            array[k]->SetAlpha(mean[k]/invconc[k]);
+            array[k]->SetBeta((1-mean[k])/invconc[k]);
+        }
+    }
+
+    private:
+
+    int Ncond;
+    int size;
+    const vector<double>& pi;
+    const vector<double>& mean;
+    const vector<double>& invconc;
+    vector<IIDBernoulliBeta*> array;
+};
+*/
 
 #endif
 

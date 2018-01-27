@@ -1,33 +1,35 @@
 #include <cmath>
 #include <fstream>
 #include "MultiGeneChain.hpp"
-#include "MultiGeneBranchOmegaModel.hpp"
+#include "MultiGeneDiffSelSparseModel.hpp"
 
 using namespace std;
 
 MPI_Datatype Propagate_arg;
 
-class MultiGeneBranchOmegaChain : public MultiGeneChain  {
+class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    int ncond;
+    int nlevel;
 
   public:
-    MultiGeneBranchOmegaModel* GetModel() {
-        return static_cast<MultiGeneBranchOmegaModel*>(model);
+    MultiGeneDiffSelSparseModel* GetModel() {
+        return static_cast<MultiGeneDiffSelSparseModel*>(model);
     }
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneBranchOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEBRANCHOMEGA"), datafile(indatafile), treefile(intreefile) {
+    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel) {
         every = inevery;
         until = inuntil;
         name = inname;
         New(force);
     }
 
-    MultiGeneBranchOmegaChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
+    MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
         if (! myid) {
@@ -36,7 +38,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneBranchOmegaModel(datafile,treefile,myid,nprocs);
+        model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,myid,nprocs);
         if (! myid) {
             cerr << " -- master allocate\n";
         }
@@ -62,6 +64,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> ncond >> nlevel;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -70,8 +73,8 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         }
         is >> every >> until >> size;
 
-        if (modeltype == "MULTIGENEBRANCHOMEGA") {
-            model = new MultiGeneBranchOmegaModel(datafile,treefile,myid,nprocs);
+        if (modeltype == "MULTIGENEDIFFSELSPARSE") {
+            model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -95,36 +98,27 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
 
     void Save() override {
         if (myid)   {
-            cerr << "error: slave in MultiGeneBranchOmegaChain::Save\n";
+            cerr << "error: slave in MultiGeneDiffSelSparseChain::Save\n";
             exit(1);
         }
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << ncond << '\t' << nlevel << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
 
+    /*
     void MakeFiles(int force) override  {
         Chain::MakeFiles(force);
-        ofstream gos((name + ".gene").c_str());
-        ofstream bos((name + ".branch").c_str());
-        ofstream bgos((name + ".branchgene").c_str());
-
-        ofstream tos((name + ".branchindices").c_str());
-        GetModel()->GetTree()->ToStreamWithBranchIndex(tos);
     }
 
     void SavePoint() override   {
         Chain::SavePoint();
-        ofstream gos((name + ".gene").c_str(),ios_base::app);
-        GetModel()->PrintGeneEffects(gos);
-        ofstream bos((name + ".branch").c_str(),ios_base::app);
-        GetModel()->PrintBranchEffects(bos);
-        ofstream bgos((name + ".branchgene").c_str(),ios_base::app);
-        GetModel()->PrintDeviations(bgos);
     }
+    */
 };
 
 int main(int argc, char* argv[])	{
@@ -149,7 +143,7 @@ int main(int argc, char* argv[])	{
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
-        MultiGeneBranchOmegaChain* chain = new MultiGeneBranchOmegaChain(name,myid,nprocs);
+        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(name,myid,nprocs);
         if (!myid)  {
             cerr << "chain " << name << " started\n";
         }
@@ -166,6 +160,8 @@ int main(int argc, char* argv[])	{
         string datafile = "";
         string treefile = "";
         string name = "";
+        int ncond = 1;
+        int nlevel = 1;
         int force = 1;
         int every = 1;
         int until = -1;
@@ -190,6 +186,14 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "-f")	{
                     force = 1;
+                }
+                else if (s == "-ncond")	{
+                    i++;
+                    ncond = atoi(argv[i]);
+                }
+                else if (s == "-nlevel")	{
+                    i++;
+                    nlevel = atoi(argv[i]);
                 }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
@@ -217,7 +221,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneBranchOmegaChain* chain = new MultiGeneBranchOmegaChain(datafile,treefile,every,until,name,force,myid,nprocs);
+        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,every,until,name,force,myid,nprocs);
         if (! myid) {
             cerr << "chain " << name << " started\n";
         }
