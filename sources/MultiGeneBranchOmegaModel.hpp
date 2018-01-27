@@ -293,6 +293,12 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         os.flush();
     }
 
+    void PrintGeneNames(ostream& os) const  {
+        for (int i=0; i<GetNgene(); i++)    {
+            os << GetLocalGeneName(i) << '\n';
+        }
+    }
+
 	void Monitor(ostream& os) const {}
 
 	void ToStream(ostream& os) const {
