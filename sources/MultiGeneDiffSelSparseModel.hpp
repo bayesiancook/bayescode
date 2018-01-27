@@ -92,8 +92,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
 
-        tree->ToStreamWithBranchIndex(cerr);
-
         if (! myid) {
             std::cerr << "number of taxa : " << Ntaxa << '\n';
             std::cerr << "number of branches : " << Nbranch << '\n';
@@ -112,6 +110,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
         shiftprobhypermean.assign(Ncond-1,0.5);
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
+        pihypermean = 0.1;
+        pihyperinvconc = 0.1;
         pi.assign(Ncond-1,0.1);
         // shiftprobarray = new IIDMultiBernBeta(GetLocalNgene(),pi,shiftprobhypermean,shiftprobhyperinvconc);
         totcount.assign(GetLocalNgene(),0);
@@ -242,6 +242,10 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 		total += BranchLengthsLogPrior();
         total += ShiftProbHyperLogPrior();
         total += GeneLogPrior;
+        if (isnan(total))   {
+            cerr << "GetLogPrior is nan\n";
+            exit(1);
+        }
 		return total;
     }
 
@@ -322,7 +326,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     void MasterMove() override {
 
-		int nrep = 30;
+		int nrep = 3;
 
 		for (int rep=0; rep<nrep; rep++)	{
 

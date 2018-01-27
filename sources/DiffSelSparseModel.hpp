@@ -154,7 +154,6 @@ class DiffSelSparseModel : public ProbModel {
 
         // specifies which condition for which branch
         branchalloc = new BranchAllocationSystem(*tree,Ncond);
-        std::cerr << "-- conditions over branches ok\n";
     }
 
     // DiffSelSparseModel(const DiffSelSparseModel&) = delete;
@@ -187,11 +186,6 @@ class DiffSelSparseModel : public ProbModel {
         // in sequence alignment)
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
-
-        std::cerr << "-- Number of taxa : " << Ntaxa << '\n';
-        std::cerr << "-- Number of branches : " << Nbranch << '\n';
-
-        std::cerr << "-- Tree and data fit together\n";
     }
 
     void Allocate() {
@@ -214,7 +208,7 @@ class DiffSelSparseModel : public ProbModel {
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
-        fitnessshape = 2.0;
+        fitnessshape = 4.0;
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 

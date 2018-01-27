@@ -89,9 +89,9 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int> >    {
         return tot;
     }
 
-    int GetRowEventNumber(int j) const {
+    int GetRowEventNumber(int i) const {
         int tot = 0;
-        for (int i=0; i<GetNcol(); i++) {
+        for (int j=0; j<GetNcol(); j++) {
             tot += GetEventNumber(i,j);
         }
         return tot;

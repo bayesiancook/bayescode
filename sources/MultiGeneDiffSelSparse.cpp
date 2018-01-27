@@ -218,7 +218,7 @@ int main(int argc, char* argv[])	{
             }
         }
         catch(...)	{
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
+            cerr << "error in command\n";
             cerr << '\n';
             exit(1);
         }
