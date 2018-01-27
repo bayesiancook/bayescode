@@ -14,6 +14,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     string modeltype, datafile, treefile;
     int ncond;
     int nlevel;
+    int codonmodel;
 
   public:
     MultiGeneDiffSelSparseModel* GetModel() {
@@ -22,7 +23,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel) {
+    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -38,7 +39,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,myid,nprocs);
+        model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
         if (! myid) {
             cerr << " -- master allocate\n";
         }
@@ -64,7 +65,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> ncond >> nlevel;
+        is >> ncond >> nlevel >> codonmodel;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -74,7 +75,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
-            model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,myid,nprocs);
+            model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -104,7 +105,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
-        param_os << ncond << '\t' << nlevel << '\n';
+        param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -162,6 +163,7 @@ int main(int argc, char* argv[])	{
         string name = "";
         int ncond = 1;
         int nlevel = 1;
+        int codonmodel = 1;
         int force = 1;
         int every = 1;
         int until = -1;
@@ -221,7 +223,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,every,until,name,force,myid,nprocs);
+        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,name,force,myid,nprocs);
         if (! myid) {
             cerr << "chain " << name << " started\n";
         }

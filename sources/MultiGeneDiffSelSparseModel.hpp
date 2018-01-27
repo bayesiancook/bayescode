@@ -37,6 +37,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 	
     // across genes:
     int Ncond;
+    int Nlevel;
+    int codonmodel;
     
     vector<double> shiftprobhypermean;
     vector<double> shiftprobhyperinvconc;
@@ -68,7 +70,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneDiffSelSparseModel(string datafile, string treefile, int inNcond, int inNlevel, int incodonmodel, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs)  {
+    MultiGeneDiffSelSparseModel(string datafile, string intreefile, int inNcond, int inNlevel, int incodonmodel, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs)  {
 
         codonmodel = incodonmodel;
         Ncond = inNcond;
@@ -112,7 +114,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
         pi.assign(Ncond-1,0.1);
         // shiftprobarray = new IIDMultiBernBeta(GetLocalNgene(),pi,shiftprobhypermean,shiftprobhyperinvconc);
-        totcount.assign(GetLocalNgene());
+        totcount.assign(GetLocalNgene(),0);
         for (int gene=0; gene<GetLocalNgene(); gene++)  {
             totcount[gene] = GetLocalGeneNsite(gene) * Naa;
         }
@@ -155,7 +157,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 // geneprocess[gene]->CorruptMatrices();
-                geneprocess[gene]->Unfold();
+                geneprocess[gene]->Unfold(true);
             }
 
             SlaveSendLogProbs();
@@ -186,8 +188,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             os << "mean\t";
             os << "invconc\t";
         }
-        os << "statent\t";
-        os << "rrent\n";
+        os << '\n';
     }
 
     void Trace(ostream& os) const {
@@ -199,8 +200,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             os << shiftprobhypermean[k-1] << '\t';
             os << shiftprobhyperinvconc[k-1] << '\t';
         }
-		os << Random::GetEntropy(nucstat) << '\t';
-		os << Random::GetEntropy(nucrelrate) << '\n';
+        os << '\n';
 		os.flush();
     }
 
@@ -209,15 +209,17 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 	void ToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
-        os << nucrelrate << '\n';
-        os << nucstat << '\n';
+        os << shiftprobhypermean << '\n';
+        os << shiftprobhyperinvconc << '\n';
+        os << pi;
     }
 
 	void FromStream(istream& is) {
         is >> lambda;
         is >> *branchlength;
-        is >> nucrelrate;
-        is >> nucstat;
+        is >> shiftprobhypermean;
+        is >> shiftprobhyperinvconc;
+        is >> pi;
     }
 
     //-------------------
@@ -261,25 +263,25 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         return total;
     }
 
-    double GetPiLogPrior(int k) {
+    double GetPiLogPrior(int k) const {
         double alpha = pihypermean / pihyperinvconc;
         double beta = (1-pihypermean) / pihyperinvconc;
         return Random::logBetaDensity(pi[k-1],alpha,beta);
     }
 
-    double GetShiftProbHyperMeanLogPrior(int k) {
+    double GetShiftProbHyperMeanLogPrior(int k) const {
         return 0;
     }
 
-    double GetShiftProbHyperInvConcLogPrior(int k)  {
+    double GetShiftProbHyperInvConcLogPrior(int k) const {
         return -shiftprobhyperinvconc[k-1];
     }
 
-    double GetCountLogProb(int k) {
+    double GetCountLogProb(int k) const {
         return shiftcountarray->GetMarginalLogProb(k-1);
     }
 
-    double GetCountLogProb()    {
+    double GetCountLogProb() const {
         double total = 0;
         for (int k=1; k<Ncond; k++) {
             total += GetCountLogProb(k);
@@ -362,7 +364,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     void GeneCollectShiftCounts()    {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             for (int k=1; k<Ncond; k++) {
-                (*shiftcountarray)[gene][k-1] = geneprocess[gene]->GetNShift(k);
+                (*shiftcountarray)[gene][k-1] = geneprocess[gene]->GetNshift(k);
             }
         }
     }
@@ -400,10 +402,10 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 		branchlength->SetScale(lambda);
     }
 
-    void MoveShiftProbHyperParameters() {
-        MovePi(0.3,10);
-        MoveShiftProbHyperMean(0.3,10);
-        MoveShiftProbHyperInvConc(0.3,10);
+    void MoveShiftProbHyperParameters(int nrep) {
+        MovePi(0.3,nrep);
+        MoveShiftProbHyperMean(0.3,nrep);
+        MoveShiftProbHyperInvConc(0.3,nrep);
     }
 
     double MovePi(double tuning, int nrep)   {
@@ -560,7 +562,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     }
 
     void MasterSendShiftProbHyperParameters()   {
-        MasterSendGlobal(shiftprobhypermean,shiftprobhyprinvconc);
+        MasterSendGlobal(shiftprobhypermean,shiftprobhyperinvconc);
         MasterSendGlobal(pi);
     }
 
