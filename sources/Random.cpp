@@ -635,26 +635,18 @@ void Random::DirichletSample(vector<double>& x, const vector<double>& center, do
     double tot = 0;
     for (unsigned int k=0; k<x.size(); k++)    {
         x[k] = Random::sGamma(concentration * center[k]);
-        if (!x[k])  {
-            x[k] = 1e-50;
-        }
-
-        /*
-        if (! x[k]) {
-            cerr << "in Random::DirichletSample: null entry\n";
-            cerr << "concentration: " << concentration << '\n';
-            cerr << "concentration*center[k] = " << concentration*center[k] << '\n';
-            exit(1);
-        }
-        */
         tot += x[k];
     }
+    double tot2 = 0;
     for (unsigned int k=0; k<x.size(); k++)    {
         x[k] /= tot;
         if (! x[k]) {
-            cerr << "in Random::DirichletSample: null entry after renorm\n";
-            exit(1);
+            x[k] = 1e-50;
         }
+        tot2 += x[k];
+    }
+    for (unsigned int k=0; k<x.size(); k++)    {
+        x[k] /= tot2;
     }
 }
 
