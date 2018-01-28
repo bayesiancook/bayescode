@@ -16,19 +16,19 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
 	int Ntaxa;
 	int Nbranch;
 
+    // branch lengths: shared across genes
 	double lambda;
 	BranchIIDGamma* branchlength;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+	GammaSuffStat hyperlengthsuffstat;
 	
+    // omega*: iid gamma across genes
 	double omegahypermean;
 	double omegahyperinvshape;
 	IIDGamma* omegaarray;
 	GammaSuffStat omegahypersuffstat;
 
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat hyperlengthsuffstat;
-
-    // mixture components
-    // set of Ncat Dirichlet densities
+    // truncated stick-breaking mixture of Ncat Dirichlet densities
     // centers
     vector<double> aacenterhypercenter;
     double aacenterhyperinvconc;
@@ -39,11 +39,10 @@ class MultiGeneAAMutSelHyperSBDPOmegaModel : public MultiGeneProbModel {
     IIDGamma* componentaaconcentrationarray;
     // and associated suffstatarray
     DirichletSuffStatArray* aahypersuffstatarray;
-
-    // now, a mixture model drawing from this set of Ncat components
     // weights:
     double kappa;
     StickBreakingProcess* weight;
+    // and associated occupancy suffstat
     OccupancySuffStat* occupancy;
 
     std::vector<AAMutSelHyperSBDPOmegaModel*> geneprocess;
