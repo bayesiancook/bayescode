@@ -20,36 +20,36 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     int baseNcat;
     int Ncat;
 
+    // branch lengths: shared across genes
 	double lambda;
 	BranchIIDGamma* branchlength;
-	
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+	GammaSuffStat hyperlengthsuffstat;
+
+    // omega*: iid gamma across genes
 	double omegahypermean;
 	double omegahyperinvshape;
 	IIDGamma* omegaarray;
 	GammaSuffStat omegahypersuffstat;
 
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-	GammaSuffStat hyperlengthsuffstat;
-
-    // mixture components
-    // set of baseNcat Dirichlet densities
+    // truncated stick-breaking mixture of baseNcat Dirichlet densities
     // centers
-
     vector<double> basecenterhypercenter;
     double basecenterhyperinvconc;
     IIDDirichlet* basecenterarray;
-
+    // concentrations
     double baseconchypermean;
     double baseconchyperinvshape;
     IIDGamma* baseconcentrationarray;
-
+    // and associated suffstatarray
     DirichletSuffStatArray* basesuffstatarray;
-
-    // now, a mixture model drawing from this set of Ncat components
     // weights:
     double basekappa;
     StickBreakingProcess* baseweight;
+    // and associated occupancy suffstat
     OccupancySuffStat* baseoccupancy;
+    // for keeping track of label-switching moves done by master 
+    // and sending the resulting permutation to slaves
     Permutation* permutocc;
 
     std::vector<AAMutSelDSBDPOmegaModel*> geneprocess;
@@ -220,6 +220,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << "varomega\t";
         os << "ncluster\t";
         os << "nbasecluster\t";
+        os << "basekappa\t";
         os << "aastatent\t";
         os << "baseconc\t";
         os << "baseent\n";
@@ -233,6 +234,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << omegaarray->GetVar() << '\t';
         os << MeanNcluster << '\t';
         os << GetBaseNcluster() << '\t';
+        os << basekappa << '\t';
         os << MeanStatEnt << '\t';
         os << MeanAAConc << '\t';
 		os << MeanAACenterEnt << '\n';
@@ -312,6 +314,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         double ret = baseweight->GetLogProb(basekappa);
         if (isinf(ret)) {
             cerr << "in BaseStickBreakingLogPrior: inf\n";
+            cerr << *baseweight << '\n';
+            cerr << basekappa << '\n';
+            exit(1);
+        }
+        return ret;
+    }
+
+    double BaseStickBreakingSuffStatLogProb() const    {
+        double ret = baseweight->GetMarginalLogProb(*baseoccupancy);
+        if (isinf(ret)) {
+            cerr << "in base stick breaking suff stat log prob: inf\n";
             exit(1);
         }
         return ret;
@@ -381,7 +394,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     // for moving kappa
     double BaseStickBreakingHyperLogProb() const {
-        return BaseStickBreakingHyperLogPrior() + BaseStickBreakingLogPrior();
+        return BaseStickBreakingHyperLogPrior() + BaseStickBreakingSuffStatLogProb();
+        // return BaseStickBreakingHyperLogPrior() + BaseStickBreakingLogPrior();
     }
 
     //-------------------
@@ -395,11 +409,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MPI_Barrier(MPI_COMM_WORLD);
             paramchrono.Start();
             aachrono.Start();
 
-            MPI_Barrier(MPI_COMM_WORLD);
             aachrono.Stop();
             basechrono.Start();
 
@@ -409,7 +421,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 MasterSendBaseMixture();
             }
 
-            MPI_Barrier(MPI_COMM_WORLD);
             basechrono.Stop();
 
             if (! fixomega) {
@@ -418,7 +429,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 MasterSendOmegaHyperParameters();
             }
 
-            MPI_Barrier(MPI_COMM_WORLD);
             blchrono.Start();
 
             MasterReceiveLengthSuffStat();
@@ -426,7 +436,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             MoveBranchLengthsHyperParameter();
             MasterSendGlobalBranchLengths();
 
-            MPI_Barrier(MPI_COMM_WORLD);
             blchrono.Stop();
             paramchrono.Stop();
         }
@@ -445,17 +454,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MPI_Barrier(MPI_COMM_WORLD);
             GeneCollectPathSuffStat();
             MoveGeneAA();
 
-            MPI_Barrier(MPI_COMM_WORLD);
             for (int r=0; r<5; r++)   {
                 MoveGeneBaseAlloc();
                 SlaveSendBaseSuffStat();
                 SlaveReceiveBaseMixture();
             }
-            MPI_Barrier(MPI_COMM_WORLD);
 
             if (! fixomega) {
                 MoveGeneOmegas();
@@ -465,10 +471,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             MoveGeneNucRates();
 
-            MPI_Barrier(MPI_COMM_WORLD);
             SlaveSendLengthSuffStat();
             SlaveReceiveGlobalBranchLengths();
-            MPI_Barrier(MPI_COMM_WORLD);
         }
 
         SlaveSendOmega();
@@ -520,9 +524,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             MoveBaseComponents(10);
             ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
-                BaseLabelSwitchingMove();
-                ResampleBaseWeights();
                 MoveBaseKappa();
+                ResampleBaseWeights();
+                BaseLabelSwitchingMove();
             }
         }
     }
