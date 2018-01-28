@@ -525,7 +525,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
                 MoveBaseKappa();
-                ResampleBaseWeights();
                 BaseLabelSwitchingMove();
             }
         }
@@ -614,6 +613,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         ScalingMove(basekappa,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(basekappa,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
         baseweight->SetKappa(basekappa);
+        baseweight->GibbsResample(*baseoccupancy);
     }
 
     void ResampleBranchLengths()    {
