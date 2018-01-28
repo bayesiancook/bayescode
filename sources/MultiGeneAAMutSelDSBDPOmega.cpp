@@ -115,13 +115,20 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     void Monitor() override {
         Chain::Monitor();
-        ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
+        // ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
+        ofstream trace_os((name + ".basemix").c_str());
         GetModel()->TraceMixture(trace_os);
+        ofstream logo_os((name + ".basemixlogo").c_str());
+        GetModel()->PrintBaseMixtureLogo(logo_os);
+        ofstream sample_os((name + ".basesamplelogo").c_str());
+        GetModel()->PrintBaseSampleLogo(sample_os);
     }
 
     void MakeFiles(int force) override  {
         Chain::MakeFiles(force);
         ofstream trace_os((name + ".basemix").c_str());
+        ofstream logo_os((name + ".basemixlogo").c_str());
+        ofstream samplelogo_os((name + ".basesamplelogo").c_str());
     }
 };
 

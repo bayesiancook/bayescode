@@ -243,12 +243,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void TraceMixture(ostream& os) const {
         for (int k=0; k<baseNcat; k++)  {
-            os << baseweight->GetVal(k) << '\t';
-            for (int l=0; l<Naa; l++)   {
-                os << baseconcentrationarray->GetVal(k) * basecenterarray->GetVal(k)[l] << '\t';
+            os << baseweight->GetVal(k) << '\t' << baseconcentrationarray->GetVal(k) << '\t';
+            for (int a=0; a<Naa; a++)   {
+                os << (int) (100* basecenterarray->GetVal(k)[a]) << '\t';
             }
+            os << '\n';
         }
-        os << '\n';
         os.flush();
     }
 
@@ -262,6 +262,34 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 	void FromStream(istream& is) {}
 	void ToStream(ostream& os) const {}
+
+    void PrintBaseMixtureLogo(ostream& os) const {
+        os << baseNcat << '\t' << Naa << '\n';
+        for (int k=0; k<baseNcat; k++)  {
+            os << baseweight->GetVal(k) << '\t';
+            for (int a=0; a<Naa; a++)   {
+                os << basecenterarray->GetVal(k)[a] << '\t';
+            }
+            os << '\n';
+        }
+    }
+
+    void PrintBaseSampleLogo(ostream& os) const {
+        int nrep = 8;
+        vector<double> x(Naa);
+        os << baseNcat * nrep << '\t' << Naa << '\n';
+        for (int k=0; k<baseNcat; k++)  {
+            for (int rep=0; rep<nrep; rep++)    {
+                Random::DirichletSample(x,basecenterarray->GetVal(k),baseconcentrationarray->GetVal(k));
+                os << 1 << '\t';
+                for (int a=0; a<Naa; a++)   {
+                    os << x[a] << '\t';
+                }
+                os << '\n';
+            }
+        }
+    }
+
 
     //-------------------
     // Updates
@@ -282,7 +310,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             total += OmegaLogPrior();
         }
         total += BaseStickBreakingHyperLogPrior();
-        total += BaseStickBreakingLogPrior();
+        // total += BaseStickBreakingLogPrior();
         total += BaseLogPrior();
 		return total;
     }
@@ -310,6 +338,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         return -basekappa/10;
     }
 
+    /*
     double BaseStickBreakingLogPrior() const    {
         double ret = baseweight->GetLogProb(basekappa);
         if (isinf(ret)) {
@@ -320,6 +349,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
         return ret;
     }
+    */
 
     double BaseStickBreakingSuffStatLogProb() const    {
         double ret = baseweight->GetMarginalLogProb(*baseoccupancy);
