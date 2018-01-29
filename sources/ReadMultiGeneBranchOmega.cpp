@@ -55,11 +55,12 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
 		is >> chainevery >> chainuntil >> chainsize;
 
 		// make a new model depending on the type obtained from the file
-		if (modeltype == "MULTIGENESINGLEOMEGA")	{
+		if (modeltype == "MULTIGENEBRANCHOMEGA")	{
 			model = new MultiGeneBranchOmegaModel(datafile,treefile,myid,nprocs);
 		}
 		else	{
 			cerr << "error when opening file "  << name << '\n';
+            cerr << modeltype << '\n';
 			exit(1);
 		}
 
@@ -165,15 +166,28 @@ int main(int argc, char* argv[])	{
 				i++;
 				if (i == argc) throw(0);
 				s = argv[i];
+				if (! IsInt(s))	{
+					throw(0);
+				}
 				burnin = atoi(argv[i]);
 				i++;
 				if (i == argc) throw(0);
 				s = argv[i];
-				every = atoi(argv[i]);
-				i++;
-				if (i == argc) throw(0);
-				s = argv[i];
-				until = atoi(argv[i]);
+				if (IsInt(s))	{
+					every = atoi(argv[i]);
+					i++;
+					if (i == argc) throw(0);
+					s = argv[i];
+					if (IsInt(s))	{
+						until = atoi(argv[i]);
+					}
+					else	{
+						i--;
+					}
+				}
+				else	{
+					i--;
+				}
 			}
 			else	{
 					if (i != (argc -1))	{
