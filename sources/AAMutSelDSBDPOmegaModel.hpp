@@ -82,6 +82,25 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	PathSuffStatArray* sitepathsuffstatarray;
 	PathSuffStatArray* componentpathsuffstatarray;
 
+    // 0: free wo shrinkage
+    // 1: free with shrinkage
+    // 2: shared across genes
+    // 3: fixed
+
+    /*
+    // currently: shared across genes
+    int blmode;
+    // currently, free without shrinkage: shared across genes is impractical
+    int nucmode;
+    // currently, shared across genes.
+    // free without shrinkage, only with baseNcat = 1
+    // free with shrinkage: not really interesting
+    int basemode;
+
+    // currently: fixed or free with shrinkage
+    int omegamode;
+    */
+
     int fixbl;
     int fixbasemix;
     int fixomega;
@@ -105,6 +124,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         fixbl = 0;
         fixbasemix = 0;
+        fixomega = 1;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -689,6 +709,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                     }
                     for (int l=0; l<Naa; l++)   {
                         aa[l] = x[l]/z;
+                        if (aa[l] < 1e-50)  {
+                            aa[l] = 1e-50;
+                        }
                     }
 
                     deltalogprob += loghastings;

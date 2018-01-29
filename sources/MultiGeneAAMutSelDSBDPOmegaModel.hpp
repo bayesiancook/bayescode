@@ -552,8 +552,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void MoveBaseMixture(int nrep)    {
         for (int rep=0; rep<nrep; rep++)  {
             MoveBaseComponents(10);
-            ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
+                ResampleBaseEmptyComponents();
                 MoveBaseKappa();
                 BaseLabelSwitchingMove();
             }
