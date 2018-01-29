@@ -50,7 +50,13 @@ class M2aMix: public SimpleArray<double>  {
             }
             double ret = log(tot) + max;
             if (std::isinf(ret)) {
+                cerr << "in M2aMix::GetPostProbArray\n";
                 cerr << "ret is inf: " << tot << '\t' << max << '\n';
+                cerr << "omega suff stat: " << suffstat.GetCount() << '\t' << suffstat.GetBeta() << '\n';
+                for (int cat=0; cat<GetSize(); cat++)   {
+                    cerr << GetVal(cat) << '\t' << weight[cat] << '\t' << logp[cat] << '\t' << postprob[cat] << '\n';
+                }
+                cerr << tot << '\t' << log(tot) << '\t' << max << '\n';
                 exit(1);
             }
             if (std::isnan(ret)) {
