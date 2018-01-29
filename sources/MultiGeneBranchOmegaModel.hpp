@@ -139,8 +139,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
 
-        tree->ToStreamWithBranchIndex(cerr);
-
         if (! myid) {
             std::cerr << "number of taxa : " << Ntaxa << '\n';
             std::cerr << "number of branches : " << Nbranch << '\n';
@@ -291,12 +289,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         }
         os << '\n';
         os.flush();
-    }
-
-    void PrintGeneNames(ostream& os) const  {
-        for (int i=0; i<GetNgene(); i++)    {
-            os << GetLocalGeneName(i) << '\n';
-        }
     }
 
 	void Monitor(ostream& os) const {}

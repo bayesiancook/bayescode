@@ -102,8 +102,6 @@ class BranchOmegaModel : public ProbModel {
 		Nsite = codondata->GetNsite();    // # columns
 		Ntaxa = codondata->GetNtaxa();
 
-		std::cerr << "-- Number of sites: " << Nsite << std::endl;
-
 		taxonset = codondata->GetTaxonSet();
 
 		// get tree from file (newick format)
@@ -153,11 +151,7 @@ class BranchOmegaModel : public ProbModel {
     //! 
     //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
     void Unfold()   {
-
-		cerr << "-- unfold\n";
 		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogLikelihood() << '\n';
-		std::cerr << "-- mapping substitutions\n";
 		phyloprocess->ResampleSub();
     }
 
