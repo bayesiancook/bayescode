@@ -42,9 +42,9 @@
 #include "IIDBernoulliBeta.hpp"
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
-#include "ProbModel.hpp"
+#include "MultiGeneProbModel.hpp"
 
-class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
+class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     public:
 
@@ -265,8 +265,8 @@ class MultiGeneCodonM2aModel : public MultiGeneMPIModule, public ProbModel	{
     // ------------------
 
     // general move schedule
-    void MasterMove();
-    void SlaveMove();
+    void MasterMove() override;
+    void SlaveMove() override;
 
     // moving gene-specific parameters
     void GeneResampleSub(double frac);
