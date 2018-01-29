@@ -111,6 +111,7 @@ void MultiGeneCodonM2aModel::Allocate() {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene] = new CodonM2aModel(GetLocalGeneName(gene),treefile,pi);
             geneprocess[gene]->SetAcrossGenesModes(blmode,nucmode);
+            geneprocess[gene]->Allocate();
         }
     }
 }
@@ -142,9 +143,11 @@ void MultiGeneCodonM2aModel::Unfold()   {
     }
     else    {
 
+        /*
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->Allocate();
         }
+        */
 
         SlaveReceiveBranchLengthsHyperParameters();
         SlaveReceiveNucRatesHyperParameters();
