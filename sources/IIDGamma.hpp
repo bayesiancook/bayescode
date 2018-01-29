@@ -109,11 +109,8 @@ class IIDGamma: public SimpleArray<double>	{
 
     //! resample all entries for which poswarray[i] == 0 from the prior (from a Gamma(shape,scale))
     void PriorResample(const Selector<double>& poswarray) {
-        cerr << "in prior resample\n";
-        cerr << "check that\n";
-        exit(1);
 		for (int i=0; i<GetSize(); i++)	{
-            if (poswarray.GetVal(i)) {
+            if (! poswarray.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);
             }
 		}
