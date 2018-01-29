@@ -52,10 +52,200 @@
 #include <cmath>
 #include <fstream>
 #include "MultiGeneCodonM2aModel.hpp"
+#include "MultiGeneChain.hpp"
 
 using namespace std;
 
 MPI_Datatype Propagate_arg;
+
+class MultiGeneCodonM2aChain : public MultiGeneChain  {
+
+  private:
+    // Chain parameters
+    string modeltype, datafile, treefile;
+    int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
+    double pihypermean, pihyperinvconc;
+    double puromhypermean, puromhyperinvconc;
+    double dposomhypermean, dposomhyperinvshape;
+    double purwhypermean, purwhyperinvconc;
+    double poswhypermean, poswhyperinvconc;
+
+  public:
+
+    MultiGeneCodonM2aModel* GetModel() {
+        return static_cast<MultiGeneCodonM2aModel*>(model);
+    }
+
+    string GetModelType() override { return modeltype; }
+
+    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode, double inpihypermean, double inpihyperinvconc, double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENECODONM2A"), datafile(indatafile), treefile(intreefile) {
+
+        blmode = inblmode;
+        nucmode = innucmode;
+        purommode = inpurommode;
+        dposommode = indposommode;
+        purwmode = inpurwmode;
+        poswmode = inposwmode;
+        pihypermean = inpihypermean;
+        pihyperinvconc = inpihyperinvconc;
+        puromhypermean = inpuromhypermean;
+        puromhyperinvconc = inpuromhyperinvconc;
+        dposomhypermean = indposomhypermean;
+        dposomhyperinvshape = indposomhyperinvshape;
+        purwhypermean = inpurwhypermean;
+        purwhyperinvconc = inpurwhyperinvconc;
+        poswhypermean = inposwhypermean;
+        poswhyperinvconc = inposwhyperinvconc;
+
+        every = inevery;
+        until = inuntil;
+        name = inname;
+        New(force);
+    }
+
+    MultiGeneCodonM2aChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
+        name = filename;
+        Open();
+        if (! myid) {
+            Save();
+        }
+    }
+
+    void New(int force) override {
+
+        model = new MultiGeneCodonM2aModel(datafile,treefile,pihypermean,pihyperinvconc,myid,nprocs);
+        GetModel()->SetAcrossGenesModes(blmode,nucmode,purommode,dposommode,purwmode,poswmode);
+        GetModel()->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
+
+        if (! myid) {
+            cerr << "allocate\n";
+        }
+        GetModel()->Allocate();
+        if (! myid) {
+            cerr << "unfold\n";
+        }
+        GetModel()->Unfold();
+
+        if (! myid) {
+            cerr << "Reset" << endl;
+            Reset(force);
+            cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
+            model->Trace(cerr);
+        }
+    }
+
+    void Open() override {
+        ifstream is((name + ".param").c_str());
+        if (!is) {
+            cerr << "Error : cannot find file : " << name << ".param\n";
+            exit(1);
+        }
+        is >> modeltype;
+        is >> datafile >> treefile;
+        is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
+        is >> pihypermean >> pihyperinvconc;
+        is >> puromhypermean >> puromhyperinvconc;
+        is >> dposomhypermean >> dposomhyperinvshape;
+        is >> purwhypermean >> purwhyperinvconc;
+        is >> poswhypermean >> poswhyperinvconc;
+
+        int tmp;
+        is >> tmp;
+        if (tmp) {
+            cerr << "Error when reading model\n";
+            exit(1);
+        }
+        is >> every >> until >> size;
+
+        if (modeltype == "MULTIGENECODONM2A") {
+            model = new MultiGeneCodonM2aModel(datafile,treefile,pihypermean,pihyperinvconc,myid,nprocs);
+            GetModel()->SetAcrossGenesModes(blmode,nucmode,purommode,dposommode,purwmode,poswmode);
+            GetModel()->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
+        } 
+        else {
+            cerr << "Error when opening file " << name
+                 << " : does not recognise model type : " << modeltype << '\n';
+            exit(1);
+        }
+
+        if (! myid) {
+            cerr << "allocate\n";
+        }
+        GetModel()->Allocate();
+
+        if (! myid) {
+            cerr << "read from file\n";
+        }
+        if (! myid) {
+            model->FromStream(is);
+            // broadcast parameter
+        }
+        else    {
+            // receive parameter
+        }
+
+        if (! myid) {
+            cerr << "unfold\n";
+        }
+        GetModel()->Unfold();
+
+        if (! myid) {
+            cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
+            model->Trace(cerr);
+        }
+    }
+
+    void Save() override {
+        if (myid)   {
+            cerr << "error: slave in MultiGeneCodonM2aChain::Save\n";
+            exit(1);
+        }
+        ofstream param_os((name + ".param").c_str());
+        param_os << GetModelType() << '\n';
+        param_os << datafile << '\t' << treefile << '\n';
+        param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t' << poswmode << '\n';
+        param_os << pihypermean << '\t' << pihyperinvconc << '\n';
+        param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
+        param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
+        param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
+        param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';;
+        param_os << 0 << '\n';
+        param_os << every << '\t' << until << '\t' << size << '\n';
+        model->ToStream(param_os);
+    }
+
+    void MakeFiles(int force) override  {
+
+        Chain::MakeFiles(force);
+
+        ofstream nameos((name + ".genelist").c_str());
+        GetModel()->PrintGeneList(nameos);
+        nameos.close();
+
+        ofstream pos((name + ".posw").c_str());
+        ofstream omos((name + ".posom").c_str());
+        /*
+        if (writegenedata)  {
+            ofstream siteos((name + ".sitepp").c_str());
+        }
+        */
+    }
+
+    void SavePoint() override   {
+        Chain::SavePoint();
+        ofstream posw_os((name + ".posw").c_str(),ios_base::app);
+        GetModel()->TracePosWeight(posw_os);
+        ofstream posom_os((name + ".posom").c_str(),ios_base::app);
+        GetModel()->TracePosOm(posom_os);
+        /*
+        if (writegenedata)  {
+            ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
+            GetModel()->MasterTraceSitesPostProb(ppos);
+            GetModel()->SlaveTraceSitesPostProb();
+        }
+        */
+    }
+};
 
 int main(int argc, char* argv[])	{
 
@@ -76,202 +266,194 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
-	string datafile = "";
-	string treefile = "";
+    MultiGeneCodonM2aChain* chain = 0;
 
-    double pihypermean = 0.1;
-    double pihyperinvconc = 0.2;
+    string name = "";
 
-    double puromhypermean = 0.5;
-    double puromhyperinvconc = 0.5;
-    int purommode = 1;
+    // starting a chain from existing files
+    if (argc == 2 && argv[1][0] != '-') {
+        name = argv[1];
+        chain = new MultiGeneCodonM2aChain(name,myid,nprocs);
+    }
 
-    double dposomhypermean = 1.0;
-    double dposomhyperinvshape = 1.0;
-    int dposommode = 1;
+    // new chain
+    else    {
+        string datafile = "";
+        string treefile = "";
 
-    double purwhypermean = 0.5;
-    double purwhyperinvconc = 0.5;
-    int purwmode = 1;
+        double pihypermean = 0.1;
+        double pihyperinvconc = 0.2;
 
-    double poswhypermean = 0.1;
-    double poswhyperinvconc = 1;
-    int poswmode = 1;
+        double puromhypermean = 0.5;
+        double puromhyperinvconc = 0.5;
+        int purommode = 1;
 
-    int blmode = 2;
-    int nucmode = 2;
+        double dposomhypermean = 1.0;
+        double dposomhyperinvshape = 1.0;
+        int dposommode = 1;
 
-    int writegenedata = 0;
+        double purwhypermean = 0.5;
+        double purwhyperinvconc = 0.5;
+        int purwmode = 1;
 
-	string name = "";
+        double poswhypermean = 0.1;
+        double poswhyperinvconc = 1;
+        int poswmode = 1;
 
-    try	{
+        int blmode = 2;
+        int nucmode = 2;
 
-        if (argc == 1)	{
-            throw(0);
-        }
+        // int writegenedata = 0;
 
-        int i = 1;
-        while (i < argc)	{
-            string s = argv[i];
+        int force = 1;
+        int every = 1;
+        int until = -1;
 
-            if (s == "-d")	{
-                i++;
-                datafile = argv[i];
+        try	{
+
+            if (argc == 1)	{
+                throw(0);
             }
-            else if ((s == "-t") || (s == "-T"))	{
-                i++;
-                treefile = argv[i];
-            }
-            else if (s == "-purom")   {
-                purommode = 0;
-                i++;
-                string tmp = argv[i];
-                if (tmp != "uninf") {
-                    puromhypermean = atof(argv[i]);
+
+            int i = 1;
+            while (i < argc)	{
+                string s = argv[i];
+
+                if (s == "-d")	{
                     i++;
-                    puromhyperinvconc = atof(argv[i]);
+                    datafile = argv[i];
                 }
-            }
-            else if (s == "-dposom")    {
-                dposommode = 0;
-                i++;
-                string tmp = argv[i];
-                if (tmp != "uninf") {
-                    dposomhypermean = atof(argv[i]);
+                else if ((s == "-t") || (s == "-T"))	{
                     i++;
-                    dposomhyperinvshape = atof(argv[i]);
+                    treefile = argv[i];
                 }
-            }
-            else if (s == "-purw")  {
-                purwmode = 0;
-                i++;
-                string tmp = argv[i];
-                if (tmp != "uninf") {
-                    purwhypermean = atof(argv[i]);
+                else if (s == "-purom")   {
+                    purommode = 0;
                     i++;
-                    purwhyperinvconc = atof(argv[i]);
+                    string tmp = argv[i];
+                    if (tmp != "uninf") {
+                        puromhypermean = atof(argv[i]);
+                        i++;
+                        puromhyperinvconc = atof(argv[i]);
+                    }
                 }
-            }
-            else if (s == "-posw")  {
-                poswmode = 0;
-                i++;
-                string tmp = argv[i];
-                if (tmp != "uninf") {
-                    poswhypermean = atof(argv[i]);
+                else if (s == "-dposom")    {
+                    dposommode = 0;
                     i++;
-                    poswhyperinvconc = atof(argv[i]);
+                    string tmp = argv[i];
+                    if (tmp != "uninf") {
+                        dposomhypermean = atof(argv[i]);
+                        i++;
+                        dposomhyperinvshape = atof(argv[i]);
+                    }
                 }
-            }
-            else if (s == "-nucrates")  {
+                else if (s == "-purw")  {
+                    purwmode = 0;
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp != "uninf") {
+                        purwhypermean = atof(argv[i]);
+                        i++;
+                        purwhyperinvconc = atof(argv[i]);
+                    }
+                }
+                else if (s == "-posw")  {
+                    poswmode = 0;
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp != "uninf") {
+                        poswhypermean = atof(argv[i]);
+                        i++;
+                        poswhyperinvconc = atof(argv[i]);
+                    }
+                }
+                else if (s == "-nucrates")  {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared")    {
+                        nucmode = 2;
+                    }
+                    else if (tmp == "shrunken")   {
+                        nucmode = 1;
+                    }
+                    else if ((tmp == "ind") || (tmp == "independent"))  {
+                        nucmode = 0;
+                    }
+                    else    {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                }
+                else if (s == "-bl")    {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared")    {
+                        blmode = 2;
+                    }
+                    else if (tmp == "shrunken")   {
+                        blmode = 1;
+                    }
+                    else if ((tmp == "ind") || (tmp == "independent"))  {
+                        blmode = 0;
+                    }
+                    else    {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
+                }
+                else if (s == "-pi")    {
+                    i++;
+                    pihypermean = atof(argv[i]);
+                    i++;
+                    pihyperinvconc = atof(argv[i]);
+                }
+                /*
+                else if (s == "-g")  {
+                    writegenedata = 1;
+                }
+                */
+                else if (s == "-f")	{
+                    force = 1;
+                }
+                else if ( (s == "-x") || (s == "-extract") )	{
+                    i++;
+                    if (i == argc) throw(0);
+                    every = atoi(argv[i]);
+                    i++;
+                    if (i == argc) throw(0);
+                    until = atoi(argv[i]);
+                }
+                else	{
+                    if (i != (argc -1))	{
+                        throw(0);
+                    }
+                    name = argv[i];
+                }
                 i++;
-                string tmp = argv[i];
-                if (tmp == "shared")    {
-                    nucmode = 2;
-                }
-                else if (tmp == "shrunken")   {
-                    nucmode = 1;
-                }
-                else if ((tmp == "ind") || (tmp == "independent"))  {
-                    nucmode = 0;
-                }
-                else    {
-                    cerr << "error: does not recongnize command after -nucrates\n";
-                    exit(1);
-                }
             }
-            else if (s == "-bl")    {
-                i++;
-                string tmp = argv[i];
-                if (tmp == "shared")    {
-                    blmode = 2;
-                }
-                else if (tmp == "shrunken")   {
-                    blmode = 1;
-                }
-                else if ((tmp == "ind") || (tmp == "independent"))  {
-                    blmode = 0;
-                }
-                else    {
-                    cerr << "error: does not recongnize command after -bl\n";
-                    exit(1);
-                }
+            if ((datafile == "") || (treefile == "") || (name == ""))	{
+                throw(0);
             }
-            else if (s == "-pi")    {
-                i++;
-                pihypermean = atof(argv[i]);
-                i++;
-                pihyperinvconc = atof(argv[i]);
-            }
-            else if (s == "-g")  {
-                writegenedata = 1;
-            }
-            else	{
-                if (i != (argc -1))	{
-                    throw(0);
-                }
-                name = argv[i];
-            }
-            i++;
         }
-        if ((datafile == "") || (treefile == "") || (name == ""))	{
-            throw(0);
+        catch(...)	{
+            cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper <hyperparamfile>] <chainname> \n";
+            cerr << '\n';
+            exit(1);
         }
-    }
-    catch(...)	{
-        cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper <hyperparamfile>] <chainname> \n";
-        cerr << '\n';
-        exit(1);
+
+        chain = new MultiGeneCodonM2aChain(datafile,treefile,blmode,nucmode,purommode,dposommode,purwmode,poswmode,pihypermean,pihyperinvconc,puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc,every,until,name,force,myid,nprocs);
     }
 
-	MultiGeneCodonM2aModel* model = new MultiGeneCodonM2aModel(datafile,treefile,pihypermean,pihyperinvconc,myid,nprocs);
-    model->SetAcrossGenesModes(blmode,nucmode,purommode,dposommode,purwmode,poswmode);
-    model->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
     if (! myid) {
-        cerr << " -- master allocate\n";
+        cerr << "chain " << name << " started\n";
     }
-    model->Allocate();
+    chain->Start();
     if (! myid) {
-        cerr << " -- master unfold\n";
-    }
-    model->Unfold();
-    if (! myid) {
-        cerr << " -- start\n";
-        model->Trace(cerr);
-    }
-    if (! myid) {
-        ofstream nameos((name + ".genelist").c_str());
-        model->PrintGeneList(nameos);
-        nameos.close();
-
-        ofstream paramos((name + ".globalparam").c_str());
-        ofstream hyperos((name + ".hyperparam").c_str());
-        ofstream pos((name + ".posw").c_str());
-        ofstream omos((name + ".posom").c_str());
-        ofstream siteos((name + ".sitepp").c_str());
-        ofstream os((name + ".trace").c_str());
-        model->TraceHeader(os);
-        os.flush();
-        while(1)	{
-            model->MasterMove();
-            model->Trace(os);
-            model->TracePosWeight(pos);
-            model->TracePosOm(omos);
-            if (writegenedata)  {
-                model->MasterTraceSitesPostProb(siteos);
-            }
-        }
-    }
-    else	{
-        while(1)	{
-            model->SlaveMove();
-            if (writegenedata)  {
-                model->SlaveTraceSitesPostProb();
-            }
-        }
+        cerr << "chain " << name << " stopped\n";
+        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        chain->GetModel()->Trace(cerr);
     }
 
 	MPI_Finalize();
 }
-
 

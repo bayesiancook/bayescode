@@ -8,7 +8,7 @@
 
 MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs) : 
 
-    MultiGeneMPIModule(inmyid,innprocs), 
+    MultiGeneProbModel(inmyid,innprocs), 
     mixhyperparam(9,0), 
     puromhypermean(mixhyperparam[0]), 
     puromhyperinvconc(mixhyperparam[1]),
