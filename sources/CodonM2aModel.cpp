@@ -14,8 +14,6 @@ CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi)	{
     Nsite = codondata->GetNsite();    // # columns
     Ntaxa = codondata->GetNtaxa();
 
-    // std::cerr << "-- Number of sites: " << Nsite << std::endl;
-
     taxonset = codondata->GetTaxonSet();
 
     // get tree from file (newick format)
@@ -30,7 +28,6 @@ CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi)	{
 
 
 void CodonM2aModel::Unfold()   {
-
     phyloprocess->Unfold();
     phyloprocess->ResampleSub();
 }
