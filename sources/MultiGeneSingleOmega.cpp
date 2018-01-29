@@ -38,18 +38,18 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
     void New(int force) override {
         model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
         if (! myid) {
-            cerr << " -- master allocate\n";
+            cerr << "allocate\n";
         }
         GetModel()->Allocate();
         if (! myid) {
-            cerr << " -- master unfold\n";
+            cerr << "unfold\n";
         }
         GetModel()->Unfold();
 
         if (! myid) {
-            cerr << "-- Reset" << endl;
+            cerr << "reset" << endl;
             Reset(force);
-            cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
+            cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }
@@ -57,7 +57,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
     void Open() override {
         ifstream is((name + ".param").c_str());
         if (!is) {
-            cerr << "-- Error : cannot find file : " << name << ".param\n";
+            cerr << "error : cannot find file : " << name << ".param\n";
             exit(1);
         }
         is >> modeltype;
@@ -65,7 +65,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "-- Error when reading model\n";
+            cerr << "error when reading model\n";
             exit(1);
         }
         is >> every >> until >> size;
@@ -73,7 +73,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         if (modeltype == "MULTIGENESINGLEOMEGA") {
             model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
         } else {
-            cerr << "-- Error when opening file " << name
+            cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
@@ -126,26 +126,19 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
+    MultiGeneSingleOmegaChain* chain = 0;
+    string name = "";
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        MultiGeneSingleOmegaChain* chain = new MultiGeneSingleOmegaChain(name,myid,nprocs);
-        if (!myid)  {
-            cerr << "chain " << name << " started\n";
-        }
-        if (!myid)  {
-            chain->Start();
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
+        name = argv[1];
+        chain = new MultiGeneSingleOmegaChain(name,myid,nprocs);
     }
 
     // new chain
     else    {
         string datafile = "";
         string treefile = "";
-        string name = "";
         int force = 1;
         int every = 1;
         int until = -1;
@@ -197,16 +190,17 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneSingleOmegaChain* chain = new MultiGeneSingleOmegaChain(datafile,treefile,every,until,name,force,myid,nprocs);
-        if (! myid) {
-            cerr << "chain " << name << " started\n";
-        }
-        chain->Start();
-        if (! myid) {
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
+        chain = new MultiGeneSingleOmegaChain(datafile,treefile,every,until,name,force,myid,nprocs);
+    }
+
+    if (! myid) {
+        cerr << "chain " << name << " started\n";
+    }
+    chain->Start();
+    if (! myid) {
+        cerr << "chain " << name << " stopped\n";
+        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        chain->GetModel()->Trace(cerr);
     }
 
 	MPI_Finalize();

@@ -92,9 +92,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         Nbranch = tree->GetNbranch();
 
         if (! myid) {
-            std::cerr << "number of taxa : " << Ntaxa << '\n';
-            std::cerr << "number of branches : " << Nbranch << '\n';
-            std::cerr << "-- Tree and data fit together\n";
+            cerr << "number of taxa : " << Ntaxa << '\n';
+            cerr << "number of branches : " << Nbranch << '\n';
+            cerr << "tree and data fit together\n";
         }
     }
 
