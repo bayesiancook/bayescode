@@ -11,6 +11,15 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
 
     MultiGeneProbModel(int inmyid, int innprocs) : ProbModel(), MultiGeneMPIModule(inmyid, innprocs) {}
 
+    virtual void Update() override {
+        if (! myid) {
+            MasterUpdate();
+        }
+        else    {
+            SlaveUpdate();
+        }
+    }
+
     virtual double Move() override {
         if (! myid) {
             MasterMove();
@@ -24,6 +33,8 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
     virtual void MasterMove() {}
     virtual void SlaveMove() {}
 
+    virtual void MasterUpdate() {}
+    virtual void SlaveUpdate() {}
 };
 
 #endif
