@@ -41,10 +41,8 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
             cerr << "allocate\n";
         }
         GetModel()->Allocate();
-        if (! myid) {
-            cerr << "unfold\n";
-        }
-        GetModel()->Unfold();
+
+        GetModel()->Update();
 
         if (! myid) {
             cerr << "reset" << endl;
@@ -77,16 +75,12 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+
         GetModel()->Allocate();
         if (! myid) {
             model->FromStream(is);
-            // broadcast parameter
         }
-        else    {
-            // receive parameter
-        }
-        model->Update();
-        GetModel()->Unfold();
+        GetModel()->Update();
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
@@ -150,6 +144,11 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
+    if (nprocs <= 1)    {
+        cerr << "error: should run the program with at least 2 cores\n";
+        exit(1);
+    }
+        
     MultiGeneBranchOmegaChain* chain = 0;
     string name = "";
 

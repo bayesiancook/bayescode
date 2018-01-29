@@ -200,36 +200,8 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene] = new BranchOmegaModel(GetLocalGeneName(gene),treefile);
-            }
-        }
-    }
-
-    void Unfold()   {
-
-        if (! GetMyid())    {
-            MasterSendGlobalBranchLengths();
-            MasterSendGlobalNucRates();
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
-            MasterReceiveLogProbs();
-        }
-        else    {
-
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene]->Allocate();
             }
-
-            SlaveReceiveGlobalBranchLengths();
-            SlaveReceiveGlobalNucRates();
-            SlaveReceiveOmegaHyperParameters();
-            SlaveReceiveOmega();
-
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->TouchMatrices();
-                geneprocess[gene]->Unfold();
-            }
-
-            SlaveSendLogProbs();
         }
     }
 
@@ -323,7 +295,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     // Updates
     //-------------------
 
-    void Update()   {
+    void MasterUpdate() override {
         branchlength->SetScale(lambda);
         double alpha = 1.0 / branchvhyperinvshape;
         double beta = alpha / branchvhypermean;
@@ -334,6 +306,23 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         genewarray->SetShape(genealpha);
         genewarray->SetScale(genebeta);
         omegatreearray->SetInvShape(omegainvshape);
+
+        if (nprocs > 1) {
+            MasterSendGlobalBranchLengths();
+            MasterSendGlobalNucRates();
+            MasterSendOmegaHyperParameters();
+            MasterSendOmega();
+            MasterReceiveLogProbs();
+        }
+    }
+
+    void SlaveUpdate() override {
+        SlaveReceiveGlobalBranchLengths();
+        SlaveReceiveGlobalNucRates();
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmega();
+        GeneResampleSub(1.0);
+        SlaveSendLogProbs();
     }
 
 	void TouchNucMatrix()	{

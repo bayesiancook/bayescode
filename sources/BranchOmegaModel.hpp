@@ -145,15 +145,19 @@ class BranchOmegaModel : public ProbModel {
 
         pathsuffstatarray = new PathSuffStatNodeArray(*tree);
         omegapathsuffstatarray = new OmegaPathSuffStatBranchArray(*tree);
+
+        phyloprocess->Unfold();
 	}
 
     //! \brief unfold the model
     //! 
     //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
+    /*
     void Unfold()   {
-		phyloprocess->Unfold();
+		// phyloprocess->Unfold();
 		phyloprocess->ResampleSub();
     }
+    */
 
     //-------------------
     // Accessors
