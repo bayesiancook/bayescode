@@ -128,15 +128,8 @@ class SingleOmegaModel : public ProbModel {
 		codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,codonmatrix);
+        phyloprocess->Unfold();
 	}
-
-    //! \brief unfold the model
-    //! 
-    //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
-    void Unfold()   {
-		phyloprocess->Unfold();
-		phyloprocess->ResampleSub();
-    }
 
     //-------------------
     // Accessors
@@ -221,9 +214,10 @@ class SingleOmegaModel : public ProbModel {
     //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
-    void Update()   {
+    void Update() override {
         branchlength->SetScale(lambda);
-        TouchMatrices();
+	    TouchMatrices();
+	    ResampleSub(1.0);
     }
 
     //-------------------

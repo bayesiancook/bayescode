@@ -58,11 +58,6 @@ class SingleOmegaSample : public Sample {
 		// read model (i.e. chain's last point) from <name>.param
 		model->FromStream(is);
 
-		/*
-		cerr << "UPDATE\n";
-		model->Update();
-		*/
-
 		// open <name>.chain, and prepare stream and stream iterator
 		OpenChainFile();
 		// now, size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)

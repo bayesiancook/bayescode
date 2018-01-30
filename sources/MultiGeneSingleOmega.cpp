@@ -42,9 +42,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         }
         GetModel()->Allocate();
         if (! myid) {
-            cerr << "unfold\n";
+            cerr << "update\n";
         }
-        GetModel()->Unfold();
+        GetModel()->Update();
 
         if (! myid) {
             cerr << "reset" << endl;
@@ -77,6 +77,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        if (! myid) {
+            cerr << "allocate\n";
+        }
         GetModel()->Allocate();
         if (! myid) {
             model->FromStream(is);
@@ -85,8 +88,10 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         else    {
             // receive parameter
         }
+        if (! myid) {
+            cerr << "update\n";
+        }
         model->Update();
-        GetModel()->Unfold();
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);

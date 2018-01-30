@@ -127,36 +127,41 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene),treefile);
+                geneprocess[gene]->Allocate();
             }
         }
     }
 
-    void Unfold()   {
+    void MasterUpdate() override {
 
-        if (! GetMyid())    {
+        branchlength->SetScale(lambda);
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
+
+        if (nprocs > 1) {
             MasterSendGlobalBranchLengths();
             MasterSendGlobalNucRates();
             MasterSendOmegaHyperParameters();
             MasterSendOmega();
             MasterReceiveLogProbs();
         }
-        else    {
+    }
 
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->Allocate();
-            }
+    void SlaveUpdate() override {
 
-            SlaveReceiveGlobalBranchLengths();
-            SlaveReceiveGlobalNucRates();
-            SlaveReceiveOmegaHyperParameters();
-            SlaveReceiveOmega();
+        SlaveReceiveGlobalBranchLengths();
+        SlaveReceiveGlobalNucRates();
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmega();
+        GeneUpdate();
+        SlaveSendLogProbs();
+    }
 
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->TouchMatrices();
-                geneprocess[gene]->Unfold();
-            }
-
-            SlaveSendLogProbs();
+    void GeneUpdate()	{
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->Update();
         }
     }
 
@@ -191,8 +196,26 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
 	void Monitor(ostream& os) const {}
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) const {}
+
+	void FromStream(istream& is) {
+        is >> lambda;
+        is >> *branchlength;
+        is >> nucrelrate;
+        is >> nucstat;
+        is >> omegahypermean;
+        is >> omegahyperinvshape;
+        is >> *omegaarray;
+    }
+
+	void ToStream(ostream& os) const {
+        os << lambda << '\n';
+        os << *branchlength << '\n';
+        os << nucrelrate << '\n';
+        os << nucstat << '\n';
+        os << omegahypermean << '\n';
+        os << omegahyperinvshape << '\n';
+        os << *omegaarray << '\n';
+    }
 
     //-------------------
     // Updates
@@ -461,6 +484,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     
     void SlaveReceiveOmega()    {
         SlaveReceiveGeneArray(*omegaarray);
+        for (int gene=0; gene<GetLocalNgene(); gene++)    {
+            geneprocess[gene]->SetOmega((*omegaarray)[gene]);
+        }
     }
 
     // omega hyperparameters

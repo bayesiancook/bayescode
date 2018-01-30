@@ -34,7 +34,7 @@ class SingleOmegaChain : public Chain  {
     void New(int force) override {
         model = new SingleOmegaModel(datafile,treefile);
         GetModel()->Allocate();
-        GetModel()->Unfold();
+        GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -67,7 +67,6 @@ class SingleOmegaChain : public Chain  {
         GetModel()->Allocate();
         model->FromStream(is);
         model->Update();
-        GetModel()->Unfold();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
