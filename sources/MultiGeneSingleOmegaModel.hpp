@@ -132,13 +132,18 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MasterUpdate() override {
+    void FastUpdate()   {
 
         branchlength->SetScale(lambda);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
         omegaarray->SetShape(alpha);
         omegaarray->SetScale(beta);
+    }
+
+    void MasterUpdate() override {
+
+        FastUpdate();
 
         if (nprocs > 1) {
             MasterSendGlobalBranchLengths();
