@@ -95,7 +95,6 @@ class SingleOmegaModel : public ProbModel {
         // where lambda is a hyperparameter
         model.component<FWrapper<double>>("lambda", 10);
         model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
-        // model.component<PoissonSuffStatBranchArray>("lengthpathsuffstatarray", tree);
 
         // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
         model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
@@ -437,8 +436,6 @@ class SingleOmegaModel : public ProbModel {
         os << Random::GetEntropy(*assembly->at<Wrapper<vector<double>>>("nucstat")) << '\t';
         os << Random::GetEntropy(*assembly->at<Wrapper<vector<double>>>("nucrelrate")) << '\n';
     }
-
-    void Monitor(ostream& os) const override {}
 
     void ToStream(ostream& os) const override {
         auto& lambda = *assembly->at<FWrapper<double>>("lambda");

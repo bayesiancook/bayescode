@@ -3,6 +3,7 @@
 
 #include <string>
 #include "ProbModel.hpp"
+#include "component_defs.hpp"
 
 /**
  * \brief A generic interface for a Monte Carlo Markov Chain
@@ -20,9 +21,9 @@
  * - <chainname>.run     : put 0 in this file to stop the chain
  */
 
-class Chain {
+class Chain : public Start {
   public:
-    Chain();
+    Chain(string modeltype="");
 
     virtual ~Chain() = default;
 
@@ -31,7 +32,7 @@ class Chain {
     //! each derived class should define a unique string for each type of model
     //! (typically used to check that a chain restarted from file is from correct model),
     //! and then override this pure virtual function to return the type.
-    virtual std::string GetModelType() = 0;
+    virtual std::string GetModelType() { return modeltype; }
 
     //! make new chain (force == 1 : overwrite already existing files with same name)
     virtual void New(int force = 0) = 0;
@@ -49,7 +50,7 @@ class Chain {
     virtual void MakeFiles(int force = 0);
 
     //! start the MCMC
-    virtual void Start();
+    virtual void start();
 
     //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
     virtual void Run();
@@ -83,15 +84,16 @@ class Chain {
 
   protected:
     //! saving frequency (i.e. number of move cycles performed between each point saved to file)
-    int every;
+    int every{1};
     //! intended final size of the chain (until==-1 means no a priori specified upper limit)
-    int until;
+    int until{-1};
     //! current size (number of points saved to file)
-    int size;
+    int size{0};
     //! pointer to the underlying model
-    ProbModel *model;
+    ProbModel *model{nullptr};
     //! base name for all files corresponding to that chain
     string name;
+    string modeltype;
 };
 
 #endif  // CHAIN_H

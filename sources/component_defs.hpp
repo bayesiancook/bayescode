@@ -4,10 +4,26 @@
 #include "Random.hpp"
 #include "tinycompo.hpp"
 
+//==========================================================
+// INTERFACES
+//==========================================================
+
+class Start : public tc::Component {
+    virtual void start() = 0;
+
+  public:
+    Start() { port("start", &Start::start); }
+};
+
 template <class Type>
 struct AbstractWrapper {
     virtual Type operator*() = 0;
 };
+
+
+//==========================================================
+// WRAPPERS
+//==========================================================
 
 // Wrapper for classes (with virtual destructors)
 template <class Type>
@@ -34,6 +50,10 @@ struct FWrapper : tc::Component {
         return ss.str();
     }
 };
+
+//==========================================================
+// CONNECTORS
+//==========================================================
 
 // Set the value to the value of a wrapped object (if it makes sense)
 template <class Type>

@@ -8,11 +8,13 @@ using namespace std;
  * \brief Chain object for running an MCMC under SingleOmegaModel
  */
 
-class SingleOmegaChain : public Chain {
+class SingleOmegaChain : public Start {
   private:
     // Chain parameters
     string modeltype;
     string datafile, treefile;
+    string name; // name for files
+    Chain* chain;
 
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final chain size, chain name and overwrite flag --
@@ -32,12 +34,13 @@ class SingleOmegaChain : public Chain {
         Save();
     }
 
+    void start() override {
+        chain->start();
+    }
+
     void New(int force) override {
-        cout << "NEW\n";
         model = new SingleOmegaModel(datafile, treefile);
-        cout << "ENDNEW" << endl;
         GetModel()->DeclareModel();  // instead of Allocate
-        // GetModel()->Allocate();
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;
         Reset(force);
@@ -97,7 +100,7 @@ int main(int argc, char* argv[]) {
         string name = argv[1];
         SingleOmegaChain* chain = new SingleOmegaChain(name);
         cerr << "chain " << name << " started\n";
-        chain->Start();
+        chain->start();
         cerr << "chain " << name << " stopped\n";
         cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
@@ -154,9 +157,8 @@ int main(int argc, char* argv[]) {
         }
 
         SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
-        cout << "Finished\n";
         cerr << "chain " << name << " started\n";
-        chain->Start();
+        chain->start();
         cerr << "chain " << name << " stopped\n";
         cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);

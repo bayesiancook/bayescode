@@ -5,13 +5,7 @@
 #include "ProbModel.hpp"
 using namespace std;
 
-Chain::Chain() {
-    every = 1;
-    until = -1;
-    size = 0;
-    model = nullptr;
-    name = "";
-}
+Chain::Chain(string modeltype) : modeltype(modeltype) {}
 
 void Chain::MakeFiles(int force) {
     if (ifstream((name + ".param").c_str()) && (force == 0)) {
@@ -54,7 +48,7 @@ void Chain::Move() {
     Monitor();
 }
 
-void Chain::Start() {
+void Chain::start() {
     ofstream run_os((name + ".run").c_str());
     run_os << 1 << '\n';
     run_os.close();
