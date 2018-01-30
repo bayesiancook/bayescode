@@ -169,6 +169,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}
 
+    const vector<double>& GetOmegaArray() const {
+        return omegaarray->GetArray();
+    }
+
     //-------------------
     // Traces and Monitors
     //-------------------

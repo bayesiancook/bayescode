@@ -174,11 +174,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         double genealpha = 1.0 / genewhyperinvshape;
         double genebeta = genealpha / genewhypermean;
         genewarray = new IIDGamma(Ngene,genealpha,genebeta);
-        /*
-        for (int i=0; i<GetNgene(); i++)    {
-            (*genewarray)[i] = 1.0;
-        }
-        */
 
         meanomegatreearray = new BranchProductArray(*branchvarray,*genewarray);
         omegainvshape = 1.0;

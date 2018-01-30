@@ -1,12 +1,12 @@
 #include <cmath>
 #include <fstream>
 #include "MultiGeneSample.hpp"
-#include "MultiGeneBranchOmegaModel.hpp"
+#include "MultiGeneSingleOmegaModel.hpp"
 using namespace std;
 
 MPI_Datatype Propagate_arg;
 
-class MultiGeneBranchOmegaSample : public MultiGeneSample {
+class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
 	private:
 	string modeltype;
@@ -17,11 +17,10 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
 
 	string GetModelType() {return modeltype;}
 
-	const MultiGeneBranchOmegaModel* GetModel() const {return (MultiGeneBranchOmegaModel*) model;}
-	MultiGeneBranchOmegaModel* GetModel() {return (MultiGeneBranchOmegaModel*) model;}
+	const MultiGeneSingleOmegaModel* GetModel() const {return (MultiGeneSingleOmegaModel*) model;}
+	MultiGeneSingleOmegaModel* GetModel() {return (MultiGeneSingleOmegaModel*) model;}
 
-	MultiGeneBranchOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid, int nprocs) : MultiGeneSample(filename,inburnin,inevery,inuntil, myid, nprocs)	{
-
+	MultiGeneSingleOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid, int nprocs) : MultiGeneSample(filename,inburnin,inevery,inuntil, myid, nprocs)	{
         Open();
 	}
 
@@ -48,8 +47,8 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
 		is >> chainevery >> chainuntil >> chainsize;
 
 		// make a new model depending on the type obtained from the file
-		if (modeltype == "MULTIGENEBRANCHOMEGA")	{
-			model = new MultiGeneBranchOmegaModel(datafile,treefile,myid,nprocs);
+		if (modeltype == "MULTIGENESINGLEOMEGA")	{
+			model = new MultiGeneSingleOmegaModel(datafile,treefile,myid,nprocs);
 		}
 		else	{
 			cerr << "error when opening file "  << name << '\n';
@@ -69,46 +68,35 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
         }
 	}
 
-    int GetNbranch() const  {
-        return GetModel()->GetNbranch();
-    }
-
 	// a very simple (and quite uninteresting) method for obtaining
 	// the posterior mean and variance of the total length of the tree
 	void Read()	{
 
         cerr << size << " points to read\n";
 
-        vector<vector<double> > pp(GetNgene(),vector<double>(GetNbranch(),0));
-
+        vector<double> meanom(GetNgene(),0);
+        vector<double> varom(GetNgene(),0);
         for (int i=0; i<size; i++)  {
             cerr << '.';
             GetNextPoint();
-            GetModel()->FastUpdate();
+            const vector<double>& om = GetModel()->GetOmegaArray();
             for (int gene=0; gene<GetNgene(); gene++)   {
-                for (int j=0; j<GetNbranch(); j++)  {
-                    if (GetModel()->GetOmega(gene,j) > GetModel()->GetMeanOmega(gene,j))    {
-                        pp[gene][j]++;
-                    }
-                }
+                meanom[gene] += om[gene];
+                varom[gene] += om[gene]*om[gene];
             }
         }
         cerr << '\n';
         for (int gene=0; gene<GetNgene(); gene++)   {
-            for (int j=0; j<GetNbranch(); j++)  {
-                pp[gene][j] /= size;
-            }
+            meanom[gene] /= size;
+            varom[gene] /= size;
+            varom[gene] -= meanom[gene]*meanom[gene];
         }
 
-        ofstream os((name + ".pp").c_str());
-        for (int j=0; j<GetNbranch(); j++)  {
-            os << j << '\t';
-            for (int gene=0; gene<GetNgene(); gene++)   {
-                os << pp[gene][j] << '\t';
-            }
-            os << '\n';
+        ofstream os((name + ".postmeanomega").c_str());
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            os << GetModel()->GetLocalGeneName(gene) << '\t' << meanom[gene] << '\t' << sqrt(varom[gene]) << '\n';
         }
-        cerr << "pp of positive departure in " << name << ".pp\n";
+        cerr << "posterior mean omega per gene in " << name << ".postmeanomega\n";
     }
 };
 
@@ -191,7 +179,7 @@ int main(int argc, char* argv[])	{
 		exit(1);
 	}
 
-	MultiGeneBranchOmegaSample* sample = new MultiGeneBranchOmegaSample(name,burnin,every,until,myid,nprocs);
+	MultiGeneSingleOmegaSample* sample = new MultiGeneSingleOmegaSample(name,burnin,every,until,myid,nprocs);
     if (! myid) {
         sample->Read();
     }
