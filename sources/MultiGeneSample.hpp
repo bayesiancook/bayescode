@@ -17,6 +17,9 @@ class MultiGeneSample: public Sample    {
         return GetMultiGeneModel()->GetNgene();
     }
 
+    void OpenChainFile() override;
+    void GetNextPoint() override;
+
     protected:
 
     int myid;
