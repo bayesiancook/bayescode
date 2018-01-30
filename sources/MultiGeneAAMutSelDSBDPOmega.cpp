@@ -14,7 +14,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     string modeltype, datafile, treefile;
     int Ncat;
     int baseNcat;
-    int fixomega;
+    int blmode, nucmode, basemode, omegamode;
 
   public:
     MultiGeneAAMutSelDSBDPOmegaModel* GetModel() {
@@ -23,7 +23,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int infixomega, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), fixomega(infixomega) {
+    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -39,15 +39,15 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,fixomega,myid,nprocs);
+        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
         if (! myid) {
-            cerr << " -- master allocate\n";
+            cerr << " -- allocate\n";
         }
         GetModel()->Allocate();
         if (! myid) {
-            cerr << " -- master unfold\n";
+            cerr << " -- update\n";
         }
-        GetModel()->Unfold();
+        GetModel()->Update();
 
         if (! myid) {
             cerr << "-- Reset" << endl;
@@ -66,7 +66,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> Ncat >> baseNcat;
-        is >> fixomega;
+        is >> blmode >> nucmode >> basemode >> omegamode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -76,7 +76,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,fixomega,myid,nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -85,13 +85,8 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         GetModel()->Allocate();
         if (! myid) {
             model->FromStream(is);
-            // broadcast parameter
         }
-        else    {
-            // receive parameter
-        }
-        model->Update();
-        GetModel()->Unfold();
+        GetModel()->Update();
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
@@ -107,7 +102,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
         param_os << Ncat << '\t' << baseNcat << '\n';
-        param_os << fixomega << '\n';
+        param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -172,11 +167,15 @@ int main(int argc, char* argv[])	{
         string treefile = "";
         int Ncat = -1;
         int baseNcat = -1;
-        int fixomega = 1;
         string name = "";
         int force = 1;
         int every = 1;
         int until = -1;
+
+        int blmode = 2;
+        int nucmode = 0;
+        int basemode = 2;
+        int omegamode = 3;
 
         try	{
 
@@ -207,11 +206,25 @@ int main(int argc, char* argv[])	{
                     i++;
                     baseNcat = atoi(argv[i]);
                 }
+                else if (s == "-basemix")    {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared")    {
+                        basemode = 2;
+                    }
+                    else if (tmp == "independent")  {
+                        basemode = 0;
+                    }
+                    else    {
+                        cerr << "error: does not recognize command after -basemix\n";
+                        exit(1);
+                    }
+                }
                 else if (s == "-fixomega")  {
-                    fixomega = 1;
+                    omegamode = 3;
                 }
                 else if (s == "-freeomega") {
-                    fixomega = 0;
+                    omegamode = 1;
                 }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
@@ -234,12 +247,12 @@ int main(int argc, char* argv[])	{
             }
         }
         catch(...)	{
-            cerr << "multigeneaamutselhdp -d <list> -t <tree> -ncat <ncat> <chainname> \n";
+            cerr << "multigeneaamutselddp -d <list> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        MultiGeneAAMutSelDSBDPOmegaChain* chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,fixomega,every,until,name,force,myid,nprocs);
+        MultiGeneAAMutSelDSBDPOmegaChain* chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,name,force,myid,nprocs);
         if (! myid) {
             cerr << "chain " << name << " started\n";
         }

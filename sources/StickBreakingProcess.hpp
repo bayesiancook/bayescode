@@ -178,6 +178,20 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total /= nrep;
     }
 
+    void FromStreamSB(istream& is) {
+        for (int k=0; k<GetSize(); k++)  {
+            is >> (*this)[k];
+            is >> V[k];
+        }
+    }
+
+    void ToStreamSB(ostream& os) const {
+        for (int k=0; k<GetSize(); k++)  {
+            os << GetVal(k) << '\t';
+            os << V[k] << '\t';
+        }
+    }
+
     private:
 
     double kappa;

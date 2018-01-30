@@ -87,23 +87,16 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // 2: shared across genes
     // 3: fixed
 
-    /*
     // currently: shared across genes
     int blmode;
-    // currently, free without shrinkage: shared across genes is impractical
+    // currently, free without shrinkage: shared across genes
     int nucmode;
     // currently, shared across genes.
     // free without shrinkage, only with baseNcat = 1
     // free with shrinkage: not really interesting
     int basemode;
-
     // currently: fixed or free with shrinkage
     int omegamode;
-    */
-
-    int fixbl;
-    int fixbasemix;
-    int fixomega;
 
     Chrono aachrono;
     Chrono basechrono;
@@ -122,9 +115,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inNcat, int inbaseNcat)   {
 
-        fixbl = 0;
-        fixbasemix = 0;
-        fixomega = 1;
+        blmode = 0;
+        nucmode = 0;
+        basemode = 0;
+        omegamode = 2;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -168,14 +162,20 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		// Allocate();
 	}
 
-    void Unfold()   {
+    void SetBLMode(int mode)    {
+        blmode = mode;
+    }
 
-		cerr << "-- unfold\n";
-		phyloprocess->Unfold();
-		cerr << phyloprocess->GetLogLikelihood() << '\n';
-		std::cerr << "-- mapping substitutions\n";
-		phyloprocess->ResampleSub();
-		// Trace(cerr);
+    void SetNucMode(int mode)   {
+        nucmode = mode;
+    }
+
+    void SetOmegaMode(int mode) {
+        omegamode = mode;
+    }
+
+    void SetBaseMode(int mode)  {
+        basemode = mode;
     }
 
 	void Allocate()	{
@@ -236,10 +236,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
+		phyloprocess->Unfold();
+
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         componentpathsuffstatarray = new PathSuffStatArray(Ncat);
-
-        Update();
 	}
 
     //-------------------
@@ -273,18 +273,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //-------------------
     // Setting and updating
     // ------------------
-
-    void SetFixBL(int infixbl)    {
-        fixbl = infixbl;
-    }
-
-    void SetFixOmega(int inom)  {
-        fixomega = inom;
-    }
-
-    void SetFixBaseMix(int inmix)    {
-        fixbasemix = inmix;
-    }
 
     void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
@@ -335,10 +323,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     void NoUpdate() {}
 
-    void Update()   {
+    void Update() override {
+        branchlength->SetScale(lambda);
+        baseweight->SetKappa(basekappa);
+        weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateOccupancies();
         UpdateMatrices();
+	    ResampleSub(1.0);
     }
 
     //-------------------
@@ -347,18 +339,26 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     double GetLogPrior() const {
         double total = 0;
-        if (! fixbl)    {
+        if (blmode < 2) {
             total += BranchLengthsHyperLogPrior();
             total += BranchLengthsLogPrior();
         }
-        total += NucRatesLogPrior();
-        total += BaseStickBreakingHyperLogPrior();
-        total += BaseStickBreakingLogPrior();
+        if (nucmode < 2)    {
+            total += NucRatesLogPrior();
+        }
+        if (basemode < 2)   {
+            if (baseNcat > 1)   {
+                total += BaseStickBreakingHyperLogPrior();
+                total += BaseStickBreakingLogPrior();
+            }
+            total += BaseLogPrior();
+        }
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
-        total += BaseLogPrior();
         total += AALogPrior();
-        total += OmegaLogPrior();
+        if (omegamode < 2)  {
+            total += OmegaLogPrior();
+        }
         return total;
     }
 
@@ -521,7 +521,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		for (int rep=0; rep<nrep; rep++)	{
 
             totchrono.Start();
-            if (! fixbl)    {
+            if (blmode < 2) {
                 ResampleBranchLengths();
                 MoveBranchLengthsHyperParameter();
             }
@@ -529,9 +529,11 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 			CollectSitePathSuffStat();
             CollectComponentPathSuffStat();
 
-			MoveNucRates();
+            if (nucmode < 2)    {
+                MoveNucRates();
+            }
 
-            if (! fixomega) {
+            if (omegamode < 2)  {
                 MoveOmega();
             }
 
@@ -540,10 +542,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             aachrono.Stop();
 
             basechrono.Start();
-            if (baseNcat > 1)   {
-                ResampleBaseAlloc();
-            }
-            if (! fixbasemix) {
+            if (basemode < 2)   {
+                if (baseNcat > 1)   {
+                    ResampleBaseAlloc();
+                }
                 MoveBaseMixture(3);
             }
             basechrono.Stop();
@@ -997,10 +999,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		os << "omega\t";
         os << "ncluster\t";
         os << "kappa\t";
-        os << "basencluster\t";
-        os << "basekappa\t";
+        if (baseNcat > 1)   {
+            os << "basencluster\t";
+            os << "basekappa\t";
+        }
         os << "aaent\t";
-		os << "meanaaconc\t";
+        os << "meanaaconc\t";
         os << "aacenterent\t";
 		os << "statent\t";
 		os << "rrent\n";
@@ -1014,8 +1018,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		os << omega << '\t';
         os << GetNcluster() << '\t';
         os << kappa << '\t';
-        os << GetBaseNcluster() << '\t';
-        os << basekappa << '\t';
+        if (baseNcat > 1)   {
+            os << GetBaseNcluster() << '\t';
+            os << basekappa << '\t';
+        }
         os << GetMeanAAEntropy() << '\t';
 		os << GetMeanComponentAAConcentration() << '\t';
         os << GetMeanComponentAAEntropy() << '\t';
@@ -1029,9 +1035,78 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
     }
 
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) const {}
+	void FromStream(istream& is) {
 
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2)    {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
+        if (basemode < 2)   {
+            is >> basekappa;
+            baseweight->FromStreamSB(is);
+            // is >> *baseweight;
+            is >> *componentalloc;
+            is >> *basecenterarray;
+            is >> *baseconcentrationarray;
+        }
+        is >> kappa;
+        weight->FromStreamSB(is);
+        // is >> *weight;
+        is >> *componentaafitnessarray;
+        is >> *sitealloc;
+        if (omegamode < 2)  {
+            is >> omega;
+        }
+    }
+
+	void ToStream(ostream& os) const {
+
+        if (blmode < 2) {
+            os << lambda << '\n';
+            os << *branchlength << '\n';
+        }
+        if (nucmode < 2)    {
+            os << nucrelrate << '\n';
+            os << nucstat << '\n';
+        }
+        if (basemode < 2)   {
+            os << basekappa << '\n';
+            baseweight->ToStreamSB(os);
+            // os << *baseweight << '\n';
+            os << *componentalloc << '\n';
+            os << *basecenterarray << '\n';
+            os << *baseconcentrationarray << '\n';
+        }
+        os << kappa << '\n';
+        weight->ToStreamSB(os);
+        // os << *weight << '\n';
+        os << *componentaafitnessarray << '\n';
+        os << *sitealloc << '\n';
+        if (omega < 2)  {
+            os << omega << '\n';
+        }
+    }
+
+    /*
+    //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
+    unsigned int GetMPISize() const {
+        return omegatree->GetMPISize();
+    }
+
+    //! write array into MPI buffer
+    void MPIPut(MPIBuffer& buffer) const {
+        buffer << *omegatree;
+    }
+
+    //! get array from MPI buffer
+    void MPIGet(const MPIBuffer& buffer)    {
+        buffer >> *omegatree; 
+    }
+    */
 };
 
 

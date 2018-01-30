@@ -61,7 +61,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double MeanAAConc;
     double MeanAACenterEnt;
 
-    int fixomega;
+    int blmode, nucmode, basemode, omegamode;
 
     Chrono totchrono;
     Chrono paramchrono;
@@ -75,13 +75,16 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int infixomega, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
+    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
 
         AllocateAlignments(datafile);
         treefile = intreefile;
         Ncat = inNcat;
         baseNcat = inbaseNcat;
-        fixomega = infixomega;
+        blmode = inblmode;
+        nucmode = innucmode;
+        basemode = inbasemode;
+        omegamode = inomegamode;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -112,7 +115,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
 		omegaarray = new IIDGamma(GetLocalNgene(),1.0,1.0);
-        if (fixomega) {
+        if (omegamode == 3) {
             for (int i=0; i<GetLocalNgene(); i++)   {
                 (*omegaarray)[i] = 1.0;
             }
@@ -156,42 +159,61 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene] = new AAMutSelDSBDPOmegaModel(GetLocalGeneName(gene),treefile,Ncat,baseNcat);
-                geneprocess[gene]->SetFixBaseMix(1);
-                geneprocess[gene]->SetFixOmega(fixomega);
+                geneprocess[gene]->SetBLMode(blmode);
+                geneprocess[gene]->SetNucMode(nucmode);
+                geneprocess[gene]->SetBaseMode(basemode);
+                geneprocess[gene]->SetOmegaMode(omegamode);
+                geneprocess[gene]->Allocate();
             }
         }
     }
 
-    void Unfold()   {
+    void FastUpdate()   {
+        branchlength->SetScale(lambda);
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
+    }
 
-        if (! GetMyid())    {
-            MasterSendGlobalBranchLengths();
-            if (! fixomega) {
+    void MasterUpdate() override {
+
+        FastUpdate();
+
+        if (nprocs > 1) {
+            if (blmode >= 2)    {
+                MasterSendGlobalBranchLengths();
+            }
+            if (basemode >= 2)  {
+                MasterSendBaseMixture();
+            }
+            if (omegamode == 1) {
                 MasterSendOmegaHyperParameters();
                 MasterSendOmega();
             }
-            MasterSendBaseMixture();
             MasterReceiveLogProbs();
         }
-        else    {
+    }
 
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->Allocate();
-            }
+    void SlaveUpdate() override {
 
+        if (blmode >= 2)    {
             SlaveReceiveGlobalBranchLengths();
-            if (! fixomega) {
-                SlaveReceiveOmegaHyperParameters();
-                SlaveReceiveOmega();
-            }
+        }
+        if (basemode >= 2)  {
             SlaveReceiveBaseMixture();
+        }
+        if (omegamode == 1) {
+            SlaveReceiveOmegaHyperParameters();
+            SlaveReceiveOmega();
+        }
+        GeneUpdate();
+        SlaveSendLogProbs();
+    }
 
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->UpdateMatrices();
-                geneprocess[gene]->Unfold();
-            }
-
-            SlaveSendLogProbs();
+    void GeneUpdate()	{
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->Update();
         }
     }
 
@@ -260,8 +282,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime() << '\n';
     }
 
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) const {}
+	void FromStream(istream& is) {
+    }
+	void ToStream(ostream& os) const {
+    }
 
     void PrintBaseMixtureLogo(ostream& os) const {
         os << baseNcat << '\t' << Naa << '\n';
@@ -305,7 +329,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 		double total = GeneLogPrior;
 		total += BranchLengthsHyperLogPrior();
 		total += BranchLengthsLogPrior();
-        if (! fixomega) {
+        if (omegamode != 3) {
             total += OmegaHyperLogPrior();
             total += OmegaLogPrior();
         }
@@ -453,7 +477,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             basechrono.Stop();
 
-            if (! fixomega) {
+            if (omegamode != 3) {
                 MasterReceiveOmega();
                 MoveOmegaHyperParameters();
                 MasterSendOmegaHyperParameters();
@@ -493,7 +517,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 SlaveReceiveBaseMixture();
             }
 
-            if (! fixomega) {
+            if (omegamode != 3) {
                 MoveGeneOmegas();
                 SlaveSendOmega();
                 SlaveReceiveOmegaHyperParameters();

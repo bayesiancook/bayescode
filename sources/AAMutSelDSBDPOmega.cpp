@@ -36,8 +36,8 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         model = new AAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat);
         cerr << "allocate\n";
         GetModel()->Allocate();
-        cerr << "unfold\n";
-        GetModel()->Unfold();
+        cerr << "update\n";
+        GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -70,8 +70,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         }
         GetModel()->Allocate();
         model->FromStream(is);
-        model->Update();
-        GetModel()->Unfold();
+        GetModel()->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
