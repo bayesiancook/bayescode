@@ -22,17 +22,26 @@
  */
 
 class Chain : public Start {
+    ProbModel *model{nullptr};
+    TraceFile* chainfile{nullptr};
+    TraceFile* fitnessfile{nullptr};
+    TraceFile* monitorfile{nullptr};
+    TraceFile* paramfile{nullptr};
+    TraceFile* runfile{nullptr};
+    TraceFile* tracefile{nullptr};
+
   public:
-    Chain(string modeltype="");
+    Chain() {
+        port("model", &Chain::model);
+        port("chainfile", &Chain::chainfile);
+        port("fitnessfile", &Chain::fitnessfile);
+        port("monitorfile", &Chain::monitorfile);
+        port("paramfile", &Chain::paramfile);
+        port("runfile", &Chain::runfile);
+        port("tracefile", &Chain::tracefile);
+    }
 
     virtual ~Chain() = default;
-
-    //! \brief return model type
-    //!
-    //! each derived class should define a unique string for each type of model
-    //! (typically used to check that a chain restarted from file is from correct model),
-    //! and then override this pure virtual function to return the type.
-    virtual std::string GetModelType() { return modeltype; }
 
     //! make new chain (force == 1 : overwrite already existing files with same name)
     virtual void New(int force = 0) = 0;
@@ -73,9 +82,6 @@ class Chain : public Start {
     //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
     virtual int GetRunningStatus();
 
-    //! return chain name: i.e. base name for all files corresponding to that chain
-    string GetName() { return name; }
-
     //! return pointer to underlying model
     ProbModel *GetModel() { return model; }
 
@@ -89,11 +95,7 @@ class Chain : public Start {
     int until{-1};
     //! current size (number of points saved to file)
     int size{0};
-    //! pointer to the underlying model
-    ProbModel *model{nullptr};
-    //! base name for all files corresponding to that chain
-    string name;
-    string modeltype;
+
 };
 
 #endif  // CHAIN_H

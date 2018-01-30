@@ -5,8 +5,6 @@
 #include "ProbModel.hpp"
 using namespace std;
 
-Chain::Chain(string modeltype) : modeltype(modeltype) {}
-
 void Chain::MakeFiles(int force) {
     if (ifstream((name + ".param").c_str()) && (force == 0)) {
         cerr << "already existing chain, cannot override (unless in forcing mode)\n";
@@ -63,25 +61,12 @@ int Chain::GetRunningStatus() {
 }
 
 void Chain::Run() {
-#if DEBUG > 0
-    int i = 0;
-    MeasureTime timer;
-#endif
     while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
         Chrono chrono;
         chrono.Reset();
         chrono.Start();
         Move();
         chrono.Stop();
-#if DEBUG > 0
-        timer << "Iteration " << i * every << ". ";
-        timer.print<0>();
-        i++;
-#endif
-        /*
-        ofstream check_os((name + ".time").c_str());
-        check_os << chrono.GetTime() / 1000 << '\n';
-        */
     }
     ofstream run_os((name + ".run").c_str());
     run_os << 0 << '\n';

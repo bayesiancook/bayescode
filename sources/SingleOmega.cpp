@@ -11,9 +11,8 @@ using namespace std;
 class SingleOmegaChain : public Start {
   private:
     // Chain parameters
-    string modeltype;
     string datafile, treefile;
-    string name; // name for files
+    string name;  // name for files
     Chain* chain;
 
   public:
@@ -34,9 +33,7 @@ class SingleOmegaChain : public Start {
         Save();
     }
 
-    void start() override {
-        chain->start();
-    }
+    void start() override { chain->start(); }
 
     void New(int force) override {
         model = new SingleOmegaModel(datafile, treefile);
@@ -95,22 +92,26 @@ class SingleOmegaChain : public Start {
 };
 
 int main(int argc, char* argv[]) {
+    Model model;
+    string name;
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        SingleOmegaChain* chain = new SingleOmegaChain(name);
-        cerr << "chain " << name << " started\n";
-        chain->start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        name = argv[1];
+        cerr << "ERROR: restarting chain not implemented in component version!\n";
+        exit(1);
+        // SingleOmegaChain* chain = new SingleOmegaChain(name);
+        // cerr << "chain " << name << " started\n";
+        // chain->start();
+        // cerr << "chain " << name << " stopped\n";
+        // cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        // chain->GetModel()->Trace(cerr);
     }
 
     // new chain
     else {
         string datafile = "";
         string treefile = "";
-        string name = "";
         int force = 1;
         int every = 1;
         int until = -1;
@@ -156,11 +157,31 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
 
-        SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
-        cerr << "chain " << name << " started\n";
-        chain->start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        model.component<SingleOmegaModel>("model", datafile, treefile);  // remove files form this constructor
+
+        model.component<Chain>("chain")
+            .connect<Use<ProbModel>>("model")
+            .connect<Use<TraceFile>>("chainfile", "chainfile")
+            .connect<Use<TraceFile>>("fitnessfile", "fitnessfile")
+            .connect<Use<TraceFile>>("monitorfile", "monitorfile")
+            .connect<Use<TraceFile>>("paramfile", "paramfile")
+            .connect<Use<TraceFile>>("runfile", "runfile")
+            .connect<Use<TraceFile>>("tracefile", "tracefile");
+
+        model.component<TraceFile>("chainfile", name + ".chain");
+        model.component<TraceFile>("fitnessfile", name + ".fitness");
+        model.component<TraceFile>("monitorfile", name + ".monitor");
+        model.component<TraceFile>("paramfile", name + ".param");
+        model.component<TraceFile>("runfile", name + ".run");
+        model.component<TraceFile>("tracefile", name + ".trace");
     }
+    Assembly assembly(model);  // instantiating assembly!
+
+    // SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+    cerr << "-- Chain " << name << " starting...\n";
+    // chain->start();
+    assembly.call("SingleOmegaDriver", "start");
+    cerr << "-- Chain " << name << " stopped\n";
+    // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    // chain->GetModel()->Trace(cerr);
 }

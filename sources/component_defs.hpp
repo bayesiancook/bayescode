@@ -20,7 +20,6 @@ struct AbstractWrapper {
     virtual Type operator*() = 0;
 };
 
-
 //==========================================================
 // WRAPPERS
 //==========================================================
@@ -48,6 +47,23 @@ struct FWrapper : tc::Component {
         stringstream ss;
         ss << "FWrapper [" << data << "]";
         return ss.str();
+    }
+};
+
+//==========================================================
+// FILE HANDLERS
+//==========================================================
+class TraceFile : public tc::Component {
+    string filename;
+    fstream fs;
+
+  public:
+    TraceFile(string filename, bool erase_contents = true) : filename(filename) {
+        if (erase_contents) {
+            fs.open(filename, ios_base::out | ios_base::trunc);
+        } else {
+            fs.open(filename, ios_base::out | ios_base::app);
+        }
     }
 };
 
