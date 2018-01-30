@@ -206,7 +206,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
 	void Monitor(ostream& os) const {}
 
-	void FromStream(istream& is) {
+	void MasterFromStream(istream& is) {
         is >> lambda;
         is >> *branchlength;
         is >> nucrelrate;
@@ -216,7 +216,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         is >> *omegaarray;
     }
 
-	void ToStream(ostream& os) const {
+	void MasterToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
         os << nucrelrate << '\n';

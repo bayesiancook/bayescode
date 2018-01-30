@@ -30,9 +30,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
     MultiGeneSingleOmegaChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
-        if (! myid) {
-            Save();
-        }
+        Save();
     }
 
     void New(int force) override {
@@ -45,10 +43,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
             cerr << "update\n";
         }
         GetModel()->Update();
-
+        Reset(force);
         if (! myid) {
-            cerr << "reset" << endl;
-            Reset(force);
             cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
@@ -81,13 +77,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
             cerr << "allocate\n";
         }
         GetModel()->Allocate();
-        if (! myid) {
-            model->FromStream(is);
-            // broadcast parameter
-        }
-        else    {
-            // receive parameter
-        }
+        model->FromStream(is);
         if (! myid) {
             cerr << "update\n";
         }
@@ -99,16 +89,17 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
     }
 
     void Save() override {
-        if (myid)   {
-            cerr << "error: slave in MultiGeneSingleOmegaChain::Save\n";
-            exit(1);
+        if (!myid)   {
+            ofstream param_os((name + ".param").c_str());
+            param_os << GetModelType() << '\n';
+            param_os << datafile << '\t' << treefile << '\n';
+            param_os << 0 << '\n';
+            param_os << every << '\t' << until << '\t' << size << '\n';
+            GetModel()->MasterToStream(param_os);
         }
-        ofstream param_os((name + ".param").c_str());
-        param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\n';
-        param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
-        model->ToStream(param_os);
+        else    {
+            GetModel()->SlaveToStream();
+        }
     }
 };
 

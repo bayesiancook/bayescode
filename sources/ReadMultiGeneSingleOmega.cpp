@@ -58,19 +58,22 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
         GetModel()->Allocate();
 		// read model (i.e. chain's last point) from <name>.param
-        if (! myid) {
-            model->FromStream(is);
-
-            // open <name>.chain, and prepare stream and stream iterator
-            OpenChainFile();
-            // now, size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)
-            // all these points can be accessed to (only once) by repeated calls to GetNextPoint()
-        }
+        model->FromStream(is);
+        // open <name>.chain, and prepare stream and stream iterator
+        OpenChainFile();
+        // now, size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)
+        // all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
 	// a very simple (and quite uninteresting) method for obtaining
 	// the posterior mean and variance of the total length of the tree
-	void Read()	{
+    void SlaveRead()    {
+        for (int i=0; i<size; i++)  {
+            GetNextPoint();
+        }
+    }
+
+	void MasterRead()	{
 
         cerr << size << " points to read\n";
 
@@ -181,7 +184,10 @@ int main(int argc, char* argv[])	{
 
 	MultiGeneSingleOmegaSample* sample = new MultiGeneSingleOmegaSample(name,burnin,every,until,myid,nprocs);
     if (! myid) {
-        sample->Read();
+        sample->MasterRead();
+    }
+    else    {
+        sample->SlaveRead();
     }
 
 	MPI_Finalize();
