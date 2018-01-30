@@ -282,9 +282,111 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime() << '\n';
     }
 
+    /*
 	void FromStream(istream& is) {
+        if (! myid) {
+            MasterFromStream(is);
+        }
+        else    {
+            SlaveFromStream();
+        }
     }
-	void ToStream(ostream& os) const {
+
+    void ToStream(ostream& os) const    {
+        if (! myid) {
+            MasterToStream(os);
+        }
+        else    {
+            SlaveToStream();
+        }
+    }
+    */
+
+    void MasterFromStream(istream& is) override {
+        is >> lambda;
+        is >> *branchlength;
+        if (omegamode != 3) {
+            is >> omegahypermean;
+            is >> omegahyperinvshape;
+            is >> *omegaarray;
+        }
+        if (basemode == 2)  {
+            is >> *basecenterarray;
+            is >> *baseconcentrationarray;
+            is >> basekappa;
+            baseweight->FromStreamSB(is);
+        }
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int size;
+            is >> size;
+            MPI_Send(&size,1,MPI_INT,proc,TAG1,MPI_COMM_WORLD);
+            MPIBuffer buffer(size);
+            buffer.FromStream(is);
+            MPI_Send(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
+        }
+    }
+
+    void SlaveFromStream() override {
+
+        int checksize = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            checksize += geneprocess[gene]->GetMPISize();
+        }
+        MPI_Status stat;
+        int size;
+        MPI_Recv(&size,1,MPI_INT,0,TAG1,MPI_COMM_WORLD,&stat);
+        if (size != checksize)  {
+            cerr << "error in SlaveFromStream: non matching buffer size\n";
+            exit(1);
+        }
+        MPIBuffer buffer(size);
+        MPI_Recv(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            buffer >> *geneprocess[gene];
+        }
+    }
+
+	void MasterToStream(ostream& os) const override {
+
+        os << lambda << '\n';
+        os << *branchlength << '\n';
+        if (omegamode != 3) {
+            os << omegahypermean << '\n';
+            os << omegahyperinvshape << '\n';
+            os << *omegaarray << '\n';
+        }
+        if (basemode == 2)  {
+            os << *basecenterarray << '\n';
+            os << *baseconcentrationarray << '\n';
+            os << basekappa << '\n';
+            baseweight->ToStreamSB(os);
+        }
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            MPI_Status stat;
+            int size;
+            MPI_Recv(&size,1,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPIBuffer buffer(size);
+            MPI_Recv(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            os << size << '\n';
+            buffer.ToStream(os);
+        }
+    }
+
+    void SlaveToStream() const override {
+
+        int size = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            size += geneprocess[gene]->GetMPISize();
+        }
+        MPIBuffer buffer(size);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            buffer << *geneprocess[gene];
+        }
+        MPI_Send(&size,1,MPI_INT,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
     }
 
     void PrintBaseMixtureLogo(ostream& os) const {

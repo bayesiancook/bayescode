@@ -10,18 +10,34 @@ using namespace std;
 
 MultiGeneChain::MultiGeneChain(int inmyid, int innprocs) : Chain(), myid(inmyid), nprocs(innprocs) {}
 
-void MultiGeneChain::Move() {
-
-    if (!myid)  {
-        for (int i = 0; i < every; i++) {
-            GetMultiGeneModel()->MasterMove();
-        }
-        SavePoint();
-        Save();
-        Monitor();
+void MultiGeneChain::SavePoint() {
+    if (! myid) {
+        ofstream chain_os((name + ".chain").c_str(), ios_base::app);
+        GetMultiGeneModel()->MasterToStream(chain_os);
     }
     else    {
-        GetMultiGeneModel()->SlaveMove();
+        GetMultiGeneModel()->SlaveToStream();
+    }
+    size++;
+}
+
+void MultiGeneChain::Reset(int force)   {
+    size = 0;
+    if (! myid) {
+        MakeFiles(force);
+    }
+    Save();
+}
+
+void MultiGeneChain::Move() {
+
+    for (int i = 0; i < every; i++) {
+        GetMultiGeneModel()->Move();
+    }
+    SavePoint();
+    Save();
+    if (!myid)  {
+        Monitor();
     }
 }
 

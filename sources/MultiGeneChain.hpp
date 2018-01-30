@@ -12,6 +12,10 @@ class MultiGeneChain : public Chain {
 
     virtual ~MultiGeneChain() = default;
 
+    virtual void SavePoint() override;
+
+    virtual void Reset(int force) override;
+
     virtual void Move() override;
     // perform one cycle of Monte Carlo "moves" (updates)
 

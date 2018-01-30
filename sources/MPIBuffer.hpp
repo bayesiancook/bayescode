@@ -3,6 +3,8 @@
 #define MPIBUFFER_H
 
 #include <vector>
+#include <iostream>
+
 using namespace std;
 
 class MPIBuffer {
@@ -62,6 +64,20 @@ class MPIBuffer {
         it++;
         i = (int) d;
     }
+
+    void ToStream(ostream& os) const    {
+        for (unsigned int i=0; i<size; i++) {
+            os << buffer[i] << '\t';
+        }
+        os << '\n';
+    }
+
+    void FromStream(istream& is)    {
+        for (unsigned int i=0; i<size; i++) {
+            is >> buffer[i];
+        }
+    }
+
 
     private:
 

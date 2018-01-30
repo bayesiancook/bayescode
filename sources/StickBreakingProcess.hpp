@@ -192,6 +192,24 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
+    unsigned int GetMPISizeSB() const  {
+        return 2*GetSize();
+    }
+
+    //! get array from MPI buffer
+    void MPIGetSB(const MPIBuffer& is)    {
+        for (int k=0; k<GetSize(); k++) {
+            is >> (*this)[k] >> V[k];
+        }
+    }
+
+    //! write array into MPI buffer
+    void MPIPutSB(MPIBuffer& os) const {
+        for (int k=0; k<GetSize(); k++) {
+            os << GetVal(k) << V[k];
+        }
+    }
+
     private:
 
     double kappa;

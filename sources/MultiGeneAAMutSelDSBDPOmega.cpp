@@ -33,25 +33,30 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     MultiGeneAAMutSelDSBDPOmegaChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
-        if (! myid) {
-            Save();
-        }
+        Save();
     }
 
     void New(int force) override {
         model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
+
         if (! myid) {
             cerr << " -- allocate\n";
         }
+
         GetModel()->Allocate();
+
         if (! myid) {
             cerr << " -- update\n";
         }
+
         GetModel()->Update();
 
         if (! myid) {
             cerr << "-- Reset" << endl;
-            Reset(force);
+        }
+        Reset(force);
+
+        if (! myid) {
             cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
@@ -82,11 +87,13 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+
         GetModel()->Allocate();
-        if (! myid) {
-            model->FromStream(is);
-        }
+
+        model->FromStream(is);
+
         GetModel()->Update();
+
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
@@ -94,21 +101,27 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void Save() override {
-        if (myid)   {
-            cerr << "error: slave in MultiGeneAAMutSelDSBDPOmegaChain::Save\n";
-            exit(1);
+        if (! myid) {
+            ofstream param_os((name + ".param").c_str());
+            param_os << GetModelType() << '\n';
+            param_os << datafile << '\t' << treefile << '\n';
+            param_os << Ncat << '\t' << baseNcat << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\n';
+            param_os << 0 << '\n';
+            param_os << every << '\t' << until << '\t' << size << '\n';
+            GetModel()->MasterToStream(param_os);
         }
-        ofstream param_os((name + ".param").c_str());
-        param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\n';
-        param_os << Ncat << '\t' << baseNcat << '\n';
-        param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\n';
-        param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
-        model->ToStream(param_os);
+        else    {
+            GetModel()->SlaveToStream();
+        }
+        // GetModel()->ToStream(param_os);
     }
 
     void Monitor() override {
+        if (myid)   {
+            cerr << "error: in specialized monitor\n";
+            exit(1);
+        }
         Chain::Monitor();
         // ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
         ofstream trace_os((name + ".basemix").c_str());
@@ -120,6 +133,10 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void MakeFiles(int force) override  {
+        if (myid)   {
+            cerr << "error: in specialized makefiles\n";
+            exit(1);
+        }
         Chain::MakeFiles(force);
         ofstream trace_os((name + ".basemix").c_str());
         ofstream logo_os((name + ".basemixlogo").c_str());

@@ -1091,22 +1091,85 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
-    /*
     //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
     unsigned int GetMPISize() const {
-        return omegatree->GetMPISize();
-    }
-
-    //! write array into MPI buffer
-    void MPIPut(MPIBuffer& buffer) const {
-        buffer << *omegatree;
+        int size = 0;
+        if (blmode < 2) {
+            size ++;
+            size += branchlength->GetMPISize();
+        }
+        if (nucmode < 2)    {
+            size += nucrelrate.size();
+            size += nucstat.size();
+        }
+        if (basemode < 2)   {
+            size ++;
+            size += baseweight->GetMPISizeSB();
+            size += componentalloc->GetMPISize();
+            size += basecenterarray->GetMPISize();
+            size += baseconcentrationarray->GetMPISize();
+        }
+        size ++;
+        size += weight->GetMPISizeSB();
+        size += componentaafitnessarray->GetMPISize();
+        size += sitealloc->GetMPISize();
+        if (omega < 2)  {
+            size++;
+        }
+        return size;
     }
 
     //! get array from MPI buffer
-    void MPIGet(const MPIBuffer& buffer)    {
-        buffer >> *omegatree; 
+    void MPIGet(const MPIBuffer& is)    {
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2)    {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
+        if (basemode < 2)   {
+            is >> basekappa;
+            baseweight->MPIGetSB(is);
+            is >> *componentalloc;
+            is >> *basecenterarray;
+            is >> *baseconcentrationarray;
+        }
+        is >> kappa;
+        weight->MPIGetSB(is);
+        is >> *componentaafitnessarray;
+        is >> *sitealloc;
+        if (omegamode < 2)  {
+            is >> omega;
+        }
     }
-    */
+
+    //! write array into MPI buffer
+    void MPIPut(MPIBuffer& os) const {
+        if (blmode < 2) {
+            os << lambda;
+            os << *branchlength;
+        }
+        if (nucmode < 2)    {
+            os << nucrelrate;
+            os << nucstat;
+        }
+        if (basemode < 2)   {
+            os << basekappa;
+            baseweight->MPIPutSB(os);
+            os << *componentalloc;
+            os << *basecenterarray;
+            os << *baseconcentrationarray;
+        }
+        os << kappa;
+        weight->MPIPutSB(os);
+        os << *componentaafitnessarray;
+        os << *sitealloc;
+        if (omega < 2)  {
+            os << omega;
+        }
+    }
 };
 
 

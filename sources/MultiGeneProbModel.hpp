@@ -30,6 +30,29 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
         return 1;
     }
 
+	virtual void FromStream(istream& is) override {
+        if (! myid) {
+            MasterFromStream(is);
+        }
+        else    {
+            SlaveFromStream();
+        }
+    }
+
+    virtual void ToStream(ostream& os) const override {
+        if (! myid) {
+            MasterToStream(os);
+        }
+        else    {
+            SlaveToStream();
+        }
+    }
+
+    virtual void MasterToStream(ostream& os) const {}
+    virtual void SlaveToStream() const {}
+    virtual void MasterFromStream(istream& is) {}
+    virtual void SlaveFromStream() {}
+
     virtual void MasterMove() {}
     virtual void SlaveMove() {}
 
