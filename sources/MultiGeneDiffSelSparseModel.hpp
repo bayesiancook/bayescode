@@ -131,36 +131,37 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene] = new DiffSelSparseModel(GetLocalGeneName(gene),treefile,Ncond,Nlevel,codonmodel);
-                geneprocess[gene]->SetFixBL(1);
-                geneprocess[gene]->SetFixHyper(1);
+                geneprocess[gene]->SetBLMode(2);
+                geneprocess[gene]->SetNucMode(0);
+                geneprocess[gene]->SetFitnessHyperMode(3);
+                geneprocess[gene]->Allocate();
             }
         }
     }
 
-    void Unfold()   {
+    void FastUpdate()   {
+        branchlength->SetScale(lambda);
+    }
 
-        if (! GetMyid())    {
-
+    void MasterUpdate() override {
+        FastUpdate();
+        if (nprocs > 1) {
             MasterSendGlobalBranchLengths();
             MasterSendShiftProbHyperParameters();
-
             MasterReceiveLogProbs();
         }
-        else    {
+    }
 
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene]->Allocate();
-            }
+    void SlaveUpdate() override {
+        SlaveReceiveGlobalBranchLengths();
+        SlaveReceiveShiftProbHyperParameters();
+        GeneUpdate();
+        SlaveSendLogProbs();
+    }
 
-            SlaveReceiveGlobalBranchLengths();
-            SlaveReceiveShiftProbHyperParameters();
-
-            for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                // geneprocess[gene]->CorruptMatrices();
-                geneprocess[gene]->Unfold(true);
-            }
-
-            SlaveSendLogProbs();
+    void GeneUpdate()	{
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->Update();
         }
     }
 
@@ -206,29 +207,79 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 	void Monitor(ostream& os) const {}
 
-	void ToStream(ostream& os) const {
+	void MasterToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
         os << shiftprobhypermean << '\n';
         os << shiftprobhyperinvconc << '\n';
-        os << pi;
+        os << pi << '\n';
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            MPI_Status stat;
+            int size;
+            MPI_Recv(&size,1,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
+            MPIBuffer buffer(size);
+            MPI_Recv(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+            os << size << '\n';
+            buffer.ToStream(os);
+        }
     }
 
-	void FromStream(istream& is) {
+    void SlaveToStream() const override {
+
+        int size = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            size += geneprocess[gene]->GetMPISize();
+        }
+        MPIBuffer buffer(size);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            buffer << *geneprocess[gene];
+        }
+        MPI_Send(&size,1,MPI_INT,0,TAG1,MPI_COMM_WORLD);
+        MPI_Send(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+    }
+
+	void MasterFromStream(istream& is) {
         is >> lambda;
         is >> *branchlength;
         is >> shiftprobhypermean;
         is >> shiftprobhyperinvconc;
         is >> pi;
+
+        for (int proc=1; proc<GetNprocs(); proc++)  {
+            int size;
+            is >> size;
+            MPI_Send(&size,1,MPI_INT,proc,TAG1,MPI_COMM_WORLD);
+            MPIBuffer buffer(size);
+            buffer.FromStream(is);
+            MPI_Send(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
+        }
+    }
+
+    void SlaveFromStream() override {
+
+        int checksize = 0;
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            checksize += geneprocess[gene]->GetMPISize();
+        }
+        MPI_Status stat;
+        int size;
+        MPI_Recv(&size,1,MPI_INT,0,TAG1,MPI_COMM_WORLD,&stat);
+        if (size != checksize)  {
+            cerr << "error in SlaveFromStream: non matching buffer size\n";
+            exit(1);
+        }
+        MPIBuffer buffer(size);
+        MPI_Recv(buffer.GetBuffer(),buffer.GetSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            buffer >> *geneprocess[gene];
+        }
     }
 
     //-------------------
     // Updates
     //-------------------
-
-    void Update()   {
-        branchlength->SetScale(lambda);
-    }
 
     void NoUpdate() {}
 

@@ -51,8 +51,14 @@ class DiffSelSparseModel : public ProbModel {
 
     int codonmodel;
 
-    int fixbl;
-    int fixhyper;
+    // 0: free wo shrinkage
+    // 1: free with shrinkage
+    // 2: shared across genes
+    // 3: fixed
+
+    int blmode;
+    int nucmode;
+    int fitnesshypermode;
 
     // -----
     // external parameters
@@ -144,8 +150,9 @@ class DiffSelSparseModel : public ProbModel {
 
         codonmodel = incodonmodel;
 
-        fixbl = 0;
-        fixhyper = 1;
+        blmode = 0;
+        nucmode = 0;
+        fitnesshypermode = 3;
 
         Ncond = inNcond;
         Nlevel = inNlevel;
@@ -232,30 +239,22 @@ class DiffSelSparseModel : public ProbModel {
 
         // create phyloprocess
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
+        phyloprocess->Unfold();
 
         // create suffstat arrays
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
     }
 
-    void Unfold(bool sample)   {
-
-        // unfold phyloprocess (allocate conditional likelihood vectors, etc)
-        std::cerr << "-- unfolding\n";
-        phyloprocess->Unfold();
-
-        if (sample) {
-            // stochastic mapping of substitution histories
-            std::cerr << "-- mapping substitutions\n";
-            phyloprocess->ResampleSub();
-        }
+    void SetBLMode(int in)   {
+        blmode = in;
     }
 
-    void SetFixBL(int in)   {
-        fixbl = in;
+    void SetNucMode(int in) {
+        nucmode = in;
     }
 
-    void SetFixHyper(int in)    {
-        fixhyper = in;
+    void SetFitnessHyperMode(int in)    {
+        fitnesshypermode = in;
     }
 
     // ------------------
@@ -275,6 +274,13 @@ class DiffSelSparseModel : public ProbModel {
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
 
+    void Update() override {
+        branchlength->SetScale(lambda);
+		fitness->SetShape(fitnessshape);
+        UpdateAll();
+        ResampleSub(1.0);
+    }
+
     void NoUpdate() {}
 
     void CorruptMatrices()  {
@@ -285,12 +291,6 @@ class DiffSelSparseModel : public ProbModel {
     void CorruptNucMatrix() {
         nucmatrix->CopyStationary(nucstat);
         nucmatrix->CorruptMatrix();
-    }
-
-    void Update() override {
-        fitnessprofile->Update();
-        CorruptMatrices();
-        phyloprocess->GetLogLikelihood();
     }
 
     void UpdateAll() {
@@ -309,24 +309,19 @@ class DiffSelSparseModel : public ProbModel {
 
     double GetLogPrior() const {
         double total = 0;
-
-        // branchlengths
-        if (! fixbl)    {
+        if (blmode < 2) {
             total += BranchLengthsHyperLogPrior();
             total += BranchLengthsLogPrior();
         }
-
-        // nuc rates
-        total += NucRatesLogPrior();
-
-        if (! fixhyper) {
+        if (nucmode < 2)    {
+            total += NucRatesLogPrior();
+        }
+        if (fitnesshypermode < 2)   {
             total += FitnessHyperLogPrior();
         }
         total += FitnessLogPrior();
-
         total += ToggleHyperLogPrior();
         total += ToggleLogPrior();
-
         return total;
     }
 
@@ -466,14 +461,13 @@ class DiffSelSparseModel : public ProbModel {
 
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
 
-            if (! fixbl)    {
+            if (blmode < 2)    {
                 CollectLengthSuffStat();
                 ResampleBranchLengths();
                 MoveBranchLengthsHyperParameter();
             }
 
             CollectPathSuffStat();
-
             UpdateAll();
 
             for (int rep = 0; rep < nrep; rep++) {
@@ -481,17 +475,21 @@ class DiffSelSparseModel : public ProbModel {
                 CompMoveFitness();
                 MoveFitnessShifts();
                 MoveShiftToggles();
-                if (! fixhyper) {
+                if (fitnesshypermode < 2)   {
                     MoveFitnessHyperParameters();
                 }
             }
-            MoveNucRates();
+
+            if (nucmode < 2)    {
+                MoveNucRates();
+            }
         }
 
         UpdateAll();
     }
 
     void ResampleSub(double frac)   {
+        CorruptMatrices();
 		phyloprocess->Move(frac);
     }
 
@@ -681,11 +679,9 @@ class DiffSelSparseModel : public ProbModel {
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness,*toggle);
 
-        /*
         ScalingMove(fitnessshape,1.0,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
         ScalingMove(fitnessshape,0.3,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
         ScalingMove(fitnessshape,0.1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
-        */
 
         ProfileMove(fitnesscenter,0.3,1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
         ProfileMove(fitnesscenter,0.1,1,100,&DiffSelSparseModel::FitnessHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
@@ -826,16 +822,97 @@ class DiffSelSparseModel : public ProbModel {
     void Monitor(ostream&) const override {}
 
     void FromStream(istream& is) override {
-        is >> lambda;
-        is >> *branchlength;
-        is >> nucrelrate;
-        is >> nucstat;
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2)    {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
+        if (fitnesshypermode < 2)   {
+            is >> fitnessshape;
+            is >> fitnesscenter;
+        }
+        is >> *fitness;
+        is >> shiftprob;
+        is >> *toggle;
     }
 
     void ToStream(ostream& os) const override {
-        os << lambda << '\n';
-        os << *branchlength << '\n';
-        os << nucrelrate << '\n';
-        os << nucstat << '\n';
+        if (blmode < 2) {
+            os << lambda << '\n';
+            os << *branchlength << '\n';
+        }
+        if (nucmode < 2)    {
+            os << nucrelrate << '\n';
+            os << nucstat << '\n';
+        }
+        if (fitnesshypermode < 2)   {
+            os << fitnessshape << '\n';
+            os << fitnesscenter << '\n';
+        }
+        os << *fitness << '\n';
+        os << shiftprob << '\n';
+        os << *toggle << '\n';
+    }
+
+    //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
+    unsigned int GetMPISize() const {
+        int size = 0;
+        if (blmode < 2) {
+            size++;
+            size += branchlength->GetMPISize();
+        }
+        if (nucmode < 2)    {
+            size += nucrelrate.size();
+            size += nucstat.size();
+        }
+        if (fitnesshypermode < 2)   {
+            size ++;
+            size += fitnesscenter.size();
+        }
+        size += fitness->GetMPISize();
+        size += shiftprob.size();
+        size += toggle->GetMPISize();
+        return size;
+    }
+
+    //! get array from MPI buffer
+    void MPIGet(const MPIBuffer& is)    {
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2)    {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
+        if (fitnesshypermode < 2)   {
+            is >> fitnessshape;
+            is >> fitnesscenter;
+        }
+        is >> *fitness;
+        is >> shiftprob;
+        is >> *toggle;
+    }
+
+    //! write array into MPI buffer
+    void MPIPut(MPIBuffer& os) const {
+        if (blmode < 2) {
+            os << lambda;
+            os << *branchlength;
+        }
+        if (nucmode < 2)    {
+            os << nucrelrate;
+            os << nucstat;
+        }
+        if (fitnesshypermode < 2)   {
+            os << fitnessshape;
+            os << fitnesscenter;
+        }
+        os << *fitness;
+        os << shiftprob;
+        os << *toggle;
     }
 };

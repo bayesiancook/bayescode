@@ -33,9 +33,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
-        if (! myid) {
-            Save();
-        }
+        Save();
     }
 
     void New(int force) override {
@@ -47,11 +45,9 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         if (! myid) {
             cerr << " -- master unfold\n";
         }
-        GetModel()->Unfold();
-
+        GetModel()->Update();
+        Reset(force);
         if (! myid) {
-            cerr << "-- Reset" << endl;
-            Reset(force);
             cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
@@ -82,15 +78,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             exit(1);
         }
         GetModel()->Allocate();
-        if (! myid) {
-            model->FromStream(is);
-            // broadcast parameter
-        }
-        else    {
-            // receive parameter
-        }
-        model->Update();
-        GetModel()->Unfold();
+        GetModel()->FromStream(is);
+        GetModel()->Update();
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
@@ -98,28 +87,19 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     }
 
     void Save() override {
-        if (myid)   {
-            cerr << "error: slave in MultiGeneDiffSelSparseChain::Save\n";
-            exit(1);
+        if (!myid)   {
+            ofstream param_os((name + ".param").c_str());
+            param_os << GetModelType() << '\n';
+            param_os << datafile << '\t' << treefile << '\n';
+            param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
+            param_os << 0 << '\n';
+            param_os << every << '\t' << until << '\t' << size << '\n';
+            GetModel()->MasterToStream(param_os);
         }
-        ofstream param_os((name + ".param").c_str());
-        param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\n';
-        param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
-        param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
-        model->ToStream(param_os);
+        else    {
+            GetModel()->SlaveToStream();
+        }
     }
-
-    /*
-    void MakeFiles(int force) override  {
-        Chain::MakeFiles(force);
-    }
-
-    void SavePoint() override   {
-        Chain::SavePoint();
-    }
-    */
 };
 
 int main(int argc, char* argv[])	{

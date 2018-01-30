@@ -14,7 +14,7 @@ template<class T> class BidimSelector	{
     virtual int GetNcol() const = 0;
 	virtual const T& GetVal(int i, int j) const = 0;
 
-    unsigned int GetMPISize() const {return this->GetNrow() * this->GetNcol() * MPISize(this->GetVal(0));}
+    unsigned int GetMPISize() const {return this->GetNrow() * this->GetNcol() * MPISize(this->GetVal(0,0));}
 
     void MPIPut(MPIBuffer& buffer) const {
         for (int i=0; i<this->GetNrow(); i++)  {

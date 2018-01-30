@@ -43,7 +43,7 @@ class DiffSelSparseChain: public Chain {
     void New(int force) override {
         model = new DiffSelSparseModel(datafile, treefile, category, level, codonmodel);
         GetModel()->Allocate();
-        GetModel()->Unfold(true);
+        GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -76,9 +76,8 @@ class DiffSelSparseChain: public Chain {
             exit(1);
         }
         GetModel()->Allocate();
-        model->FromStream(is);
-        model->Update();
-        GetModel()->Unfold(true);
+        GetModel()->FromStream(is);
+        GetModel()->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
@@ -98,72 +97,80 @@ class DiffSelSparseChain: public Chain {
 
 int main(int argc, char* argv[]) {
 
-    cerr << "-- Parsing command line arguments\n";
+    string name = "";
+    DiffSelSparseChain* chain = 0;
 
     // this is an already existing chain on the disk; reopen and restart
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        cerr << "-- Trying to reopen existing chain named " << name << " on disk\n";
+        name = argv[1];
+        chain = new DiffSelSparseChain(name);
     }
 
     // this is a new chain
     else {
 
-	string datafile = "";
-	string treefile = "";
-	int ncond = 2;
-	int nlevel = 1;
-	int codonmodel = 1;
+        string datafile = "";
+        string treefile = "";
+        int ncond = 2;
+        int nlevel = 1;
+        int codonmodel = 1;
 
-	string name = "";
-	int every = 1;
-	int until = -1;
+        name = "";
+        int every = 1;
+        int until = -1;
+        int force = 1;
 
-	try	{
+        try	{
 
-		if (argc == 1)	{
-			throw(0);
-		}
+            if (argc == 1)	{
+                throw(0);
+            }
 
-		int i = 1;
-		while (i < argc)	{
-			string s = argv[i];
+            int i = 1;
+            while (i < argc)	{
+                string s = argv[i];
 
-			if (s == "-d")	{
-				i++;
-				datafile = argv[i];
-			}
-			else if ((s == "-t") || (s == "-T"))	{
-				i++;
-				treefile = argv[i];
-			}
-			else if (s == "-ncond")	{
-				i++;
-				ncond = atoi(argv[i]);
-			}
-			else if ( (s == "-x") || (s == "-extract") )	{
-				i++;
-				if (i == argc) throw(0);
-				every = atoi(argv[i]);
-				i++;
-				if (i == argc) throw(0);
-				until = atoi(argv[i]);
-			}
-			else	{
-				if (i != (argc -1))	{
-					throw(0);
-				}
-				name = argv[i];
-			}
-			i++;
-		}
-	}
-	catch(...)	{
-		cerr << "error in command\n";
-		exit(1);
-	}
-
-	DiffSelSparseChain* chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,every,until,codonmodel,name,true);
-	chain->Start();
+                if (s == "-d")	{
+                    i++;
+                    datafile = argv[i];
+                }
+                else if ((s == "-t") || (s == "-T"))	{
+                    i++;
+                    treefile = argv[i];
+                }
+                else if (s == "-f")	{
+                    force = 1;
+                }
+                else if (s == "-ncond")	{
+                    i++;
+                    ncond = atoi(argv[i]);
+                }
+                else if ( (s == "-x") || (s == "-extract") )	{
+                    i++;
+                    if (i == argc) throw(0);
+                    every = atoi(argv[i]);
+                    i++;
+                    if (i == argc) throw(0);
+                    until = atoi(argv[i]);
+                }
+                else	{
+                    if (i != (argc -1))	{
+                        throw(0);
+                    }
+                    name = argv[i];
+                }
+                i++;
+            }
+        }
+        catch(...)	{
+            cerr << "error in command\n";
+            exit(1);
+        }
+        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,every,until,codonmodel,name,force);
     }
+    cerr << "chain " << name << " started\n";
+    chain->Start();
+    cerr << "chain " << name << " stopped\n";
+    cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    chain->GetModel()->Trace(cerr);
 }

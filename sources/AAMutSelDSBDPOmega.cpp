@@ -88,15 +88,13 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
 
 int main(int argc, char* argv[])	{
 
+    string name = "";
+    AAMutSelDSBDPOmegaChain* chain = 0;
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        AAMutSelDSBDPOmegaChain* chain = new AAMutSelDSBDPOmegaChain(name);
-        cerr << "chain " << name << " started\n";
-        chain->Start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        name = argv[1];
+        chain = new AAMutSelDSBDPOmegaChain(name);
     }
 
     // new chain
@@ -105,7 +103,7 @@ int main(int argc, char* argv[])	{
         string treefile = "";
         int Ncat = -1;
         int baseNcat = -1;
-        string name = "";
+        name = "";
         int force = 1;
         int every = 1;
         int until = -1;
@@ -165,13 +163,14 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        AAMutSelDSBDPOmegaChain* chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,every,until,name,force);
-        cerr << "chain " << name << " started\n";
-        chain->Start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,every,until,name,force);
     }
+
+    cerr << "chain " << name << " started\n";
+    chain->Start();
+    cerr << "chain " << name << " stopped\n";
+    cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    chain->GetModel()->Trace(cerr);
 }
 
 

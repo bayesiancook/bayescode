@@ -11,9 +11,7 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double> >    {
     DiffSelSparseFitnessArray(const BidimSelector<vector<double> >& infitness, const BidimSelector<vector<int> >& intoggle, int inNlevel) : 
         SimpleBidimArray<vector<double> >(infitness.GetNrow(),infitness.GetNcol(),vector<double>(infitness.GetVal(0,0).size(),0)),
         fitness(infitness), toggle(intoggle), Nlevel(inNlevel)  {
-            cerr << "dim of fitness array: " << GetNrow() << '\t' << GetNcol() << '\t' << GetDim() << '\n';
             Update();
-            cerr << "update ok\n";
     }
 
     int GetDim() const {return GetVal(0,0).size();}
