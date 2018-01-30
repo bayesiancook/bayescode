@@ -38,24 +38,15 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     void New(int force) override {
         model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
-
         if (! myid) {
             cerr << " -- allocate\n";
         }
-
         GetModel()->Allocate();
-
         if (! myid) {
             cerr << " -- update\n";
         }
-
         GetModel()->Update();
-
-        if (! myid) {
-            cerr << "-- Reset" << endl;
-        }
         Reset(force);
-
         if (! myid) {
             cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
@@ -89,9 +80,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         }
 
         GetModel()->Allocate();
-
         model->FromStream(is);
-
         GetModel()->Update();
 
         if (! myid) {
@@ -114,7 +103,6 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         else    {
             GetModel()->SlaveToStream();
         }
-        // GetModel()->ToStream(param_os);
     }
 
     void Monitor() override {
