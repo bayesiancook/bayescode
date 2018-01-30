@@ -149,16 +149,6 @@ class BranchOmegaModel : public ProbModel {
         phyloprocess->Unfold();
 	}
 
-    //! \brief unfold the model
-    //! 
-    //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
-    /*
-    void Unfold()   {
-		// phyloprocess->Unfold();
-		phyloprocess->ResampleSub();
-    }
-    */
-
     //-------------------
     // Accessors
     // ------------------
@@ -235,6 +225,18 @@ class BranchOmegaModel : public ProbModel {
         TouchNucMatrix();
         codonmatrixtree->UpdateCodonMatrices();
         rootcodonmatrix->CorruptMatrix();
+    }
+
+    void Update() override {
+        branchlength->SetScale(lambda);
+        double alpha = 1.0 / branchvhyperinvshape;
+        double beta = alpha / branchvhypermean;
+        branchv->SetShape(alpha);
+        branchv->SetScale(beta);
+        meanomegatree->SetMulVal(genew);
+        omegatree->SetInvShape(omegainvshape);
+	    TouchMatrices();
+	    ResampleSub(1.0);
     }
 
     //! \brief dummy function that does not do anything.
@@ -491,7 +493,6 @@ class BranchOmegaModel : public ProbModel {
         is >> nucrelrate;
         is >> nucstat;
     }
-
 };
 
 

@@ -295,7 +295,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     // Updates
     //-------------------
 
-    void MasterUpdate() override {
+    void FastUpdate()   {
         branchlength->SetScale(lambda);
         double alpha = 1.0 / branchvhyperinvshape;
         double beta = alpha / branchvhypermean;
@@ -306,6 +306,11 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         genewarray->SetShape(genealpha);
         genewarray->SetScale(genebeta);
         omegatreearray->SetInvShape(omegainvshape);
+    }
+
+    void MasterUpdate() override {
+
+        FastUpdate();
 
         if (nprocs > 1) {
             MasterSendGlobalBranchLengths();
@@ -321,8 +326,14 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         SlaveReceiveGlobalNucRates();
         SlaveReceiveOmegaHyperParameters();
         SlaveReceiveOmega();
-        GeneResampleSub(1.0);
+        GeneUpdate();
         SlaveSendLogProbs();
+    }
+
+    void GeneUpdate()	{
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->Update();
+        }
     }
 
 	void TouchNucMatrix()	{
@@ -331,10 +342,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 	}
 
     void NoUpdate() {}
-
-    void FastUpdate()   {
-        meanomegatreearray->Update();
-    }
 
     //-------------------
     // Log Prior and Likelihood
@@ -566,7 +573,6 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     void GeneResampleOmega()  {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->ResampleOmega();
-            // (*omegatreearray)[gene].Copy(*geneprocess[gene]->GetOmegaTree());
         }
     }
 

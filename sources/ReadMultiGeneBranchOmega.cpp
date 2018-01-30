@@ -22,13 +22,10 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
 
 	MultiGeneBranchOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid, int nprocs) : MultiGeneSample(filename,inburnin,inevery,inuntil, myid, nprocs)	{
 
+        Open();
         if (! myid) {
-            Open();
         }
         else    {
-            // ??
-            cerr << "in multigene branchomega sample: slave\n";
-            exit(1);
         }
 	}
 
@@ -65,19 +62,15 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
 		}
 
         GetModel()->Allocate();
-
 		// read model (i.e. chain's last point) from <name>.param
-		model->FromStream(is);
+        if (! myid) {
+            model->FromStream(is);
 
-		/*
-		cerr << "UPDATE\n";
-		model->Update();
-		*/
-
-		// open <name>.chain, and prepare stream and stream iterator
-		OpenChainFile();
-		// now, size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)
-		// all these points can be accessed to (only once) by repeated calls to GetNextPoint()
+            // open <name>.chain, and prepare stream and stream iterator
+            OpenChainFile();
+            // now, size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)
+            // all these points can be accessed to (only once) by repeated calls to GetNextPoint()
+        }
 	}
 
     int GetNgene() const {
@@ -147,7 +140,6 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
-
 	int burnin = 0;
 	int every = 1;
 	int until = -1;
@@ -211,6 +203,8 @@ int main(int argc, char* argv[])	{
     if (! myid) {
         sample->Read();
     }
+
+	MPI_Finalize();
 }
 
 
