@@ -260,7 +260,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
 	void Monitor(ostream& os) const {}
 
-	void ToStream(ostream& os) const {
+	void MasterToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
         os << branchvhypermean << '\t' << branchvhyperinvshape << '\n';
@@ -273,7 +273,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         os << nucstat << '\n';
     }
 
-	void FromStream(istream& is) {
+	void MasterFromStream(istream& is) {
         is >> lambda;
         is >> *branchlength;
         is >> branchvhypermean >> branchvhyperinvshape;

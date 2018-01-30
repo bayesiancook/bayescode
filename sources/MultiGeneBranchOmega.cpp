@@ -30,9 +30,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
     MultiGeneBranchOmegaChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
-        if (! myid) {
-            Save();
-        }
+	Save();
     }
 
     void New(int force) override {
@@ -41,12 +39,10 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
             cerr << "allocate\n";
         }
         GetModel()->Allocate();
-
         GetModel()->Update();
+        Reset(force);
 
         if (! myid) {
-            cerr << "reset" << endl;
-            Reset(force);
             cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
@@ -77,9 +73,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         }
 
         GetModel()->Allocate();
-        if (! myid) {
-            model->FromStream(is);
-        }
+        GetModel()->FromStream(is);
         GetModel()->Update();
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -88,16 +82,17 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
     }
 
     void Save() override {
-        if (myid)   {
-            cerr << "error: slave in MultiGeneBranchOmegaChain::Save\n";
-            exit(1);
+        if (!myid)   {
+            ofstream param_os((name + ".param").c_str());
+            param_os << GetModelType() << '\n';
+            param_os << datafile << '\t' << treefile << '\n';
+            param_os << 0 << '\n';
+            param_os << every << '\t' << until << '\t' << size << '\n';
+            GetModel()->MasterToStream(param_os);
         }
-        ofstream param_os((name + ".param").c_str());
-        param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\n';
-        param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
-        model->ToStream(param_os);
+        else    {
+            GetModel()->SlaveToStream();
+        }
     }
 
     void MakeFiles(int force) override  {
@@ -116,12 +111,14 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
 
     void SavePoint() override   {
         Chain::SavePoint();
-        ofstream gos((name + ".gene").c_str(),ios_base::app);
-        GetModel()->PrintGeneEffects(gos);
-        ofstream bos((name + ".branch").c_str(),ios_base::app);
-        GetModel()->PrintBranchEffects(bos);
-        ofstream bgos((name + ".branchgene").c_str(),ios_base::app);
-        GetModel()->PrintDeviations(bgos);
+        if (!myid)  {
+            ofstream gos((name + ".gene").c_str(),ios_base::app);
+            GetModel()->PrintGeneEffects(gos);
+            ofstream bos((name + ".branch").c_str(),ios_base::app);
+            GetModel()->PrintBranchEffects(bos);
+            ofstream bgos((name + ".branchgene").c_str(),ios_base::app);
+            GetModel()->PrintDeviations(bgos);
+        }
     }
 };
 
