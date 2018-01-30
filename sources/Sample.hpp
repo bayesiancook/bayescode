@@ -25,7 +25,7 @@ class Sample	{
 
 			// get the next point (automatically accounts for subsampling, as specified by the "every" parameter)
 			// this point is accessed to using GetModel()
-	void 		GetNextPoint();
+	virtual void 		GetNextPoint();
 
 			// returns a pointer to current point
 			// in general this function will be overriden by derived classes
@@ -45,7 +45,7 @@ class Sample	{
 			// after OpenChainFile() has been called,
 			// size is defined (it is the total number of points with which this Sample object will make all its various posterior averages)
 			// all these points can be accessed to (only once) by repeated calls to GetNextPoint()
-	void 		OpenChainFile();
+	virtual void 		OpenChainFile();
 
 	int size;		// sample size (calculated from parameters above)
 
