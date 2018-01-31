@@ -34,15 +34,24 @@ class M2aMix: public SimpleArray<double>  {
 
             double logp[GetSize()];
             double max = 0;
+            int first = 1;
             for (int cat=0; cat<GetSize(); cat++)  {
                 logp[cat] = suffstat.GetLogProb(GetVal(cat));
-                if ((!cat) || (max < logp[cat]))    {
-                    max = logp[cat];
+                if (first || (max < logp[cat]))    {
+                    if (weight[cat])    {
+                        max = logp[cat];
+                        first = 0;
+                    }
                 }
             }
             double tot = 0;
             for (int cat=0; cat<GetSize(); cat++)  {
-                postprob[cat] = weight[cat] * exp(logp[cat] - max);
+                if (weight[cat])    {
+                    postprob[cat] = weight[cat] * exp(logp[cat] - max);
+                }
+                else    {
+                    postprob[cat] = 0;
+                }
                 tot += postprob[cat];
             }
             for (int cat=0; cat<GetSize(); cat++)  {
