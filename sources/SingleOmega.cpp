@@ -134,15 +134,15 @@ int main(int argc, char* argv[]) {
 
         model.component<SOM>("model", datafile, treefile);  // remove files form this constructor
 
-        model.component<SingleOmegaLifecycle>("lifecycle");
+        model.component<SingleOmegaLifecycle>("lifecycle").connect<Use<SOM>>("model", "model");
 
         model.component<ChainDriver>("chaindriver", every, until)
-            .connect<Use<SOM>>("model", "model")
+            .connect<Use<ProbModel>>("model", "model")
             .connect<Use<Lifecycle>>("lifecycle", "lifecycle")
-            .connect<Use<SOMTrace>>("chainfile", "chainfile")
-            .connect<Use<SOMTrace>>("monitorfile", "monitorfile")
-            // .connect<Use<SOMTrace>>("paramfile", "paramfile")
-            .connect<Use<SOMTrace>>("tracefile", "tracefile")
+            .connect<Use<AbstractTraceFile>>("chainfile", "chainfile")
+            .connect<Use<AbstractTraceFile>>("monitorfile", "monitorfile")
+            // .connect<Use<AbstractTraceFile>>("paramfile", "paramfile")
+            .connect<Use<AbstractTraceFile>>("tracefile", "tracefile")
             .connect<Use<RunToggle>>("runtoggle", "runtoggle");
 
         model.component<SOMTrace>("chainfile", name + ".chain", &SOM::ToStream, &SOM::ChainHeader)
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     // SingleOmegaLifecycle* chain = new SingleOmegaLifecycle(datafile, treefile, every, until, name, force);
     cerr << "-- Chain " << name << " starting...\n";
     // chain->start();
-    assembly.call("chaindriver", "start");
+    assembly.call("chaindriver", "go");
     cerr << "-- Chain " << name << " stopped\n";
     // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->model->GetLogProb() << "\n";
     // chain->model->Trace(cerr);

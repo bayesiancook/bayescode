@@ -127,12 +127,12 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
         model.dot_to_file();
 
         assembly = unique_ptr<Assembly>(new Assembly(model));
-        assembly->print_all();
-        cout << (*assembly->at<Wrapper<vector<double>>>("nucrelrate"))[0] << endl;
-        cout << (*assembly->at<Wrapper<vector<double>>>("nucstat"))[0] << endl;
-        cout << *assembly->at<FWrapper<double>>("omega") << endl;
-        cout << *assembly->at<FWrapper<double>>("lambda") << endl;
-        cout << assembly->at<BranchIIDGamma>("branchlength").GetVal(2) << endl;
+        // assembly->print_all();
+        // cout << (*assembly->at<Wrapper<vector<double>>>("nucrelrate"))[0] << endl;
+        // cout << (*assembly->at<Wrapper<vector<double>>>("nucstat"))[0] << endl;
+        // cout << *assembly->at<FWrapper<double>>("omega") << endl;
+        // cout << *assembly->at<FWrapper<double>>("lambda") << endl;
+        // cout << assembly->at<BranchIIDGamma>("branchlength").GetVal(2) << endl;
     }
 
     //! \brief unfold the model

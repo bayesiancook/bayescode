@@ -5,11 +5,10 @@
 using namespace std;
 
 void ChainDriver::go() {
-    chainfile->write_header();
-    tracefile->write_header();
-
     lifecycle_handler->Init();
 
+    chainfile->write_header();
+    tracefile->write_header();
     tracefile->write_line();
     chainfile->write_line();
 

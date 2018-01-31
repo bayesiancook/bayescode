@@ -72,7 +72,7 @@ class TraceFile : public AbstractTraceFile, public tc::Component {
     Type* target{nullptr};
 
   public:
-    TraceFile(string filename, void (Type::*header_method)(ostream&) const, void (Type::*trace_method)(ostream&) const,
+    TraceFile(string filename, void (Type::*trace_method)(ostream&) const, void (Type::*header_method)(ostream&) const,
               bool erase_contents = true)
         : trace_method(trace_method), header_method(header_method) {
         port("target", &TraceFile::target);
@@ -89,28 +89,23 @@ class TraceFile : public AbstractTraceFile, public tc::Component {
 };
 
 class RunToggle : public tc::Component {
-    fstream fs;
+    string chainname;
 
     void set(int i) {
+        ofstream fs;
+        fs.open(chainname + ".run", ios_base::in | ios_base::out | ios_base::trunc);
         fs << i;
-        fs.seekg(fs.beg);
     }
 
   public:
-    RunToggle(string chainname) {
-        fs.open(chainname + ".run", ios_base::in | ios_base::out | ios_base::trunc);
-        set(1);
-    }
+    RunToggle(string chainname) : chainname(chainname) { set(1); }
 
-    void toggle() {
-        if (fs.peek() == '1') {
-            set(0);
-        } else {
-            set(1);
-        }
+    bool check() {
+        ifstream fs;
+        fs.open(chainname + ".run", ios_base::in);
+        cerr << "CHECK " << (char)(fs.peek()) << '\n';
+        return static_cast<char>(fs.peek()) == '1';
     }
-
-    bool check() { return fs.peek() == '1'; }
 };
 
 //==========================================================
