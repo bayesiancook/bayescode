@@ -467,7 +467,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     /*
     double BaseStickBreakingLogPrior() const    {
         double ret = baseweight->GetLogProb(basekappa);
-        if (isinf(ret)) {
+        if (std::isinf(ret)) {
             cerr << "in BaseStickBreakingLogPrior: inf\n";
             cerr << *baseweight << '\n';
             cerr << basekappa << '\n';
@@ -479,7 +479,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     double BaseStickBreakingSuffStatLogProb() const    {
         double ret = baseweight->GetMarginalLogProb(*baseoccupancy);
-        if (isinf(ret)) {
+        if (std::isinf(ret)) {
             cerr << "in base stick breaking suff stat log prob: inf\n";
             exit(1);
         }
@@ -490,7 +490,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         double total = 0;
         total += basecenterarray->GetLogProb();
         total += baseconcentrationarray->GetLogProb();
-        if (isinf(total))   {
+        if (std::isinf(total))   {
             cerr << "in BaseLogPrior: inf\n";
             exit(1);
         }
