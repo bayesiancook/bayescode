@@ -54,7 +54,6 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
-    void Unfold();
 
     //-------------------
     // Accessors
@@ -79,6 +78,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 	void UpdateNucMatrix();
     void SetMixtureArrays();
 
+    void FastUpdate();
+    void MasterUpdate() override;
+    void SlaveUpdate() override;
+    void GeneUpdate();
     void NoUpdate() {}
 
     //-------------------
@@ -95,8 +98,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     void SlaveTraceSitesPostProb();
 
 	void Monitor(ostream& os) const {}
-	void FromStream(istream& is) {}
-	void ToStream(ostream& os) const {}
+	void MasterFromStream(istream& is) override;
+	void MasterToStream(ostream& os) const override;
 
     // summary statistics for tracing MCMC
     int GetNpos() const;

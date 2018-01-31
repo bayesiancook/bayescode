@@ -116,10 +116,22 @@ void MultiGeneCodonM2aModel::Allocate() {
     }
 }
 
-void MultiGeneCodonM2aModel::Unfold()   {
+void MultiGeneCodonM2aModel::FastUpdate()   {
+    if (blmode == 2)    {
+        branchlength->SetScale(lambda);
+    }
+    else    {
+        branchlength->SetAllBranches(1.0/lambda);
+        branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
+    }
+    nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
+    nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+    SetMixtureArrays();
+}
 
-    if (! GetMyid())    {
-
+void MultiGeneCodonM2aModel::MasterUpdate() {
+    FastUpdate();
+    if (nprocs > 1) {
         MasterSendBranchLengthsHyperParameters();
         MasterSendNucRatesHyperParameters();
         MasterSendMixtureHyperParameters();
@@ -141,40 +153,33 @@ void MultiGeneCodonM2aModel::Unfold()   {
         MasterSendMixture();
         MasterReceiveLogProbs();
     }
+}
+
+void MultiGeneCodonM2aModel::SlaveUpdate()  {
+    SlaveReceiveBranchLengthsHyperParameters();
+    SlaveReceiveNucRatesHyperParameters();
+    SlaveReceiveMixtureHyperParameters();
+    if (blmode == 2)    {
+        SlaveReceiveGlobalBranchLengths();
+    }
     else    {
+        SlaveReceiveGeneBranchLengths();
+    }
+    if (nucmode == 2)   {
+        SlaveReceiveGlobalNucRates();
+    }
+    else    {
+        SlaveReceiveGeneNucRates();
+    }
 
-        /*
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->Allocate();
-        }
-        */
+    SlaveReceiveMixture();
+    GeneUpdate();
+    SlaveSendLogProbs();
+}
 
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
-        SlaveReceiveMixtureHyperParameters();
-
-        if (blmode == 2)    {
-            SlaveReceiveGlobalBranchLengths();
-        }
-        else    {
-            SlaveReceiveGeneBranchLengths();
-        }
-
-        if (nucmode == 2)   {
-            SlaveReceiveGlobalNucRates();
-        }
-        else    {
-            SlaveReceiveGeneNucRates();
-        }
-
-        SlaveReceiveMixture();
-
-        for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->UpdateMatrices();
-            geneprocess[gene]->Unfold();
-        }
-
-        SlaveSendLogProbs();
+void MultiGeneCodonM2aModel::GeneUpdate()   {
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        geneprocess[gene]->Update();
     }
 }
 
@@ -214,10 +219,12 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
     double dposombeta = dposomalpha / dposomhypermean;
     dposomarray->SetShape(dposomalpha);
     dposomarray->SetScale(dposombeta);
-    dposomarray->PriorResample(*poswarray);
-    // necessary after changing some dposom values
-    for (int gene=0; gene<GetLocalNgene(); gene++)    {
-        geneprocess[gene]->SetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
+    if (myid) {
+        dposomarray->PriorResample(*poswarray);
+        // necessary after changing some dposom values
+        for (int gene=0; gene<GetLocalNgene(); gene++)    {
+            geneprocess[gene]->SetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
+        }
     }
 
     double purwalpha = purwhypermean / purwhyperinvconc;
@@ -232,6 +239,56 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
     poswarray->SetBeta(poswbeta);
 }
 
+
+//-------------------
+// Streams 
+// ------------------
+
+
+void MultiGeneCodonM2aModel::MasterFromStream(istream& is)  {
+
+    is >> lambda;
+    is >> *branchlength;
+    is >> blhyperinvshape;
+    is >> nucrelratehypercenter;
+    is >> nucrelratehyperinvconc;
+    is >> nucstathypercenter;
+    is >> nucstathyperinvconc;
+    is >> *nucrelratearray;
+    is >> *nucstatarray;
+    is >> puromhypermean >> puromhyperinvconc;
+    is >> dposomhypermean >> dposomhyperinvshape;
+    is >> purwhypermean >> purwhyperinvconc;
+    is >> poswhypermean >> poswhyperinvconc;
+    is >> pi;
+    is >> *puromarray;
+    is >> *dposomarray;
+    is >> *purwarray;
+    is >> *poswarray;
+}
+
+
+void MultiGeneCodonM2aModel::MasterToStream(ostream& os) const  {
+
+    os << lambda << '\n';
+    os << *branchlength << '\n';
+    os << blhyperinvshape << '\n';
+    os << nucrelratehypercenter << '\n';
+    os << nucrelratehyperinvconc << '\n';
+    os << nucstathypercenter << '\n';
+    os << nucstathyperinvconc << '\n';
+    os << *nucrelratearray << '\n';
+    os << *nucstatarray << '\n';
+    os << puromhypermean << puromhyperinvconc << '\n';
+    os << dposomhypermean << dposomhyperinvshape << '\n';
+    os << purwhypermean << purwhyperinvconc << '\n';
+    os << poswhypermean << poswhyperinvconc << '\n';
+    os << pi << '\n';
+    os << *puromarray << '\n';
+    os << *dposomarray << '\n';
+    os << *purwarray << '\n';
+    os << *poswarray << '\n';
+}
 
 //-------------------
 // Traces and Monitors

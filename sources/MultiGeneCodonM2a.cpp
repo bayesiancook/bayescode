@@ -106,9 +106,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
     MultiGeneCodonM2aChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();
-        if (! myid) {
-            Save();
-        }
+        Save();
     }
 
     void New(int force) override {
@@ -122,13 +120,11 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
         }
         GetModel()->Allocate();
         if (! myid) {
-            cerr << "unfold\n";
+            cerr << "update\n";
         }
-        GetModel()->Unfold();
-
+        GetModel()->Update();
+        Reset(force);
         if (! myid) {
-            cerr << "Reset" << endl;
-            Reset(force);
             cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
@@ -176,18 +172,12 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
         if (! myid) {
             cerr << "read from file\n";
         }
-        if (! myid) {
-            model->FromStream(is);
-            // broadcast parameter
-        }
-        else    {
-            // receive parameter
-        }
+        GetModel()->FromStream(is);
 
         if (! myid) {
-            cerr << "unfold\n";
+            cerr << "update\n";
         }
-        GetModel()->Unfold();
+        GetModel()->Update();
 
         if (! myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -196,22 +186,23 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
     }
 
     void Save() override {
-        if (myid)   {
-            cerr << "error: slave in MultiGeneCodonM2aChain::Save\n";
-            exit(1);
+        if (!myid)   {
+            ofstream param_os((name + ".param").c_str());
+            param_os << GetModelType() << '\n';
+            param_os << datafile << '\t' << treefile << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t' << poswmode << '\n';
+            param_os << pihypermean << '\t' << pihyperinvconc << '\n';
+            param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
+            param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
+            param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
+            param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';;
+            param_os << 0 << '\n';
+            param_os << every << '\t' << until << '\t' << size << '\n';
+            GetModel()->MasterToStream(param_os);
         }
-        ofstream param_os((name + ".param").c_str());
-        param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\n';
-        param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t' << poswmode << '\n';
-        param_os << pihypermean << '\t' << pihyperinvconc << '\n';
-        param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
-        param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
-        param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
-        param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';;
-        param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
-        model->ToStream(param_os);
+        else    {
+            GetModel()->SlaveToStream();
+        }
     }
 
     void MakeFiles(int force) override  {
@@ -233,12 +224,14 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
 
     void SavePoint() override   {
         Chain::SavePoint();
-        ofstream posw_os((name + ".posw").c_str(),ios_base::app);
-        GetModel()->TracePosWeight(posw_os);
-        ofstream posom_os((name + ".posom").c_str(),ios_base::app);
-        GetModel()->TracePosOm(posom_os);
+        if (!myid)  {
+            ofstream posw_os((name + ".posw").c_str(),ios_base::app);
+            GetModel()->TracePosWeight(posw_os);
+            ofstream posom_os((name + ".posom").c_str(),ios_base::app);
+            GetModel()->TracePosOm(posom_os);
+        }
         /*
-        if (writegenedata)  {
+        if (!miyd && writegenedata)  {
             ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
             GetModel()->MasterTraceSitesPostProb(ppos);
             GetModel()->SlaveTraceSitesPostProb();
@@ -267,7 +260,6 @@ int main(int argc, char* argv[])	{
 	MPI_Type_commit(&Propagate_arg); 
 
     MultiGeneCodonM2aChain* chain = 0;
-
     string name = "";
 
     // starting a chain from existing files

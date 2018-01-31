@@ -27,11 +27,6 @@ CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi)	{
 }
 
 
-void CodonM2aModel::Unfold()   {
-    phyloprocess->Unfold();
-    phyloprocess->ResampleSub();
-}
-
 void CodonM2aModel::Allocate()	{
 
     lambda = 10.0;
@@ -87,6 +82,7 @@ void CodonM2aModel::Allocate()	{
     sitecodonmatrixarray = new MixtureSelector<MGOmegaCodonSubMatrix>(componentcodonmatrixarray,sitealloc);
 
     phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
+    phyloprocess->Unfold();
 
     lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
     sitepathsuffstatarray = new PathSuffStatArray(GetNsite());
@@ -97,14 +93,10 @@ void CodonM2aModel::Allocate()	{
 void CodonM2aModel::Update()    {
 
     blhypermean->SetAllBranches(1.0/lambda);
-    cerr << "check that\n";
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
     UpdateMatrices();
-    /*
-    UpdateMatrices();
-    componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
-    */
-    ResampleAlloc();
+    GetIntegratedLogLikelihood();
+    ResampleSub(1.0);
 }
 
 // setting model features and (hyper)parameters
@@ -203,7 +195,7 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
     const vector<double>& w = componentomegaarray->GetWeights();
     double max = 0;
     for (int i=0; i<GetNsite(); i++) {
-        int bkalloc = sitealloc->GetVal(i);
+        // int bkalloc = sitealloc->GetVal(i);
 
         for (int k=0; k<ncat; k++) {
             (*sitealloc)[i] = k;
@@ -215,13 +207,20 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
 
         double p = 0;
         for (int k=0; k<ncat; k++) {
-            p += w[k] * exp(logp[k]-max);
+            double tmp = w[k] * exp(logp[k]-max);
+            p += tmp;
+            sitepostprobarray[i][k] = tmp;
         }
         double logl = log(p) + max;
         total += logl;
+        for (int k=0; k<ncat; k++) {
+            sitepostprobarray[i][k] /= p;
+        }
 
-        (*sitealloc)[i] = bkalloc;
+        // (*sitealloc)[i] = bkalloc;
     }
+
+    sitealloc->GibbsResample(sitepostprobarray);
     return total;
 }
 
@@ -536,6 +535,7 @@ void CodonM2aModel::TraceHeader(std::ostream& os) const {
 void CodonM2aModel::Trace(ostream& os) const {	
     os << GetLogPrior() << '\t';
     os << GetLogLikelihood() << '\t';
+    // os << GetIntegratedLogLikelihood() << '\t';
     os << branchlength->GetTotalLength() << '\t';
     os << purom << '\t' << dposom+1 << '\t' << purw << '\t' << posw << '\t';
     os << Random::GetEntropy(nucstat) << '\t';

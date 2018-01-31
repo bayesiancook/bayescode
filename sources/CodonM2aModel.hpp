@@ -59,7 +59,6 @@ class CodonM2aModel : public ProbModel {
 
 	CodonM2aModel(string datafile, string treefile, double inpi);
 	void Allocate();
-    void Unfold();
 
     //-------------------
     // Accessors
@@ -126,9 +125,6 @@ class CodonM2aModel : public ProbModel {
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
-    // void Update() override {}
-    void NoUpdate() {}
-
     //-------------------
     // Matrices
     //-------------------
@@ -137,6 +133,7 @@ class CodonM2aModel : public ProbModel {
 	void UpdateNucMatrix();
 	void UpdateCodonMatrices();
 	void UpdateMatrices();
+    void NoUpdate() {}
 
     //-------------------
     // Traces and Monitors
@@ -158,7 +155,8 @@ class CodonM2aModel : public ProbModel {
     //-------------------
 
     double GetLogProb() const override {
-        return GetLogPrior() + GetIntegratedLogLikelihood();
+        return GetLogPrior() + GetLogLikelihood();
+        // return GetLogPrior() + GetIntegratedLogLikelihood();
     }
 
 	double GetLogLikelihood() const;

@@ -34,7 +34,7 @@ class CodonM2aChain : public Chain  {
     void New(int force) override {
         model = new CodonM2aModel(datafile,treefile,pi);
         GetModel()->Allocate();
-        GetModel()->Unfold();
+        GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -65,9 +65,8 @@ class CodonM2aChain : public Chain  {
             exit(1);
         }
         GetModel()->Allocate();
-        model->FromStream(is);
-        model->Update();
-        GetModel()->Unfold();
+        GetModel()->FromStream(is);
+        GetModel()->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
