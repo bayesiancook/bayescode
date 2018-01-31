@@ -26,6 +26,11 @@ struct Lifecycle {
     virtual void End() = 0;
 };
 
+struct AbstractTraceFile {
+    virtual void write_header() = 0;
+    virtual void write_line() = 0;
+};
+
 //==========================================================
 // WRAPPERS
 //==========================================================
@@ -59,17 +64,18 @@ struct FWrapper : tc::Component {
 //==========================================================
 // FILE HANDLERS
 //==========================================================
-class TraceFile : public tc::Component {
-    string filename;
+template <class Type>
+class TraceFile : public AbstractTraceFile, public tc::Component {
     ofstream fs;
-    function<void(ostream&)> trace_method;
-    function<void(ostream&)> header_method;
+    void (Type::*trace_method)(ostream&) const;
+    void (Type::*header_method)(ostream&) const;
+    Type* target{nullptr};
 
   public:
-    // TODO refactor to take member pointers in constructor
-    TraceFile(string filename, bool erase_contents = true) : filename(filename) {
-        port("method", &TraceFile::trace_method);
-        port("header", &TraceFile::header_method);
+    TraceFile(string filename, void (Type::*header_method)(ostream&) const, void (Type::*trace_method)(ostream&) const,
+              bool erase_contents = true)
+        : trace_method(trace_method), header_method(header_method) {
+        port("target", &TraceFile::target);
         if (erase_contents) {  // TODO warning/error if file is not empty
             fs.open(filename, ios_base::trunc);
         } else {
@@ -77,9 +83,9 @@ class TraceFile : public tc::Component {
         }
     }
 
-    void write_header() { header_method(fs); }
+    void write_header() override { (target->*header_method)(fs); }
 
-    void write_line() { trace_method(fs); }
+    void write_line() override { (target->*trace_method)(fs); }
 };
 
 class RunToggle : public tc::Component {
@@ -110,19 +116,6 @@ class RunToggle : public tc::Component {
 //==========================================================
 // CONNECTORS
 //==========================================================
-
-template <class Type>
-struct UseTraceMethods {
-    static void _connect(tc::Assembly& assembly, tc::Address tracefile, tc::Address target, void (Type::*header)(ostream&),
-                         void (Type::*line)(ostream&)) {
-        auto& user_ref = assembly.at<TraceFile>(tracefile);
-        auto& target_ref = assembly.at<Type>(target);
-        auto header_lambda = [&target_ref, line](ostream& os) { (target_ref.*line)(os); };
-        auto line_lambda = [&target_ref, header](ostream& os) { (target_ref.*header)(os); };
-        user_ref.set("method", function<void(ostream&)>(header_lambda));
-        user_ref.set("header", function<void(ostream&)>(line_lambda));
-    }
-};
 
 // Set the value to the value of a wrapped object (if it makes sense)
 template <class Type>

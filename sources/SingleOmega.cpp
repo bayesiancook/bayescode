@@ -4,11 +4,11 @@
 #include "SingleOmegaModel.hpp"
 using namespace std;
 
-class SingleOmegaLifecycle : public Lifecycle {
+class SingleOmegaLifecycle : public Lifecycle, public tc::Component {
     SingleOmegaModel* model;
 
   public:
-    SingleOmegaLifecycle() = default;
+    SingleOmegaLifecycle() { port("model", &SingleOmegaLifecycle::model); }
 
     void Init() override {
         model->DeclareModel();  // instead of Allocate
@@ -19,9 +19,9 @@ class SingleOmegaLifecycle : public Lifecycle {
         // model->Trace(cerr);
     }
 
-    void EndMove() {}
+    void EndMove() override {}
 
-    void End() {}
+    void End() override {}
 
     // FIXME FIXME FIXME FIXME chain restarting no longer supported!
     // void Open() override {
@@ -129,28 +129,32 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
 
-        model.component<SingleOmegaModel>("model", datafile, treefile);  // remove files form this constructor
+        using SOM = SingleOmegaModel;
+        using SOMTrace = TraceFile<SOM>;
 
-        model.component<Chain>("chain", every, until)
-            .connect<Use<ProbModel>>("model")
-            .connect<Use<TraceFile>>("chainfile", "chainfile")
-            .connect<Use<TraceFile>>("monitorfile", "monitorfile")
-            // .connect<Use<TraceFile>>("paramfile", "paramfile")
-            .connect<Use<TraceFile>>("tracefile", "tracefile")
+        model.component<SOM>("model", datafile, treefile);  // remove files form this constructor
+
+        model.component<SingleOmegaLifecycle>("lifecycle");
+
+        model.component<ChainDriver>("chaindriver", every, until)
+            .connect<Use<SOM>>("model", "model")
+            .connect<Use<Lifecycle>>("lifecycle", "lifecycle")
+            .connect<Use<SOMTrace>>("chainfile", "chainfile")
+            .connect<Use<SOMTrace>>("monitorfile", "monitorfile")
+            // .connect<Use<SOMTrace>>("paramfile", "paramfile")
+            .connect<Use<SOMTrace>>("tracefile", "tracefile")
             .connect<Use<RunToggle>>("runtoggle", "runtoggle");
 
-        model.component<TraceFile>("chainfile", name + ".chain");
-        model.connect<UseTraceMethods<SingleOmegaModel>>("chainfile", "model", &SingleOmegaModel::ToStream,
-                                                         &SingleOmegaModel::ChainHeader);
+        model.component<SOMTrace>("chainfile", name + ".chain", &SOM::ToStream, &SOM::ChainHeader)
+            .connect<Use<SOM>>("target", "model");
 
-        model.component<TraceFile>("tracefile", name + ".trace");
-        model.connect<UseTraceMethods<SingleOmegaModel>>("tracefile", "model", &SingleOmegaModel::Trace,
-                                                         &SingleOmegaModel::TraceHeader);
+        model.component<SOMTrace>("tracefile", name + ".trace", &SOM::Trace, &SOM::TraceHeader)
+            .connect<Use<SOM>>("target", "model");
 
-        model.component<TraceFile>("monitorfile", name + ".monitor");
-        model.connect<UseTraceMethods<SingleOmegaModel>>("monitorfile", "model", &SingleOmegaModel::Monitor, nullptr);
+        model.component<SOMTrace>("monitorfile", name + ".monitor", &SOM::Monitor, nullptr)
+            .connect<Use<SOM>>("target", "model");
 
-        // model.component<TraceFile>("paramfile", name + ".param");
+        // model.component<SOMTrace>>("paramfile", name + ".param");
         model.component<RunToggle>("runtoggle", name);
     }
     Assembly assembly(model);  // instantiating assembly!
@@ -158,7 +162,7 @@ int main(int argc, char* argv[]) {
     // SingleOmegaLifecycle* chain = new SingleOmegaLifecycle(datafile, treefile, every, until, name, force);
     cerr << "-- Chain " << name << " starting...\n";
     // chain->start();
-    assembly.call("SingleOmegaDriver", "start");
+    assembly.call("chaindriver", "start");
     cerr << "-- Chain " << name << " stopped\n";
     // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->model->GetLogProb() << "\n";
     // chain->model->Trace(cerr);

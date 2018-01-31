@@ -24,10 +24,10 @@ class ChainDriver : public Go {
 
     Lifecycle* lifecycle_handler;
 
-    TraceFile* chainfile{nullptr};
-    TraceFile* monitorfile{nullptr};
-    TraceFile* paramfile{nullptr};
-    TraceFile* tracefile{nullptr};
+    AbstractTraceFile* chainfile{nullptr};
+    AbstractTraceFile* monitorfile{nullptr};
+    AbstractTraceFile* paramfile{nullptr};
+    AbstractTraceFile* tracefile{nullptr};
 
     RunToggle* run_toggle{nullptr};
 

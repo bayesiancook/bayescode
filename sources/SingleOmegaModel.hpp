@@ -25,7 +25,7 @@ using namespace tc;
  * in which case omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel {
+class SingleOmegaModel : public ProbModel, public tc::Component {
     Model model;                    // component version of graphical model
     unique_ptr<Assembly> assembly;  // pointer to assembly (FIXME allow empty assembly for ease of use)
 
