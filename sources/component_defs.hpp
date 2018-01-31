@@ -22,6 +22,7 @@ struct AbstractWrapper {
 
 struct Lifecycle {
     virtual void Init() = 0;
+    virtual void EndMove() = 0;
     virtual void End() = 0;
 };
 
@@ -65,10 +66,11 @@ class TraceFile : public tc::Component {
     function<void(ostream&)> header_method;
 
   public:
+    // TODO refactor to take member pointers in constructor
     TraceFile(string filename, bool erase_contents = true) : filename(filename) {
         port("method", &TraceFile::trace_method);
         port("header", &TraceFile::header_method);
-        if (erase_contents) {
+        if (erase_contents) {  // TODO warning/error if file is not empty
             fs.open(filename, ios_base::trunc);
         } else {
             fs.open(filename, ios_base::app);
@@ -109,8 +111,17 @@ class RunToggle : public tc::Component {
 // CONNECTORS
 //==========================================================
 
+template <class Type>
 struct UseTraceMethods {
-    static void _connect(tc::Assembly& assembly, tc::PortAddress) {}
+    static void _connect(tc::Assembly& assembly, tc::Address tracefile, tc::Address target, void (Type::*header)(ostream&),
+                         void (Type::*line)(ostream&)) {
+        auto& user_ref = assembly.at<TraceFile>(tracefile);
+        auto& target_ref = assembly.at<Type>(target);
+        auto header_lambda = [&target_ref, line](ostream& os) { (target_ref.*line)(os); };
+        auto line_lambda = [&target_ref, header](ostream& os) { (target_ref.*header)(os); };
+        user_ref.set("method", function<void(ostream&)>(header_lambda));
+        user_ref.set("header", function<void(ostream&)>(line_lambda));
+    }
 };
 
 // Set the value to the value of a wrapped object (if it makes sense)

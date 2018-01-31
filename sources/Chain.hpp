@@ -1,14 +1,12 @@
 #ifndef CHAIN_H
 #define CHAIN_H
 
-#include <string>
-#include "ProbModel.hpp"
 #include "component_defs.hpp"
-
+class ProbModel;
 /**
- * \brief A generic interface for a Monte Carlo Markov Chain
+ * \brief A generic interface for a Monte Carlo Markov ChainDriver
  *
- * Chain is responsible for creating a model,
+ * ChainDriver is responsible for creating a model,
  * by calling the model constructor with the relevant settings,
  * and then running the MCMC, regularly saving samples into a file.
  * A chain can be stopped, and then restarted from file.
@@ -21,11 +19,12 @@
  * - <chainname>.run     : put 0 in this file to stop the chain
  */
 
-class Chain : public Go {
+class ChainDriver : public Go {
     ProbModel* model{nullptr};
 
+    Lifecycle* lifecycle_handler;
+
     TraceFile* chainfile{nullptr};
-    TraceFile* fitnessfile{nullptr};
     TraceFile* monitorfile{nullptr};
     TraceFile* paramfile{nullptr};
     TraceFile* tracefile{nullptr};
@@ -33,50 +32,24 @@ class Chain : public Go {
     RunToggle* run_toggle{nullptr};
 
   public:
-    Chain() {
-        port("model", &Chain::model);
-        port("chainfile", &Chain::chainfile);
-        port("fitnessfile", &Chain::fitnessfile);
-        port("monitorfile", &Chain::monitorfile);
-        port("paramfile", &Chain::paramfile);
-        port("tracefile", &Chain::tracefile);
-        port("runtoggle", &Chain::run_toggle);
+    ChainDriver(int every, int until) : every(every), until(until) {
+        port("lifecycle", &ChainDriver::lifecycle_handler);
+        port("model", &ChainDriver::model);
+        port("chainfile", &ChainDriver::chainfile);
+        port("monitorfile", &ChainDriver::monitorfile);
+        port("paramfile", &ChainDriver::paramfile);
+        port("tracefile", &ChainDriver::tracefile);
+        port("runtoggle", &ChainDriver::run_toggle);
     }
 
-    ~Chain() = default;
-
-    // //! make new chain (force == 1 : overwrite already existing files with same name)
-    // void New(bool force = false) = 0;
-
-    // //! open chain from file
-    // void Open() = 0;
-
-    // //! save chain to file
-    // void Save() = 0;
-
-    //! initialise model and make the files (force == 1: overwrite existing files with same name)
-    void Reset(bool force = false);
-
-    // //! create all files (chain, trace, monitor; called when creating a new chain)
-    void MakeFiles(bool force = false);
-
     //! start the MCMC
-    void go() override {}  // TODO
-
-    //! start the MCMC
-    void Start();
+    void go() override;
 
     //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
     void Run();
 
     //! perform one cycle of Monte Carlo "moves" (updates)
     void Move();
-
-    //! save one point in the .chain file (called after each cycle)
-    void SavePoint();
-
-    //! write current trace and monitoring statistics in the .trace and .monitor files (called after each cycle)
-    void Monitor();
 
     //! \brief returns running status (1: run should continue / 0: run should now stop)
     //!
@@ -86,9 +59,6 @@ class Chain : public Go {
     //!
     //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
     bool IsRunning();
-
-    //! return pointer to underlying model
-    ProbModel* GetModel() { return model; }
 
     //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }

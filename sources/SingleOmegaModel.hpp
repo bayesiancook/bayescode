@@ -437,6 +437,8 @@ class SingleOmegaModel : public ProbModel {
         os << Random::GetEntropy(*assembly->at<Wrapper<vector<double>>>("nucrelrate")) << '\n';
     }
 
+    void ChainHeader(ostream& os) const {}
+
     void ToStream(ostream& os) const override {
         auto& lambda = *assembly->at<FWrapper<double>>("lambda");
         auto& omega = *assembly->at<FWrapper<double>>("omega");
@@ -456,4 +458,6 @@ class SingleOmegaModel : public ProbModel {
         is >> *assembly->at<Wrapper<vector<double>>>("nucrelrate");
         is >> *assembly->at<Wrapper<vector<double>>>("nucstat");
     }
+
+    void Monitor(ostream&) const override {}
 };
