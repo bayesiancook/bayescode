@@ -21,14 +21,16 @@
  * - <chainname>.run     : put 0 in this file to stop the chain
  */
 
-class Chain : public Start {
-    ProbModel *model{nullptr};
+class Chain : public Go {
+    ProbModel* model{nullptr};
+
     TraceFile* chainfile{nullptr};
     TraceFile* fitnessfile{nullptr};
     TraceFile* monitorfile{nullptr};
     TraceFile* paramfile{nullptr};
-    TraceFile* runfile{nullptr};
     TraceFile* tracefile{nullptr};
+
+    RunToggle* run_toggle{nullptr};
 
   public:
     Chain() {
@@ -37,41 +39,44 @@ class Chain : public Start {
         port("fitnessfile", &Chain::fitnessfile);
         port("monitorfile", &Chain::monitorfile);
         port("paramfile", &Chain::paramfile);
-        port("runfile", &Chain::runfile);
         port("tracefile", &Chain::tracefile);
+        port("runtoggle", &Chain::run_toggle);
     }
 
-    virtual ~Chain() = default;
+    ~Chain() = default;
 
-    //! make new chain (force == 1 : overwrite already existing files with same name)
-    virtual void New(int force = 0) = 0;
+    // //! make new chain (force == 1 : overwrite already existing files with same name)
+    // void New(bool force = false) = 0;
 
-    //! open chain from file
-    virtual void Open() = 0;
+    // //! open chain from file
+    // void Open() = 0;
 
-    //! save chain to file
-    virtual void Save() = 0;
+    // //! save chain to file
+    // void Save() = 0;
 
     //! initialise model and make the files (force == 1: overwrite existing files with same name)
-    virtual void Reset(int force = 0);
+    void Reset(bool force = false);
 
-    //! create all files (chain, trace, monitor; called when creating a new chain)
-    virtual void MakeFiles(int force = 0);
+    // //! create all files (chain, trace, monitor; called when creating a new chain)
+    void MakeFiles(bool force = false);
 
     //! start the MCMC
-    virtual void start();
+    void go() override {}  // TODO
+
+    //! start the MCMC
+    void Start();
 
     //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
-    virtual void Run();
+    void Run();
 
     //! perform one cycle of Monte Carlo "moves" (updates)
-    virtual void Move();
+    void Move();
 
     //! save one point in the .chain file (called after each cycle)
-    virtual void SavePoint();
+    void SavePoint();
 
     //! write current trace and monitoring statistics in the .trace and .monitor files (called after each cycle)
-    virtual void Monitor();
+    void Monitor();
 
     //! \brief returns running status (1: run should continue / 0: run should now stop)
     //!
@@ -80,10 +85,10 @@ class Chain : public Start {
     //! - size < until, or until == -1
     //!
     //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
-    virtual int GetRunningStatus();
+    bool IsRunning();
 
     //! return pointer to underlying model
-    ProbModel *GetModel() { return model; }
+    ProbModel* GetModel() { return model; }
 
     //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }
@@ -95,7 +100,6 @@ class Chain : public Start {
     int until{-1};
     //! current size (number of points saved to file)
     int size{0};
-
 };
 
 #endif  // CHAIN_H

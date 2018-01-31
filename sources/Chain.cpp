@@ -5,8 +5,8 @@
 #include "ProbModel.hpp"
 using namespace std;
 
-void Chain::MakeFiles(int force) {
-    if (ifstream((name + ".param").c_str()) && (force == 0)) {
+void Chain::MakeFiles(bool force) {
+    if (ifstream((name + ".param").c_str()) && !force) {
         cerr << "already existing chain, cannot override (unless in forcing mode)\n";
         exit(1);
     }
@@ -21,7 +21,6 @@ void Chain::Monitor() {
     ofstream trace_os((name + ".trace").c_str(), ios_base::app);
     model->Trace(trace_os);
     ofstream mon_os((name + ".monitor").c_str());
-    ofstream mon_det_os((name + ".details").c_str());
     model->Monitor(mon_os);
 }
 
@@ -31,10 +30,10 @@ void Chain::SavePoint() {
     size++;
 }
 
-void Chain::Reset(int force) {
+void Chain::Reset(bool force) {
     size = 0;
     MakeFiles(force);
-    Save();
+    // Save();
 }
 
 void Chain::Move() {
@@ -42,32 +41,18 @@ void Chain::Move() {
         model->Move();
     }
     SavePoint();
-    Save();
+    // Save();
     Monitor();
 }
 
-void Chain::start() {
-    ofstream run_os((name + ".run").c_str());
-    run_os << 1 << '\n';
-    run_os.close();
-    Run();
-}
-
-int Chain::GetRunningStatus() {
-    ifstream run_is((name + ".run").c_str());
-    int run;
-    run_is >> run;
-    return run;
-}
+bool Chain::IsRunning() { return run_toggle->check(); }
 
 void Chain::Run() {
-    while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
+    while (IsRunning() && ((until == -1) || (size <= until))) {
         Chrono chrono;
         chrono.Reset();
         chrono.Start();
         Move();
         chrono.Stop();
     }
-    ofstream run_os((name + ".run").c_str());
-    run_os << 0 << '\n';
 }

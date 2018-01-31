@@ -4,44 +4,19 @@
 #include "SingleOmegaModel.hpp"
 using namespace std;
 
-/**
- * \brief Chain object for running an MCMC under SingleOmegaModel
- */
-
-class SingleOmegaChain : public Start {
-  private:
-    // Chain parameters
-    string datafile, treefile;
-    string name;  // name for files
-    Chain* chain;
+class SingleOmegaLifecycle : public Lifecycle {
+    SingleOmegaModel* model;
+    bool force{false};
 
   public:
-    //! constructor for a new chain: datafile, treefile, saving frequency, final chain size, chain name and overwrite flag --
-    //! calls New
-    SingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force)
-        : modeltype("SINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
-        every = inevery;
-        until = inuntil;
-        name = inname;
-        New(force);
-    }
+    SingleOmegaLifecycle(bool forse = false) : force(force) {}
 
-    //! constructor for re-opening an already existing chain from file -- calls Open
-    SingleOmegaChain(string filename) {
-        name = filename;
-        Open();
-        Save();
-    }
-
-    void start() override { chain->start(); }
-
-    void New(int force) override {
-        model = new SingleOmegaModel(datafile, treefile);
-        GetModel()->DeclareModel();  // instead of Allocate
-        GetModel()->Unfold();
+    void Init() override {
+        model->DeclareModel();  // instead of Allocate
+        model->Unfold();
         cerr << "-- Reset" << endl;
-        Reset(force);
-        cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
+        Reset(bool force);
+        cerr << "-- initial ln prob = " << model->GetLogProb() << "\n";
         model->Trace(cerr);
     }
 
@@ -67,11 +42,11 @@ class SingleOmegaChain : public Start {
             cerr << "-- Error when opening file " << name << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
-        // GetModel()->Allocate();
+        // model->Allocate();
         model->FromStream(is);
         model->Update();
-        GetModel()->Unfold();
-        cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
+        model->Unfold();
+        cerr << size << " points saved, current ln prob = " << model->GetLogProb() << "\n";
         model->Trace(cerr);
     }
 
@@ -83,9 +58,6 @@ class SingleOmegaChain : public Start {
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
-
-    //! return the model, with its derived type (unlike ProbModel::GetModel)
-    SingleOmegaModel* GetModel() { return static_cast<SingleOmegaModel*>(model); }
 
     //! return model type
     string GetModelType() override { return modeltype; }
@@ -100,12 +72,12 @@ int main(int argc, char* argv[]) {
         name = argv[1];
         cerr << "ERROR: restarting chain not implemented in component version!\n";
         exit(1);
-        // SingleOmegaChain* chain = new SingleOmegaChain(name);
+        // SingleOmegaLifecycle* chain = new SingleOmegaLifecycle(name);
         // cerr << "chain " << name << " started\n";
         // chain->start();
         // cerr << "chain " << name << " stopped\n";
-        // cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        // chain->GetModel()->Trace(cerr);
+        // cerr << chain->GetSize() << " points saved, current ln prob = " << chain->model->GetLogProb() << "\n";
+        // chain->model->Trace(cerr);
     }
 
     // new chain
@@ -162,14 +134,12 @@ int main(int argc, char* argv[]) {
         model.component<Chain>("chain")
             .connect<Use<ProbModel>>("model")
             .connect<Use<TraceFile>>("chainfile", "chainfile")
-            .connect<Use<TraceFile>>("fitnessfile", "fitnessfile")
             .connect<Use<TraceFile>>("monitorfile", "monitorfile")
             .connect<Use<TraceFile>>("paramfile", "paramfile")
-            .connect<Use<TraceFile>>("runfile", "runfile")
-            .connect<Use<TraceFile>>("tracefile", "tracefile");
+            .connect<Use<TraceFile>>("tracefile", "tracefile")
+            .connect<Use<RunToggle>>("runtoggle", "runtoggle");
 
         model.component<TraceFile>("chainfile", name + ".chain");
-        model.component<TraceFile>("fitnessfile", name + ".fitness");
         model.component<TraceFile>("monitorfile", name + ".monitor");
         model.component<TraceFile>("paramfile", name + ".param");
         model.component<TraceFile>("runfile", name + ".run");
@@ -177,11 +147,11 @@ int main(int argc, char* argv[]) {
     }
     Assembly assembly(model);  // instantiating assembly!
 
-    // SingleOmegaChain* chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+    // SingleOmegaLifecycle* chain = new SingleOmegaLifecycle(datafile, treefile, every, until, name, force);
     cerr << "-- Chain " << name << " starting...\n";
     // chain->start();
     assembly.call("SingleOmegaDriver", "start");
     cerr << "-- Chain " << name << " stopped\n";
-    // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-    // chain->GetModel()->Trace(cerr);
+    // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->model->GetLogProb() << "\n";
+    // chain->model->Trace(cerr);
 }
