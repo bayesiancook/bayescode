@@ -293,7 +293,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 		total += BranchLengthsLogPrior();
         total += ShiftProbHyperLogPrior();
         total += GeneLogPrior;
-        if (isnan(total))   {
+        if (std::isnan(total))   {
             cerr << "GetLogPrior is nan\n";
             exit(1);
         }

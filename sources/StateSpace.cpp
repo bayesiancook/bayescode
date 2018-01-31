@@ -86,7 +86,7 @@ DNAStateSpace::DNAStateSpace() {
     }
 }
 
-DNAStateSpace::~DNAStateSpace() {
+DNAStateSpace::~DNAStateSpace() throw() {
     delete[] Alphabet;
     delete[] AlphabetSet;
 }
@@ -104,7 +104,7 @@ RYStateSpace::RYStateSpace() {
     }
 }
 
-RYStateSpace::~RYStateSpace() {
+RYStateSpace::~RYStateSpace() throw() {
     delete[] Alphabet;
     delete[] AlphabetSet;
 }
@@ -132,7 +132,7 @@ RNAStateSpace::RNAStateSpace() {
     }
 }
 
-RNAStateSpace::~RNAStateSpace() {
+RNAStateSpace::~RNAStateSpace() throw() {
     delete[] Alphabet;
     delete[] AlphabetSet;
 }
@@ -150,7 +150,7 @@ ProteinStateSpace::ProteinStateSpace() {
     }
 }
 
-ProteinStateSpace::~ProteinStateSpace() {
+ProteinStateSpace::~ProteinStateSpace() throw() {
     delete[] Alphabet;
     delete[] AlphabetSet;
 }

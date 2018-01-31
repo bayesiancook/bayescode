@@ -61,7 +61,7 @@ class SimpleStateSpace : public StateSpace {
 class DNAStateSpace : public SimpleStateSpace {
   public:
     DNAStateSpace();
-    ~DNAStateSpace() override;
+    ~DNAStateSpace() throw() override;
 };
 
 /**
@@ -71,7 +71,7 @@ class DNAStateSpace : public SimpleStateSpace {
 class RNAStateSpace : public SimpleStateSpace {
   public:
     RNAStateSpace();
-    ~RNAStateSpace() override;
+    ~RNAStateSpace() throw() override;
 };
 
 /**
@@ -84,7 +84,7 @@ class RNAStateSpace : public SimpleStateSpace {
 class ProteinStateSpace : public SimpleStateSpace {
   public:
     ProteinStateSpace();
-    ~ProteinStateSpace() override;
+    ~ProteinStateSpace() throw() override;
 };
 
 /**
@@ -94,7 +94,7 @@ class ProteinStateSpace : public SimpleStateSpace {
 class RYStateSpace : public SimpleStateSpace {
   public:
     RYStateSpace();
-    ~RYStateSpace() override;
+    ~RYStateSpace() throw() override;
 
     int GetRYCoding(int from);
 };
@@ -119,7 +119,7 @@ class GenericStateSpace : public SimpleStateSpace {
         }
     }
 
-    ~GenericStateSpace() override {
+    ~GenericStateSpace() throw() override {
         delete[] Alphabet;
         delete[] AlphabetSet;
     }

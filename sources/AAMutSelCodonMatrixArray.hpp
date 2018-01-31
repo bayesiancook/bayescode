@@ -11,7 +11,7 @@ class AAMutSelCodonMatrixArray : public BidimArray<SubMatrix>, public BidimArray
 
     AAMutSelCodonMatrixArray(const BidimSelector<vector<double> >& infitnessarray, const CodonStateSpace& incodonstatespace, const SubMatrix& innucmatrix) :
         fitnessarray(infitnessarray), codonstatespace(incodonstatespace), nucmatrix(innucmatrix),
-        matrixarray(infitnessarray.GetNrow(),vector<AAMutSelOmegaCodonSubMatrix*>(infitnessarray.GetNcol(),0)) {
+        matrixarray(infitnessarray.GetNrow(),vector<AAMutSelOmegaCodonSubMatrix*>(infitnessarray.GetNcol(),(AAMutSelOmegaCodonSubMatrix*)0)) {
         Create();
     }
 

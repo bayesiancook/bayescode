@@ -409,7 +409,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         double total = 0;
         total += basecenterarray->GetLogProb();
         total += baseconcentrationarray->GetLogProb();
-        if (isinf(total))   {
+        if (std::isinf(total))   {
             cerr << "in BaseLogPrior: inf\n";
             exit(1);
         }

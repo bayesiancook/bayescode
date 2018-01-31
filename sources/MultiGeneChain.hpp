@@ -10,7 +10,7 @@ class MultiGeneChain : public Chain {
 
     MultiGeneChain(int myid, int nprocs);
 
-    virtual ~MultiGeneChain() = default;
+    virtual ~MultiGeneChain() throw()  = default;
 
     virtual void SavePoint() override;
 

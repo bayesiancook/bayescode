@@ -310,7 +310,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         total += AAHyperLogPrior();
         total += AALogPrior();
         total += OmegaLogPrior();
-        if (isinf(total))   {
+        if (std::isinf(total))   {
             cerr << "in GetLogPrior: inf\n";
             exit(1);
         }
@@ -339,7 +339,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
     double StickBreakingLogPrior() const    {
         double ret = weight->GetLogProb(kappa);
-        if (isinf(ret)) {
+        if (std::isinf(ret)) {
             cerr << "in StickBreakingLogPrior: inf\n";
             exit(1);
         }
@@ -357,7 +357,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
         double total = 0;
         total += componentaacenterarray->GetLogProb();
         total += componentaaconcentrationarray->GetLogProb();
-        if (isinf(total))   {
+        if (std::isinf(total))   {
             cerr << "in AAHyperLogPrior: inf\n";
             exit(1);
         }
@@ -373,7 +373,7 @@ class AAMutSelHyperSBDPOmegaModel : public ProbModel {
 
     double AALogPrior() const {
         double ret = aafitnessarray->GetLogProb();
-        if (isinf(ret)) {
+        if (std::isinf(ret)) {
             cerr << "in AALogPrior: inf\n";
             exit(1);
         }

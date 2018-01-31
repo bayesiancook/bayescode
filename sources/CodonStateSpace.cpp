@@ -120,7 +120,7 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
     }
 }
 
-CodonStateSpace::~CodonStateSpace() {
+CodonStateSpace::~CodonStateSpace() throw() {
     delete[] CodonCode;
     delete[] CodonCodeWithStops;
     for (int pos = 0; pos < Npos; pos++) {

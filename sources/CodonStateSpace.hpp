@@ -22,15 +22,15 @@ class CodonStateSpace : public StateSpace {
 
     //! constructor: should always specify the genetic code (en enum type: Universal, MtMam or MtInv, see BiologicalSequences.h)
     CodonStateSpace(GeneticCodeType type);
-    ~CodonStateSpace() /*override*/;
+    ~CodonStateSpace() throw() override;
 
-    int GetNstate() const /*override*/ { return Nstate; }
+    int GetNstate() const override { return Nstate; }
 
     //! given a 3-nucleotide string, returns codon index, in 0..Nstate-1 (if stop or unrecognized, exits with error message)
-    int GetState(std::string word) const /*override*/;
+    int GetState(std::string word) const override;
 
     //! given a codon index (stops excluded), returns the corresponding 3-nucleotide string
-    std::string GetState(int codon) const /*override*/;
+    std::string GetState(int codon) const override;
 
     // codon specific methods
 
