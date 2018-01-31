@@ -41,11 +41,11 @@ class StateSpace {
 
 class SimpleStateSpace : public StateSpace {
   public:
-    int GetState(std::string from) const /*override*/;
+    int GetState(std::string from) const override;
 
-    int GetNstate() const /*override*/ { return Nstate; }
+    int GetNstate() const override { return Nstate; }
 
-    std::string GetState(int state) const /*override*/;
+    std::string GetState(int state) const override;
 
   protected:
     int Nstate;
@@ -61,7 +61,7 @@ class SimpleStateSpace : public StateSpace {
 class DNAStateSpace : public SimpleStateSpace {
   public:
     DNAStateSpace();
-    ~DNAStateSpace() /*override*/;
+    ~DNAStateSpace() override;
 };
 
 /**
@@ -71,7 +71,7 @@ class DNAStateSpace : public SimpleStateSpace {
 class RNAStateSpace : public SimpleStateSpace {
   public:
     RNAStateSpace();
-    ~RNAStateSpace() /*override*/;
+    ~RNAStateSpace() override;
 };
 
 /**
@@ -84,7 +84,7 @@ class RNAStateSpace : public SimpleStateSpace {
 class ProteinStateSpace : public SimpleStateSpace {
   public:
     ProteinStateSpace();
-    ~ProteinStateSpace() /*override*/;
+    ~ProteinStateSpace() override;
 };
 
 /**
@@ -94,7 +94,7 @@ class ProteinStateSpace : public SimpleStateSpace {
 class RYStateSpace : public SimpleStateSpace {
   public:
     RYStateSpace();
-    ~RYStateSpace() /*override*/;
+    ~RYStateSpace() override;
 
     int GetRYCoding(int from);
 };
@@ -119,7 +119,7 @@ class GenericStateSpace : public SimpleStateSpace {
         }
     }
 
-    ~GenericStateSpace() /*override*/ {
+    ~GenericStateSpace() override {
         delete[] Alphabet;
         delete[] AlphabetSet;
     }
