@@ -377,7 +377,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     void MasterMove() override {
 
-		int nrep = 3;
+        int nrep = 1;
+		// int nrep = 3;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
@@ -399,7 +400,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
         GeneResampleSub(1.0);
 
-		int nrep = 3;
+		int nrep = 1;
+		// int nrep = 3;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
@@ -432,7 +434,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     void GeneMove() {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->MoveParameters(1,20);
+            geneprocess[gene]->MoveParameters(1,10);
+            // geneprocess[gene]->MoveParameters(1,20);
         }
     }
 
