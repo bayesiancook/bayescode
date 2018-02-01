@@ -543,16 +543,20 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
             basechrono.Start();
             if (basemode < 2)   {
-                if (baseNcat > 1)   {
-                    ResampleBaseAlloc();
-                }
-                MoveBaseMixture(3);
+                MoveBase(3);
             }
             basechrono.Stop();
 
             totchrono.Stop();
 		}
 	}
+
+    void MoveBase(int nrep) {
+        if (baseNcat > 1)   {
+            ResampleBaseAlloc();
+        }
+        MoveBaseMixture(nrep);
+    }
 
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();

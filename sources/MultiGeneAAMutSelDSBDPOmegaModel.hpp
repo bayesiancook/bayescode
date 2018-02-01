@@ -569,15 +569,16 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             aachrono.Start();
 
             aachrono.Stop();
-            basechrono.Start();
 
-            for (int r=0; r<5; r++) {
-                MasterReceiveBaseSuffStat();
-                MoveBaseMixture(1);
-                MasterSendBaseMixture();
+            if (basemode >= 2)  {
+                basechrono.Start();
+                for (int r=0; r<5; r++) {
+                    MasterReceiveBaseSuffStat();
+                    MoveBaseMixture(1);
+                    MasterSendBaseMixture();
+                }
+                basechrono.Stop();
             }
-
-            basechrono.Stop();
 
             if (omegamode != 3) {
                 MasterReceiveOmega();
@@ -613,10 +614,18 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             GeneCollectPathSuffStat();
             MoveGeneAA();
 
-            for (int r=0; r<5; r++)   {
-                MoveGeneBaseAlloc();
-                SlaveSendBaseSuffStat();
-                SlaveReceiveBaseMixture();
+            if (basemode >= 2)  {
+                for (int r=0; r<5; r++)   {
+                    MoveGeneBase();
+                    SlaveSendBaseSuffStat();
+                    SlaveReceiveBaseMixture();
+                }
+
+            }
+            else    {
+                for (int r=0; r<5; r++)   {
+                    MoveGeneBase();
+                }
             }
 
             if (omegamode != 3) {
@@ -662,9 +671,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MoveGeneBaseAlloc()    {
+    void MoveGeneBase()    {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
-            geneprocess[gene]->ResampleBaseAlloc();
+            geneprocess[gene]->MoveBase(3);
             geneprocess[gene]->CollectBaseSuffStat();
         }
     }
