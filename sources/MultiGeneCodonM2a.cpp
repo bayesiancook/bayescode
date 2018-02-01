@@ -53,6 +53,7 @@
 #include <fstream>
 #include "MultiGeneCodonM2aModel.hpp"
 #include "MultiGeneChain.hpp"
+#include "Chrono.hpp"
 
 using namespace std;
 
@@ -242,7 +243,10 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
 
 int main(int argc, char* argv[])	{
 
-	int myid  = 0;
+	Chrono chrono;
+    chrono.Start();
+
+    int myid = 0;
 	int nprocs = 0;
 
 	MPI_Init(&argc,&argv);
@@ -436,6 +440,12 @@ int main(int argc, char* argv[])	{
         chain = new MultiGeneCodonM2aChain(datafile,treefile,blmode,nucmode,purommode,dposommode,purwmode,poswmode,pihypermean,pihyperinvconc,puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc,every,until,name,force,myid,nprocs);
     }
 
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to set things up: " << chrono.GetTime() << '\n';
+    }
+    chrono.Reset();
+    chrono.Start();
     if (! myid) {
         cerr << "chain " << name << " started\n";
     }
@@ -444,6 +454,10 @@ int main(int argc, char* argv[])	{
         cerr << "chain " << name << " stopped\n";
         cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
+    }
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to run: " << chrono.GetTime() << '\n';
     }
 
 	MPI_Finalize();

@@ -2,6 +2,7 @@
 #include <fstream>
 #include "MultiGeneChain.hpp"
 #include "MultiGeneDiffSelSparseModel.hpp"
+#include "Chrono.hpp"
 
 using namespace std;
 
@@ -104,6 +105,9 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
 int main(int argc, char* argv[])	{
 
+	Chrono chrono;
+    chrono.Start();
+
 	int myid  = 0;
 	int nprocs = 0;
 
@@ -121,26 +125,19 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
+    string name = "";
+    MultiGeneDiffSelSparseChain* chain = 0;
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(name,myid,nprocs);
-        if (!myid)  {
-            cerr << "chain " << name << " started\n";
-        }
-        if (!myid)  {
-            chain->Start();
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
+        name = argv[1];
+        chain = new MultiGeneDiffSelSparseChain(name,myid,nprocs);
     }
 
     // new chain
     else    {
         string datafile = "";
         string treefile = "";
-        string name = "";
         int ncond = 1;
         int nlevel = 1;
         int codonmodel = 1;
@@ -203,16 +200,27 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneDiffSelSparseChain* chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,name,force,myid,nprocs);
-        if (! myid) {
-            cerr << "chain " << name << " started\n";
-        }
-        chain->Start();
-        if (! myid) {
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
+        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,name,force,myid,nprocs);
+    }
+
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to set things up: " << chrono.GetTime() << '\n';
+    }
+    chrono.Reset();
+    chrono.Start();
+    if (! myid) {
+        cerr << "chain " << name << " started\n";
+    }
+    chain->Start();
+    if (! myid) {
+        cerr << "chain " << name << " stopped\n";
+        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        chain->GetModel()->Trace(cerr);
+    }
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to run: " << chrono.GetTime() << '\n';
     }
 
 	MPI_Finalize();

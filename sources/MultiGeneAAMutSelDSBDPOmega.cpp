@@ -2,6 +2,7 @@
 #include <fstream>
 #include "MultiGeneChain.hpp"
 #include "MultiGeneAAMutSelDSBDPOmegaModel.hpp"
+#include "Chrono.hpp"
 
 using namespace std;
 
@@ -134,6 +135,9 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
 int main(int argc, char* argv[])	{
 
+	Chrono chrono;
+    chrono.Start();
+
 	int myid  = 0;
 	int nprocs = 0;
 
@@ -151,10 +155,13 @@ int main(int argc, char* argv[])	{
 	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
 	MPI_Type_commit(&Propagate_arg); 
 
+    string name = "";
+    MultiGeneAAMutSelDSBDPOmegaChain* chain = 0;
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        MultiGeneAAMutSelDSBDPOmegaChain* chain = new MultiGeneAAMutSelDSBDPOmegaChain(name,myid,nprocs);
+        name = argv[1];
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(name,myid,nprocs);
         if (!myid)  {
             cerr << "chain " << name << " started\n";
         }
@@ -172,7 +179,6 @@ int main(int argc, char* argv[])	{
         string treefile = "";
         int Ncat = -1;
         int baseNcat = -1;
-        string name = "";
         int force = 1;
         int every = 1;
         int until = -1;
@@ -257,16 +263,27 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        MultiGeneAAMutSelDSBDPOmegaChain* chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,name,force,myid,nprocs);
-        if (! myid) {
-            cerr << "chain " << name << " started\n";
-        }
-        chain->Start();
-        if (! myid) {
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,name,force,myid,nprocs);
+    }
+
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to set things up: " << chrono.GetTime() << '\n';
+    }
+    chrono.Reset();
+    chrono.Start();
+    if (! myid) {
+        cerr << "chain " << name << " started\n";
+    }
+    chain->Start();
+    if (! myid) {
+        cerr << "chain " << name << " stopped\n";
+        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        chain->GetModel()->Trace(cerr);
+    }
+    chrono.Stop();
+    if (! myid) {
+        cout << "total time to run: " << chrono.GetTime() << '\n';
     }
 
 	MPI_Finalize();
