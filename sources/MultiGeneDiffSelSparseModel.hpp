@@ -431,11 +431,15 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
+            movechrono.Start();
             GeneMove();
+            movechrono.Stop();
 
             SlaveSendShiftCounts();
             SlaveReceiveShiftProbHyperParameters();
+            movechrono.Start();
             GeneResampleShiftProbs();
+            movechrono.Stop();
 
             SlaveSendLengthSuffStat();
             SlaveReceiveGlobalBranchLengths();
