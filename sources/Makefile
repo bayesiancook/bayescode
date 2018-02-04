@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse diffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
+ALL= subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse diffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -61,6 +61,10 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
+
+subsample$(EXEEXT): $(PROGSDIR)/subsample$(EXEEXT)
+$(PROGSDIR)/subsample$(EXEEXT): RandomGeneSample.o $(OBJS)
+	$(CC) RandomGeneSample.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 chi2$(EXEEXT): $(PROGSDIR)/chi2$(EXEEXT)
 $(PROGSDIR)/chi2$(EXEEXT): Chi2.o $(OBJS)
