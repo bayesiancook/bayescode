@@ -43,6 +43,7 @@
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
 #include "MultiGeneProbModel.hpp"
+#include "Chrono.hpp"
 
 class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
@@ -359,6 +360,18 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     void SlaveSendLogProbs();
     void MasterReceiveLogProbs();
 
+    double GetSlaveMoveTime() const {
+        return moveTime;
+    }
+
+    double GetSlaveMapTime() const  {
+        return mapTime;
+    }
+
+    double GetMasterMoveTime() const {
+        return movechrono.GetTime();
+    }
+
     //-------------------
     // Data structures
     // ------------------
@@ -428,6 +441,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     double lnL;
     double GeneLogPrior;
+    double moveTime;
+    double mapTime;
 
     int burnin;
 
@@ -440,6 +455,9 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     int dposommode;
     int purwmode;
     int poswmode;
+
+    Chrono movechrono;
+    Chrono mapchrono;
 
     /*
     double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;

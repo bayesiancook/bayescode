@@ -523,31 +523,41 @@ void MultiGeneCodonM2aModel::MasterMove() {
 
         // mixture hyperparameters
         MasterReceiveMixtureHyperSuffStat();
+        movechrono.Start();
         MoveMixtureHyperParameters();
+        movechrono.Stop();
         MasterSendMixtureHyperParameters();
 
         // global branch lengths, or gene branch lengths hyperparameters
         if (blmode == 2)    {
             MasterReceiveBranchLengthsSuffStat();
+            movechrono.Start();
             ResampleBranchLengths();
             MoveLambda();
+            movechrono.Stop();
             MasterSendGlobalBranchLengths();
         }
         else if (blmode == 1)    {
             MasterReceiveBranchLengthsHyperSuffStat();
+            movechrono.Start();
             MoveBranchLengthsHyperParameters();
+            movechrono.Stop();
             MasterSendBranchLengthsHyperParameters();
         }
 
         // global nucrates, or gene nucrates hyperparameters
         if (nucmode == 2)   {
             MasterReceiveNucPathSuffStat();
+            movechrono.Start();
             MoveNucRates();
+            movechrono.Stop();
             MasterSendGlobalNucRates();
         }
         else if (nucmode == 1)  {
             MasterReceiveNucRatesHyperSuffStat();
+            movechrono.Start();
             MoveNucRatesHyperParameters();
+            movechrono.Stop();
             MasterSendNucRatesHyperParameters();
         }
     }
@@ -565,7 +575,11 @@ void MultiGeneCodonM2aModel::MasterMove() {
 // slave move
 void MultiGeneCodonM2aModel::SlaveMove() {
 
+    movechrono.Start();
+    mapchrono.Start();
     GeneResampleSub(1.0);
+    mapchrono.Stop();
+    movechrono.Stop();
 
     int nrep = 30;
 
@@ -573,7 +587,9 @@ void MultiGeneCodonM2aModel::SlaveMove() {
 
         // gene specific mixture parameters
         // possibly branch lengths and nuc rates (if mode == 1 or 2)
+        movechrono.Start();
         MoveGeneParameters(1.0);
+        movechrono.Stop();
 
         // mixture hyperparameters
         SlaveSendMixtureHyperSuffStat();
@@ -1020,12 +1036,16 @@ void MultiGeneCodonM2aModel::SlaveSendLogProbs()   {
 
     GeneLogPrior = 0;
     lnL = 0;
+    moveTime = movechrono.GetTime();
+    mapTime = mapchrono.GetTime();
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         GeneLogPrior += geneprocess[gene]->GetLogPrior();
         lnL += geneprocess[gene]->GetLogLikelihood();
     }
     SlaveSendAdditive(GeneLogPrior);
     SlaveSendAdditive(lnL);
+    SlaveSendAdditive(moveTime);
+    SlaveSendAdditive(mapTime);
 }
 
 void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
@@ -1034,6 +1054,12 @@ void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
     MasterReceiveAdditive(GeneLogPrior);
     lnL = 0;
     MasterReceiveAdditive(lnL);
+    moveTime = 0;
+    mapTime = 0;
+    MasterReceiveAdditive(moveTime);
+    MasterReceiveAdditive(mapTime);
+    moveTime /= (GetNprocs()-1);
+    mapTime /= (GetNprocs()-1);
 }
 
 /*

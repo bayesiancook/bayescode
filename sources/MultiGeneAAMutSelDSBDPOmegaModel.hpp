@@ -60,6 +60,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double MeanStatEnt;
     double MeanAAConc;
     double MeanAACenterEnt;
+    double moveTime;
+    double mapTime;
+    Chrono movechrono;
+    Chrono mapchrono;
 
     int blmode, nucmode, basemode, omegamode;
 
@@ -224,6 +228,18 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     //-------------------
     // Traces and Monitors
     //-------------------
+
+    double GetSlaveMoveTime() const {
+        return moveTime;
+    }
+
+    double GetSlaveMapTime() const   {
+        return mapTime;
+    }
+
+    double GetMasterMoveTime() const {
+        return movechrono.GetTime();
+    }
 
     int GetBaseNcluster() const {
         int n = 0;
@@ -574,7 +590,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 basechrono.Start();
                 for (int r=0; r<5; r++) {
                     MasterReceiveBaseSuffStat();
+                    movechrono.Start();
                     MoveBaseMixture(1);
+                    movechrono.Stop();
                     MasterSendBaseMixture();
                 }
                 basechrono.Stop();
@@ -582,15 +600,19 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             if (omegamode != 3) {
                 MasterReceiveOmega();
+                movechrono.Start();
                 MoveOmegaHyperParameters();
+                movechrono.Stop();
                 MasterSendOmegaHyperParameters();
             }
 
             blchrono.Start();
 
             MasterReceiveLengthSuffStat();
+            movechrono.Start();
             ResampleBranchLengths();
             MoveBranchLengthsHyperParameter();
+            movechrono.Stop();
             MasterSendGlobalBranchLengths();
 
             blchrono.Stop();
@@ -605,36 +627,49 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // slave move
     void SlaveMove() override {
 
+        movechrono.Start();
+        mapchrono.Start();
         GeneResampleSub(1.0);
+        mapchrono.Stop();
+        movechrono.Stop();
 
 		int nrep = 30;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
+            movechrono.Start();
             GeneCollectPathSuffStat();
             MoveGeneAA();
+            movechrono.Stop();
 
             if (basemode >= 2)  {
                 for (int r=0; r<5; r++)   {
+                    movechrono.Start();
                     MoveGeneBase();
+                    movechrono.Stop();
                     SlaveSendBaseSuffStat();
                     SlaveReceiveBaseMixture();
                 }
-
             }
             else    {
+                movechrono.Start();
                 for (int r=0; r<5; r++)   {
                     MoveGeneBase();
                 }
+                movechrono.Stop();
             }
 
             if (omegamode != 3) {
+                movechrono.Start();
                 MoveGeneOmegas();
+                movechrono.Stop();
                 SlaveSendOmega();
                 SlaveReceiveOmegaHyperParameters();
             }
 
+            movechrono.Start();
             MoveGeneNucRates();
+            movechrono.Stop();
 
             SlaveSendLengthSuffStat();
             SlaveReceiveGlobalBranchLengths();
@@ -936,6 +971,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendAdditive(MeanStatEnt);
         SlaveSendAdditive(MeanAAConc);
         SlaveSendAdditive(MeanAACenterEnt);
+
+        moveTime = movechrono.GetTime();
+        mapTime = mapchrono.GetTime();
+        SlaveSendAdditive(moveTime);
+        SlaveSendAdditive(mapTime);
     }
 
     void MasterReceiveLogProbs()    {
@@ -956,6 +996,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         MeanStatEnt /= GetTotNsite();
         MeanAAConc /= GetTotNsite();
         MeanAACenterEnt /= GetTotNsite();
+
+        moveTime = 0;
+        mapTime = 0;
+        MasterReceiveAdditive(moveTime);
+        MasterReceiveAdditive(mapTime);
+        moveTime /= (GetNprocs()-1);
+        mapTime /= (GetNprocs()-1);
+
     }
 };
 

@@ -9,6 +9,9 @@
 
 class Chrono {
   public:
+    Chrono() {
+        Reset();
+    }
     void Reset();
     void Start();
     void Stop();

@@ -15,6 +15,7 @@
 #include "Parallel.hpp"
 #include "MultiGeneProbModel.hpp"
 #include "IIDMultiBernBeta.hpp"
+#include "Chrono.hpp"
 
 class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
@@ -63,6 +64,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     // total logprior for gene-specific variables (here, omega only)
     // summed over all genes
     double GeneLogPrior;
+
+    double moveTime;
+    double mapTime;
+    Chrono movechrono;
+    Chrono mapchrono;
 
     public:
 
@@ -277,6 +283,18 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         }
     }
 
+    double GetSlaveMoveTime() const {
+        return moveTime;
+    }
+
+    double GetSlaveMapTime() const   {
+        return mapTime;
+    }
+
+    double GetMasterMoveTime() const {
+        return movechrono.GetTime();
+    }
+
     //-------------------
     // Updates
     //-------------------
@@ -383,12 +401,16 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 		for (int rep=0; rep<nrep; rep++)	{
 
             MasterReceiveShiftCounts();
+            movechrono.Start();
             MoveShiftProbHyperParameters(3);
+            movechrono.Stop();
             MasterSendShiftProbHyperParameters();
 
             MasterReceiveLengthSuffStat();
+            movechrono.Start();
             ResampleBranchLengths();
             MoveBranchLengthsHyperParameter();
+            movechrono.Stop();
             MasterSendGlobalBranchLengths();
         }
 
@@ -398,7 +420,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     // slave move
     void SlaveMove() override {
 
+        movechrono.Start();
+        mapchrono.Start();
         GeneResampleSub(1.0);
+        mapchrono.Stop();
+        movechrono.Stop();
 
 		int nrep = 1;
 		// int nrep = 3;
@@ -601,6 +627,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         }
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
+
+        moveTime = movechrono.GetTime();
+        mapTime = mapchrono.GetTime();
+        SlaveSendAdditive(moveTime);
+        SlaveSendAdditive(mapTime);
     }
 
     void MasterReceiveLogProbs()    {
@@ -608,6 +639,12 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
         MasterReceiveAdditive(lnL);
+        moveTime = 0;
+        mapTime = 0;
+        MasterReceiveAdditive(moveTime);
+        MasterReceiveAdditive(mapTime);
+        moveTime /= (GetNprocs()-1);
+        mapTime /= (GetNprocs()-1);
     }
 
     void MasterReceiveShiftCounts()   {
