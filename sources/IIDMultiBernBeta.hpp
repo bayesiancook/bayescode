@@ -125,43 +125,6 @@ class IIDMultiCount : public SimpleArray<vector<int> >  {
     const vector<double>& invconc;
 };
 
-/*
-class IIDMultiCount : public SimpleArray<vector<int> >  {
-
-    public:
-
-    IIDMultiCount(int insize, int indim) : SimpleArray<vector<int> >(insize, vector<int>(indim,0)) {}
-    ~IIDMultiCount() {}
-
-    int GetDim() const  {
-        return GetVal(0).size();
-    }
-
-    double GetMarginalLogProb(int k, const vector<double>& pi, const vector<double>& mean, const vector<double>& invconc) const {
-        double total = 0;
-        double alpha = mean[k]/invconc[k];
-        double beta = (1-mean[k])/invconc[k];
-        for (int i=0; i<GetSize(); i++) {
-            total += GetMarginalLogProb(i,k,pi[k],alpha,beta);
-        }
-        return total;
-    }
-
-    double GetMarginalLogProb(int i, int k, double pi, double alpha, double beta)    {
-        double ret = 0;
-        if (GetVal(i)[k])   {
-            double alpha
-            ret = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha + 
-        }
-        else    {
-        }
-    }
-
-    private:
-
-};
-*/
-
 
 #endif
 

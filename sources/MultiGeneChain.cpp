@@ -64,10 +64,8 @@ void MultiGeneChain::Run() {
 
     if (! myid) {
 
-#if DEBUG > 0
         int i = 0;
         MeasureTime timer;
-#endif
 
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
 
@@ -78,11 +76,9 @@ void MultiGeneChain::Run() {
             Move();
             chrono.Stop();
 
-#if DEBUG > 0
             timer << "Iteration " << i * every << ". ";
             timer.print<0>();
             i++;
-#endif
 
             /*
             ofstream check_os((name + ".time").c_str());

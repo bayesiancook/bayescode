@@ -213,6 +213,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 	void Monitor(ostream& os) const {}
 
+    /*
 	void MasterToStream(ostream& os) const {
         os << lambda << '\n';
         os << *branchlength << '\n';
@@ -282,6 +283,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             buffer >> *geneprocess[gene];
         }
     }
+    */
 
     double GetSlaveMoveTime() const {
         return moveTime;
@@ -400,11 +402,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MasterReceiveShiftCounts();
             movechrono.Start();
+            MasterReceiveShiftCounts();
             MoveShiftProbHyperParameters(3);
-            movechrono.Stop();
             MasterSendShiftProbHyperParameters();
+            movechrono.Stop();
 
             MasterReceiveLengthSuffStat();
             movechrono.Start();

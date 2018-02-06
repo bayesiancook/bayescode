@@ -372,6 +372,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
         return movechrono.GetTime();
     }
 
+    void StartChrono()  {
+        totchrono.Start();
+    }
+
     //-------------------
     // Data structures
     // ------------------
@@ -456,8 +460,11 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     int purwmode;
     int poswmode;
 
+    int ncycle;
+
     Chrono movechrono;
     Chrono mapchrono;
+    Chrono totchrono;
 
     /*
     double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;
