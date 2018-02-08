@@ -55,7 +55,7 @@ class MeasureTime : public std::stringstream {
             stop();
         }
         std::string left(2 * i, ' ');
-        std::cout << left << "* " << message << str() << "Time: " << duration.count() << "ms."
+        std::cout << left << "* " << message << str() << "Time: " << duration.count() //  << "ms."
                   << std::endl;
         str("");
         start();
