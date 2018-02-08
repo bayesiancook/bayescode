@@ -72,26 +72,27 @@ int Chain::GetRunningStatus() {
 }
 
 void Chain::Run() {
-#if DEBUG > 0
+
     int i = 0;
     MeasureTime timer;
-#endif
+    Chrono chrono;
+    double tottime = 0;
+    int burnin = 10;
+
     while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
-        Chrono chrono;
         chrono.Reset();
         chrono.Start();
         Move();
         chrono.Stop();
-#if DEBUG > 0
         timer << "Iteration " << i * every << ". ";
         timer.print<0>();
         i++;
-#endif
-        /*
-        ofstream check_os((name + ".time").c_str());
-        check_os << chrono.GetTime() / 1000 << '\n';
-        */
+        if (i > burnin)    {
+            tottime += chrono.GetTime();
+        }
     }
     ofstream run_os((name + ".run").c_str());
     run_os << 0 << '\n';
+    ofstream check_os((name + ".meantime").c_str());
+    check_os << tottime / 1000 / (i-burnin) << '\n';
 }

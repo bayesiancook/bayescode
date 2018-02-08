@@ -66,11 +66,13 @@ void MultiGeneChain::Run() {
 
         int i = 0;
         MeasureTime timer;
+        Chrono chrono;
+        double tottime = 0;
+        int burnin = 10;
 
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
 
             MasterSendRunningStatus(1);
-            Chrono chrono;
             chrono.Reset();
             chrono.Start();
             Move();
@@ -80,6 +82,9 @@ void MultiGeneChain::Run() {
             timer.print<0>();
             i++;
 
+            if (i > burnin)    {
+                tottime += chrono.GetTime();
+            }
             /*
             ofstream check_os((name + ".time").c_str());
             check_os << chrono.GetTime() / 1000 << '\n';
@@ -88,6 +93,8 @@ void MultiGeneChain::Run() {
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());
         run_os << 0 << '\n';
+        ofstream check_os((name + ".meantime").c_str());
+        check_os << tottime / 1000 / (i-burnin) << '\n';
     }
     else    {
 
