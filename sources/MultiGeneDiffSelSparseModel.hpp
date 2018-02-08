@@ -402,11 +402,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            movechrono.Start();
             MasterReceiveShiftCounts();
+            movechrono.Start();
             MoveShiftProbHyperParameters(3);
-            MasterSendShiftProbHyperParameters();
             movechrono.Stop();
+            MasterSendShiftProbHyperParameters();
 
             MasterReceiveLengthSuffStat();
             movechrono.Start();
