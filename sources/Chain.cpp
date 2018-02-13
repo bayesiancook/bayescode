@@ -11,6 +11,7 @@ using namespace std;
 Chain::Chain()  {
     every = 1;
     until = -1;
+    saveall = 1;
     size = 0;
     model = nullptr;
     name = "";
@@ -22,7 +23,9 @@ void Chain::MakeFiles(int force) {
         exit(1);
     }
     ofstream param_os((name + ".param").c_str());
-    ofstream chain_os((name + ".chain").c_str());
+    if (saveall)    {
+        ofstream chain_os((name + ".chain").c_str());
+    }
     ofstream mon_os((name + ".monitor").c_str());
     ofstream trace_os((name + ".trace").c_str());
     model->TraceHeader(trace_os);
@@ -37,8 +40,10 @@ void Chain::Monitor() {
 }
 
 void Chain::SavePoint() {
-    ofstream chain_os((name + ".chain").c_str(), ios_base::app);
-    model->ToStream(chain_os);
+    if (saveall)    {
+        ofstream chain_os((name + ".chain").c_str(), ios_base::app);
+        model->ToStream(chain_os);
+    }
     size++;
 }
 

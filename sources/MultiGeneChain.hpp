@@ -22,6 +22,8 @@ class MultiGeneChain : public Chain {
     virtual void Start() override;
     // start Monte Carlo
 
+    virtual void MakeFiles(int force) override;
+
     void MasterSendRunningStatus(int status);
     int SlaveReceiveRunningStatus();
 

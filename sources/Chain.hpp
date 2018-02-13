@@ -94,6 +94,8 @@ class Chain {
     ProbModel *model;  
     //! base name for all files corresponding to that chain
     string name;  
+    //! flag: if 1, then complete state is saved at each interation in .chain file
+    int saveall;
 };
 
 #endif  // CHAIN_H

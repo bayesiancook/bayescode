@@ -11,12 +11,14 @@ using namespace std;
 MultiGeneChain::MultiGeneChain(int inmyid, int innprocs) : Chain(), myid(inmyid), nprocs(innprocs) {}
 
 void MultiGeneChain::SavePoint() {
-    if (! myid) {
-        ofstream chain_os((name + ".chain").c_str(), ios_base::app);
-        GetMultiGeneModel()->MasterToStream(chain_os);
-    }
-    else    {
-        GetMultiGeneModel()->SlaveToStream();
+    if (saveall)    {
+        if (! myid) {
+            ofstream chain_os((name + ".chain").c_str(), ios_base::app);
+            GetMultiGeneModel()->MasterToStream(chain_os);
+        }
+        else    {
+            GetMultiGeneModel()->SlaveToStream();
+        }
     }
     size++;
 }
@@ -27,6 +29,13 @@ void MultiGeneChain::Reset(int force)   {
         MakeFiles(force);
     }
     Save();
+}
+
+void MultiGeneChain::MakeFiles(int force)   {
+    Chain::MakeFiles(force);
+    ofstream nameos((name + ".genelist").c_str());
+    GetMultiGeneModel()->PrintGeneList(nameos);
+    nameos.close();
 }
 
 void MultiGeneChain::Move() {
@@ -64,20 +73,23 @@ void MultiGeneChain::Run() {
 
     if (! myid) {
 
+        /*
         int i = 0;
         MeasureTime timer;
         Chrono chrono;
         double tottime = 0;
         int burnin = 10;
+        */
 
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
 
             MasterSendRunningStatus(1);
-            chrono.Reset();
+            Chrono chrono;
             chrono.Start();
             Move();
             chrono.Stop();
 
+            /*
             timer << "Iteration " << i * every << ". ";
             timer.print<0>();
             i++;
@@ -85,6 +97,7 @@ void MultiGeneChain::Run() {
             if (i > burnin)    {
                 tottime += chrono.GetTime();
             }
+            */
             /*
             ofstream check_os((name + ".time").c_str());
             check_os << chrono.GetTime() / 1000 << '\n';
@@ -93,8 +106,10 @@ void MultiGeneChain::Run() {
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());
         run_os << 0 << '\n';
+        /*
         ofstream check_os((name + ".meantime").c_str());
         check_os << tottime / 1000 / (i-burnin) << '\n';
+        */
     }
     else    {
 
