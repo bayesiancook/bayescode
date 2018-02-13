@@ -9,7 +9,7 @@ class DiffSelSparseChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int codonmodel, category, level, fixglob, fixvar;
+    int category, level, codonmodel, fixglob, fixvar;
 
   public:
     DiffSelSparseModel* GetModel() {
@@ -18,18 +18,17 @@ class DiffSelSparseChain: public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelSparseChain(string indata, string intree, int incategory,
-                                              int inlevel, int inevery, int inuntil, 
-					      int incodonmodel,
-                                              string inname, int force)
+    DiffSelSparseChain(string indata, string intree, int incategory, int inlevel, int incodonmodel,
+                                              int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
-          codonmodel(incodonmodel),
           category(incategory),
-          level(inlevel)	{
+          level(inlevel),
+          codonmodel(incodonmodel)  {
         every = inevery;
         until = inuntil;
+        saveall = insaveall;
         name = inname;
         New(force);
     }
@@ -65,7 +64,7 @@ class DiffSelSparseChain: public Chain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> every >> until >> size;
+        is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelSparseModel(
@@ -88,7 +87,7 @@ class DiffSelSparseChain: public Chain {
         param_os << datafile << '\t' << treefile << '\t' << category << '\t' << level << '\n';
         param_os << codonmodel << '\n';
         param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
+        param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
     }
@@ -118,6 +117,7 @@ int main(int argc, char* argv[]) {
         name = "";
         int every = 1;
         int until = -1;
+        int saveall = 1;
         int force = 1;
 
         try	{
@@ -140,6 +140,12 @@ int main(int argc, char* argv[]) {
                 }
                 else if (s == "-f")	{
                     force = 1;
+                }
+                else if (s == "+s") {
+                    saveall = 1;
+                }
+                else if (s == "-s") {
+                    saveall = 0;
                 }
                 else if (s == "-ncond")	{
                     i++;
@@ -166,7 +172,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,every,until,codonmodel,name,force);
+        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,name,force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

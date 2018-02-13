@@ -24,9 +24,10 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
+    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, int insaveall, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
         every = inevery;
         until = inuntil;
+        saveall = insaveall;
         name = inname;
         New(force);
     }
@@ -69,7 +70,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> every >> until >> size;
+        is >> every >> until >> saveall >> size;
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
             model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
@@ -94,7 +95,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << 0 << '\n';
-            param_os << every << '\t' << until << '\t' << size << '\n';
+            param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
         }
         else    {
@@ -144,6 +145,7 @@ int main(int argc, char* argv[])	{
         int force = 1;
         int every = 1;
         int until = -1;
+        int saveall = 1;
 
         try	{
 
@@ -165,6 +167,12 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "-f")	{
                     force = 1;
+                }
+                else if (s == "-s") {
+                    saveall = 0;
+                }
+                else if (s == "+s") {
+                    saveall = 1;
                 }
                 else if (s == "-ncond")	{
                     i++;
@@ -200,7 +208,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,name,force,myid,nprocs);
+        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,name,force,myid,nprocs);
     }
 
     chrono.Stop();
