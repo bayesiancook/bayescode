@@ -213,7 +213,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
 	void Monitor(ostream& os) const {}
 
-    /*
 	void MasterToStream(ostream& os) const {
         os << lambda << '\t';
         os << *branchlength << '\t';
@@ -283,7 +282,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             buffer >> *geneprocess[gene];
         }
     }
-    */
 
     double GetSlaveMoveTime() const {
         return moveTime;
