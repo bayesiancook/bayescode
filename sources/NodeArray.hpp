@@ -45,7 +45,6 @@ template<class T> class NodeSelector	{
         for (int i=0; i<this->GetNnode(); i++)  {
             os << this->GetVal(i) << '\t';
         }
-        os << '\n';
     }
 };
 

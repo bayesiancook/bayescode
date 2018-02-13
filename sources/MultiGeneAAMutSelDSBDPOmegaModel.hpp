@@ -366,17 +366,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 	void MasterToStream(ostream& os) const override {
 
-        os << lambda << '\n';
-        os << *branchlength << '\n';
+        os << lambda << '\t';
+        os << *branchlength << '\t';
         if (omegamode != 3) {
-            os << omegahypermean << '\n';
-            os << omegahyperinvshape << '\n';
-            os << *omegaarray << '\n';
+            os << omegahypermean << '\t';
+            os << omegahyperinvshape << '\t';
+            os << *omegaarray << '\t';
         }
         if (basemode == 2)  {
-            os << *basecenterarray << '\n';
-            os << *baseconcentrationarray << '\n';
-            os << basekappa << '\n';
+            os << *basecenterarray << '\t';
+            os << *baseconcentrationarray << '\t';
+            os << basekappa << '\t';
             baseweight->ToStreamSB(os);
         }
 

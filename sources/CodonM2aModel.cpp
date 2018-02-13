@@ -561,11 +561,11 @@ void CodonM2aModel::GetSitesPostProb(double* array) const {
 
 void CodonM2aModel::ToStream(ostream& os) const {
 
-    os << lambda << '\n';
-    os << *branchlength << '\n';
-    os << purom << '\t' << dposom << '\t' << purw << '\t' << posw << '\n';
-    os << nucrelrate << '\n';
-    os << nucstat << '\n';
+    os << lambda << '\t';
+    os << *branchlength << '\t';
+    os << purom << '\t' << dposom << '\t' << purw << '\t' << posw << '\t';
+    os << nucrelrate << '\t';
+    os << nucstat << '\t';
 }
 
 void CodonM2aModel::FromStream(istream& is) {

@@ -1070,28 +1070,28 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	void ToStream(ostream& os) const {
 
         if (blmode < 2) {
-            os << lambda << '\n';
-            os << *branchlength << '\n';
+            os << lambda << '\t';
+            os << *branchlength << '\t';
         }
         if (nucmode < 2)    {
-            os << nucrelrate << '\n';
-            os << nucstat << '\n';
+            os << nucrelrate << '\t';
+            os << nucstat << '\t';
         }
         if (basemode < 2)   {
-            os << basekappa << '\n';
+            os << basekappa << '\t';
             baseweight->ToStreamSB(os);
-            // os << *baseweight << '\n';
-            os << *componentalloc << '\n';
-            os << *basecenterarray << '\n';
-            os << *baseconcentrationarray << '\n';
+            // os << *baseweight << '\t';
+            os << *componentalloc << '\t';
+            os << *basecenterarray << '\t';
+            os << *baseconcentrationarray << '\t';
         }
-        os << kappa << '\n';
+        os << kappa << '\t';
         weight->ToStreamSB(os);
-        // os << *weight << '\n';
-        os << *componentaafitnessarray << '\n';
-        os << *sitealloc << '\n';
+        // os << *weight << '\t';
+        os << *componentaafitnessarray << '\t';
+        os << *sitealloc << '\t';
         if (omega < 2)  {
-            os << omega << '\n';
+            os << omega << '\t';
         }
     }
 

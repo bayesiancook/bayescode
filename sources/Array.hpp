@@ -44,7 +44,6 @@ template<class T> class Selector	{
         for (int i=0; i<this->GetSize(); i++)  {
             os << this->GetVal(i) << '\t';
         }
-	os << '\n';
     }
 };
 

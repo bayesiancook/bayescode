@@ -45,7 +45,6 @@ template<class T> class BranchSelector	{
         for (int i=0; i<this->GetNbranch(); i++)  {
             os << this->GetVal(i) << '\t';
         }
-        os << '\n';
     }
 };
 

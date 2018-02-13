@@ -215,11 +215,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     /*
 	void MasterToStream(ostream& os) const {
-        os << lambda << '\n';
-        os << *branchlength << '\n';
-        os << shiftprobhypermean << '\n';
-        os << shiftprobhyperinvconc << '\n';
-        os << pi << '\n';
+        os << lambda << '\t';
+        os << *branchlength << '\t';
+        os << shiftprobhypermean << '\t';
+        os << shiftprobhyperinvconc << '\t';
+        os << pi << '\t';
 
         for (int proc=1; proc<GetNprocs(); proc++)  {
             MPI_Status stat;

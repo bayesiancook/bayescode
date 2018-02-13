@@ -270,24 +270,24 @@ void MultiGeneCodonM2aModel::MasterFromStream(istream& is)  {
 
 void MultiGeneCodonM2aModel::MasterToStream(ostream& os) const  {
 
-    os << lambda << '\n';
-    os << *branchlength << '\n';
-    os << blhyperinvshape << '\n';
-    os << nucrelratehypercenter << '\n';
-    os << nucrelratehyperinvconc << '\n';
-    os << nucstathypercenter << '\n';
-    os << nucstathyperinvconc << '\n';
-    os << *nucrelratearray << '\n';
-    os << *nucstatarray << '\n';
-    os << puromhypermean << puromhyperinvconc << '\n';
-    os << dposomhypermean << dposomhyperinvshape << '\n';
-    os << purwhypermean << purwhyperinvconc << '\n';
-    os << poswhypermean << poswhyperinvconc << '\n';
-    os << pi << '\n';
-    os << *puromarray << '\n';
-    os << *dposomarray << '\n';
-    os << *purwarray << '\n';
-    os << *poswarray << '\n';
+    os << lambda << '\t';
+    os << *branchlength << '\t';
+    os << blhyperinvshape << '\t';
+    os << nucrelratehypercenter << '\t';
+    os << nucrelratehyperinvconc << '\t';
+    os << nucstathypercenter << '\t';
+    os << nucstathyperinvconc << '\t';
+    os << *nucrelratearray << '\t';
+    os << *nucstatarray << '\t';
+    os << puromhypermean << puromhyperinvconc << '\t';
+    os << dposomhypermean << dposomhyperinvshape << '\t';
+    os << purwhypermean << purwhyperinvconc << '\t';
+    os << poswhypermean << poswhyperinvconc << '\t';
+    os << pi << '\t';
+    os << *puromarray << '\t';
+    os << *dposomarray << '\t';
+    os << *purwarray << '\t';
+    os << *poswarray << '\t';
 }
 
 //-------------------

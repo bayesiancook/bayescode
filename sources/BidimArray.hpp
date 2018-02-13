@@ -27,7 +27,7 @@ template<class T> class BidimSelector	{
     void ToStream(ostream& os) const    {
         for (int i=0; i<this->GetNrow(); i++)  {
             for (int j=0; j<this->GetNcol(); j++)   {
-                os << this->GetVal(i,j);
+                os << this->GetVal(i,j) << '\t';
             }
         }
     }
