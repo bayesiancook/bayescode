@@ -224,11 +224,11 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
     void SavePoint() override   {
         MultiGeneChain::SavePoint();
         if (writegenedata)  {
-            ofstream posw_os((name + ".posw").c_str(),ios_base::app);
-            GetModel()->TracePosWeight(posw_os);
-            ofstream posom_os((name + ".posom").c_str(),ios_base::app);
-            GetModel()->TracePosOm(posom_os);
             if (! myid) {
+                ofstream posw_os((name + ".posw").c_str(),ios_base::app);
+                GetModel()->TracePosWeight(posw_os);
+                ofstream posom_os((name + ".posom").c_str(),ios_base::app);
+                GetModel()->TracePosOm(posom_os);
                 ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
                 GetModel()->MasterTraceSitesPostProb(pp_os);
             }
