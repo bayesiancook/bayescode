@@ -158,17 +158,8 @@ void MultiGeneMPIModule::PrintGeneList(ostream& os) const {
         exit(1);
     }
     os << Ngene << '\n';
-    /*
     for (int gene=0; gene<Ngene; gene++)    {
         os << GeneName[gene] << '\t' << GeneNsite[gene] << '\n';
-    }
-    */
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        for (int gene=0; gene<Ngene; gene++)    {
-            if (GeneAlloc[gene] == proc)    {
-                os << GeneName[gene] << '\t' << GeneNsite[gene] << '\n';
-            }
-        }
     }
 }
 
