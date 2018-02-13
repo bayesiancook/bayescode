@@ -219,7 +219,7 @@ class DiffSelSparseModel : public ProbModel {
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
-        pi.assign(Ncond-1,1.0);
+        pi.assign(Ncond-1,0.1);
         shiftprobhypermean.assign(Ncond-1,0.5);
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
         shiftprob.assign(Ncond-1,0.1);
@@ -358,7 +358,12 @@ class DiffSelSparseModel : public ProbModel {
         for (int k=1; k<Ncond; k++) {
             double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
             double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
-            total += Random::logBetaDensity(shiftprob[k-1],alpha,beta);
+            if (shiftprob[k-1] != 0)    {
+                total += log(pi[k-1]) + Random::logBetaDensity(shiftprob[k-1],alpha,beta);
+            }
+            else    {
+                total += log(1 - pi[k-1]);
+            }
         }
         return total;
     }
@@ -706,7 +711,25 @@ class DiffSelSparseModel : public ProbModel {
             }
             int nn = Nsite*Naa;
 
-            shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+            if (nshift) {
+                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+            }
+            else    {
+                double logp0 = log(1-pi[k-1]);
+                double logp1 = log(pi[k-1]) + Random::logGamma(alpha+beta) + Random::logGamma(beta + nn) - Random::logGamma(beta) - Random::logGamma(alpha+beta+nn);
+                double max = (logp0 > logp1) ? logp0 : logp1;
+                double p0 = exp(logp0-max);
+                double p1 = exp(logp1-max);
+                double tot = p0+p1;
+                p0/=tot;
+                p1/=tot;
+                if (Random::Uniform() < p0) {
+                    shiftprob[k-1] = 0;
+                }
+                else    {
+                    shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+                }
+            }
         }
     }
 
@@ -841,20 +864,20 @@ class DiffSelSparseModel : public ProbModel {
 
     void ToStream(ostream& os) const override {
         if (blmode < 2) {
-            os << lambda << '\n';
-            os << *branchlength << '\n';
+            os << lambda << '\t';
+            os << *branchlength << '\t';
         }
         if (nucmode < 2)    {
-            os << nucrelrate << '\n';
-            os << nucstat << '\n';
+            os << nucrelrate << '\t';
+            os << nucstat << '\t';
         }
         if (fitnesshypermode < 2)   {
-            os << fitnessshape << '\n';
-            os << fitnesscenter << '\n';
+            os << fitnessshape << '\t';
+            os << fitnesscenter << '\t';
         }
-        os << *fitness << '\n';
-        os << shiftprob << '\n';
-        os << *toggle << '\n';
+        os << *fitness << '\t';
+        os << shiftprob << '\t';
+        os << *toggle << '\t';
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
