@@ -158,104 +158,17 @@ void MultiGeneMPIModule::PrintGeneList(ostream& os) const {
         exit(1);
     }
     os << Ngene << '\n';
+    /*
     for (int gene=0; gene<Ngene; gene++)    {
         os << GeneName[gene] << '\t' << GeneNsite[gene] << '\n';
     }
-}
-
-
-/*
-void MultiGeneMPIModule::MasterSendGlobalVariable(const MPIObject& object) {
-
-    MPIBuffer buffer(object.GetMPISize());
-    buffer << object;
-    // object.MPIPut(buffer);
-    MPI_Bcast(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
-}
-
-
-void MultiGeneMPIModule::SlaveReceiveGlobalVariable(MPIObject& object) {
-
-    MPIBuffer buffer(object.GetMPISize());
-    MPI_Bcast(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,0,MPI_COMM_WORLD);
-    // object.MPIGet(buffer);
-    buffer >> object;
-}
-
-void MultiGeneMPIModule::SlaveSendAdditive(const MPIAdditive& object) {
-
-    MPIBuffer buffer(object.GetMPISize());
-    buffer << object;
-    // object.MPIPut(buffer);
-    MPI_Send(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-}
-
-void MultiGeneMPIModule::MasterReceiveAdditive(MPIAdditive& object)   {
-
-    object.Clear();
-    MPI_Status stat;
+    */
     for (int proc=1; proc<GetNprocs(); proc++)  {
-        MPIBuffer buffer(object.GetMPISize());
-        MPI_Recv(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        // object.MPIAdd(buffer);
-        object += buffer;
+        for (int gene=0; gene<Ngene; gene++)    {
+            if (GeneAlloc[gene] == proc)    {
+                os << GeneName[gene] << '\t' << GeneNsite[gene] << '\n';
+            }
+        }
     }
 }
 
-template<class T> unsigned int MPIElementSize<T> = -1;
-
-template<class T> void MultiGeneMPIModule::MasterSendGeneArray(const SimpleArray<T>&) {
-
-}
-
-template<class T> void MultiGeneMPIModule::SlaveReceiveGeneArray(SimpleArray<T>&) {
-
-}
-
-void MultiGeneMPIModule::MasterSendGeneArray(const MPIArray& array)   {
-
-    unsigned int elemsize = array.GetMPIElementSize();
-    int thusfar = 0;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        unsigned int buffersize = elemsize * GetSlaveNgene(proc);
-        MPIBuffer buffer(buffersize);
-        array.MPIPutArray(buffer,thusfar,GetSlaveNgene(proc));
-        thusfar += GetSlaveNgene(proc);
-        MPI_Send(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD);
-    }
-}
-
-        
-void MultiGeneMPIModule::SlaveReceiveGeneArray(MPIArray& array)  {
-
-    unsigned int elemsize = array.GetMPIElementSize();
-    unsigned int buffersize = elemsize * GetLocalNgene();
-    MPIBuffer buffer(buffersize);
-    MPI_Status stat;
-    MPI_Recv(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD,&stat);
-    array.MPIGetArray(buffer,0,GetLocalNgene());
-}
-
-void MultiGeneMPIModule::SlaveSendGeneArray(const MPIArray& array)  {
-
-    unsigned int elemsize = array.GetMPIElementSize();
-    unsigned int buffersize = elemsize * GetLocalNgene();
-    MPIBuffer buffer(buffersize);
-    array.MPIPutArray(buffer,0,GetLocalNgene());
-    MPI_Send(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
-}
-
-void MultiGeneMPIModule::MasterReceiveGeneArray(MPIArray& array)    {
-
-    unsigned int elemsize = array.GetMPIElementSize();
-    MPI_Status stat;
-    int thusfar = 0;
-    for (int proc=1; proc<GetNprocs(); proc++)  {
-        unsigned int buffersize = elemsize * GetSlaveNgene(proc);
-        MPIBuffer buffer(buffersize);
-        MPI_Recv(buffer.GetBuffer(),buffer.GetBufferSize(),MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
-        array.MPIGetArray(buffer,thusfar,GetSlaveNgene(proc));
-        thusfar += GetSlaveNgene(proc);
-    }
-}
-*/
