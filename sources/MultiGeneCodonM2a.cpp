@@ -453,7 +453,7 @@ int main(int argc, char* argv[])	{
     }
     chrono.Stop();
     if (! myid) {
-        cout << "total time to run: " << chrono.GetTime() << '\n';
+        cout << "total time in MCMC: " << chrono.GetTime() << '\n';
         cout << "total time in master moves: " << chain->GetModel()->GetMasterMoveTime() << '\n';
         cout << "mean total time in slave moves: " << chain->GetModel()->GetSlaveMoveTime() << '\n';
         cout << "mean total time in substitution mapping: " << chain->GetModel()->GetSlaveMapTime() << '\n';

@@ -102,6 +102,36 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             GetModel()->SlaveToStream();
         }
     }
+
+    void MakeFiles(int force) override  {
+        MultiGeneChain::MakeFiles(force);
+        /*
+        if (writegenedata)  {
+            ofstream pos((name + ".posw").c_str());
+            ofstream omos((name + ".posom").c_str());
+            ofstream siteos((name + ".sitepp").c_str());
+        }
+        */
+    }
+
+    void SavePoint() override   {
+        MultiGeneChain::SavePoint();
+        /*
+        if (writegenedata)  {
+            if (! myid) {
+                ofstream posw_os((name + ".posw").c_str(),ios_base::app);
+                GetModel()->TracePosWeight(posw_os);
+                ofstream posom_os((name + ".posom").c_str(),ios_base::app);
+                GetModel()->TracePosOm(posom_os);
+                ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
+                GetModel()->MasterTraceSitesPostProb(pp_os);
+            }
+            else    {
+                GetModel()->SlaveTraceSitesPostProb();
+            }
+        }
+        */
+    }
 };
 
 int main(int argc, char* argv[])	{
@@ -228,7 +258,7 @@ int main(int argc, char* argv[])	{
     }
     chrono.Stop();
     if (! myid) {
-        cout << "total time to run: " << chrono.GetTime() << '\n';
+        cout << "total time in MCMC: " << chrono.GetTime() << '\n';
         cout << "total time in master moves: " << chain->GetModel()->GetMasterMoveTime() << '\n';
         cout << "mean total time in slave moves: " << chain->GetModel()->GetSlaveMoveTime() << '\n';
         cout << "mean total time in substitution mapping: " << chain->GetModel()->GetSlaveMapTime() << '\n';
