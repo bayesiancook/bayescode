@@ -64,6 +64,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    int writegenedata;
     int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
     double puromhypermean, puromhyperinvconc;
@@ -79,7 +80,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode, double inpihypermean, double inpihyperinvconc, double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENECODONM2A"), datafile(indatafile), treefile(intreefile) {
+    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode, double inpihypermean, double inpihyperinvconc, double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENECODONM2A"), datafile(indatafile), treefile(intreefile) {
 
         blmode = inblmode;
         nucmode = innucmode;
@@ -100,6 +101,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
 
         every = inevery;
         until = inuntil;
+        writegenedata = inwritegenedata;
         name = inname;
         New(force);
     }
@@ -139,6 +141,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> writegenedata;
         is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
         is >> puromhypermean >> puromhyperinvconc;
@@ -191,6 +194,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
+            param_os << writegenedata << '\n';
             param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t' << poswmode << '\n';
             param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
@@ -208,36 +212,30 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
 
     void MakeFiles(int force) override  {
 
-        Chain::MakeFiles(force);
+        MultiGeneChain::MakeFiles(force);
 
-        ofstream nameos((name + ".genelist").c_str());
-        GetModel()->PrintGeneList(nameos);
-        nameos.close();
-
-        ofstream pos((name + ".posw").c_str());
-        ofstream omos((name + ".posom").c_str());
-        /*
         if (writegenedata)  {
+            ofstream pos((name + ".posw").c_str());
+            ofstream omos((name + ".posom").c_str());
             ofstream siteos((name + ".sitepp").c_str());
         }
-        */
     }
 
     void SavePoint() override   {
-        Chain::SavePoint();
-        if (!myid)  {
+        MultiGeneChain::SavePoint();
+        if (writegenedata)  {
             ofstream posw_os((name + ".posw").c_str(),ios_base::app);
             GetModel()->TracePosWeight(posw_os);
             ofstream posom_os((name + ".posom").c_str(),ios_base::app);
             GetModel()->TracePosOm(posom_os);
+            if (! myid) {
+                ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
+                GetModel()->MasterTraceSitesPostProb(pp_os);
+            }
+            else    {
+                GetModel()->SlaveTraceSitesPostProb();
+            }
         }
-        /*
-        if (!miyd && writegenedata)  {
-            ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
-            GetModel()->MasterTraceSitesPostProb(ppos);
-            GetModel()->SlaveTraceSitesPostProb();
-        }
-        */
     }
 };
 
@@ -299,7 +297,7 @@ int main(int argc, char* argv[])	{
         int blmode = 2;
         int nucmode = 2;
 
-        // int writegenedata = 0;
+        int writegenedata = 0;
 
         int force = 1;
         int every = 1;
@@ -403,11 +401,9 @@ int main(int argc, char* argv[])	{
                     i++;
                     pihyperinvconc = atof(argv[i]);
                 }
-                /*
                 else if (s == "-g")  {
                     writegenedata = 1;
                 }
-                */
                 else if (s == "-f")	{
                     force = 1;
                 }
@@ -437,7 +433,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new MultiGeneCodonM2aChain(datafile,treefile,blmode,nucmode,purommode,dposommode,purwmode,poswmode,pihypermean,pihyperinvconc,puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc,every,until,name,force,myid,nprocs);
+        chain = new MultiGeneCodonM2aChain(datafile,treefile,blmode,nucmode,purommode,dposommode,purwmode,poswmode,pihypermean,pihyperinvconc,puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc,every,until,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();

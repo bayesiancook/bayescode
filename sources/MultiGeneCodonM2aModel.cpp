@@ -1062,37 +1062,6 @@ void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
     mapTime /= (GetNprocs()-1);
 }
 
-/*
-void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
-    vector<double> array(GetTotNsite());
-    MasterReceiveGene(array);
-    int i = 0;
-    for (int gene=0; gene<Ngene; gene++)    {
-            os << GeneName[gene] << '\t';
-            int nsite = GeneNsite[gene];
-            for (int k=0; k<nsite; k++) {
-                if (array[i] < 0)   {
-                    cerr << "error: negative post prob\n";
-                    cerr << GeneName[gene] << '\n';
-                    cerr << GeneNsite[gene] << '\n';
-                    cerr << i << '\n';
-                    exit(1);
-                }
-                os << array[i++] << '\t';
-            }
-        }
-    }
-    if (i != totnsite)  {
-        cerr << "error in MultiGeneCodonM2aModel::MasterTraceSitesPostProb: non matching number of sites\n";
-        exit(1);
-    }
-}
-
-void MultiGeneCodonM2aModel::SlaveTraceSitesPostProb()  {
-
-}
-*/
-
 void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
 
     for (int proc=1; proc<GetNprocs(); proc++)  {
@@ -1122,6 +1091,7 @@ void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream& os)  {
             cerr << "error in MultiGeneCodonM2aModel::MasterTraceSitesPostProb: non matching number of sites\n";
             exit(1);
         }
+        delete[] array;
     }
     os << '\n';
     os.flush();
