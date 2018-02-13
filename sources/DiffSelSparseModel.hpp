@@ -739,6 +739,18 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    double ToggleMarginalLogPrior(int nn, int nshift, double pi, double alpha, double beta) const {
+        double logp1 = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha+nshift) + Random::logGamma(beta + nn - nshift) - Random::logGamma(alpha + beta + nn);
+        if (nshift) {
+            return logp1;
+        }
+        double logp0 = log(1-pi);
+        double max = (logp0 > logp1) ? logp0 : logp1;
+        double tot = exp(logp0-max) + exp(logp1-max);
+        double ret = log(tot) + max;
+        return ret;
+    }
+
     double MoveShiftToggles(int k, int nrep)  {
 
         int nshift = 0;
@@ -751,6 +763,7 @@ class DiffSelSparseModel : public ProbModel {
 
         double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
         double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+        double pp = pi[k-1];
 
         double ntot = 0;
         double nacc = 0;
@@ -760,13 +773,18 @@ class DiffSelSparseModel : public ProbModel {
 
                 if (!(*toggle)(k-1,i)[a])    {
 
-                    double deltalogprob = SiteSuffStatLogProb(i);
+                    double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
                     (*toggle)(k-1,i)[a] = 1;
                     (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
                     // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
                     UpdateSite(i);
-                    deltalogprob += SiteSuffStatLogProb(i);
-                    deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
+                    deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
+                    /*
+                    double c1 = ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) - ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta);
+                    double c2 = log(alpha + nshift) - log(beta + nn - nshift - 1);
+                    cerr << nshift << c2 - c1 << '\n';
+                    */
+                    // deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted) {
@@ -779,11 +797,11 @@ class DiffSelSparseModel : public ProbModel {
                     ntot++;
                 }
                 else    {
-                    double deltalogprob = SiteSuffStatLogProb(i);
+                    double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
                     (*toggle)(k-1,i)[a] = 0;
                     UpdateSite(i);
-                    deltalogprob += SiteSuffStatLogProb(i);
-                    deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
+                    deltalogprob += ToggleMarginalLogPrior(nn,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
+                    // deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted) {
