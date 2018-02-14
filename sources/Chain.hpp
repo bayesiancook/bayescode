@@ -45,43 +45,13 @@ class ChainDriver : public Go {
     }
 
     //! start the MCMC
-    void go() override {
-        lifecycle_handler->Init();
-
-        chainfile->write_header();
-        tracefile->write_header();
-        tracefile->write_line();
-        chainfile->write_line();
-
-        Run();
-
-        lifecycle_handler->End();
-    }
+    void go() override;
 
     //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
-    void Run() {
-        for (int i = 0; i < every; i++) {
-            model->Move();
-        }
-        tracefile->write_line();
-        chainfile->write_line();
-        monitorfile->write_line();
-
-        size++;
-
-        lifecycle_handler->EndMove();
-    }
+    void Run();
 
     //! perform one cycle of Monte Carlo "moves" (updates)
-    void Move() {
-        while (IsRunning() && ((until == -1) || (size <= until))) {
-            Chrono chrono;
-            chrono.Reset();
-            chrono.Start();
-            Move();
-            chrono.Stop();
-        }
-    }
+    void Move();
 
     //! \brief returns running status (1: run should continue / 0: run should now stop)
     //!
@@ -90,7 +60,7 @@ class ChainDriver : public Go {
     //! - size < until, or until == -1
     //!
     //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
-    bool IsRunning() { return run_toggle->check(); }
+    bool IsRunning();
 
     //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }
@@ -105,5 +75,49 @@ class ChainDriver : public Go {
     //! current size (number of points saved to file)
     int size{0};
 };
+
+template <class Child>
+inline void ChainDriver<Child>::go() {
+    lifecycle_handler->Init();
+
+    chainfile->write_header();
+    tracefile->write_header();
+    tracefile->write_line();
+    chainfile->write_line();
+
+    Run();
+
+    lifecycle_handler->End();
+}
+
+template <class Child>
+inline void ChainDriver<Child>::Move() {
+    for (int i = 0; i < every; i++) {
+        model->Move();
+    }
+    tracefile->write_line();
+    chainfile->write_line();
+    monitorfile->write_line();
+
+    size++;
+
+    lifecycle_handler->EndMove();
+}
+
+template <class Child>
+inline bool ChainDriver<Child>::IsRunning() {
+    return run_toggle->check();
+}
+
+template <class Child>
+inline void ChainDriver<Child>::Run() {
+    while (IsRunning() && ((until == -1) || (size <= until))) {
+        Chrono chrono;
+        chrono.Reset();
+        chrono.Start();
+        Move();
+        chrono.Stop();
+    }
+}
 
 #endif  // CHAIN_H
