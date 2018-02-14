@@ -3,6 +3,7 @@
 #define GAMMASUFFSTAT_H
 
 #include "IIDGamma.hpp"
+#include "WhiteNoise.hpp"
 
 /**
  * \brief A sufficient statistic for a collection of gamma variates, as a function of the shape and scale parameters

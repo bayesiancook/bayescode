@@ -7,6 +7,7 @@
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
+#include "WhiteNoise.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
 #include "CodonSuffStat.hpp"
