@@ -166,12 +166,11 @@ int main(int argc, char* argv[]) {
     // Instantiating model and running the chain
     //=======================================================================================================================
     Assembly assembly(model);
-    auto& chain = assembly.at<ChainDriver<SingleOmegaModel>>("chaindriver");
 
     cerr << "-- Chain " << name << " starting...\n";
-
     assembly.call("chaindriver", "go");
 
+    auto& chain = assembly.at<ChainDriver<SingleOmegaModel>>("chaindriver");
     cerr << "-- Chain " << name << " stopped\n";
     cerr << chain.GetSize() << "-- Points saved, current ln prob = " << chain.GetModel().GetLogProb() << "\n";
     chain.GetModel().Trace(cerr);

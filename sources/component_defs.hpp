@@ -7,7 +7,6 @@
 //==========================================================
 // INTERFACES
 //==========================================================
-
 class Go : public tc::Component {
     virtual void go() = 0;
 
@@ -35,7 +34,7 @@ struct AbstractTraceFile {
 // WRAPPERS
 //==========================================================
 
-// Wrapper for classes (with virtual destructors)
+// Wrapper for classes
 template <class Type>
 struct Wrapper : tc::Component, public Type {
     template <class... Args>
