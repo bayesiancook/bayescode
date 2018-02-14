@@ -274,6 +274,29 @@ class DiffSelSparseModel : public ProbModel {
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
 
+    const vector<double>& GetShiftProbVector() const {
+        return shiftprob;
+    }
+
+
+    void GetFitnessArray(int k, double* array) const  {
+        int j = 0;
+        for (int i=0; i<GetNsite(); i++)    {
+            for (int a=0; a<Naa; a++)   {
+                array[j++] = fitness->GetVal(k,i)[a];
+            }
+        }
+    }
+
+    void GetShiftToggleArray(int k, int* array) const  {
+        int j = 0;
+        for (int i=0; i<GetNsite(); i++)    {
+            for (int a=0; a<Naa; a++)   {
+                array[j++] = toggle->GetVal(k-1,i)[a];
+            }
+        }
+    }
+
     void Update() override {
         branchlength->SetScale(lambda);
 		fitness->SetShape(fitnessshape);
@@ -827,8 +850,8 @@ class DiffSelSparseModel : public ProbModel {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
-    int GetNsite() { return Nsite; }
-    int GetNcond() { return Ncond; }
+    int GetNsite() const { return Nsite; }
+    int GetNcond() const { return Ncond; }
 
     //-------------------
     // Traces and monitors
@@ -858,6 +881,24 @@ class DiffSelSparseModel : public ProbModel {
         }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
+    }
+
+    void TraceToggle(int k, ostream& os) const {
+        for (int i=0; i<GetNsite(); i++)    {
+            for (int a=0; a<Naa; a++)   {
+                os << toggle->GetVal(k-1,i)[a] << '\t';
+            }
+        }
+        os << '\n';
+    }
+
+    void TraceFitness(int k, ostream& os) const {
+        for (int i=0; i<GetNsite(); i++)    {
+            for (int a=0; a<Naa; a++)   {
+                os << fitness->GetVal(k,i)[a] << '\t';
+            }
+        }
+        os << '\n';
     }
 
     void Monitor(ostream&) const override {}

@@ -217,7 +217,9 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
         if (writegenedata)  {
             ofstream pos((name + ".posw").c_str());
             ofstream omos((name + ".posom").c_str());
-            ofstream siteos((name + ".sitepp").c_str());
+            if (writegenedata == 2) {
+                ofstream siteos((name + ".sitepp").c_str());
+            }
         }
     }
 
@@ -229,11 +231,15 @@ class MultiGeneCodonM2aChain : public MultiGeneChain  {
                 GetModel()->TracePosWeight(posw_os);
                 ofstream posom_os((name + ".posom").c_str(),ios_base::app);
                 GetModel()->TracePosOm(posom_os);
-                ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
-                GetModel()->MasterTraceSitesPostProb(pp_os);
+                if (writegenedata == 2) {
+                    ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
+                    GetModel()->MasterTraceSitesPostProb(pp_os);
+                }
             }
             else    {
-                GetModel()->SlaveTraceSitesPostProb();
+                if (writegenedata == 2) {
+                    GetModel()->SlaveTraceSitesPostProb();
+                }
             }
         }
     }
@@ -297,7 +303,7 @@ int main(int argc, char* argv[])	{
         int blmode = 2;
         int nucmode = 2;
 
-        int writegenedata = 0;
+        int writegenedata = 1;
 
         int force = 1;
         int every = 1;
@@ -402,7 +408,13 @@ int main(int argc, char* argv[])	{
                     pihyperinvconc = atof(argv[i]);
                 }
                 else if (s == "-g")  {
+                    writegenedata = 0;
+                }
+                else if (s == "+g")  {
                     writegenedata = 1;
+                }
+                else if (s == "+G")  {
+                    writegenedata = 2;
                 }
                 else if (s == "-f")	{
                     force = 1;

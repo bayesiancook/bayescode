@@ -47,7 +47,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     double pihypermean;
     double pihyperinvconc;
 
-    // IIDMultiBernBeta* shiftprobarray;
+    IIDMultiBernBeta* shiftprobarray;
     vector<int> totcount;
     IIDMultiCount* shiftcountarray;
 
@@ -119,7 +119,7 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         pihypermean = 0.1;
         pihyperinvconc = 0.1;
         pi.assign(Ncond-1,0.1);
-        // shiftprobarray = new IIDMultiBernBeta(GetLocalNgene(),pi,shiftprobhypermean,shiftprobhyperinvconc);
+        shiftprobarray = new IIDMultiBernBeta(GetLocalNgene(),pi,shiftprobhypermean,shiftprobhyperinvconc);
         totcount.assign(GetLocalNgene(),0);
         for (int gene=0; gene<GetLocalNgene(); gene++)  {
             totcount[gene] = GetLocalGeneNsite(gene) * Naa;
@@ -670,6 +670,131 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         SlaveReceiveGlobal(pi);
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->SetShiftProbHyperParameters(pi,shiftprobhypermean,shiftprobhyperinvconc);
+        }
+    }
+
+    void MasterTraceSiteStats(string name, int mode) {
+
+        MasterReceiveGeneArray(*shiftprobarray);
+        for (int k=1; k<Ncond; k++)    {
+            ostringstream s;
+            s << name << "_" << k << ".geneshiftprob";
+            ofstream os(s.str().c_str(),ios_base::app);
+            for (int gene=0; gene<GetLocalNgene(); gene++)  {
+                os << shiftprobarray->GetVal(gene)[k-1] << '\t';
+            }
+            os << '\n';
+        }
+
+        if (mode == 2)  {
+            for (int k=0; k<Ncond; k++)    {
+                ostringstream s;
+                s << name << "_" << k << ".fitness";
+                ofstream os(s.str().c_str(),ios_base::app);
+                for (int proc=1; proc<GetNprocs(); proc++)  {
+                    int totnsite = GetSlaveTotNsite(proc);
+                    double* array = new double[totnsite*Naa];
+                    MPI_Status stat;
+                    MPI_Recv(array,totnsite*Naa,MPI_DOUBLE,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+                    int i = 0;
+                    for (int gene=0; gene<Ngene; gene++)    {
+                        if (GeneAlloc[gene] == proc)    {
+                            os << GeneName[gene] << '\t';
+                            int nsite = GeneNsite[gene];
+                            for (int j=0; j<nsite; j++) {
+                                for (int a=0; a<Naa; a++)   {
+                                    os << array[i++] << '\t';
+                                }
+                            }
+                        }
+                    }
+                    if (i != totnsite*Naa)  {
+                        cerr << "error in MultiGeneDiffSelSparseModel::MasterTraceSiteStats: non matching number of sites\n";
+                        exit(1);
+                    }
+                    delete[] array;
+                }
+                os << '\n';
+                os.flush();
+            }
+
+            for (int k=1; k<Ncond; k++)    {
+                ostringstream s;
+                s << name << "_" << k << ".shifttoggle";
+                ofstream os(s.str().c_str(),ios_base::app);
+                for (int proc=1; proc<GetNprocs(); proc++)  {
+                    int totnsite = GetSlaveTotNsite(proc);
+                    int* array = new int[totnsite*Naa];
+                    MPI_Status stat;
+                    MPI_Recv(array,totnsite*Naa,MPI_INT,proc,TAG1,MPI_COMM_WORLD,&stat);
+
+                    int i = 0;
+                    for (int gene=0; gene<Ngene; gene++)    {
+                        if (GeneAlloc[gene] == proc)    {
+                            os << GeneName[gene] << '\t';
+                            int nsite = GeneNsite[gene];
+                            for (int j=0; j<nsite; j++) {
+                                for (int a=0; a<Naa; a++)   {
+                                    os << array[i++] << '\t';
+                                }
+                            }
+                        }
+                    }
+                    if (i != totnsite*Naa)  {
+                        cerr << "error in MultiGeneDiffSelSparseModel::MasterTraceSiteStats: non matching number of sites\n";
+                        exit(1);
+                    }
+                    delete[] array;
+                }
+                os << '\n';
+                os.flush();
+            }
+        }
+    }
+
+    void SlaveTraceSiteStats(int mode) {
+
+        for (int gene=0; gene<GetLocalNgene(); gene++)  {
+            (*shiftprobarray)[gene] = geneprocess[gene]->GetShiftProbVector();
+        }
+        SlaveSendGeneArray(*shiftprobarray);
+
+        if (mode == 2)  {
+            for (int k=0; k<Ncond; k++)    {
+                int ngene = GetLocalNgene();
+                int totnsite = GetLocalTotNsite();
+                double* array = new double[totnsite*Naa];
+                int i = 0;
+                for (int gene=0; gene<ngene; gene++)    {
+                    geneprocess[gene]->GetFitnessArray(k,array+i);
+                    i += GetLocalGeneNsite(gene)*Naa;
+                }
+                if (i != totnsite*Naa)  {
+                    cerr << "error in MultiGeneDiffSelSparseModel::SlaveTraceSiteStats: non matching number of sites\n";
+                    exit(1);
+                }
+
+                MPI_Send(array,totnsite*Naa,MPI_DOUBLE,0,TAG1,MPI_COMM_WORLD);
+                delete[] array;
+            }
+            for (int k=1; k<Ncond; k++)    {
+                int ngene = GetLocalNgene();
+                int totnsite = GetLocalTotNsite();
+                int* array = new int[totnsite*Naa];
+                int i = 0;
+                for (int gene=0; gene<ngene; gene++)    {
+                    geneprocess[gene]->GetShiftToggleArray(k,array+i);
+                    i += GetLocalGeneNsite(gene)*Naa;
+                }
+                if (i != totnsite*Naa)  {
+                    cerr << "error in MultiGeneCodonM2aModel::SlaveTraceSitesPostProb: non matching number of sites\n";
+                    exit(1);
+                }
+
+                MPI_Send(array,totnsite*Naa,MPI_INT,0,TAG1,MPI_COMM_WORLD);
+                delete[] array;
+            }
         }
     }
 };

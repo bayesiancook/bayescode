@@ -16,6 +16,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     int ncond;
     int nlevel;
     int codonmodel;
+    int writegenedata;
 
   public:
     MultiGeneDiffSelSparseModel* GetModel() {
@@ -24,10 +25,11 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, int insaveall, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
+    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
+        writegenedata = inwritegenedata;
         name = inname;
         New(force);
     }
@@ -70,7 +72,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> every >> until >> saveall >> size;
+        is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
             model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
@@ -95,7 +97,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << 0 << '\n';
-            param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
+            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
         }
         else    {
@@ -105,32 +107,33 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
     void MakeFiles(int force) override  {
         MultiGeneChain::MakeFiles(force);
-        /*
         if (writegenedata)  {
-            ofstream pos((name + ".posw").c_str());
-            ofstream omos((name + ".posom").c_str());
-            ofstream siteos((name + ".sitepp").c_str());
+            for (int k=0; k<ncond; k++) {
+                ostringstream s;
+                s << name << "_" << k;
+                if (k)  {
+                    ofstream pos((s.str() + ".geneshiftprob").c_str());
+                    if (writegenedata == 2) {
+                        ofstream tos((s.str() + ".shifttoggle").c_str());
+                    }
+                }
+                if (writegenedata == 2) {
+                    ofstream fos((s.str() + ".fitness").c_str());
+                }
+            }
         }
-        */
     }
 
     void SavePoint() override   {
         MultiGeneChain::SavePoint();
-        /*
         if (writegenedata)  {
             if (! myid) {
-                ofstream posw_os((name + ".posw").c_str(),ios_base::app);
-                GetModel()->TracePosWeight(posw_os);
-                ofstream posom_os((name + ".posom").c_str(),ios_base::app);
-                GetModel()->TracePosOm(posom_os);
-                ofstream pp_os((name + ".sitepp").c_str(),ios_base::app);
-                GetModel()->MasterTraceSitesPostProb(pp_os);
+                GetModel()->MasterTraceSiteStats(name,writegenedata);
             }
             else    {
-                GetModel()->SlaveTraceSitesPostProb();
+                GetModel()->SlaveTraceSiteStats(writegenedata);
             }
         }
-        */
     }
 };
 
@@ -176,6 +179,7 @@ int main(int argc, char* argv[])	{
         int every = 1;
         int until = -1;
         int saveall = 1;
+        int writegenedata = 1;
 
         try	{
 
@@ -212,6 +216,15 @@ int main(int argc, char* argv[])	{
                     i++;
                     nlevel = atoi(argv[i]);
                 }
+                else if (s == "-g")  {
+                    writegenedata = 0;
+                }
+                else if (s == "+g")  {
+                    writegenedata = 1;
+                }
+                else if (s == "+G")  {
+                    writegenedata = 2;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -238,7 +251,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,name,force,myid,nprocs);
+        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();

@@ -5,8 +5,9 @@
 #include "Random.hpp"
 #include "MPIBuffer.hpp"
 
-/*
-class IIDMultiBernBeta : public SimpleArray<vector<double > {
+class IIDMultiBernBeta : public SimpleArray<vector<double > > {
+
+    public:
 
     IIDMultiBernBeta(int insize, const vector<double>& inpi, const vector<double>& inmean, const vector<double>& ininvconc) :  SimpleArray<vector<double> >(insize, vector<double>(inpi.size(),0)), pi(inpi), mean(inmean), invconc(ininvconc)  {
         Sample();
@@ -34,7 +35,7 @@ class IIDMultiBernBeta : public SimpleArray<vector<double > {
     double GetLogProb() {
         double total = 0;
         for (int i=0; i<GetSize(); i++) {
-            total += GetLogProb(int i);
+            total += GetLogProb(i);
         }
         return total;
     }
@@ -58,9 +59,8 @@ class IIDMultiBernBeta : public SimpleArray<vector<double > {
 
     const vector<double>& pi;
     const vector<double>& mean;
-    const vector<douhble>& invconc;
+    const vector<double>& invconc;
 };
-*/
 
 class IIDMultiCount : public SimpleArray<vector<int> >  {
 

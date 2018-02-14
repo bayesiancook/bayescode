@@ -9,7 +9,7 @@ class DiffSelSparseChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int category, level, codonmodel, fixglob, fixvar;
+    int ncond, nlevel, codonmodel, fixglob, fixvar;
 
   public:
     DiffSelSparseModel* GetModel() {
@@ -18,13 +18,13 @@ class DiffSelSparseChain: public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelSparseChain(string indata, string intree, int incategory, int inlevel, int incodonmodel,
+    DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel,
                                               int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
-          category(incategory),
-          level(inlevel),
+          ncond(inncond),
+          nlevel(innlevel),
           codonmodel(incodonmodel)  {
         every = inevery;
         until = inuntil;
@@ -40,7 +40,7 @@ class DiffSelSparseChain: public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelSparseModel(datafile, treefile, category, level, codonmodel);
+        model = new DiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -56,7 +56,7 @@ class DiffSelSparseChain: public Chain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> treefile >> category >> level;
+        is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
         int tmp;
         is >> tmp;
@@ -68,7 +68,7 @@ class DiffSelSparseChain: public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelSparseModel(
-                datafile, treefile, category, level, codonmodel);
+                datafile, treefile, ncond, nlevel, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -84,12 +84,38 @@ class DiffSelSparseChain: public Chain {
     void Save() override {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\t' << category << '\t' << level << '\n';
+        param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << codonmodel << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
+    }
+
+    void SavePoint() override   {
+        Chain::SavePoint();
+        for (int k=0; k<ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            if (k)  {
+                ofstream tos((s.str() + ".shifttoggle").c_str(), ios_base::app);
+                GetModel()->TraceToggle(k,tos);
+            }
+            ofstream fos((s.str() + ".fitness").c_str(), ios_base::app);
+            GetModel()->TraceFitness(k,fos);
+        }
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        for (int k=0; k<ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            if (k)  {
+                ofstream tos((s.str() + ".shifttoggle").c_str());
+            }
+            ofstream fos((s.str() + ".fitness").c_str());
+        }
     }
 };
 
