@@ -67,6 +67,10 @@ class SingleOmegaLifecycle : public Lifecycle, public tc::Component {
 int main(int argc, char* argv[]) {
     Model model;
     string name;
+    string datafile = "";
+    string treefile = "";
+    int every = 1;
+    int until = -1;
 
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
@@ -83,11 +87,6 @@ int main(int argc, char* argv[]) {
 
     // new chain
     else {
-        string datafile = "";
-        string treefile = "";
-        int every = 1;
-        int until = -1;
-
         try {
             if (argc == 1) {
                 throw(0);
@@ -128,42 +127,52 @@ int main(int argc, char* argv[]) {
             cerr << '\n';
             exit(1);
         }
-
-        using SOM = SingleOmegaModel;
-        using SOMTrace = TraceFile<SOM>;
-
-        model.component<SOM>("model", datafile, treefile);  // remove files form this constructor
-
-        model.component<SingleOmegaLifecycle>("lifecycle").connect<Use<SOM>>("model", "model");
-
-        model.component<ChainDriver>("chaindriver", every, until)
-            .connect<Use<ProbModel>>("model", "model")
-            .connect<Use<Lifecycle>>("lifecycle", "lifecycle")
-            .connect<Use<AbstractTraceFile>>("chainfile", "chainfile")
-            .connect<Use<AbstractTraceFile>>("monitorfile", "monitorfile")
-            // .connect<Use<AbstractTraceFile>>("paramfile", "paramfile")
-            .connect<Use<AbstractTraceFile>>("tracefile", "tracefile")
-            .connect<Use<RunToggle>>("runtoggle", "runtoggle");
-
-        model.component<SOMTrace>("chainfile", name + ".chain", &SOM::ToStream, &SOM::ChainHeader)
-            .connect<Use<SOM>>("target", "model");
-
-        model.component<SOMTrace>("tracefile", name + ".trace", &SOM::Trace, &SOM::TraceHeader)
-            .connect<Use<SOM>>("target", "model");
-
-        model.component<SOMTrace>("monitorfile", name + ".monitor", &SOM::Monitor, nullptr)
-            .connect<Use<SOM>>("target", "model");
-
-        // model.component<SOMTrace>>("paramfile", name + ".param");
-        model.component<RunToggle>("runtoggle", name);
     }
-    Assembly assembly(model);  // instantiating assembly!
 
-    // SingleOmegaLifecycle* chain = new SingleOmegaLifecycle(datafile, treefile, every, until, name, force);
+    //
+    //=======================================================================================================================
+    // Declaring the component assembly
+    //=======================================================================================================================
+    using SOM = SingleOmegaModel;
+    using SOMTrace = TraceFile<SOM>;
+    using Driver = ChainDriver<SOM>;
+
+    model.component<SOM>("model", datafile, treefile);  // remove files form this constructor
+
+    model.component<SingleOmegaLifecycle>("lifecycle").connect<Use<SOM>>("model", "model");
+
+    model.component<Driver>("chaindriver", every, until)
+        .connect<Use<ProbModel>>("model", "model")
+        .connect<Use<Lifecycle>>("lifecycle", "lifecycle")
+        .connect<Use<AbstractTraceFile>>("chainfile", "chainfile")
+        .connect<Use<AbstractTraceFile>>("monitorfile", "monitorfile")
+        // .connect<Use<AbstractTraceFile>>("paramfile", "paramfile")
+        .connect<Use<AbstractTraceFile>>("tracefile", "tracefile")
+        .connect<Use<RunToggle>>("runtoggle", "runtoggle");
+
+    model.component<SOMTrace>("chainfile", name + ".chain", &SOM::ToStream, &SOM::ChainHeader)
+        .connect<Use<SOM>>("target", "model");
+
+    model.component<SOMTrace>("tracefile", name + ".trace", &SOM::Trace, &SOM::TraceHeader)
+        .connect<Use<SOM>>("target", "model");
+
+    model.component<SOMTrace>("monitorfile", name + ".monitor", &SOM::Monitor, nullptr).connect<Use<SOM>>("target", "model");
+
+    // model.component<SOMTrace>>("paramfile", name + ".param");
+    model.component<RunToggle>("runtoggle", name);
+
+    //
+    //=======================================================================================================================
+    // Instantiating model and running the chain
+    //=======================================================================================================================
+    Assembly assembly(model);
+    auto& chain = assembly.at<ChainDriver<SingleOmegaModel>>("chaindriver");
+
     cerr << "-- Chain " << name << " starting...\n";
-    // chain->start();
+
     assembly.call("chaindriver", "go");
+
     cerr << "-- Chain " << name << " stopped\n";
-    // cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->model->GetLogProb() << "\n";
-    // chain->model->Trace(cerr);
+    cerr << chain.GetSize() << "-- Points saved, current ln prob = " << chain.GetModel().GetLogProb() << "\n";
+    chain.GetModel().Trace(cerr);
 }

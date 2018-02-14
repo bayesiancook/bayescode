@@ -1,8 +1,9 @@
 #ifndef CHAIN_H
 #define CHAIN_H
 
+#include "Chrono.hpp"
+#include "ProbModel.hpp"
 #include "component_defs.hpp"
-class ProbModel;
 /**
  * \brief A generic interface for a Monte Carlo Markov ChainDriver
  *
@@ -19,6 +20,7 @@ class ProbModel;
  * - <chainname>.run     : put 0 in this file to stop the chain
  */
 
+template <class Child>
 class ChainDriver : public Go {
     ProbModel* model{nullptr};
 
@@ -43,13 +45,43 @@ class ChainDriver : public Go {
     }
 
     //! start the MCMC
-    void go() override;
+    void go() override {
+        lifecycle_handler->Init();
+
+        chainfile->write_header();
+        tracefile->write_header();
+        tracefile->write_line();
+        chainfile->write_line();
+
+        Run();
+
+        lifecycle_handler->End();
+    }
 
     //! run the MCMC: cycle over Move, Monitor and Save while running status == 1
-    void Run();
+    void Run() {
+        for (int i = 0; i < every; i++) {
+            model->Move();
+        }
+        tracefile->write_line();
+        chainfile->write_line();
+        monitorfile->write_line();
+
+        size++;
+
+        lifecycle_handler->EndMove();
+    }
 
     //! perform one cycle of Monte Carlo "moves" (updates)
-    void Move();
+    void Move() {
+        while (IsRunning() && ((until == -1) || (size <= until))) {
+            Chrono chrono;
+            chrono.Reset();
+            chrono.Start();
+            Move();
+            chrono.Stop();
+        }
+    }
 
     //! \brief returns running status (1: run should continue / 0: run should now stop)
     //!
@@ -58,10 +90,12 @@ class ChainDriver : public Go {
     //! - size < until, or until == -1
     //!
     //! Thus, "echo 0 > <chainname>.run" is the proper way to stop a chain from a shell
-    bool IsRunning();
+    bool IsRunning() { return run_toggle->check(); }
 
     //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }
+
+    Child& GetModel() { return dynamic_cast<Child&>(*model); }
 
   protected:
     //! saving frequency (i.e. number of move cycles performed between each point saved to file)
