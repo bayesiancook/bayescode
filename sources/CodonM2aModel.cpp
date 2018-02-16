@@ -8,6 +8,10 @@ CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi)	{
     blmode = 0;
     nucmode = 0;
     data = new FileSequenceAlignment(datafile);
+    if (data->GetNsite() % 3)   {
+        cerr << "error : not a correctly formatted codon-alignment: " << datafile << '\n';
+        exit(1);
+    }
     codondata = new CodonSequenceAlignment(data, true);
     pi = inpi;
 
