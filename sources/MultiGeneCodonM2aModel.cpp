@@ -776,13 +776,13 @@ void MultiGeneCodonM2aModel::ResamplePi()   {
 void MultiGeneCodonM2aModel::MoveNucRates()    {
 
     vector<double>& nucrelrate = (*nucrelratearray)[0];
-    ProfileMove(nucrelrate,0.1,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
-    ProfileMove(nucrelrate,0.03,3,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
-    ProfileMove(nucrelrate,0.01,3,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.1,1,10,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.03,3,10,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucrelrate,0.01,3,10,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
 
     vector<double>& nucstat = (*nucstatarray)[0];
-    ProfileMove(nucstat,0.1,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
-    ProfileMove(nucstat,0.01,1,3,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucstat,0.1,1,10,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
+    ProfileMove(nucstat,0.01,1,10,&MultiGeneCodonM2aModel::NucRatesLogProb,&MultiGeneCodonM2aModel::UpdateNucMatrix,this);
 }
 
 //-------------------
