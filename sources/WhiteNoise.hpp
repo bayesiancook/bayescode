@@ -27,13 +27,13 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
     //! sample all entries from prior
 	void Sample()	{
 		for (int i=0; i<GetNbranch(); i++)	{
+            /*
             double alpha = shape*blmean.GetVal(i);
             double beta = shape;
 			(*this)[i] = Random::GammaSample(alpha,beta);
-            /*
+            */
             double scale = shape / blmean.GetVal(i);
 			(*this)[i] = Random::GammaSample(shape,scale);
-            */
 		}
 	}
 
@@ -41,13 +41,13 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 	void GibbsResample(const PoissonSuffStatBranchArray& suffstatarray)	{
 		for (int i=0; i<GetNbranch(); i++)	{
 			const PoissonSuffStat& suffstat = suffstatarray.GetVal(i);
+            /*
             double alpha = shape*blmean.GetVal(i);
             double beta = shape;
 			(*this)[i] = Random::GammaSample(alpha + suffstat.GetCount(), beta + suffstat.GetBeta());
-            /*
+            */
             double scale = shape / blmean.GetVal(i);
 			(*this)[i] = Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
-            */
 		}
 	}
 
@@ -62,13 +62,13 @@ class GammaWhiteNoise: public SimpleBranchArray<double>	{
 
     //! return log prob for one entry
 	double GetLogProb(int index) const {
+        /*
         double alpha = shape*blmean.GetVal(index);
         double beta = shape;
         return Random::logGammaDensity(GetVal(index),alpha,beta);
-        /*
+        */
         double scale = shape / blmean.GetVal(index);
         return Random::logGammaDensity(GetVal(index),shape,scale);
-        */
 	}
 
     double GetTotalLength() const {
