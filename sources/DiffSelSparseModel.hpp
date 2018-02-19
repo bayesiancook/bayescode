@@ -43,6 +43,17 @@ license and that you accept its terms.*/
 #include "IIDDirichlet.hpp"
 #include "PathSuffStat.hpp"
 
+/**
+ * \brief A sparse version of the differential selection model (see DiffSelModel)
+ *
+ * This is a codon model, based on the mutation-selection formalism,
+ * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
+ * is modulated across a set of alternative 'conditions', or environments, specified over the tree.
+ * The model is meant to identify positions displaying significant patterns of directional convergent selection
+ * (i.e. sites that they tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
+ *
+ */
+
 class DiffSelSparseModel : public ProbModel {
 
     // -----
@@ -146,6 +157,14 @@ class DiffSelSparseModel : public ProbModel {
 
   public:
 
+    //! \brief constructor
+    //!
+    //! parameters:
+    //! - datafile: name of file containing codon sequence alignment
+    //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
+    //! - Ncond: number of conditions (K)
+    //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
+    //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
     DiffSelSparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) : hyperfitnesssuffstat(Naa) {
 
         codonmodel = incodonmodel;
@@ -167,6 +186,7 @@ class DiffSelSparseModel : public ProbModel {
 
     ~DiffSelSparseModel() {}
 
+    //! read files (and read out the distribution of conditions across branches, based on the tree read from treefile)
     void ReadFiles(string datafile, string treefile) {
         // nucleotide sequence alignment
         data = new FileSequenceAlignment(datafile);
@@ -195,6 +215,7 @@ class DiffSelSparseModel : public ProbModel {
         Nbranch = tree->GetNbranch();
     }
 
+    //! allocate the model (data structures)
     void Allocate() {
 
         // ----------
@@ -245,14 +266,31 @@ class DiffSelSparseModel : public ProbModel {
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
     }
 
+    //! \brief set estimation method for branch lengths
+    //!
+    //! Used in a multigene context.
+    //! - mode == 2: global
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetBLMode(int in)   {
         blmode = in;
     }
 
+    //! \brief set estimation method for nuc rates
+    //!
+    //! Used in a multigene context.
+    //! - mode == 2: global
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetNucMode(int in) {
         nucmode = in;
     }
 
+    //! \brief set estimation method for fitness hyperparameters
+    //!
+    //! Used in a multigene context.
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetFitnessHyperMode(int in)    {
         fitnesshypermode = in;
     }
@@ -268,17 +306,20 @@ class DiffSelSparseModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
+    //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc) to specified values (used in multi-gene context)
     void SetShiftProbHyperParameters(const vector<double>& inpi, const vector<double>& inshiftprobhypermean, const vector<double>& inshiftprobhyperinvconc)    {
         pi = inpi;
         shiftprobhypermean = inshiftprobhypermean;
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
 
+    //! const access to shift prob vector
     const vector<double>& GetShiftProbVector() const {
         return shiftprob;
     }
 
 
+    //! get a copy of fitness array (for all sites and amino-acids) for condition k
     void GetFitnessArray(int k, double* array) const  {
         int j = 0;
         for (int i=0; i<GetNsite(); i++)    {
@@ -288,6 +329,7 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    //! get a copy of toggle values (for all sites and amino-acids) for condition k
     void GetShiftToggleArray(int k, int* array) const  {
         int j = 0;
         for (int i=0; i<GetNsite(); i++)    {
@@ -304,23 +346,37 @@ class DiffSelSparseModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    //! \brief dummy function that does not do anything.
+    //! 
+    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove (defined in ProbModel),
+    //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
+    //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
+    //!
+    //! The matrices are not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrices know that they will have to recalculate whichever component is requested later on upon demand.
     void CorruptMatrices()  {
         CorruptNucMatrix();
         condsubmatrixarray->Corrupt();
     }
 
+    //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
+    //!
+    //! The matrix is not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
     void CorruptNucMatrix() {
         nucmatrix->CopyStationary(nucstat);
         nucmatrix->CorruptMatrix();
     }
 
+    //! update fitness profiles and matrices across all sites and conditions
     void UpdateAll() {
         fitnessprofile->Update();
         CorruptMatrices();
     }
 
+    //! update fitness profiles and matrices across all conditions for site i
     void UpdateSite(int i) {
         fitnessprofile->UpdateColumn(i);
         condsubmatrixarray->CorruptColumn(i);
@@ -330,6 +386,9 @@ class DiffSelSparseModel : public ProbModel {
     // log priors
     // ---------------
 
+    //! \brief return total log prior
+    //!
+    //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
         if (blmode < 2) {
@@ -348,15 +407,18 @@ class DiffSelSparseModel : public ProbModel {
         return total;
     }
 
+    //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior()	const {
         // exponential of mean 10
 		return -lambda / 10;
 	}
 
+    //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior()	const {
 		return branchlength->GetLogProb();
 	}
 
+    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const {
         // uniform on relrates and nucstat
         double total = 0;
@@ -365,17 +427,19 @@ class DiffSelSparseModel : public ProbModel {
         return total;
     }
 
+    //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
         // uniform on center
         // exponential on shape
         return -fitnessshape;
     }
 
+    //! log prior over input fitness parameters
     double FitnessLogPrior() const  {
         return fitness->GetLogProb();
     }
 
-    // for the moment, uniform prior over shift probs
+    //! log prior over toggle array hyperparameters
     double ToggleHyperLogPrior() const  {
         double total = 0;
         for (int k=1; k<Ncond; k++) {
@@ -391,14 +455,17 @@ class DiffSelSparseModel : public ProbModel {
         return total;
     }
 
+    //! log prior over toggle array
     double ToggleLogPrior() const   {
         return toggle->GetLogProb();
     }
 
+    //! return log likelihood
     double GetLogLikelihood() const { 
         return phyloprocess->GetLogLikelihood();
     }
 
+    //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const {
         return GetLogPrior() + GetLogLikelihood();
     }
@@ -408,40 +475,43 @@ class DiffSelSparseModel : public ProbModel {
     // ---------------
 
     //! \brief const access to array of length-pathsuffstats across branches
-    //!
-    //! Useful for resampling branch lengths conditional on the current substitution mapping
     const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
         return lengthpathsuffstatarray;
     }
 
-    // suffstats, per condition and per site
-    // see SuffStat.hpp
+    //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
         suffstatarray->Clear();
         suffstatarray->AddSuffStat(*phyloprocess,*branchalloc);
     }
 
+    //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat()    {
 		lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process
     double SuffStatLogProb() const   {
         return suffstatarray->GetLogProb(*condsubmatrixarray);
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process, at site i
     double SiteSuffStatLogProb(int site) const   {
         return suffstatarray->GetLogProb(site,*condsubmatrixarray);
     }
 
+    //! \brief return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
 	double BranchLengthsHyperSuffStatLogProb()	const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
+    //! return log prob of current fitness parameters, conditional on their hyperparameters
 	double FitnessHyperSuffStatLogProb()	const {
 		return hyperfitnesssuffstat.GetLogProb(fitnessshape,fitnesscenter);
 	}
 
+    //! return number of shifts (i.e. number of toggles in active state) under condition cond (and across all sites and all amino-acids)
     int GetNshift(int cond) const {
         if (! cond) {
             cerr << "error: GetNshift called on baseline\n";
@@ -450,6 +520,7 @@ class DiffSelSparseModel : public ProbModel {
         return toggle->GetRowEventNumber(cond-1);
     }
 
+    //! return number of shifts (i.e. number of toggles in active state) under condition cond and for site i (across all amino-acids)
     int GetNshift(int cond, int site) const {
         if (! cond) {
             cerr << "error: GetNshift called on baseline\n";
@@ -462,14 +533,17 @@ class DiffSelSparseModel : public ProbModel {
     // log probs for MH moves
     // ---------------
 
+    //! \brief log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + SuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving fitness hyperparameters
     double FitnessHyperLogProb() const  {
         return FitnessHyperLogPrior() + FitnessHyperSuffStatLogProb();
     }
@@ -485,6 +559,7 @@ class DiffSelSparseModel : public ProbModel {
         return 1.0;
 	}
 
+    //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
 
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
@@ -516,16 +591,19 @@ class DiffSelSparseModel : public ProbModel {
         UpdateAll();
     }
 
+    //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac)   {
         CorruptMatrices();
 		phyloprocess->Move(frac);
     }
 
+    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveBranchLengthsHyperParameter()	{
 
 		hyperlengthsuffstat.Clear();
@@ -535,6 +613,7 @@ class DiffSelSparseModel : public ProbModel {
 		branchlength->SetScale(lambda);
 	}
 
+    //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
 	void MoveNucRates()	{
 
         CorruptMatrices();
@@ -549,17 +628,12 @@ class DiffSelSparseModel : public ProbModel {
         CorruptMatrices();
 	}
 
-    void MoveBaselineFitness() {
-        MoveBaselineFitness(1.0, 3, 10);
-        MoveBaselineFitness(1.0, 10, 10);
-        MoveBaselineFitness(1.0, 20, 10);
-        MoveBaselineFitness(0.3, 20, 10);
-    }
-
+    //! MH compensatory move on fitness parameters and hyper-parameters
     void CompMoveFitness()  {
         CompMoveFitness(1.0,10);
     }
 
+    //! MH compensatory move on fitness parameters and hyper-parameters
     double CompMoveFitness(double tuning, int nrep) {
 
         double nacc = 0;
@@ -623,6 +697,15 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
+    //! MH moves on baseline fitness parameters (for condition k=0)
+    void MoveBaselineFitness() {
+        MoveBaselineFitness(1.0, 3, 10);
+        MoveBaselineFitness(1.0, 10, 10);
+        MoveBaselineFitness(1.0, 20, 10);
+        MoveBaselineFitness(0.3, 20, 10);
+    }
+
+    //! MH moves on baseline fitness parameters (for condition k=0)
     double MoveBaselineFitness(double tuning, int n, int nrep) {
 
         double nacc = 0;
@@ -658,6 +741,7 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
+    //! MH moves on toggles (fitness shifts)
     void MoveFitnessShifts()    {
         for (int k=1; k<Ncond; k++) {
             MoveFitnessShifts(k,1,10);
@@ -665,6 +749,7 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    //! MH moves on fitness shifts (i.e. for conditions k=1..Ncond-1)
     double MoveFitnessShifts(int k, double tuning, int nrep) {
 
         double nacc = 0;
@@ -702,6 +787,7 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
+    //! MH moves on hyperparameters of distribution of fitness factors
     void MoveFitnessHyperParameters() {
         // collect suff stats across all active fitness parameters
         hyperfitnesssuffstat.Clear();
@@ -719,6 +805,7 @@ class DiffSelSparseModel : public ProbModel {
 
     }
 
+    //! gibbs resampling of prior probability of a shift 
     void ResampleShiftProb()    {
 
         for (int k=1; k<Ncond; k++) {
@@ -756,12 +843,14 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    //! MH moves on toggles
     void MoveShiftToggles() {
         for (int k=1; k<Ncond; k++) {
             MoveShiftToggles(k,10);
         }
     }
 
+    //! helper function: returns the marginal log prob of distribution of toggles for a condition, given number of toggles in active state and given hyperparameters
     double ToggleMarginalLogPrior(int nn, int nshift, double pi, double alpha, double beta) const {
         double logp1 = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha+nshift) + Random::logGamma(beta + nn - nshift) - Random::logGamma(alpha + beta + nn);
         if (nshift) {
@@ -774,6 +863,7 @@ class DiffSelSparseModel : public ProbModel {
         return ret;
     }
 
+    //! MH moves on toggles
     double MoveShiftToggles(int k, int nrep)  {
 
         int nshift = 0;
@@ -846,18 +936,21 @@ class DiffSelSparseModel : public ProbModel {
     // Accessors
     // ------------------
 
-	CodonStateSpace* GetCodonStateSpace() const {
+    //! const access to codon state space
+	const CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
+    //! return number of aligned sites
     int GetNsite() const { return Nsite; }
+    //! return number of conditions
     int GetNcond() const { return Ncond; }
 
     //-------------------
     // Traces and monitors
     // ------------------
 
-    void TraceHeader(std::ostream& os) const override {
+    void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "meanvar0\t";
         os << "shape\t";
@@ -883,6 +976,7 @@ class DiffSelSparseModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
+    //! trace the current value of toggles, across all sites and all amino-acids, under condition k (one single line in output stream)
     void TraceToggle(int k, ostream& os) const {
         for (int i=0; i<GetNsite(); i++)    {
             for (int a=0; a<Naa; a++)   {
@@ -892,6 +986,7 @@ class DiffSelSparseModel : public ProbModel {
         os << '\n';
     }
 
+    //! trace the current value of fitness params, across all sites and all amino-acids, under condition k (one single line in output stream)
     void TraceFitness(int k, ostream& os) const {
         for (int i=0; i<GetNsite(); i++)    {
             for (int a=0; a<Naa; a++)   {

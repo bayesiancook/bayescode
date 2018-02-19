@@ -5,6 +5,10 @@
 using namespace std;
 
 
+/**
+ * \brief Chain object for running an MCMC under the DiffSelSparseModel
+ */
+
 class DiffSelSparseChain: public Chain {
   private:
     // Chain parameters

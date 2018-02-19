@@ -4,10 +4,24 @@
 
 #include "BidimArray.hpp"
 
+/**
+ * \brief An array of site- and condition-specific fitness profiles
+ *
+ * this array is used in DiffSelModel; It implements the following deterministic relation:
+ * - F_kia = G_ia * exp(D_kia),
+ *
+ * where G_ia is the baseline fitness of amino-acid a at site i, D_kia the differential effect for amino-acid a at site i under condition k;
+ * the result, F_kia is (up to a proportionality constant) the fitness of amino-acid a at site i under condition k.
+ * Note that, when Nlevel == 2, the relation between G, D and F unfolds over two levels:
+ * - F_1ia = G_ia * exp(D_1ia)
+ * - F_kia = G_ia * exp(D_kia + D_1ia), for k=2..K-1
+ */
+
 class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
 
     public:
 
+    //! constructor, parameterized by baseline (G), delta (D) and Nlevel
     DiffSelFitnessArray(const Selector<vector<double> >& inbaseline, const BidimSelector<vector<double> >& indelta, int inNlevel) : 
     // DiffSelFitnessArray(const Selector<vector<double> >& inbaseline, const BidimSelector<vector<double> >& indelta, const vector<vector<int> >& inpattern) :
         SimpleBidimArray<vector<double> >(indelta.GetNrow()+1,indelta.GetNcol(),vector<double>(indelta.GetVal(0,0).size(),0)),
@@ -16,8 +30,10 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
             Update();
     }
 
+    //! returns dimension of fitness profiles (should normally be 20)
     int GetDim() const {return GetVal(0,0).size();}
 
+    //! full update of the array
     void Update()   {
         for (int i=0; i<GetNrow(); i++)  {
             for (int j=0; j<GetNcol(); j++)   {
@@ -26,12 +42,14 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
         }
     }
 
+    //! update of column j (i.e. site j)
     void UpdateColumn(int j)    {
         for (int i=0; i<GetNrow(); i++) {
             Update(i,j);
         }
     }
 
+    //! update of column j (i.e. site j), but only for those conditions that are flagged
     void UpdateColumn(int j, const vector<int>& flag)  {
         for (int i=0; i<GetNrow(); i++) {
             if (flag[i])    {
@@ -40,6 +58,7 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double> >    {
         }
     }
 
+    //! update of column j (i.e. site j) and condition i
     void Update(int i, int j)   {
         vector<double>& x = (*this)(i,j);
         double total = 0;

@@ -11,7 +11,7 @@
 /**
  * \brief An array of IID gamma random variables
  *
- * One should be careful about the fact that the shape and scale parameters are given by copy (not by ref) to the array.
+ * Note that the shape and scale parameters are given by copy (not by ref) to the array.
  * Thus, each time the shape and scale parameters are modified during the MCMC,
  * the new values should be given to the array (using the SetShape and SetScale methods).
  */

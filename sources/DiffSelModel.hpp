@@ -26,6 +26,31 @@ The fact that you are presently reading this means that you have had knowledge o
 license and that you accept its terms.*/
 
 
+/**
+ * \brief The differential selection (diffsel) model, such as implemented in Parto and Lartillot, 2017, BMC Evolutionary Biology.
+ *
+ * This is a codon model, based on the mutation-selection formalism,
+ * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
+ * is modulated across a set of alternative 'conditions', or environments, specified over the tree.
+ * The model is meant to identify positions displaying significant patterns of directional convergent selection
+ * (i.e. sites that they tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
+ *
+ * Technically, the model defines K conditions;
+ * condition 0 defines the background, and then condition k=1..K-1 represent the alternative conditions.
+ * An array if site-specific basal fitness profiles G_ia, for site i and amino-acid a, is defined for the background condition.
+ * Then, for each alternative condition, a differential (log-fitness) contrast is defined:
+ * D_kia, for condition k, site i and amino-acid a.
+ * A positive (resp negative) D_kia means that the fitness of amino-acid a at site i under condition k is increased (resp decreased) compared to the baseline.
+ * Quantitatively, the fitness vector at site i under condition k is defined by F_kia = G_kia * exp(D_kia).
+ *
+ * The constrasts D_kia are iid normal of mean 0 and variance that is either fixed (equal to 1) or estimated across all amino-acids and sites
+ * (separately for each condition).
+ * Statistical support for a differential effect between conditions, for a given site i and a given amino acid a, is 
+ * quantified by the tail area of the posterior distribution of D_kia (i.e. to what extent this posterior distribution is mostly under 
+ * either the right-hand or the left-hand site of 0).
+ */
+
+
 #include "CodonSequenceAlignment.hpp"
 #include "GTRSubMatrix.hpp"
 #include "PhyloProcess.hpp"
@@ -136,6 +161,16 @@ class DiffSelModel : public ProbModel {
 
   public:
 
+    //! \brief constructor
+    //!
+    //! parameters:
+    //! - datafile: name of file containing codon sequence alignment
+    //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
+    //! - Ncond: number of conditions (K)
+    //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
+    //! - fixglob: whether the hyperparameters for the global selection profiles (G_i) are fixed (i.e. fitness profiles iid uniform Dirichlet) or estimated across sites
+    //! - fixvar: whether the variance of the differential effects D_ki is fixed (equal to 1) or estimated across sites (separately for each condition)
+    //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
     DiffSelModel(const std::string& datafile, const std::string& treefile, int inNcond,
                  int inNlevel, int infixglob, int infixvar, int incodonmodel) {
 
@@ -163,6 +198,7 @@ class DiffSelModel : public ProbModel {
 
     ~DiffSelModel() {}
 
+    //! read files (and read out the distribution of conditions across branches, based on the tree read from treefile)
     void ReadFiles(string datafile, string treefile) {
         // nucleotide sequence alignment
         data = new FileSequenceAlignment(datafile);
@@ -196,21 +232,7 @@ class DiffSelModel : public ProbModel {
         std::cerr << "-- Tree and data fit together\n";
     }
 
-    void MakePattern()  {
-        condalloc.assign(Ncond,vector<int>(Ncond,0));
-        for (int l = 0; l < Ncond; l++) {
-            condalloc[0][l] = 1;
-        }
-        if (Nlevel == 2) {
-            for (int l = 1; l < Ncond; l++) {
-                condalloc[1][l] = 1;
-            }
-        }
-        for (int l = Nlevel; l < Ncond; l++) {
-            condalloc[l][l] = 1;
-        }
-    }
-
+    //! allocate the model (data structures)
     void Allocate() {
 
         // ----------
@@ -286,13 +308,25 @@ class DiffSelModel : public ProbModel {
     // Update system
     // ------------------
 
+    //! \brief dummy function that does not do anything.
+    //! 
+    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove (defined in ProbModel),
+    //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
+    //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
+    //!
+    //! The matrices are not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrices know that they will have to recalculate whichever component is requested later on upon demand.
     void CorruptMatrices()  {
         CorruptNucMatrix();
         condsubmatrixarray->Corrupt();
     }
 
+    //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
+    //!
+    //! The matrix is not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
     void CorruptNucMatrix() {
         nucmatrix->CopyStationary(nucstat);
         nucmatrix->CorruptMatrix();
@@ -304,16 +338,19 @@ class DiffSelModel : public ProbModel {
         phyloprocess->GetLogLikelihood();
     }
 
+    //! update fitness profiles and matrices across all sites and conditions
     void UpdateAll() {
         fitnessprofile->Update();
         CorruptMatrices();
     }
 
+    //! update fitness profiles and matrices across all conditions for site i
     void UpdateSite(int i) {
         fitnessprofile->UpdateColumn(i);
         condsubmatrixarray->CorruptColumn(i);
     }
 
+    //! update fitness profile and matrix for site i and condition k
     void UpdateSiteCond(int i, int k)   {
         fitnessprofile->UpdateColumn(i,condalloc[k+1]);
         condsubmatrixarray->CorruptColumn(i,condalloc[k+1]);
@@ -323,6 +360,9 @@ class DiffSelModel : public ProbModel {
     // log priors
     // ---------------
 
+    //! \brief return total log prior
+    //!
+    //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
 
@@ -345,15 +385,18 @@ class DiffSelModel : public ProbModel {
         return total;
     }
 
+    //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior()	const {
         // exponential of mean 10
 		return -lambda / 10;
 	}
 
+    //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior()	const {
 		return branchlength->GetLogProb();
 	}
 
+    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const {
         // uniform on relrates and nucstat
         double total = 0;
@@ -362,22 +405,27 @@ class DiffSelModel : public ProbModel {
         return total;
     }
 
+    //! log prior over baseline (G)
     double BaselineLogPrior() const {
         return Nsite * Random::logGamma((double)Naa);
     }
 
+    //! log prior over differential effect (D)
     double DeltaLogPrior() const {
         return delta->GetLogProb();
     }
 
+    //! log hyper prior over variance parameters of D
     double VarSelLogPrior() const {
         return varsel->GetLogProb();
     }
 
+    //! return log likelihood
     double GetLogLikelihood() const { 
         return phyloprocess->GetLogLikelihood();
     }
 
+    //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const {
         return GetLogPrior() + GetLogLikelihood();
     }
@@ -386,30 +434,34 @@ class DiffSelModel : public ProbModel {
     // collecting suff stats
     // ---------------
 
-    // suffstats, per condition and per site
-    // see SuffStat.hpp
+    //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
         suffstatarray->Clear();
         suffstatarray->AddSuffStat(*phyloprocess,*branchalloc);
     }
 
+    //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat()    {
 		lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process
     double SuffStatLogProb() const   {
         return suffstatarray->GetLogProb(*condsubmatrixarray);
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process, at site i
     double SiteSuffStatLogProb(int site) const   {
         return suffstatarray->GetLogProb(site,*condsubmatrixarray);
     }
 
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process, at site i and for branches under condition k
     double SiteCondSuffStatLogProb(int site,int k)  {
         return suffstatarray->GetLogProb(site,condalloc[k+1],*condsubmatrixarray);
     }
 
+    //! \brief return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
 	double BranchLengthsHyperSuffStatLogProb()	const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
@@ -418,10 +470,12 @@ class DiffSelModel : public ProbModel {
     // log probs for MH moves
     // ---------------
 
+    //! \brief log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + SuffStatLogProb();
     }
@@ -430,8 +484,7 @@ class DiffSelModel : public ProbModel {
     // Moves
     // ---------------
 
-    // move cycle schedule
-    // does not yet implement any monitoring (success rates, time spent, etc)
+    //! \brief complete MCMC move schedule
     double Move() override {
 
         int nrep0 = 3;
@@ -465,15 +518,18 @@ class DiffSelModel : public ProbModel {
         return 1.0;
     }
 
+    //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac)   {
 		phyloprocess->Move(frac);
     }
 
+    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveBranchLengthsHyperParameter()	{
 
 		hyperlengthsuffstat.Clear();
@@ -483,6 +539,7 @@ class DiffSelModel : public ProbModel {
 		branchlength->SetScale(lambda);
 	}
 
+    //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
 	void MoveNucRates()	{
 
         CorruptMatrices();
@@ -497,10 +554,12 @@ class DiffSelModel : public ProbModel {
         CorruptMatrices();
 	}
 
+    //! MH moves on baseline fitness profiles (G)
     void MoveBaseline() {
         MoveBaseline(0.15, 10, 1);
     }
 
+    //! MH moves on baseline fitness profiles (G)
     double MoveBaseline(double tuning, int n, int nrep) {
 
         double nacc = 0;
@@ -534,6 +593,7 @@ class DiffSelModel : public ProbModel {
         return nacc / ntot;
     }
 
+    //! MH moves on differential fitness effects (D)
     void MoveDelta()    {
         for (int k =0; k < Ncond-1; k++) {
         // for (int k = 1; k < Ncond; k++) {
@@ -544,6 +604,7 @@ class DiffSelModel : public ProbModel {
         }
     }
 
+    //! MH moves on differential fitness effects (D)
     double MoveDelta(int k, double tuning, int n, int nrep) {
         double nacc = 0;
         double ntot = 0;
@@ -569,11 +630,13 @@ class DiffSelModel : public ProbModel {
         return nacc / ntot;
     }
 
+    //! MH moves on variance parameters of differential fitness effects
     void MoveVarSel()   {
         MoveVarSel(1.0, 10);
         MoveVarSel(0.3, 10);
     }
 
+    //! MH moves on variance parameters of differential fitness effects
     double MoveVarSel(double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
@@ -601,18 +664,21 @@ class DiffSelModel : public ProbModel {
     // Accessors
     // ------------------
 
-	CodonStateSpace* GetCodonStateSpace() const {
+    //! const access to codon state space
+	const CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
+    //! return number of sites
     int GetNsite() { return Nsite; }
+    //! return number of conditions
     int GetNcond() { return Ncond; }
 
     //-------------------
     // Traces and monitors
     // ------------------
 
-    void TraceHeader(std::ostream& os) const override {
+    void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "globent\t";
         for (int k = 1; k < Ncond; k++) {
@@ -655,4 +721,21 @@ class DiffSelModel : public ProbModel {
         os << *varsel << '\n';
         os << *delta << '\n';
     }
+
+    private:
+    void MakePattern()  {
+        condalloc.assign(Ncond,vector<int>(Ncond,0));
+        for (int l = 0; l < Ncond; l++) {
+            condalloc[0][l] = 1;
+        }
+        if (Nlevel == 2) {
+            for (int l = 1; l < Ncond; l++) {
+                condalloc[1][l] = 1;
+            }
+        }
+        for (int l = Nlevel; l < Ncond; l++) {
+            condalloc[l][l] = 1;
+        }
+    }
+
 };

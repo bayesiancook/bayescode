@@ -15,10 +15,17 @@
 #include "Parallel.hpp"
 #include "MultiGeneProbModel.hpp"
 
+/**
+ * \brief An Array of BranchArray's of OmegaPathSuffStat
+ *
+ * used in MultiGeneBranchOmegaModel, where each gene has a BranchArray of OmegaPathSuffStat.
+ */
+
 class OmegaPathSuffStatTreeArray : public Array<OmegaPathSuffStatBranchArray>   {
 
     public:
 
+    //! constructor, parameterized by underlying tree and size (number of genes)
     OmegaPathSuffStatTreeArray(const Tree& intree, int insize): tree(intree), size(insize), array(insize,(OmegaPathSuffStatBranchArray*)0) {
         for (int i=0; i<GetSize(); i++) {
             array[i] = new OmegaPathSuffStatBranchArray(tree);
@@ -31,18 +38,19 @@ class OmegaPathSuffStatTreeArray : public Array<OmegaPathSuffStatBranchArray>   
         }
     }
 
-    int GetSize() const {
+    int GetSize() const override {
         return size;
     }
 
-    const OmegaPathSuffStatBranchArray& GetVal(int i) const /*override*/ {
+    const OmegaPathSuffStatBranchArray& GetVal(int i) const override {
         return *array[i];
     }
 
-    OmegaPathSuffStatBranchArray& operator[](int i) /*override*/ {
+    OmegaPathSuffStatBranchArray& operator[](int i) override {
         return *array[i];
     }
 
+    //! clear all suff stats
     void Clear()    {
         for (int i=0; i<GetSize(); i++) {
             array[i]->Clear();

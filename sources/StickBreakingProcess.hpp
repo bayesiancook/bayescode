@@ -5,24 +5,32 @@
 #include "OccupancySuffStat.hpp"
 #include "Permutation.hpp"
 
+/**
+ * \brief A truncated stick-breaking weight vector
+ */
+
 class StickBreakingProcess : public SimpleArray<double> {
 
     public:
 
+    //! constructor, parameterized by array size (truncation upper limit) and concentration parameter kappa
     StickBreakingProcess(int inncat, double inkappa) : SimpleArray<double>(inncat), kappa(inkappa), V(inncat)    {
         Sample();
     }
 
     ~StickBreakingProcess() {}
 
+    //! set concentration parameter kappa to new value
     void SetKappa(double inkappa)   {
         kappa = inkappa;
     }
 
+    //! get underlying array of Beta variates
     const vector<double>& GetBetaVariates() const {
         return V;
     }
 
+    //! swap the two components 
     void SwapComponents(int cat1, int cat2)   {
         Swap(cat1,cat2);
         double tmp = V[cat1];
@@ -30,6 +38,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         V[cat2] = tmp;
     }
 
+    //! Sample (from prior distribution)
     void Sample()   {
         double cumulProduct = 1.0;
         double totweight = 0;
@@ -48,6 +57,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
+    //! Sample from posterior distribution (given occupany sufficient statistics)
     void GibbsResample(const OccupancySuffStat& occupancy)  {
 
         int remainingOcc = 0;
@@ -76,6 +86,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
+    //! get log prior (under current kappa value)
     double GetLogProb() const   {
         double total = 0;
         for (int k=0; k<GetSize()-1; k++)	{
@@ -84,6 +95,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total;
     }
 
+    //! get log prior (under specified kappa value)
     double GetLogProb(double kappa) const   {
         double total = 0;
         for (int k=0; k<GetSize()-1; k++)	{
@@ -92,6 +104,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total;
     }
 
+    //! get marginal log prior (i.e. integrated over weights, conditional on specified occupancy sufficient statistics)
     double GetMarginalLogProb(const OccupancySuffStat& occupancy) const {
 
         int remainingOcc = 0;
@@ -113,11 +126,13 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total;
     }
 
+    //! perform nrep cycles of Label-switching MCMC updates (such as defined in Papaspiliopoulos and Roberts, 2008, Biometrika, 95:169)
     void LabelSwitchingMove(int nrep, OccupancySuffStat& occupancy, Permutation& permut)   {
         MoveOccupiedCompAlloc(nrep,occupancy,permut);
         MoveAdjacentCompAlloc(nrep,occupancy,permut);
     }
 
+    //! label-switching MCMC update: swapping two randomly chosen occupied components
     double MoveOccupiedCompAlloc(int k0, OccupancySuffStat& occupancy, Permutation& permut)	{
 
         int nrep = (int) (k0 * kappa);
@@ -155,6 +170,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         return 0;
     }
 
+    //! label-switching MCMC udpate: swapping two successive components
     double MoveAdjacentCompAlloc(int k0, OccupancySuffStat& occupancy, Permutation& permut)	{
 
         GibbsResample(occupancy);
@@ -178,6 +194,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total /= nrep;
     }
 
+    //! specialized FromStream function (ideally should try to override the default FromStream instead of that)
     void FromStreamSB(istream& is) {
         for (int k=0; k<GetSize(); k++)  {
             is >> (*this)[k];
@@ -185,6 +202,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
+    //! specialized ToStream function (ideally should try to override the default FromStream instead of that)
     void ToStreamSB(ostream& os) const {
         for (int k=0; k<GetSize(); k++)  {
             os << GetVal(k) << '\t';
@@ -192,18 +210,19 @@ class StickBreakingProcess : public SimpleArray<double> {
         }
     }
 
+    //! specialized GetMPISize (ideally should try to override the default FromStream instead of that)
     unsigned int GetMPISizeSB() const  {
         return 2*GetSize();
     }
 
-    //! get array from MPI buffer
+    //! get array from MPI buffer (specialized)
     void MPIGetSB(const MPIBuffer& is)    {
         for (int k=0; k<GetSize(); k++) {
             is >> (*this)[k] >> V[k];
         }
     }
 
-    //! write array into MPI buffer
+    //! write array into MPI buffer (specialized)
     void MPIPutSB(MPIBuffer& os) const {
         for (int k=0; k<GetSize(); k++) {
             os << GetVal(k) << V[k];

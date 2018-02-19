@@ -4,6 +4,10 @@
 #include "Chain.hpp"
 using namespace std;
 
+/**
+ * \brief Chain object for running an MCMC under CodonM2aModel
+ */
+
 class CodonM2aChain : public Chain  {
 
   private:
@@ -12,12 +16,14 @@ class CodonM2aChain : public Chain  {
     double pi;
 
   public:
+    //! return the model, with its derived type (unlike ProbModel::GetModel)
     CodonM2aModel* GetModel() {
         return static_cast<CodonM2aModel*>(model);
     }
 
     string GetModelType() override { return modeltype; }
 
+    //! constructor for a new chain: datafile, treefile, pi (fraction of sites under positive selection) saving frequency, final chain size, chain name and overwrite flag -- calls New
     CodonM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil, string inname, int force) : modeltype("CODONM2A"), datafile(indatafile), treefile(intreefile), pi(inpi)  {
         every = inevery;
         until = inuntil;
@@ -25,6 +31,7 @@ class CodonM2aChain : public Chain  {
         New(force);
     }
 
+    //! constructor for re-opening an already existing chain from file -- calls Open
     CodonM2aChain(string filename) {
         name = filename;
         Open();

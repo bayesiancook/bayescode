@@ -154,10 +154,10 @@ template<class T> class HomogeneousSelector : public Selector<T>	{
 
 	~HomogeneousSelector() {}
 
-	int GetSize() const /*override*/ {return size;}
+	int GetSize() const override {return size;}
 
     //! return a reference to the same value (i.e. value) for any index
-	const T& GetVal(int index) const /*override*/ {return value;}
+	const T& GetVal(int index) const override {return value;}
 
 	private:
     //! array (abstract) size
@@ -183,9 +183,9 @@ template<class T> class SimpleArray : public Array<T>	{
 
 	virtual ~SimpleArray() {}
 
-	int GetSize() const /*override*/ {return array.size();}
-	T& operator[](int index) /*override*/ {return array[index];}
-	const T& GetVal(int index) const /*override*/ {return array[index];}
+	int GetSize() const override {return array.size();}
+	T& operator[](int index) override {return array[index];}
+	const T& GetVal(int index) const override {return array[index];}
 
     //! return a const ref to the std::vector<T> of which this class is the interface
 	const vector<T>& GetArray() const {return array;}
@@ -234,10 +234,10 @@ template<class T> class MixtureSelector : public Selector<T>	{
 	~MixtureSelector() {}
 
     //! return size of array of components
-	int GetSize() const /*override*/ {return alloc->GetSize();}
+	int GetSize() const override {return alloc->GetSize();}
 
     //! GetVal(i) (for i in 0..alloc->GetSize()-1) returns a reference to the component to which item i is allocated (i.e. components[alloc[i]])
-	const T& GetVal(int i) const /*override*/ {
+	const T& GetVal(int i) const override {
 		return components->GetVal(alloc->GetVal(i));
 	}
 

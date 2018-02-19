@@ -7,21 +7,34 @@
 #include <iostream>
 #include <sstream>
 
+/**
+ * \brief A chronometer
+ *
+ * Measures time in milliseconds; also implements a counter, allowing to both measure total time and count e.g. number of cycles (and then return mean time per cycle).
+ */
+
 class Chrono {
   public:
     Chrono() {
         Reset();
     }
+    //! reset chrono
     void Reset();
+    //! start chrono
     void Start();
+    //! stop chrono
     void Stop();
 
+    //! increment the counter of cycles
     inline int operator++() { return N++; }
 
+    //! get total time
     inline double GetTime() const { return TotalTime; }
 
+    //! get time per cycle
     inline double GetTimePerCount() const { return TotalTime / N; }
 
+    //! get total number of cycles
     inline int GetCount() const { return N; }
 
   private:

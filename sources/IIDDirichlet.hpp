@@ -7,12 +7,25 @@
 #include "SuffStat.hpp"
 #include "MPIBuffer.hpp"
 
+/**
+ * \brief A sufficient statistic for a collection of Dirichlet random variables, as a function of the parameters of the Dirichlet distribution
+ *
+ * Consider a Dirichlet distribution, over vectors of dimension K, and with parameter alpha = (alpha_k)_k=1..K.
+ * Consider N Dirichlet random variables (x_i)_i=1..N ~ Dirichlet(alpha).
+ * Then, up to an additive constant (not depending on alpha):
+ *
+ * sum_i log p(x_i | alpha) = N (log Gamma(|alpha|) - sum_k log Gamma(alpha_k)) + sum_k S_k ^ (alpha_k-1)
+ *
+ * where S_k = sum_i log(x_ik).
+ */
+
 class DirichletSuffStat : public SuffStat	{
 
 	public:
     DirichletSuffStat(int indim) : sumlog(indim,0), n(0) {}
     ~DirichletSuffStat() {}
 
+    //! set suff stats to 0
 	void Clear()	{
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             sumlog[i] = 0;
@@ -20,10 +33,12 @@ class DirichletSuffStat : public SuffStat	{
         n = 0;
 	}
 
+    //! get dimension of underlying Dirichlet distribution
     int GetDim()    {
         return (int) sumlog.size();
     }
 
+    //! add the contribution of one variate (x) to this suffstat
     void AddSuffStat(const vector<double>& pi)  {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             if (pi[i] <= 0) {
@@ -39,6 +54,7 @@ class DirichletSuffStat : public SuffStat	{
         n++;
     }
 
+    //! add the contribution of one variate (x) to this suffstat
     void AddSuffStat(const double* insumlog, int d)  {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             sumlog[i] += insumlog[i];
@@ -46,6 +62,7 @@ class DirichletSuffStat : public SuffStat	{
         n += d;
     }
 
+    //! (*this) += from
     void Add(const DirichletSuffStat& from) {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             sumlog[i] += from.GetSumLog(i);
@@ -53,19 +70,23 @@ class DirichletSuffStat : public SuffStat	{
         n += from.GetN();
     }
 
+    //! (*this) += from, operator version
     DirichletSuffStat& operator+=(const DirichletSuffStat& from)    {
         Add(from);
         return *this;
     }
 
+    //! return S_k
     double GetSumLog(int i) const   {
         return sumlog[i];
     }
 
+    //! return N (number of Dirichlet variables contributing to the sufficient statistic)
     int GetN() const    {
         return n;
     }
 
+    //! return logprob, as a function of center (renormalized alpha) and concentration (sum of the alpha vector)
 	double GetLogProb(const vector<double>& center, double concentration) const    {
         
         double tot = n * Random::logGamma(concentration);
@@ -75,8 +96,10 @@ class DirichletSuffStat : public SuffStat	{
         return tot;
     }
 
+    //! return object size, when put into an MPI buffer
     unsigned int GetMPISize() const {return sumlog.size() + 1;}
 
+    //! put object into MPI buffer
     void MPIPut(MPIBuffer& buffer) const {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             buffer << sumlog[i];
@@ -84,6 +107,7 @@ class DirichletSuffStat : public SuffStat	{
         buffer << n;
     }
 
+    //! read object from MPI buffer
     void MPIGet(const MPIBuffer& buffer)    {
         for (unsigned int i=0; i<sumlog.size(); i++)    {
             buffer >> sumlog[i];
@@ -91,6 +115,7 @@ class DirichletSuffStat : public SuffStat	{
         buffer >> n;
     }
 
+    //! read a DirichletSuffStat from MPI buffer and add it to this
     void Add(const MPIBuffer& buffer)   {
         double tmp;
         for (unsigned int i=0; i<sumlog.size(); i++)    {
@@ -109,47 +134,60 @@ class DirichletSuffStat : public SuffStat	{
 };
 
 
+/**
+ * \brief A SimpleArray of DirichletSuffStat
+ */
+
 class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
 
     public:
+    //! constructor, parameterized by array size and dimension of the Dirichlet distribution
     DirichletSuffStatArray(int insize, int indim) : SimpleArray<DirichletSuffStat>(insize,DirichletSuffStat(indim)), dim(indim) {}
     ~DirichletSuffStatArray() {}
 
+    //! return dimension of the Dirichlet distribution
     int GetDim() const {
         return dim;
     }
 
+    //! set suff stat to 0
     void Clear()    {
         for (int i=0; i<GetSize(); i++) {
             (*this)[i].Clear();
         }
     }
 
+    //! element-wise addition of array given as argument to this array
     void Add(const DirichletSuffStatArray& from)    {
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i].Add(from.GetVal(i));
         }
     }
 
+    //! element-wise addition, operator version
     DirichletSuffStatArray& operator+=(const DirichletSuffStatArray& from)  {
         Add(from);
         return *this;
     }
 
+    //! return object size, when put into an MPI buffer
     unsigned int GetMPISize() const {return GetSize() * GetVal(0).GetMPISize();}
 
+    //! put object into MPI buffer
     void MPIPut(MPIBuffer& buffer) const    {
 		for (int i=0; i<GetSize(); i++)	{
             buffer << GetVal(i);
         }
     }
 
+    //! read object from MPI buffer
     void MPIGet(const MPIBuffer& buffer)    {
 		for (int i=0; i<GetSize(); i++)	{
             buffer >> (*this)[i];
         }
     }
 
+    //! read a DirichletSuffStatArray from MPI buffer and add it to this
     void Add(const MPIBuffer& buffer)   {
 		for (int i=0; i<GetSize(); i++)	{
             (*this)[i] += buffer;
@@ -160,10 +198,15 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat>    {
     int dim;
 };
 
+/**
+ * \brief An array of IID Dirichlet random variables
+ */
+
 class IIDDirichlet: public SimpleArray<vector<double> >	{
 
 	public: 
 
+    //! constructor, parameterized by array size and parameters of the Dirichlet distribution (center and concentration)
 	IIDDirichlet(int insize, const vector<double>& incenter, double inconcentration) : SimpleArray<vector<double> >(insize), center(incenter), concentration(inconcentration) {
         for (int i=0; i<GetSize(); i++) {
             (*this)[i].assign(center.size(),0);
@@ -173,14 +216,17 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 
 	~IIDDirichlet() {}
 
+    //! set center of the Dirichlet distribution
     void SetCenter(const vector<double>& incenter)    {
         center = incenter;
     }
     
+    //! set concentration of the Dirichlet distribution
     void SetConcentration(double inconcentration)   {
         concentration = inconcentration;
     }
 
+    //! set all entries equal to uniform vector
     void SetUniform()   {
         int dim = GetDim();
         for (int i=0; i<GetSize(); i++) {
@@ -190,16 +236,19 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
         }
     }
 
+    //! get dimension of Dirichlet distribution
     int GetDim() const {
         return center.size();
     }
 
-	void Sample()	{
+	//! sample from prior
+    void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
             Random::DirichletSample((*this)[i],center,concentration);
 		}
 	}
 
+    //! get log probability density of all entries, given current values of center and concentration parameters
 	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -208,16 +257,19 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		return total;
 	}
 
+    //! get log probability of entry i
 	double GetLogProb(int i) const {
         return Random::logDirichletDensity(GetVal(i),center,concentration);
 	}
 
+    //! add this array to sufficient statistic given as argument
 	void AddSuffStat(DirichletSuffStat& suffstat) const {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstat.AddSuffStat(GetVal(i));
 		}
 	}
 
+    //! add this array to sufficient statistic given as argument -- only entries with non zero occupancy
 	void AddSuffStat(DirichletSuffStat& suffstat, const Selector<int>& occupancy) const   {
 		for (int i=0; i<GetSize(); i++)	{
             if (occupancy.GetVal(i))   {
@@ -226,6 +278,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
 	}
 
+    //! resample from prior those entries for which occupancy[i] == 0
     void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
@@ -234,6 +287,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
 		}
     }
 
+    //! get mean entropy over all elements of the array
     double GetMeanEntropy() const   {
 
         double mean = 0;
@@ -244,6 +298,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
         return mean;
     }
 
+    //! get mean of component k of all elements of the array
     double GetMean(int k) const {
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {
@@ -253,6 +308,7 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
         return m1;
     }
 
+    //! get variance of component k of all elements of the array
     double GetVar(int k) const {
         double m1 = 0;
         double m2 = 0;
@@ -271,10 +327,15 @@ class IIDDirichlet: public SimpleArray<vector<double> >	{
     double concentration;
 };
 
+/**
+ * \brief An array of Dirichlet random variables, each with its own center and concentration parameters
+ */
+
 class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	public: 
 
+    //! constructor, parameterized by arrays of center and concentration parameters (both of same size, which will also be the size of this array)
 	MultiDirichlet(const Selector<vector<double> >* incenterarray, const Selector<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
         if (centerarray->GetSize() != concentrationarray->GetSize())    {
             cerr << "error in multi dirichlet: center and concentration arrays should have same size\n";
@@ -289,37 +350,19 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
 	~MultiDirichlet() {}
 
+    //! return dimension of Dirichlet distribution
     int GetDim() const {
         return dim;
     }
 
+    //! sample all entries from prior
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
             Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
 		}
 	}
 
-    bool CheckPositivity()  {
-        int allpos = 1;
-		for (int i=0; i<GetSize(); i++)	{
-            int pos = 1;
-            for (int j=0; j<GetDim(); j++)  {
-                if (! GetVal(i)[j]) {
-                    pos = 0;
-                }
-            }
-            if (! pos)  {
-                allpos = 0;
-                for (int j=0; j<GetDim(); j++)  {
-                    cerr << GetVal(i)[j] << '\t';
-                }
-                cerr << '\n';
-                cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
-            }
-        }
-        return allpos;
-    }
-
+    //! get total log prob (sum over all array)
 	double GetLogProb()	const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -328,16 +371,19 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 		return total;
 	}
 
+    //! get log prob for entry i
 	double GetLogProb(int i) const {
         return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
 	}
 
+    //! \brief add entries of this array to an array DirichletSuffStat, based on specified allocation vector
     void AddSuffStat(Array<DirichletSuffStat>& suffstatarray, const Selector<int>& alloc) {
 		for (int i=0; i<GetSize(); i++)	{
 			suffstatarray[alloc.GetVal(i)].AddSuffStat(GetVal(i));
 		}
 	}
 
+    //! resample entries for which occupancy[i] == 0
     void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
@@ -363,7 +409,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 		}
     }
 
-
+    //! get mean entropy over all elements of the array
     double GetMeanEntropy() const   {
 
         double mean = 0;
@@ -374,6 +420,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
         return mean;
     }
 
+    //! get mean of component k of all elements of the array
     double GetMean(int k) const {
         double m1 = 0;
         for (int i=0; i<GetSize(); i++) {
@@ -383,6 +430,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
         return m1;
     }
 
+    //! get variance of component k of all elements of the array
     double GetVar(int k) const {
         double m1 = 0;
         double m2 = 0;

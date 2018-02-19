@@ -2,29 +2,47 @@
 #ifndef BRANCHALLOC_H
 #define BRANCHALLOC_H
 
+/**
+ * \brief An object that associates an integer (in 0..K-1) to each branch of a phylogenetic tree
+ *
+ * should perhaps derive it from BranchArray
+ *
+ */
+
 class BranchAllocationSystem    {
 
     public:
 
+    //! \brief Constructor with tree and number of conditions
+    //!
+    //! names of branches of the tree are assumed to encode integers, specifying the allocation for each branch
     BranchAllocationSystem(const Tree& intree, int inNcond) : tree(intree), Ncond(inNcond), branchalloc(intree.GetNbranch(),0), Nbranch(intree.GetNbranch()) {
         MakeBranchAllocations();
     }
 
+    //! return allocation status of branch j
     int GetBranchAlloc(int j)   const {
         return branchalloc[j];
     }
 
+    //! return a const ref to underlying tree
     const Tree& GetTree() const {
         return tree;
     }
 
+    //! return number of branches
     int GetNbranch()  const {
         return Nbranch;
     }
+
+    //! return array of branch allocations as a simple vector<int>
     const vector<int>& GetAllocVector() const {
         return branchalloc;
     }
 
+    private:
+
+    //! read out branch names (recursively) and fill-in allocation map
 	void MakeBranchAllocations()	{
 
 		// default pre-initialization
@@ -44,6 +62,7 @@ class BranchAllocationSystem    {
 		}
 	} 
 		
+    //! recursive helper function for MakeBranchAllocations
 	void RecursiveMakeBranchAllocations(const Link* from)	{
 		
 		if (! from->isRoot())	{

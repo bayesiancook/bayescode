@@ -303,36 +303,36 @@ double CodonM2aModel::NucRatesLogPrior() const {
 
 double CodonM2aModel::OmegaLogPrior() const {
     double total = 0;
-    total += PurOmegaLogProb();
-    total += PosOmegaLogProb();
-    total += PurWeightLogProb();
-    total += PosWeightLogProb();
+    total += PurOmegaLogPrior();
+    total += PosOmegaLogPrior();
+    total += PurWeightLogPrior();
+    total += PosWeightLogPrior();
     return total;
 }
 
 // Beta prior for purifmean
-double CodonM2aModel::PurOmegaLogProb()  const {
+double CodonM2aModel::PurOmegaLogPrior()  const {
     double alpha = puromhypermean / puromhyperinvconc;
     double beta = (1-puromhypermean) / puromhyperinvconc;
     return Random::logBetaDensity(purom,alpha,beta);
 }
 
 // Gamma prior for dposom
-double CodonM2aModel::PosOmegaLogProb() const {
+double CodonM2aModel::PosOmegaLogPrior() const {
     double alpha = 1.0 / dposomhyperinvshape;
     double beta = alpha / dposomhypermean;
     return Random::logGammaDensity(dposom,alpha,beta);
 }
 
 // Beta prior for purw
-double CodonM2aModel::PurWeightLogProb() const {
+double CodonM2aModel::PurWeightLogPrior() const {
     double alpha = purwhypermean / purwhyperinvconc;
     double beta = (1 - purwhypermean) / purwhyperinvconc;
     return Random::logBetaDensity(purw,alpha,beta);
 }
 
 // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
-double CodonM2aModel::PosWeightLogProb() const {
+double CodonM2aModel::PosWeightLogPrior() const {
     if (posw)   {
         if (! pi)   {
             cerr << "in PosWeightLogProb: pi == 0 and posw > 0\n";
@@ -349,7 +349,7 @@ double CodonM2aModel::PosWeightLogProb() const {
 }
 
 // Bernoulli for whether posw == 0 or > 0
-double CodonM2aModel::PosSwitchLogProb() const {
+double CodonM2aModel::PosSwitchLogPrior() const {
     if (posw)   {
         return log(pi);
     }
@@ -466,26 +466,22 @@ void CodonM2aModel::ResampleAlloc()	{
     sitealloc->GibbsResample(sitepostprobarray);
 }
 
-double CodonM2aModel::DrawBetaPosWeight()    {
-    double alpha = poswhypermean / poswhyperinvconc;
-    double beta = (1-poswhypermean) / poswhyperinvconc;
-    return Random::BetaSample(alpha,beta);
-}
-
 double CodonM2aModel::SwitchPosWeight(int nrep)	{
 
     double nacc = 0;
     double ntot = 0;
     for (int rep=0; rep<nrep; rep++)	{
         double bkposw = posw;
-        double deltalogprob = - PosSwitchLogProb() - OmegaPathSuffStatLogProb();
+        double deltalogprob = - PosSwitchLogPrior() - OmegaPathSuffStatLogProb();
         if (posw)   {
             posw = 0;
         }
         else    {
-            posw = DrawBetaPosWeight();
+            double alpha = poswhypermean / poswhyperinvconc;
+            double beta = (1-poswhypermean) / poswhyperinvconc;
+            posw = Random::BetaSample(alpha,beta);
         }
-        deltalogprob += PosSwitchLogProb() + OmegaPathSuffStatLogProb();
+        deltalogprob += PosSwitchLogPrior() + OmegaPathSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted)	{
             nacc ++;

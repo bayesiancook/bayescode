@@ -1,6 +1,5 @@
 #ifndef RANDOM_H
 #define RANDOM_H
-
 #include "Eigen/Dense"
 //
 // c++11
@@ -19,6 +18,15 @@ using namespace std;
 #define nullptr 0 
 
 const double Pi = 3.1415926535897932384626;
+
+
+/**
+ * \brief A random number generator and probability library
+ *
+ * Implements Mersenne twister
+ * (Matsumora and Nishimora 1996, 32-bit generator; implementation adapted from Michael Brundage, copyright 1995-2005, creative commons),
+ * plus many basic routines related to probabilities: in particular, sampling from standard distributions and returning their densities).
+ */
 
 class Random {
   public:

@@ -4,6 +4,12 @@
 #include "SingleOmegaModel.hpp"
 using namespace std;
 
+/**
+ * \brief An MCMC sample for SingleOmegaModel
+ *
+ * implements a simple read function, returning the MCMC estimate of the posterior mean and standard deviation of omega=dN/dS
+ */
+
 
 class SingleOmegaSample : public Sample {
 
@@ -14,15 +20,16 @@ class SingleOmegaSample : public Sample {
 
 	public:
 
-	string GetModelType() {return modeltype;}
+	string GetModelType() override {return modeltype;}
 
 	SingleOmegaModel* GetModel() {return (SingleOmegaModel*) model;}
 
+    //! \brief Constructor (file name, burn-in, thinning and upper limit, see Sample)
 	SingleOmegaSample(string filename, int inburnin, int inevery, int inuntil) : Sample(filename,inburnin,inevery,inuntil)	{
 		Open();
 	}
 
-	void Open()	{
+	void Open()	override {
 
 		// open <name>.param
 		ifstream is((name + ".param").c_str());
@@ -64,8 +71,7 @@ class SingleOmegaSample : public Sample {
 		// all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
-	// a very simple (and quite uninteresting) method for obtaining
-	// the posterior mean and variance of the total length of the tree
+	//! \brief computes the posterior mean estimate (and the posterior standard deviation) of omega
 	void Read()	{
 
         cerr << size << " points to read\n";

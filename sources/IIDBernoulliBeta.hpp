@@ -8,12 +8,17 @@
 #include "CodonSuffStat.hpp"
 #include "MPIBuffer.hpp"
 
+/**
+ * \brief A sufficient statistic for a collection of random variables, from a mixture of a point mass at 0 and a Beta distribution (see IIDBernoulliBeta)
+ */
+
 class BernoulliBetaSuffStat : public SuffStat	{
 
 	public:
 	BernoulliBetaSuffStat() {}
 	~BernoulliBetaSuffStat() {}
 
+    //! set suff stats to 0
 	void Clear()	{
 		sumlog0 = 0;
 		sumlog1 = 0;
@@ -21,16 +26,19 @@ class BernoulliBetaSuffStat : public SuffStat	{
 		n1 = 0;
 	}
 
+    //! add the contribution of one beta variate equal to 0 to this suffstat
     void AddNullSuffStat(int c = 1) {
         n0 += c;
     }
 
+    //! add the contribution of one beta variate > 0 to this suffstat
 	void AddPosSuffStat(double log0, double log1, int c = 1)	{
 		sumlog0 += log0;
 		sumlog1 += log1;
 		n1 += c;
 	}
 
+    //! (*this) += from
     void Add(const BernoulliBetaSuffStat& from)  {
         sumlog0 += from.GetSumLog0();
         sumlog1 += from.GetSumLog1();
@@ -38,21 +46,26 @@ class BernoulliBetaSuffStat : public SuffStat	{
         n1 += from.GetN1();
     }
 
+    //! (*this) += from, operator version
     BernoulliBetaSuffStat& operator+=(const BernoulliBetaSuffStat& from)  {
         Add(from);
         return *this;
     }
 
+    //! return object size, when put into an MPI buffer
     unsigned int GetMPISize() const {return 4;}
 
+    //! put object into MPI buffer
     void MPIPut(MPIBuffer& buffer) const    {
         buffer << sumlog0 << sumlog1 << n0 << n1;
     }
 
+    //! read object from MPI buffer
     void MPIGet(const MPIBuffer& buffer)    {
         buffer >> sumlog0 >> sumlog1 >> n0 >> n1;
     }
 
+    //! read a BernoulliBetaSuffStat from MPI buffer and add it to this
     void Add(const MPIBuffer& buffer)   {
         double temp;
         buffer >> temp;
@@ -67,15 +80,20 @@ class BernoulliBetaSuffStat : public SuffStat	{
         n1 += tmp;
     }
 
+    //! return log prob of suff stats, as a function of parameters of the mixture and the Beta distribution
 	double GetLogProb(double pi, double alpha, double beta) const {
         double logbern = n0 * log(1-pi) + n1 * log(pi);
         double logbeta = n1 * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) - Random::logGamma(beta)) + (alpha-1)*sumlog0 + (beta-1)*sumlog1;
         return logbern + logbeta;
 	}
 	
+    //! get number of contributing variables that are == 0
     int GetN0() const {return n0;}
+    //! get number of contributing variables that are > 0
     int GetN1() const {return n1;}
+    //! get total sum of log(1-x_i), for all x_i's that are > 0
     double GetSumLog0() const {return sumlog0;}
+    //! get total sum of log(x_i), for all x_i's that are > 0
     double GetSumLog1() const {return sumlog1;}
 
 	private:
@@ -86,24 +104,37 @@ class BernoulliBetaSuffStat : public SuffStat	{
 	int n1;
 };
 
+
+/**
+ * \brief An array of IID random variables, from a mixture of a point mass at 0 (weight 1-pi) and a Beta distribution (weight pi)
+ */
+
 class IIDBernoulliBeta : public SimpleArray<double> {
 
     public:
 
+    //! constructor, parameterized by size, weight parameter pi of the mixture, and parameters of the Beta (alpha and beta)
     IIDBernoulliBeta(int insize, double inpi, double inalpha, double inbeta) : SimpleArray<double>(insize), pi(inpi), alpha(inalpha), beta(inbeta)  {
         Sample();
     }
 
     ~IIDBernoulliBeta() {}
 
+    //! return weight of the Beta component of the mixture
     double GetPi() const {return pi;}
+    //! return alpha parameter of the Beta distribution
     double GetAlpha() const {return alpha;}
+    //! return beta parameter of the Beta distribution
     double GetBeta() const {return beta;}
 
+    //! set weight of the Beta component of the mixture to new value
     void SetPi(double inpi) {pi = inpi;}
+    //! set alpha parameter of the Beta distribution to new value
     void SetAlpha(double inalpha) {alpha = inalpha;}
+    //! set beta parameter of the Beta distribution to new value
     void SetBeta(double inbeta) {beta = inbeta;}
 
+    //! sample all entries from prior distribution
 	void Sample()	{
 		for (int i=0; i<GetSize(); i++)	{
             if (Random::Uniform() < pi) {
@@ -115,6 +146,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
 		}
 	}
 
+    //! get number of entries that are equal to 0
     int GetNullSet() const {
         int tot = 0;
         for (int i=0; i<GetSize(); i++) {
@@ -125,6 +157,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
         return tot;
     }
 
+    //! return log probability summed over all entries
 	double GetLogProb() const {
 		double total = 0;
 		for (int i=0; i<GetSize(); i++)	{
@@ -133,6 +166,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
 		return total;
 	}
 
+    //! return log probability for entry i
 	double GetLogProb(int i) const {
         double ret = 0;
         if (! GetVal(i))    {
@@ -145,6 +179,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
         return ret;
 	}
 
+    //! add all entries to sufficient statistic
 	void AddSuffStat(BernoulliBetaSuffStat& suffstat)	{
 		for (int i=0; i<GetSize(); i++)	{
             if (! GetVal(i))    {
@@ -156,6 +191,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
 		}
 	}
 
+    //! get mean of all of those entries that are not 0
     double GetPosMean()  const {
         int tot = 0;
         double m1 = 0;
@@ -178,52 +214,6 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     double alpha;
     double beta;
 };
-
-/*
-class IIDBernoulliBetaArray : public Array<IIDBernoulliBeta>    {
-
-    public:
-
-    IIDBernoulliBetaArray(int inncond, int insize, const vector<double>& inpi, const vector<double>& inmean, const vector<double>& ininvconc) : Ncond(inncond), size(insize), pi(inpi), mean(inmean), invconc(ininvconc), array(inncond) {
-        Create();
-    }
-
-    ~IIDBernoulliBetaArray() {
-        Delete();
-    }
-
-    void Create()   {
-        for (int k=0; k<Ncond; k++) {
-            double alpha = mean[k] / invconc[k];
-            double beta = (1-mean[k]) / invconc[k];
-            array[k] = new IIDBernoulliBeta(size,pi[k],alpha,beta);
-        }
-    }
-
-    void Delete()   {
-        for (int k=0; k<Ncond; k++) {
-            delete array[k];
-        }
-    }
-
-    void SetParameters()    {
-        for (int k=0; k<Ncond; k++) {
-            array[k]->SetPi(pi[k]);
-            array[k]->SetAlpha(mean[k]/invconc[k]);
-            array[k]->SetBeta((1-mean[k])/invconc[k]);
-        }
-    }
-
-    private:
-
-    int Ncond;
-    int size;
-    const vector<double>& pi;
-    const vector<double>& mean;
-    const vector<double>& invconc;
-    vector<IIDBernoulliBeta*> array;
-};
-*/
 
 #endif
 

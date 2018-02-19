@@ -1,39 +1,40 @@
 
-// this is the M2a model of codeml (Muse and Gaut version)
-// this model assumes that the omega_i's across sites (i=1..Nsite)
-// are a mixture with 3 components
-//
-// omega0 < 1, with weight w0 
-// omega1 = 1, with weight w1 
-// omega2 > 1, with weight w2
-//
-// this model is used to test for the presence of positive selection (i.e to test whether w2>0) in a gene
-// and then to select those sites that have a dN/dS > 1 (i.e. that are allocated to the third category of the mixture with high post prob) 
-//
-// here, the model is parameterized as follows:
-// omega0 = purom, 
-// omega1 = 1,
-// omega2 = 1 + dposom,
-// where 0 < purom < 1 and dposom > 0
-// purom has a beta prior (hyperparams: puromhypermean and puromhyperinvconc)
-// dposom has a gamma prior (hyperparams: dposomhypermean and dposomhyperinvshape)
-//
-// the weights of the mixture are parameterized as follows:
-// w0 = purw * (1 - posw)
-// w1 = (1-purw) * (1-posw)
-// w2 = posw
-// where 0<purw<1 and 0<=posw<1
-// purw has a beta prior (hyperparams: purwhypermean and purwhyperinvconc)
-// the prior on posw is a mixture:
-// - with probability 1-pi, posw = 0
-// - with probability pi, 0 < posw < 1, in which case is it from a beta prior (hyperparams: poswhypermean and poswhyperinvconc)
-// thus, setting pi = 0 imposes a model without positive selection
-//
-// in total, the 9 hyperparameters of the mixture of omegas are:
-// puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape
-// purwhypermean, purwhyperinvconc, pi, poswhypermean, poswhyperinvconc
-// in a single-gene context, these hyperparameters are fixed 
-// in a multigene context, they can be either fixed or estimated across genes (see MultiGeneCodonM2aModel)
+/**
+ * \brief The M2amodel of codeml (Muse and Gaut version)
+ *
+ * the omega_i's across sites (i=1..Nsite) are a mixture with 3 components
+ * - omega0 < 1, with weight w0 
+ * - omega1 = 1, with weight w1 
+ * - omega2 > 1, with weight w2
+ *
+ * This model is used to test for the presence of positive selection (i.e to test whether w2>0) in a gene
+ * and then to select those sites that have a dN/dS > 1 (i.e. that are allocated to the third category of the mixture with high post prob).
+ * Here, the model is parameterized as follows:
+ * - omega0 = purom, 
+ * - omega1 = 1,
+ * - omega2 = 1 + dposom,
+ * where 0 < purom < 1 and dposom > 0;
+ * purom has a beta prior (hyperparams: puromhypermean and puromhyperinvconc);
+ * dposom has a gamma prior (hyperparams: dposomhypermean and dposomhyperinvshape).
+ *
+ * The weights of the mixture are parameterized as follows:
+ * - w0 = purw * (1 - posw)
+ * - w1 = (1-purw) * (1-posw)
+ * - w2 = posw
+ * where 0<purw<1 and 0<=posw<1;
+ * purw has a beta prior (hyperparams: purwhypermean and purwhyperinvconc);
+ * the prior on posw is a mixture:
+ * - with probability 1-pi, posw = 0
+ * - with probability pi, 0 < posw < 1, in which case is it from a beta prior (hyperparams: poswhypermean and poswhyperinvconc).
+ * Thus, setting pi = 0 imposes a model without positive selection.
+ * 
+ * In total, the 9 hyperparameters of the mixture of omegas are:
+ * puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
+ * purwhypermean, purwhyperinvconc, pi, poswhypermean, poswhyperinvconc.
+ * In a single-gene context, these hyperparameters are fixed;
+ * in a multigene context, they can be either fixed or estimated across genes (see MultiGeneCodonM2aModel).
+ */
+
 
 #include "CodonSequenceAlignment.hpp"
 #include "Tree.hpp"
@@ -58,43 +59,61 @@ class CodonM2aModel : public ProbModel {
     // Constructors
     // ------------------
 
+    //! \brief constructor, parameterized by names of data and tree files, and pi, proportion of sites under positive selection
+    //!
+    //! Note: in itself, the constructor does not allocate the model;
+    //! It only reads the data and tree file and register them together.
 	CodonM2aModel(string datafile, string treefile, double inpi);
+
+    //! model allocation
 	void Allocate();
 
     //-------------------
     // Accessors
     // ------------------
 
+    //! number of aligned positions
 	int GetNsite() const {return codondata->GetNsite();}
 
-    CodonStateSpace* GetCodonStateSpace() const {
+    //! const access to codon state space
+    const CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
     }
 
+    //! return value of omega_0 < 1
     double GetPurOm() const {
         return purom;
     }
 
+    //! return value of omega_2 > 1
+    double GetPosOm() const {
+        return 1.0 + dposom;
+    }
+
+    //! return value of dposom  = omega_2 - 1 > 0
     double GetDPosOm() const {
         return dposom;
     }
 
+    //! return proportion of sites under strictly purifying selection (under omega_0 < 1)
     double GetPurW() const {
         return purw;
     }
 
+    //! return proportion of sites under positive selection
     double GetPosW() const {
         return posw;
     }
 
+    //! whether branch lengths are fixed externally (e.g. when branch lengths are shared across genes in a multi-gene context)
     bool FixedBranchLengths() const    {
         return blmode == 2;
     }
 
+    //! whether nuc rates are fixed externally (e.g. when nuc rates are shared across genes in a multi-gene context)
     bool FixedNucRates() const  {
         return nucmode == 2;
     }
-
 
     //-------------------
     // Setting and updating
@@ -102,49 +121,100 @@ class CodonM2aModel : public ProbModel {
 
     // Setting model features and (hyper) parameters
 
-    // called upon constructing the model
-    // mode == 2: global
-    // mode == 1: gene specific, with hyperparameters estimated across genes
-    // mode == 0: gene-specific, with fixed hyperparameters
+    //! \brief set estimation method for branch lengths and nuc rates
+    //!
+    //! Used in a multigene context.
+    //! - mode == 2: global
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetAcrossGenesModes(int inblmode, int innucmode)   {
         blmode = inblmode;
         nucmode = innucmode;
     }
 
+    //! \brief set branch lengths to a new value
+    //! 
+    //! Used in a multigene context (branch lengths shared across genes)
     void SetBranchLengths(const BranchSelector<double>& inbranchlength);
+
+    //! \brief get a copy of branch lengths into array given as argument
+    //! 
+    //! Used in a multigene context.
     void GetBranchLengths(BranchArray<double>& inbranchlength) const;
 
+    //! \brief set branch lengths hyperparameters to a new value
+    //! 
+    //! Used in a multigene context (shrinkage across genes)
     void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape);
 
+    //! \brief set nucleotide rates (relative exchangeabilities and eq. frequencies) to a new value
+    //! 
+    //! Used in a multigene context (nuc rates shared across genes)
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat);
+
+    //! \brief get a copy of nucleotide rates into arrays given as arguments
     void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const;
 
+    //! \brief set nucleotide rates hyperparameters to a new value
+    //! 
+    //! Used in a multigene context (shrinkage across genes)
     void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc);
 
+    //! \brief set omega mixture parameters to a new value
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
+
+    //! \brief get omega mixture parameter values
     void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw) const;
 
+    //! \brief set omega mixture hyperparameters to a new value
+    //! 
+    //! Used in a multigene context (shrinkage across genes)
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     //-------------------
     // Matrices
     //-------------------
 
+    //! \brief global update function
     void Update() override;
+
+    //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
+    //!
+    //! The matrix is not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
 	void UpdateNucMatrix();
+
+    //! \brief tell the codon matrices that their parameters have changed and that it should be updated
+    //!
+    //! The matrices are not directly updated at that step. Instead, corruption is notified,
+    //! such that the matrices know that they will have to recalculate whichever component is requested later on upon demand.
 	void UpdateCodonMatrices();
+
+    //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that they should be updated
+    //!
+    //! Just successive calls to UpdateNucMatrix() and then UpdateCodonMatrices();
 	void UpdateMatrices();
+
+    //! \brief dummy function that does not do anything.
+    //! 
+    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove (defined in ProbModel),
+    //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
     //-------------------
     // Traces and Monitors
     // ------------------
 
+    //! brief return current mean omega value
 	double GetMeanOmega() const;
 
-	void TraceHeader(std::ostream& os) const override;
+	void TraceHeader(ostream& os) const override;
 	void Trace(ostream& os) const override;
+
+    //! \brief write current site post probs (of being under positive selection) on one line
 	void TracePostProb(ostream& os) const ;
+
+    //! \brief get a copy of current site post probs (of being under positive selection) into array
     void GetSitesPostProb(double* array) const;
 
 	// void Monitor(ostream& os) const override {}
@@ -155,61 +225,107 @@ class CodonM2aModel : public ProbModel {
     // Likelihood
     //-------------------
 
+    //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const override {
         return GetLogPrior() + GetLogLikelihood();
         // return GetLogPrior() + GetIntegratedLogLikelihood();
     }
 
+    //! return current value of likelihood, conditional on omega mixture allocations
 	double GetLogLikelihood() const;
+
+    //! return current value of likelihood, averaged over omega mixture allocations
     double GetIntegratedLogLikelihood() const;
-
-    //-------------------
-    // Suff Stat and suffstatlogprobs
-    //-------------------
-
-    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const;
-    const NucPathSuffStat& GetNucPathSuffStat() const;
-
-	double PathSuffStatLogProb() const;
-	double LambdaHyperSuffStatLogProb() const;
-    double NucRatesSuffStatLogProb() const;
-	double OmegaPathSuffStatLogProb() const;
 
     //-------------------
     // Priors
     //-------------------
 
+    //! \brief return total log prior
+    //!
+    //! Note: up to some multiplicative constant
 	double GetLogPrior() const;
 
+    //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double LambdaHyperLogPrior() const;
+
+    //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior() const;
+
+    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const;
 
+    //! log prior over omega mixture
     double OmegaLogPrior() const;
 
-    // Beta prior for purifmean
-    double PurOmegaLogProb() const;
-    // Gamma prior for dposom
-	double PosOmegaLogProb() const;
-    // Beta prior for purw
-	double PurWeightLogProb() const;
-    // mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
-	double PosWeightLogProb() const;
-    // Bernoulli for whether posw == 0 or > 0
-    double PosSwitchLogProb() const;
+    //! beta prior for purom
+    double PurOmegaLogPrior() const;
+
+    //! gamma prior for dposom
+	double PosOmegaLogPrior() const;
+
+    //! beta prior for purw
+	double PurWeightLogPrior() const;
+
+    //! mixture of point mass at 0 (with prob pi) and Beta distribution (with prob 1 - pi) for posw
+	double PosWeightLogPrior() const;
+
+    //! Bernoulli for whether posw == 0 or > 0
+    double PosSwitchLogPrior() const;
+
+    //-------------------
+    // Suff Stat and suffstatlogprobs
+    //-------------------
+
+    //! \brief const access to array of length-pathsuffstats across branches
+    //!
+    //! Useful for resampling branch lengths conditional on the current substitution mapping
+    const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const;
+
+    //! \brief const acess to nuc-pathsuffstat
+    //! 
+    //! Useful for resampling nucleotide relative exchangeabilities (nucrelrate) and equilibrium frequencies (nucstat)
+    //! conditional on the current substitution mapping.
+    const NucPathSuffStat& GetNucPathSuffStat() const;
+
+    //! \brief return log prob of the current substitution mapping, as a function of the current codon substitution process
+    //!
+    //! Calculated using pathsuffstat (which summarizes all information about the substitution mapping)
+    //! and the codonmatrix.
+    //! Both pathsuffstat and codonmatrix are assumed to be updated.
+	double PathSuffStatLogProb() const;
+
+    //! \brief return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
+	double LambdaHyperSuffStatLogProb() const;
+
+    //! \brief return log prob of current substitution mapping, as a function of nucleotide parameters (nucrelrate and nucstat)
+    //!
+    //! Calculated using nucpathsuffstat 
+    //! (which summarizes all information about how the probability of the substitution mapping depends on nucleotide mutation rates)
+    //! and the nucmatrix.
+    //! Both nucpathsuffstat and nucmatrix are assumed to be updated.
+    double NucRatesSuffStatLogProb() const;
+
+    //! \brief return log prob of current substitution mapping, as a function of omega mixture configuration
+    //!
+    //! Calculated using siteomegapathsuffstatarray
+	double OmegaPathSuffStatLogProb() const;
 
     //-------------------
     //  Log probs for MH moves
     //-------------------
 
+    //! \brief log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
     double LambdaHyperLogProb() const {
         return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + NucRatesSuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving parameters of omega mixture
     double OmegaLogProb() const {
         return OmegaLogPrior() + OmegaPathSuffStatLogProb();
     }
@@ -218,37 +334,61 @@ class CodonM2aModel : public ProbModel {
     //  Moves 
     //-------------------
 
+    //! \brief complete MCMC move schedule
 	double Move();
+
+    //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac);
+
+    //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep);
 
     //
     // Branch Lengths and hyperparam lambda
     //
 
+    //! overall schedule branch length updatdes
     void MoveBranchLengths();
+
+    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths();
+
+    //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat();
+
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveLambda();
 
+    //! collect generic sufficient statistics from substitution mappings
 	void CollectPathSuffStat();
 
     //
     // Omega mixture 
     //
 
+    //! collect sufficient statistics per component of omega mixtures
 	void CollectComponentPathSuffStat();
+
+    //! complete move schedule for omega mixture parameters
 	void MoveOmega();
+
+    //! collect sufficient statistics as a function of omega (per site) 
 	void CollectOmegaPathSuffStat();
+
+    //! resample site allocations of omega mixture
 	void ResampleAlloc();
-    double DrawBetaPosWeight();
+
+    //! reversible jump move on posw
 	double SwitchPosWeight(int nrep);
 
     //
     // nucleotide parameters
     //
 
+    //! collect sufficient statistics for moving nucleotide rates (based on generic sufficient statistics stored in pathsuffstat)
     void CollectNucPathSuffStat();
+
+    //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
 	void MoveNucRates();
 
     //-------------------
