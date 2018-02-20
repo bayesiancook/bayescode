@@ -111,8 +111,8 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
             Random::DirichletSample(r, dvec(Nrr, 1.0 / Nrr), (double)Nrr);
         });
         model.component<wdvec>("nucstat", Nnuc, 0).configure<wdvec>([](wdvec& r) {
-                Random::DirichletSample(r, dvec(Nnuc, 1.0 / Nnuc), (double)Nnuc);
-            });
+            Random::DirichletSample(r, dvec(Nnuc, 1.0 / Nnuc), (double)Nnuc);
+        });
 
         // a nucleotide matrix (parameterized by nucrelrate and nucstat)
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)

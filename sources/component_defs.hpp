@@ -119,5 +119,4 @@ struct SetValueTo {
     }
 };
 
-
 #endif
