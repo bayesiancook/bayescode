@@ -119,10 +119,5 @@ struct SetValueTo {
     }
 };
 
-struct DirichletSample {
-    static void _connect(tc::Assembly& assembly, tc::Address x, const std::vector<double>& center, double concentration) {
-        Random::DirichletSample(*assembly.at<Wrapper<std::vector<double>>>(x), center, concentration);
-    }
-};
 
 #endif

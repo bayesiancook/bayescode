@@ -26,8 +26,8 @@ using namespace tc;
  */
 
 class SingleOmegaModel : public ProbModel, public tc::Component {
-    Model model;                    // component version of graphical model
-    unique_ptr<Assembly> assembly;  // pointer to assembly (FIXME allow empty assembly for ease of use)
+    Model model;        // component version of graphical model
+    Assembly assembly;  // component assembly
 
     // tree and data
     Tree* tree;
@@ -91,16 +91,28 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     }
 
     void DeclareModel() {
+        using dvec = vector<double>;
+        using wdvec = Wrapper<dvec>;
+
         // branch lengths iid expo (gamma of shape 1 and scale lambda)
         // where lambda is a hyperparameter
         model.component<FWrapper<double>>("lambda", 10);
         model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
 
+        struct DirichletSample {
+            static void _connect(tc::Assembly& assembly, tc::Address x, const std::vector<double>& center,
+                                 double concentration) {
+                Random::DirichletSample(*assembly.at<Wrapper<std::vector<double>>>(x), center, concentration);
+            }
+        };
+
         // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
-        model.component<Wrapper<vector<double>>>("nucrelrate", Nrr, 0);
-        model.connect<DirichletSample>("nucrelrate", vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
-        model.component<Wrapper<vector<double>>>("nucstat", Nnuc, 0);
-        model.connect<DirichletSample>("nucstat", vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        model.component<wdvec>("nucrelrate", Nrr, 0).configure<wdvec>([](wdvec& r) {
+            Random::DirichletSample(r, dvec(Nrr, 1.0 / Nrr), (double)Nrr);
+        });
+        model.component<wdvec>("nucstat", Nnuc, 0).configure<wdvec>([](wdvec& r) {
+                Random::DirichletSample(r, dvec(Nnuc, 1.0 / Nnuc), (double)Nnuc);
+            });
 
         // a nucleotide matrix (parameterized by nucrelrate and nucstat)
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
@@ -126,20 +138,20 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
         model.dot_to_file();
 
-        assembly = unique_ptr<Assembly>(new Assembly(model));
-        // assembly->print_all();
-        // cout << (*assembly->at<Wrapper<vector<double>>>("nucrelrate"))[0] << endl;
-        // cout << (*assembly->at<Wrapper<vector<double>>>("nucstat"))[0] << endl;
-        // cout << *assembly->at<FWrapper<double>>("omega") << endl;
-        // cout << *assembly->at<FWrapper<double>>("lambda") << endl;
-        // cout << assembly->at<BranchIIDGamma>("branchlength").GetVal(2) << endl;
+        assembly.instantiate_from(model);
+        // assembly.print_all();
+        // cout << (*assembly.at<Wrapper<vector<double>>>("nucrelrate"))[0] << endl;
+        // cout << (*assembly.at<Wrapper<vector<double>>>("nucstat"))[0] << endl;
+        // cout << *assembly.at<FWrapper<double>>("omega") << endl;
+        // cout << *assembly.at<FWrapper<double>>("lambda") << endl;
+        // cout << assembly.at<BranchIIDGamma>("branchlength").GetVal(2) << endl;
     }
 
     //! \brief unfold the model
     //!
     //! only at that step does the PhyloProcess create the whole structure of substitution mappings.
     void Unfold() {
-        auto& phyloprocess = assembly->at<PhyloProcess>("phyloprocess");
+        auto& phyloprocess = assembly.at<PhyloProcess>("phyloprocess");
 
         cerr << "-- unfold\n";
         phyloprocess.Unfold();
@@ -163,7 +175,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //!
     //! Used in a multigene context.
     void SetBranchLengths(const BranchSelector<double>& inbranchlength) {
-        assembly->at<BranchIIDGamma>("branchlength").Copy(inbranchlength);
+        assembly.at<BranchIIDGamma>("branchlength").Copy(inbranchlength);
     }
 
     //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
@@ -171,8 +183,8 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! The matrix is not directly updated at that step. Instead, corruption is notified,
     //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
     void TouchNucMatrix() {
-        auto& nucmatrix = assembly->at<GTRSubMatrix>("nucmatrix");
-        nucmatrix.CopyStationary(&assembly->at<Wrapper<vector<double>>>("nucstat"));
+        auto& nucmatrix = assembly.at<GTRSubMatrix>("nucmatrix");
+        nucmatrix.CopyStationary(&assembly.at<Wrapper<vector<double>>>("nucstat"));
         nucmatrix.CorruptMatrix();
     }
 
@@ -181,8 +193,8 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! The matrix is not directly updated at that step. Instead, corruption is notified,
     //! such that the matrix knows that it will have to recalculate whichever component is requested later on upon demand.
     void TouchCodonMatrix() {
-        auto& codonmatrix = assembly->at<MGOmegaCodonSubMatrix>("codonmatrix");
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
+        auto& codonmatrix = assembly.at<MGOmegaCodonSubMatrix>("codonmatrix");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
         codonmatrix.SetOmega(omega);
         codonmatrix.CorruptMatrix();
     }
@@ -219,7 +231,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
     //! return current value of likelihood (pruning-style, i.e. integrated over all substitution histories)
     double GetLogLikelihood() const {
-        auto& phyloprocess = assembly->at<PhyloProcess>("phyloprocess");
+        auto& phyloprocess = assembly.at<PhyloProcess>("phyloprocess");
         return phyloprocess.GetLogLikelihood();
     }
 
@@ -229,12 +241,12 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! \brief log prior over hyperparameters of prior over branch lengths (here, lambda ~ exponential of rate 10)
     double BranchLengthsHyperLogPrior() const {
         // exponential of mean 10
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
         return -lambda / 10;
     }
 
     //! log prior over branch lengths (iid exponential of rate lambda)
-    double BranchLengthsLogPrior() const { return assembly->at<BranchIIDGamma>("branchlength").GetLogProb(); }
+    double BranchLengthsLogPrior() const { return assembly.at<BranchIIDGamma>("branchlength").GetLogProb(); }
 
     //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in
     //! both cases
@@ -242,9 +254,9 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
     //! log prior over omega (gamma of mean omegahypermean and shape 1/omegahyperinvshape)
     double OmegaLogPrior() const {
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
-        auto& omegahyperinvshape = *assembly->at<FWrapper<double>>("omegahyperinvshape");
-        auto& omegahypermean = *assembly->at<FWrapper<double>>("omegahypermean");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
+        auto& omegahyperinvshape = *assembly.at<FWrapper<double>>("omegahyperinvshape");
+        auto& omegahypermean = *assembly.at<FWrapper<double>>("omegahypermean");
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
         return Random::logGammaDensity(omega, alpha, beta);
@@ -271,7 +283,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! and the codonmatrix.
     //! Both pathsuffstat and codonmatrix are assumed to be updated.
     double PathSuffStatLogProb() const {
-        auto& codonmatrix = assembly->at<MGOmegaCodonSubMatrix>("codonmatrix");
+        auto& codonmatrix = assembly.at<MGOmegaCodonSubMatrix>("codonmatrix");
         return pathsuffstat.GetLogProb(codonmatrix);
     }
 
@@ -281,7 +293,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! (which summarizes all information about how the prob of the substitution mapping depends on branch lengths).
     //! lengthpathsuffstat is assumed to be updated.
     double BranchLengthsHyperSuffStatLogProb() const {
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
         return hyperlengthsuffstat.GetLogProb(1.0, lambda);
     }
 
@@ -294,7 +306,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! and the nucmatrix.
     //! Both nucpathsuffstat and nucmatrix are assumed to be updated.
     double NucRatesSuffStatLogProb() const {
-        auto& nucmatrix = assembly->at<GTRSubMatrix>("nucmatrix");
+        auto& nucmatrix = assembly.at<GTRSubMatrix>("nucmatrix");
         return nucpathsuffstat.GetLogProb(nucmatrix, *GetCodonStateSpace());
     }
 
@@ -325,7 +337,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
     //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac) {
-        auto& phyloprocess = assembly->at<PhyloProcess>("phyloprocess");
+        auto& phyloprocess = assembly.at<PhyloProcess>("phyloprocess");
         TouchMatrices();
         phyloprocess.Move(frac);
     }
@@ -345,7 +357,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
     //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat() {
-        auto& phyloprocess = assembly->at<PhyloProcess>("phyloprocess");
+        auto& phyloprocess = assembly.at<PhyloProcess>("phyloprocess");
         lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(phyloprocess);
     }
@@ -353,33 +365,33 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
     void ResampleBranchLengths() {
         CollectLengthSuffStat();
-        assembly->at<BranchIIDGamma>("branchlength").GibbsResample(*lengthpathsuffstatarray);
+        assembly.at<BranchIIDGamma>("branchlength").GibbsResample(*lengthpathsuffstatarray);
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
     void MoveBranchLengthsHyperParameter() {
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
         hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(assembly->at<BranchIIDGamma>("branchlength"));
+        hyperlengthsuffstat.AddSuffStat(assembly.at<BranchIIDGamma>("branchlength"));
         ;
         ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::BranchLengthsHyperLogProb, &SingleOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::BranchLengthsHyperLogProb, &SingleOmegaModel::NoUpdate, this);
-        assembly->at<BranchIIDGamma>("branchlength").SetScale(lambda);
+        assembly.at<BranchIIDGamma>("branchlength").SetScale(lambda);
     }
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
-        auto& phyloprocess = assembly->at<PhyloProcess>("phyloprocess");
+        auto& phyloprocess = assembly.at<PhyloProcess>("phyloprocess");
         pathsuffstat.Clear();
         pathsuffstat.AddSuffStat(phyloprocess);
     }
 
     //! Gibbs resample omega (based on sufficient statistics of current substitution mapping)
     void MoveOmega() {
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
-        auto& omegahyperinvshape = *assembly->at<FWrapper<double>>("omegahyperinvshape");
-        auto& omegahypermean = *assembly->at<FWrapper<double>>("omegahypermean");
-        auto& codonmatrix = assembly->at<MGOmegaCodonSubMatrix>("codonmatrix");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
+        auto& omegahyperinvshape = *assembly.at<FWrapper<double>>("omegahyperinvshape");
+        auto& omegahypermean = *assembly.at<FWrapper<double>>("omegahypermean");
+        auto& codonmatrix = assembly.at<MGOmegaCodonSubMatrix>("codonmatrix");
         omegapathsuffstat.Clear();
         omegapathsuffstat.AddSuffStat(codonmatrix, pathsuffstat);
         double alpha = 1.0 / omegahyperinvshape;
@@ -391,7 +403,7 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     //! collect sufficient statistics for moving nucleotide rates (based on generic sufficient statistics stored in
     //! pathsuffstat)
     void CollectNucPathSuffStat() {
-        auto& codonmatrix = assembly->at<MGOmegaCodonSubMatrix>("codonmatrix");
+        auto& codonmatrix = assembly.at<MGOmegaCodonSubMatrix>("codonmatrix");
         TouchMatrices();
         nucpathsuffstat.Clear();
         nucpathsuffstat.AddSuffStat(codonmatrix, pathsuffstat);
@@ -401,8 +413,8 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     void MoveNucRates() {
         CollectNucPathSuffStat();
 
-        auto& nucrelrate = *assembly->at<Wrapper<vector<double>>>("nucrelrate");
-        auto& nucstat = *assembly->at<Wrapper<vector<double>>>("nucstat");
+        auto& nucrelrate = *assembly.at<Wrapper<vector<double>>>("nucrelrate");
+        auto& nucstat = *assembly.at<Wrapper<vector<double>>>("nucstat");
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb, &SingleOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb, &SingleOmegaModel::TouchNucMatrix, this);
@@ -426,37 +438,37 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     }
 
     void Trace(ostream& os) const override {
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << assembly->at<BranchIIDGamma>("branchlength").GetTotalLength() << '\t';
+        os << assembly.at<BranchIIDGamma>("branchlength").GetTotalLength() << '\t';
         os << lambda << '\t';
         os << omega << '\t';
-        os << Random::GetEntropy(*assembly->at<Wrapper<vector<double>>>("nucstat")) << '\t';
-        os << Random::GetEntropy(*assembly->at<Wrapper<vector<double>>>("nucrelrate")) << '\n';
+        os << Random::GetEntropy(*assembly.at<Wrapper<vector<double>>>("nucstat")) << '\t';
+        os << Random::GetEntropy(*assembly.at<Wrapper<vector<double>>>("nucrelrate")) << '\n';
     }
 
     void ChainHeader(ostream& os) const {}
 
     void ToStream(ostream& os) const override {
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
         os << lambda << '\n';
-        os << assembly->at<BranchIIDGamma>("branchlength") << '\n';
+        os << assembly.at<BranchIIDGamma>("branchlength") << '\n';
         os << omega << '\n';
-        os << *assembly->at<Wrapper<vector<double>>>("nucrelrate") << '\n';
-        os << *assembly->at<Wrapper<vector<double>>>("nucstat") << '\n';
+        os << *assembly.at<Wrapper<vector<double>>>("nucrelrate") << '\n';
+        os << *assembly.at<Wrapper<vector<double>>>("nucstat") << '\n';
     }
 
     void FromStream(istream& is) override {
-        auto& lambda = *assembly->at<FWrapper<double>>("lambda");
-        auto& omega = *assembly->at<FWrapper<double>>("omega");
+        auto& lambda = *assembly.at<FWrapper<double>>("lambda");
+        auto& omega = *assembly.at<FWrapper<double>>("omega");
         is >> lambda;
-        is >> assembly->at<BranchIIDGamma>("branchlength");
+        is >> assembly.at<BranchIIDGamma>("branchlength");
         is >> omega;
-        is >> *assembly->at<Wrapper<vector<double>>>("nucrelrate");
-        is >> *assembly->at<Wrapper<vector<double>>>("nucstat");
+        is >> *assembly.at<Wrapper<vector<double>>>("nucrelrate");
+        is >> *assembly.at<Wrapper<vector<double>>>("nucstat");
     }
 
     void Monitor(ostream&) const override {}
