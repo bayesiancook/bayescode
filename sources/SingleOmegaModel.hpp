@@ -29,6 +29,9 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     Model model;        // component version of graphical model
     Assembly assembly;  // component assembly
 
+    using scalar = double;
+    using vec = vector<double>;
+
     // tree and data
     Tree* tree;
     FileSequenceAlignment* data;
@@ -91,37 +94,37 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     }
 
     void DeclareModel() {
-        using dvec = vector<double>;
-        using wdvec = Wrapper<dvec>;
-        using wd = FWrapper<double>;
+        using wvec = Wrapper<vec>;
+        using wscalar = FWrapper<scalar>;
 
         // branch lengths iid expo (gamma of shape 1 and scale lambda)
         // where lambda is a hyperparameter
-        model.component<wd>("lambda", 10);
+        model.component<wscalar>("lambda", 10);
         model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
 
         // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
-        model.component<wdvec>("nucrelrate", Nrr, 0).configure<wdvec>([](wdvec& r) {
-            Random::DirichletSample(r, dvec(Nrr, 1.0 / Nrr), (double)Nrr);
+        model.component<wvec>("nucrelrate", Nrr, 0).configure([](wvec& r) {
+            Random::DirichletSample(r, vec(Nrr, 1.0 / Nrr), (scalar)Nrr);
         });
-        model.component<wdvec>("nucstat", Nnuc, 0).configure<wdvec>([](wdvec& r) {
-            Random::DirichletSample(r, dvec(Nnuc, 1.0 / Nnuc), (double)Nnuc);
+        model.component<wvec>("nucstat", Nnuc, 0).configure([](wvec& r) {
+            Random::DirichletSample(r, vec(Nnuc, 1.0 / Nnuc), (scalar)Nnuc);
         });
 
         // a nucleotide matrix (parameterized by nucrelrate and nucstat)
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
-            .connect<Use<dvec>>("mRelativeRate", "nucrelrate")
-            .connect<Use<dvec>>("CopyStationary", "nucstat");
+            .connect<Use<vec>>("mRelativeRate", "nucrelrate")
+            .connect<Use<vec>>("CopyStationary", "nucstat");
 
         // omega has a Gamma prior
         // of mean omegahypermean and inverse shape parameter omegahyperinvshape
-        model.component<wd>("omegahypermean", 1);
-        model.component<wd>("omegahyperinvshape", 1);
-        model.component<wd>("omega", 1);
+        scalar omega = 1;
+        model.component<wscalar>("omegahypermean", 1);
+        model.component<wscalar>("omegahyperinvshape", 1);
+        model.component<wscalar>("omega", omega);
 
         // a codon matrix (parameterized by nucmatrix and omega)
         // 1 = omega
-        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), 1)
+        model.component<MGOmegaCodonSubMatrix>("codonmatrix", GetCodonStateSpace()->GetNstate(), omega)
             .connect<Set<CodonStateSpace*>>("statespace", GetCodonStateSpace())
             .connect<Use<SubMatrix>>("nucmatrix", "nucmatrix");
 
