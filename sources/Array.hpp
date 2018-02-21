@@ -123,7 +123,6 @@ template<class T> ostream& operator<<(ostream& os, const vector<T>& array)  {
     for (unsigned int i=0; i<array.size(); i++) {
         os << array[i] << '\t';
     }
-    os << '\n';
     return os;
 }
 

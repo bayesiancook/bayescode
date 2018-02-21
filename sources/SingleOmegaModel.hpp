@@ -450,21 +450,20 @@ class SingleOmegaModel : public ProbModel {
 	void Monitor(ostream& os) const {}
 
 	void ToStream(ostream& os) const {
-        os << lambda << '\n';
+        os << omega << '\t';
+        os << nucstat << '\t';
+        os << nucrelrate << '\t';
+        os << lambda << '\t';
         os << *branchlength << '\n';
-        os << omega << '\n';
-        os << nucrelrate << '\n';
-        os << nucstat << '\n';
     }
 
 	void FromStream(istream& is) {
+        is >> omega;
+        is >> nucstat;
+        is >> nucrelrate;
         is >> lambda;
         is >> *branchlength;
-        is >> omega;
-        is >> nucrelrate;
-        is >> nucstat;
     }
-
 };
 
 
