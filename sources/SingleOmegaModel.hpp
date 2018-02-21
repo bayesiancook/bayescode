@@ -93,18 +93,12 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
     void DeclareModel() {
         using dvec = vector<double>;
         using wdvec = Wrapper<dvec>;
+        using wd = FWrapper<double>;
 
         // branch lengths iid expo (gamma of shape 1 and scale lambda)
         // where lambda is a hyperparameter
-        model.component<FWrapper<double>>("lambda", 10);
+        model.component<wd>("lambda", 10);
         model.component<BranchIIDGamma>("branchlength", tree, 1.0, 10);
-
-        struct DirichletSample {
-            static void _connect(tc::Assembly& assembly, tc::Address x, const std::vector<double>& center,
-                                 double concentration) {
-                Random::DirichletSample(*assembly.at<Wrapper<std::vector<double>>>(x), center, concentration);
-            }
-        };
 
         // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
         model.component<wdvec>("nucrelrate", Nrr, 0).configure<wdvec>([](wdvec& r) {
@@ -116,14 +110,14 @@ class SingleOmegaModel : public ProbModel, public tc::Component {
 
         // a nucleotide matrix (parameterized by nucrelrate and nucstat)
         model.component<GTRSubMatrix>("nucmatrix", Nnuc, true)
-            .connect<Use<vector<double>>>("mRelativeRate", "nucrelrate")
-            .connect<Use<vector<double>>>("CopyStationary", "nucstat");
+            .connect<Use<dvec>>("mRelativeRate", "nucrelrate")
+            .connect<Use<dvec>>("CopyStationary", "nucstat");
 
         // omega has a Gamma prior
         // of mean omegahypermean and inverse shape parameter omegahyperinvshape
-        model.component<FWrapper<double>>("omegahypermean", 1);
-        model.component<FWrapper<double>>("omegahyperinvshape", 1);
-        model.component<FWrapper<double>>("omega", 1);
+        model.component<wd>("omegahypermean", 1);
+        model.component<wd>("omegahyperinvshape", 1);
+        model.component<wd>("omega", 1);
 
         // a codon matrix (parameterized by nucmatrix and omega)
         // 1 = omega
