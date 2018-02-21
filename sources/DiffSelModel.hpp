@@ -33,18 +33,19 @@ license and that you accept its terms.*/
  * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
  * is modulated across a set of alternative 'conditions', or environments, specified over the tree.
  * The model is meant to identify positions displaying significant patterns of directional convergent selection
- * (i.e. sites that they tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
+ * (i.e. sites that tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
  *
  * Technically, the model defines K conditions;
  * condition 0 defines the background, and then condition k=1..K-1 represent the alternative conditions.
- * An array if site-specific basal fitness profiles G_ia, for site i and amino-acid a, is defined for the background condition.
+ * An array of site-specific basal fitness profiles G_ia, for site i and amino-acid a, is defined for the background condition.
  * Then, for each alternative condition, a differential (log-fitness) contrast is defined:
  * D_kia, for condition k, site i and amino-acid a.
  * A positive (resp negative) D_kia means that the fitness of amino-acid a at site i under condition k is increased (resp decreased) compared to the baseline.
  * Quantitatively, the fitness vector at site i under condition k is defined by F_kia = G_kia * exp(D_kia).
  *
  * The constrasts D_kia are iid normal of mean 0 and variance that is either fixed (equal to 1) or estimated across all amino-acids and sites
- * (separately for each condition).
+ * (separately for each condition) -- see BidimIIDMVNormal.
+ *
  * Statistical support for a differential effect between conditions, for a given site i and a given amino acid a, is 
  * quantified by the tail area of the posterior distribution of D_kia (i.e. to what extent this posterior distribution is mostly under 
  * either the right-hand or the left-hand site of 0).

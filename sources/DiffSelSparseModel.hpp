@@ -50,7 +50,7 @@ license and that you accept its terms.*/
  * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
  * is modulated across a set of alternative 'conditions', or environments, specified over the tree.
  * The model is meant to identify positions displaying significant patterns of directional convergent selection
- * (i.e. sites that they tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
+ * (i.e. sites that tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
  *
  */
 

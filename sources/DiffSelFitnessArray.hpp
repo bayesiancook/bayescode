@@ -8,11 +8,13 @@
  * \brief An array of site- and condition-specific fitness profiles
  *
  * this array is used in DiffSelModel; It implements the following deterministic relation:
- * - F_kia = G_ia * exp(D_kia),
+ * - F_0ia = G_ia;
+ * - F_kia = G_ia * exp(D_kia), for k=1..K-1
  *
  * where G_ia is the baseline fitness of amino-acid a at site i, D_kia the differential effect for amino-acid a at site i under condition k;
- * the result, F_kia is (up to a proportionality constant) the fitness of amino-acid a at site i under condition k.
+ * the result, F_kia is the fitness of amino-acid a at site i under condition k.
  * Note that, when Nlevel == 2, the relation between G, D and F unfolds over two levels:
+ * - F_0ia = G_ia;
  * - F_1ia = G_ia * exp(D_1ia)
  * - F_kia = G_ia * exp(D_kia + D_1ia), for k=2..K-1
  */

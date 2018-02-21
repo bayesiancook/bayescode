@@ -7,6 +7,10 @@ using namespace std;
 
 MPI_Datatype Propagate_arg;
 
+/**
+ * \brief Chain object for running an MCMC under MultiGeneSingleOmegaModel
+ */
+
 class MultiGeneSingleOmegaChain : public MultiGeneChain  {
 
   private:
@@ -20,6 +24,15 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
+    //! \brief constructor for a new MCMC
+    //!
+    //! \param indatafile: name of file contanining sequence alignment
+    //! \param intreefile: name of file contaning tree
+    //! \param inevery: thinning factor
+    //! \param inuntil: maximum MCMC sample size
+    //! \param name: base name for all files related to this MCMC run
+    //! \param force: overwrite existing files with same name
+    //! \param inmyid, int innprocs: process id and total number of MPI processes
     MultiGeneSingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENESINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
@@ -27,6 +40,7 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain  {
         New(force);
     }
 
+    //! \brief constructor for opening and restarting an already existing chain
     MultiGeneSingleOmegaChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();

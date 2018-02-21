@@ -8,6 +8,9 @@ using namespace std;
 
 MPI_Datatype Propagate_arg;
 
+/**
+ * \brief A MultiGeneChain object for running an MCMC under MultiGeneDiffSelSparseModel
+ */
 class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
   private:
@@ -25,6 +28,20 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
+    //! \brief constructor for a new MCMC
+    //!
+    //! \param indatafile: name of file contanining sequence alignment
+    //! \param intreefile: name of file contaning tree (with branch names giving the allocation of branches to the conditions)
+    //! \param inncond: number of conditions
+    //! \param innlevel: number of levels of the model
+    //! \param incodonmodel: type of codon substitution process (1: mutation-selection, 0: square-root)
+    //! \param inevery: thinning factor
+    //! \param inuntil: maximum MCMC sample size
+    //! \param insaveall: if 1, then, save all information about each configuration visited during MCMC (into .chain file)
+    //! \param inwritegenedata: if 1, then trace gene- and condition-specific shift probabilities in separate files; if 2, then also trace site-specific shift probabilities
+    //! \param name: base name for all files related to this MCMC run
+    //! \param force: overwrite existing files with same name
+    //! \param inmyid, int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
         every = inevery;
         until = inuntil;
@@ -34,6 +51,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         New(force);
     }
 
+    //! \brief constructor for opening and restarting an already existing chain
     MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
         name = filename;
         Open();

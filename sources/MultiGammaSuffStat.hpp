@@ -5,12 +5,20 @@
 #include "IIDMultiGamma.hpp"
 #include "SuffStat.hpp"
 
+/**
+ * \brief A sufficient statistic for a collection of MultiGamma variates, as a function of the shape and center parameters
+ *
+ * see BidimIIDMultiGamma.
+ */
+
 class MultiGammaSuffStat : public SuffStat  {
 
 	public:
+    //! constructor, parameterized by dimension of the multi-gamma
 	MultiGammaSuffStat(int indim) : dim(indim), sum(indim), sumlog(indim), n(indim) {}
 	~MultiGammaSuffStat() {}
 
+    //! return dimension of the multi-gamma
     int GetDim() const {
         return dim;
     }

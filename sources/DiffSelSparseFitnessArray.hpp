@@ -8,16 +8,18 @@
  * \brief An array of site- and condition-specific fitness profiles
  *
  * this array is used in DiffSelSparseModel; It implements the following deterministic relation:
- * - F_kia = G_0ia^(1-d_kia) * G_kia^(d_kia)
+ * - F_0ia = G_0ia;
+ * - F_kia = G_0ia^(1-d_kia) * G_kia^(d_kia), for k=1..K-1
  *
  * where
  * - G_kia is the input fitness matrix (for amino-acid a, site i and condition k=0..K-1)
  * - d_kia is an array of toggles (for amino-acid a, site i and condition k=1..K-1)
- * - F_kia is the resulting fitness of amino acid a at site i and under condition k (for k=0..K-1)
+ * - F_kia is the actual fitness of amino acid a at site i and under condition k (for k=0..K-1)
  *
  * In words, if d_kia == 0, then F_kia, the fitness of amino-acid a at site i under condition k, is just the baseline G_0ia; otherwise, it is a 'new' fitness parameter, such as defined by G_kia.
  * Note that, when Nlevel == 2, the relation between G, d and F unfolds over two levels:
- * - F_1ia = G_0ia^(1-d_1ia) * G_1ia^(d_1ia)
+ * - F_0ia = G_0ia;
+ * - F_1ia = G_0ia^(1-d_1ia) * G_1ia^(d_1ia);
  * - F_kia = F_1ia^(1-d_kia) * G_kia^(d_kia), for k=2..K-1
  */
 

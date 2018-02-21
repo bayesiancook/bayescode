@@ -6,21 +6,38 @@
 
 
 /**
- * \brief A BidimArray of Nrow * Ncol iid vectors of gamma random variables (each vector being itself of dimension dim)
+ * \brief A BidimArray of iid vectors (of dimension dim) of gamma random variables.
+ *
+ * The Nrow*Ncol array is parameterized by a (positive) shape parameter and a center (a frequency vector of dimension dim).
+ * Then, for i=0..Nrow-1, j=0..Ncol-1, k=0..dim-1:
+ *
+ * x_ijk ~ Gamma(shape,center[k]).
  *
  * This class is used in DiffSelSparseModel.
  * In this context, rows are conditions, columns are sites, 
  * and (x_ijk)_k=1..20 is the vector of fitness parameters over the 20 amino-acids for site j under condition i.
- * Thus, for i=0..Nrow-1, j=0..Ncol-1, k=0..dim-1:
  *
- * x_ijk ~ Gamma(shape,center[k]).
+ * Note that renormalizing those vectors, i.e. defining:
+ *
+ * y_ijk = x_ijk / Z_ij, where Z_ij = sum_k y_ijk
+ *
+ * then, the y_ij vectors are iid from a Dirichlet distribution:
+ *
+ * y_ij ~ Dirichlet(shape*center)
+ *
+ * In other words, a 'MultiGamma(shape,center)' can be seen as an unnormalized Dirichlet(shape*center),
+ * and similarly, a BidimIIDMultiGamma can be seen as a BidimArray of unnormalized iid Dirichlet random variables.
+ * In the context of DiffSelSparseModel, 
+ * working with the unnormalized fitness profiles x_ij,
+ * rather than with the normalized versions given by y_ij,
+ * turns out to be more practical.
  */
 
 class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
 
     public:
 
-    //! constructor, parameterized by number of rows, of columns, dimension of the vectors, shape parameter and vector of means (center)
+    //! constructor, parameterized by number of rows, of columns, dimension of the vectors, shape parameter and center (frequency vector)
     BidimIIDMultiGamma(int innrow, int inncol, int indim, double inshape, const vector<double>& incenter) :
         SimpleBidimArray(innrow,inncol,vector<double>(indim,1.0/indim)), dim(indim), shape(inshape), center(incenter) {
         Sample();
@@ -52,7 +69,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
         }
     }
 
-    //! get mean relative variance over row (condition) k (mean over all sites)
+    //! get mean relative variance for row k (i.e. mean of GetRelVar(k,j) over all columns j=0..Ncol-1)
     double GetMeanRelVar(int k) const  {
 
         double mean = 0;
@@ -130,7 +147,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double> >    {
         return total;
     }
 
-    //! return logprob for entry i,j, only for those amino-acids that for which toggle[k] != 0
+    //! return logprob for entry i,j, only for those amino-acids for which toggle[k] != 0
     double GetLogProb(int i, int j, const vector<int>& toggle) const {
         const vector<double>& x = GetVal(i,j);
         double total = 0;
