@@ -1,17 +1,34 @@
 use strict;
 
 my $infile = shift;
+my $listfile = shift;
 my $burnin = shift;
 
+open (LIST0, $listfile) or die "input error for original gene list\n";
 open (LISTFILE, $infile.'.genelist') or die "input error for gene list\n";
 open (POSWFILE, $infile.'.posw') or die "input error for .posw file\n";
 open (POSOMFILE, $infile.'.posom') or die "input error for .posom file\n";
 
+my @genename0;
 my @genename;
-my %gene2index;
 my %gene2size;
 
+my $Ngene0 = <LIST0>;
+my $ngene0 = 0;
+foreach my $line (<LIST0>)	{
+	chomp $line;
+	$genename0[$ngene0] = $line;
+	$ngene0++;
+}
+if ($ngene0 != $Ngene0)	{
+	die "error: non matching number of genes: $ngene0 vs $Ngene0\n";
+}
+
 my $Ngene = <LISTFILE>;
+if ($Ngene != $Ngene0)  {
+	die "error: non matching number of genes: $Ngene vs $Ngene0\n";
+}
+
 my $ngene = 0;
 foreach my $line (<LISTFILE>)	{
 	chomp $line;
@@ -22,10 +39,9 @@ foreach my $line (<LISTFILE>)	{
     }
     my $name = $a[0];
     my $size = $a[1];
-	$genename[$ngene] = $name;
-	$ngene++;
-	$gene2index{$name} = $ngene;
+    $genename[$ngene] = $name;
     $gene2size{$name} = $size;
+	$ngene++;
 }
 if ($ngene != $Ngene)	{
 	die "error: non matching number of genes: $ngene vs $Ngene\n";
@@ -95,13 +111,13 @@ foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
 	$count++;
 	$totpp += $gene2pp{$gene};
 	my $fdr = int(100 * $totpp / $count);
-	print SOUTFILE "$fdr\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\t$gene2index{$gene}\t$gene\n";
+	print SOUTFILE "$fdr\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\t$gene\n";
 }
 	
 open (PPOUTFILE, '>'.$infile.'.pp') or die "output error: $infile\n";
 for (my $g=0; $g<$Ngene; $g++)  {
-    my $gene = $genename[$g];
-    print PPOUTFILE "$gene2index{$gene}\t$gene\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\n";
+    my $gene = $genename0[$g];
+    print PPOUTFILE "$gene\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\n";
 }
 
 
