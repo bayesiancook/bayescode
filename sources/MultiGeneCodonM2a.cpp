@@ -267,8 +267,8 @@ int main(int argc, char* argv[])	{
         double poswhyperinvconc = 1;
         int poswmode = 1;
 
-        int blmode = 2;
-        int nucmode = 2;
+        int blmode = 1;
+        int nucmode = 1;
 
         int writegenedata = 1;
 

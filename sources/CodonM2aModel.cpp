@@ -116,6 +116,7 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double>& inbranchlength) const 
 
 void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
+    blhyperinvshape = inblinvshape;
     branchlength->SetShape(1.0 / blhyperinvshape);
 }
 

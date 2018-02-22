@@ -132,43 +132,31 @@ class CodonM2aModel : public ProbModel {
         nucmode = innucmode;
     }
 
-    //! \brief set branch lengths to a new value
-    //! 
-    //! Used in a multigene context (branch lengths shared across genes)
+    //! set branch lengths to a new value (multi-gene analyses)
     void SetBranchLengths(const BranchSelector<double>& inbranchlength);
 
-    //! \brief get a copy of branch lengths into array given as argument
-    //! 
-    //! Used in a multigene context.
+    //! get a copy of branch lengths into array given as argument
     void GetBranchLengths(BranchArray<double>& inbranchlength) const;
 
-    //! \brief set branch lengths hyperparameters to a new value
-    //! 
-    //! Used in a multigene context (shrinkage across genes)
+    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
     void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape);
 
-    //! \brief set nucleotide rates (relative exchangeabilities and eq. frequencies) to a new value
-    //! 
-    //! Used in a multigene context (nuc rates shared across genes)
+    //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a new value (multi-gene analyses)
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat);
 
-    //! \brief get a copy of nucleotide rates into arrays given as arguments
+    //! get a copy of nucleotide rates into arrays given as arguments
     void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const;
 
-    //! \brief set nucleotide rates hyperparameters to a new value
-    //! 
-    //! Used in a multigene context (shrinkage across genes)
+    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc);
 
-    //! \brief set omega mixture parameters to a new value
+    //! set omega mixture parameters to a new value
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
 
-    //! \brief get omega mixture parameter values
+    //! get omega mixture parameter values
     void GetMixtureParameters(double& inpurom, double& indposom, double& inpurw, double& inposw) const;
 
-    //! \brief set omega mixture hyperparameters to a new value
-    //! 
-    //! Used in a multigene context (shrinkage across genes)
+    //! set omega mixture hyperparameters to a new value
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     //-------------------
