@@ -15,6 +15,37 @@
 #include "Chrono.hpp"
 #include "Permutation.hpp"
 
+/**
+ * \brief The mutation-selection model with constant fitness landscape over the tree -- double Dirichlet process version.
+ *
+ * The model is parameterized by 
+ * - an fixed unrooted phylogenetic tree tau, with branch lengths l = (l_j), for j running over branches
+ * - a GTR nucleotide matrix Q = rho * pi, specifying the mutation process (assumed homogeneous across sites and lineages)
+ * - an array of site-specific amino-acid fitness profiles F_ia, for site i and amino-acid a
+ * - an omega multiplier, capturing deviations of the non-syn rate from the model (see Rodrigue and Lartillot, 2107); this parameter is fixed to 1 by default.
+ *
+ * Site-specific amino-acid fitness profiles are drawn from a Dirichlet process,
+ * implemented using a truncated stick-breaking process, of concentration parameter kappa, and truncated at Ncat.
+ *
+ * The base distribution of this Dirichlet process, G_0, is itself a (truncated stick breaking) mixture of Dirichlet distributions,
+ * parameterized by basekappa, and truncated at baseNcat. Each component of this mixture Dirichlet is parameterized by a center (a 20-freqeuncy vector) and a concentration.
+ *
+ * Concerning the first-level stick-breaking process, by default, Ncat == 100 (can be changed using the  -ncat option).
+ * As for baseNcat, it is equal to 1, in which case the base distribution G_0 is just a simple Dirichlet (as in Rodrigue et al, 2010). This simple model is probably the one that should be used by default for single-gene analyses. The more complex model with baseNcat > 1 is meant to be used in a multi-gene context (although, even in that case, mixing is still challenging, and not sure whether this model brings important improvement in the end). Thus, baseNcat = 1 appears to be the most reasonable model settings for now.
+ *
+ * Priors (in a single-gene context):
+ * - branch lengths iid exponential, of rate lambda
+ * - lambda exponential of rate 10
+ * - rho and pi uniform Dirichlet
+ * - omega: fixed to 1 or exponential of rate 1
+ * - kappa: exponential of rate 0.1
+ * - center of base distribution: uniform Dirichlet
+ * - concentration of base distribution: exponential of mean 20.
+ *
+ * In a multi-gene context, shrinkage across genes can be applied to branch lengths, omega, nucleotide rate parameters (rho and pi), and to the parameters of the base distribution (center and concentration) -- see MultiGeneAAMutSelDSBDPModel.
+ *
+ */
+
 class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 	Tree* tree;
@@ -113,12 +144,19 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Construction and allocation
     // ------------------
 
+    //! \brief constructor
+    //!
+    //! parameters:
+    //! - datafile: name of file containing codon sequence alignment
+    //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
+    //! - Ncat: truncation of the first-level stick-breaking process (by default: 100)
+    //! - baseNcat: truncation of the second-level stick-breaking process (by default: 1)
 	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inNcat, int inbaseNcat)   {
 
         blmode = 0;
         nucmode = 0;
         basemode = 0;
-        omegamode = 2;
+        omegamode = 3;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -135,9 +173,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
 
         baseNcat = inbaseNcat;
-        if (baseNcat == -1) {
-            baseNcat = 100;
-        }
 
 		std::cerr << "-- Number of sites: " << Nsite << std::endl;
         cerr << "ncat : " << Ncat << '\n';
@@ -162,36 +197,68 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		// Allocate();
 	}
 
+    //! \brief set estimation method for branch lengths
+    //!
+    //! - mode == 2: shared and estimated across genes 
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes (with shrinkage)
+    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
+    //!
+    //! for single-gene analyses, only mode 0 can be used.
     void SetBLMode(int mode)    {
         blmode = mode;
     }
 
+    //! \brief set estimation method for nuc rates
+    //!
+    //! - mode == 2: shared and estimated across genes
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes (with shrinkage)
+    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
+    //!
+    //! for single-gene analyses, only mode 0 can be used.
     void SetNucMode(int mode)   {
         nucmode = mode;
     }
 
+    //! \brief set estimation method for nuc rates
+    //!
+    //! - mode == 3: fixed to 1
+    //! - mode == 2: shared and estimated across genes: currently not implemented
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes (with shrinkage)
+    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
+    //!
+    //! for single-gene analyses, either mode 3 and mode 0 can be used -- default mode is 3.
     void SetOmegaMode(int mode) {
         omegamode = mode;
     }
 
+    //! \brief set estimation method for center and concentration parameters of base distribution
+    //!
+    //! - mode == 3: shared across genes and fixed to externally given empirical values: currently not implemented 
+    //! - mode == 2: shared and estimated across genes
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes (with shrinkage): currently not implemented
+    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
+    //!
+    //! for single-gene analyses, either mode 3 and mode 0 can be used -- default mode is 3.
     void SetBaseMode(int mode)  {
         basemode = mode;
     }
 
+    //! allocate the model (data structures)
 	void Allocate()	{
 
+        // branch lengths
 		lambda = 10;
 		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
 		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
+        // nucleotide mutation matrix
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
-
 		nucstat.assign(Nnuc,0);
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
-
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
+        // base distribution (can be skipped)
         basekappa = 1.0;
         baseweight = new StickBreakingProcess(baseNcat,basekappa);
         baseoccupancy = new OccupancySuffStat(baseNcat);
@@ -211,28 +278,38 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         for (int k=0; k<baseNcat; k++)  {
             (*baseconcentrationarray)[k] = 20.0;
         }
-
         // suff stats for component aa fitness arrays
         basesuffstatarray = new DirichletSuffStatArray(baseNcat,Naa);
-
         componentalloc = new MultinomialAllocationVector(Ncat,baseweight->GetArray());
         componentcenterarray = new MixtureSelector<vector<double> >(basecenterarray,componentalloc);
         componentconcentrationarray = new MixtureSelector<double>(baseconcentrationarray,componentalloc);
 
+        //
+        // (truncated) Dirichlet mixture of aa fitness profiles
+        // 
+
+        // Ncat fitness profiles iid from the base distribution
         componentaafitnessarray = new MultiDirichlet(componentcenterarray,componentconcentrationarray);
 
-        // mixture of aa fitness profiles
+        // mixture weights (truncated stick breaking process)
         kappa = 1.0;
         weight = new StickBreakingProcess(Ncat,kappa);
-        occupancy = new OccupancySuffStat(Ncat);
 
+        // site allocations to the mixture (multinomial allocation)
         sitealloc = new MultinomialAllocationVector(Nsite,weight->GetArray());
 
+        // occupancy suff stats of site allocations (for resampling weights)
+        occupancy = new OccupancySuffStat(Ncat);
+
+        // global omega (fixed to 1 by default)
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
 		omega = 1.0;
 
+        // Ncat mut sel codon matrices (based on the Ncat fitness profiles of the mixture)
         componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
+
+        // selector, specifying which codon matrix should be used for each site
         sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
@@ -246,26 +323,32 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Accessors
     // ------------------
 
+    //! const access to codon state space
 	CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) codondata->GetStateSpace();
 	}
 
+    //! return number of aligned sites
     int GetNsite() const    {
         return Nsite;
     }
 
+    //! return current omega value
     double GetOmega() const {
         return omega;
     }
 
+    //! \brief const access to array of length-pathsuffstats across branches
     const PoissonSuffStatBranchArray* GetLengthPathSuffStatArray() const {
         return lengthpathsuffstatarray;
     }
 
+    //! \brief const access to array of suff stats for base mixture
     const DirichletSuffStatArray* GetBaseSuffStatArray() const   {
         return basesuffstatarray;
     }
 
+    //! \brief const access to array of occupancy suff stats for base mixture
     const OccupancySuffStat* GetBaseOccupancies() const {
         return baseoccupancy;
     }
@@ -274,26 +357,31 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Setting and updating
     // ------------------
 
+    //! set branch lengths to a new value (multi-gene analyses)
     void SetBranchLengths(const BranchSelector<double>& inbranchlength)    {
         branchlength->Copy(inbranchlength);
     }
 
+    //! set omega to new value (multi-gene analyses)
     void SetOmega(double inomega)   {
         omega = inomega;
         UpdateCodonMatrices();
     }
 
+    //! set omega hyperparams to new value (multi-gene analyses)
     void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
     }
 
+    //! set nuc rates to new value (multi-gene analyses)
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         UpdateMatrices();
     }
 
+    //! set base mixture concentration and center parameters to new value (multi-gene analyses)
     void SetBaseMixture(const Selector<vector<double> >& inbasecenterarray, const Selector<double>& inbaseconcentrationarray, const Selector<double>& inbaseweight, const Selector<int>& inpermut) {
 
         basecenterarray->Copy(inbasecenterarray);
@@ -302,25 +390,33 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         componentalloc->Permute(inpermut);
     }
 
+    //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
 	void UpdateNucMatrix()	{
 		nucmatrix->CopyStationary(nucstat);
 		nucmatrix->CorruptMatrix();
 	}
 
+    //! \brief tell the codon matrices that their parameters have changed and that they should be updated
 	void UpdateCodonMatrices()	{
         componentcodonmatrixarray->SetOmega(omega);
 		componentcodonmatrixarray->UpdateCodonMatrices();
 	}
 
+    //! \brief tell codon matrix k that its parameters have changed and that it should be updated
     void UpdateCodonMatrix(int k)    {
         (*componentcodonmatrixarray)[k].CorruptMatrix();
     }
 		
+    //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
     void UpdateMatrices()   {
         UpdateNucMatrix();
         UpdateCodonMatrices();
     }
 
+    //! \brief dummy function that does not do anything.
+    //! 
+    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove (defined in ProbModel),
+    //! all of which require a void (*f)(void) function pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
     void Update() override {
@@ -337,6 +433,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Priors and likelihood
     //-------------------
 
+    //! \brief return total log prior (up to some constant)
     double GetLogPrior() const {
         double total = 0;
         if (blmode < 2) {
@@ -362,49 +459,59 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return total;
     }
 
+    //! return log likelihood
 	double GetLogLikelihood() const {
 		return phyloprocess->GetLogLikelihood();
 	}
 
+    //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const   {
         return GetLogPrior() + GetLogLikelihood();
     }
 
+    //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior() const {
 		return -lambda / 10;
 	}
 
+    //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior() const {
 		return branchlength->GetLogProb();
 	}
 
-	// exponential of mean 1
+    //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
 	double OmegaLogPrior() const {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
 		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
 	}
 
+    //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
         return 0;
     }
 
+    //! log prior over concentration parameters basekappa of mixture of base distribution
     double BaseStickBreakingHyperLogPrior() const   {
         return -basekappa/10;
     }
 
+    //! log prior over weights of stick breaking process of base distribution
     double BaseStickBreakingLogPrior() const    {
         return baseweight->GetLogProb(basekappa);
     }
 
+    //! log prior over concentration parameters kappa of stick-breaking mixture of amino-acid profiles
     double StickBreakingHyperLogPrior() const   {
         return -kappa/10;
     }
 
+    //! log prior over weights of stick breaking process of amino-acid profiles 
     double StickBreakingLogPrior() const    {
         return weight->GetLogProb(kappa);
     }
 
+    //! log prior over base center and concentration parameters
     double BaseLogPrior() const {
         double total = 0;
         total += basecenterarray->GetLogProb();
@@ -416,6 +523,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return total;
     }
 
+    //! log prior over base center and concentration parameters of component k of base distribution
     double BaseLogPrior(int k) const {
         double total = 0;
         total += basecenterarray->GetLogProb(k);
@@ -423,10 +531,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return total;
     }
 
+    //! log prior of amino-acid fitness profiles
     double AALogPrior() const {
         return componentaafitnessarray->GetLogProb();
     }
 
+    //! log prior of amino-acid fitness profile k
     double AALogPrior(int k) const {
         return componentaafitnessarray->GetLogProb(k);
     }
@@ -435,18 +545,22 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
+    //! return log prob of the current substitution mapping, as a function of the current codon substitution process
 	double PathSuffStatLogProb() const {
         return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
+    //! return log prob of the substitution mappings over sites allocated to component k of the mixture
     double PathSuffStatLogProb(int k) const {
         return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k));
     }
 
+    //! return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
 	double BranchLengthsHyperSuffStatLogProb() const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
+    //! return log prob of first-level mixture components (i.e. all amino-acid profiles drawn from component k of the base distribution), as a function of the center and concentration parameters of this component
     double BaseSuffStatLogProb(int k) const   {
         return basesuffstatarray->GetVal(k).GetLogProb(basecenterarray->GetVal(k),baseconcentrationarray->GetVal(k));
     }
@@ -455,28 +569,27 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //  Log probs for MH moves
     //-------------------
 
-    // for moving branch lengths hyperparameter lambda
+    //! log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
-    // for moving nuc rates
+    //! log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const {
         return NucRatesLogPrior() + PathSuffStatLogProb();
     }
 
-    // for moving aa hyper params (center and concentration)
-    // for component k of the mixture
+    //! log prob factor to be recomputed when moving aa hyper params (center and concentration) for component k of base distribution
     double BaseLogProb(int k) const   {
         return BaseLogPrior(k) + BaseSuffStatLogProb(k);
     }
 
-    // for moving basekappa
+    //! log prob factor to be recomputed when moving basekappa, the concentration parameter of the second-level strick breaking process (base distribution)
     double BaseStickBreakingHyperLogProb() const {
         return BaseStickBreakingHyperLogPrior() + BaseStickBreakingLogPrior();
     }
 
-    // for moving kappa
+    //! log prob factor to be recomputed when moving kappa, the concentration parameter of the first-level strick breaking process
     double StickBreakingHyperLogProb() const {
         return StickBreakingHyperLogPrior() + StickBreakingLogPrior();
     }
@@ -485,18 +598,19 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //  Collecting Suff Stats
     //-------------------
 
-    // per site
+    //! collect sufficient statistics if substitution mappings across sites
 	void CollectSitePathSuffStat()	{
 		sitepathsuffstatarray->Clear();
         sitepathsuffstatarray->AddSuffStat(*phyloprocess);
 	}
 
-    // per component of the mixture
+    //! gather site-specific sufficient statistics component-wise
 	void CollectComponentPathSuffStat()	{
         componentpathsuffstatarray->Clear();
         componentpathsuffstatarray->Add(*sitepathsuffstatarray,*sitealloc);
     }
 
+    //! collect sufficient statistics for moving branch lengths (directly from the substitution mappings)
     void CollectLengthSuffStat()    {
 		lengthpathsuffstatarray->Clear();
 		lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
@@ -506,17 +620,20 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //  Moves 
     //-------------------
 
+    //! complete MCMC move schedule
 	double Move()	{
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
     }
 
+    //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac)   {
         UpdateMatrices();
 		phyloprocess->Move(frac);
     }
 
+    //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep)   {
 		for (int rep=0; rep<nrep; rep++)	{
 
@@ -551,6 +668,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		}
 	}
 
+    //! MH move on base mixture
     void MoveBase(int nrep) {
         if (baseNcat > 1)   {
             ResampleBaseAlloc();
@@ -558,11 +676,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         MoveBaseMixture(nrep);
     }
 
+    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
 	void MoveBranchLengthsHyperParameter()	{
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -571,6 +691,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		branchlength->SetScale(lambda);
 	}
 
+    //! MH move on omega
 	void MoveOmega()	{
 
 		omegapathsuffstat.Clear();
@@ -581,6 +702,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		UpdateCodonMatrices();
 	}
 
+    //! MH move on nucleotide rate parameters 
 	void MoveNucRates()	{
 
         ProfileMove(nucrelrate,0.1,1,3,&AAMutSelDSBDPOmegaModel::NucRatesLogProb,&AAMutSelDSBDPOmegaModel::UpdateMatrices,this);
@@ -591,6 +713,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         ProfileMove(nucstat,0.01,1,3,&AAMutSelDSBDPOmegaModel::NucRatesLogProb,&AAMutSelDSBDPOmegaModel::UpdateMatrices,this);
 	}
 
+    //! MCMC module for the mixture amino-acid fitness profiles
     void MoveAAMixture(int nrep)    {
         for (int rep=0; rep<nrep; rep++)  {
             MoveAAProfiles();
@@ -604,16 +727,19 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
+    //! resample empty components of the mixture from prior
     void ResampleEmptyComponents()  {
         componentaafitnessarray->PriorResample(*occupancy);
         componentcodonmatrixarray->UpdateCodonMatrices(*occupancy);
     }
 
+    //! MH move on amino-acid fitness profiles (occupied components only)
     void MoveAAProfiles()   {
         CompMoveAAProfiles(3);
         MulMoveAAProfiles(3);
     }
 
+    //! MH move on amino-acid fitness profiles: additive compensated move on pairs of entries of the vector
     double CompMoveAAProfiles(int nrep) {
         accb1 += MoveAA(1.0,1,nrep);
         // accb2 += MoveAA(1.0,3,nrep);
@@ -626,6 +752,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return 1.0;
     }
 
+    //! MH move on amino-acid fitness profiles: multiplicative move (using the Gamma representation of the Dirichlet)
     double MulMoveAAProfiles(int nrep) {
         acca1 += MoveAAGamma(3.0,nrep);
         acca2 += MoveAAGamma(1.0,nrep);
@@ -638,6 +765,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return 1.0;
     }
 
+    //! MH move on amino-acid fitness profiles: additive compensated move on pairs of entries of the vector
 	double MoveAA(double tuning, int n, int nrep)	{
 		double nacc = 0;
 		double ntot = 0;
@@ -671,6 +799,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		return nacc/ntot;
 	}
 
+    //! helper function: log density of 20 gammas
     double GammaAALogPrior(const vector<double>& x, const vector<double>& aacenter, double aaconc) {
         double total = 0;
         for (int l=0; l<Naa; l++)   {
@@ -679,6 +808,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return total;
     }
 
+    //! MH move on amino-acid fitness profiles: multiplicative move (using the Gamma representation of the Dirichlet)
 	double MoveAAGamma(double tuning, int nrep)	{
 
 		double nacc = 0;
@@ -746,6 +876,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return nacc/ntot;
 	}
 
+    //! Gibbs resample mixture allocations
     void ResampleAlloc()    {
         vector<double> postprob(Ncat,0);
         for (int i=0; i<Nsite; i++) {
@@ -755,11 +886,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         UpdateOccupancies();
     }
 
+    //! update mixture occupancy suff stats (for resampling mixture weights)
     void UpdateOccupancies()    {
         occupancy->Clear();
         occupancy->AddSuffStat(*sitealloc);
     }
 
+    //! get allocation posterior probabilities for a given site
     void GetAllocPostProb(int site, vector<double>& postprob)    {
 
         double max = 0;
@@ -784,6 +917,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
+    //! MCMC sequence for label switching moves
     void LabelSwitchingMove()   {
         Permutation permut(Ncat);
         weight->LabelSwitchingMove(5,*occupancy,permut);
@@ -791,16 +925,19 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         componentaafitnessarray->Permute(permut);
     }
 
+    //! Gibbs resample mixture weights (based on occupancy suff stats)
     void ResampleWeights()  {
         weight->GibbsResample(*occupancy);
     }
 
+    //! MH move on kappa, concentration parameter of the mixture
     void MoveKappa()    {
         ScalingMove(kappa,1.0,10,&AAMutSelDSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(kappa,0.3,10,&AAMutSelDSBDPOmegaModel::StickBreakingHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
         weight->SetKappa(kappa);
     }
 
+    //! MCMC module for the base mixture 
     void MoveBaseMixture(int nrep)    {
         for (int rep=0; rep<nrep; rep++)  {
             MoveBaseComponents(10);
@@ -813,6 +950,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
+    //! MCMC module for moving the center and concentration parameters of the components of the the base mixture 
     void MoveBaseComponents(int nrep) {
 
         CollectBaseSuffStat();
@@ -825,11 +963,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
+    //! collect suff stats for moving center and concentration parameters of the base mixture
     void CollectBaseSuffStat()   {
         basesuffstatarray->Clear();
         componentaafitnessarray->AddSuffStat(*basesuffstatarray,*componentalloc);
     }
 
+    //! MCMC module for moving the center parameters of the components of the the base mixture 
     double MoveBaseCenters(double tuning, int n) {
 		double nacc = 0;
 		double ntot = 0;
@@ -855,6 +995,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		return nacc/ntot;
 	}
 
+    //! MCMC module for moving the concentration parameters of the components of the the base mixture 
     double MoveBaseConcentrations(double tuning)  {
 		double nacc = 0;
 		double ntot = 0;
@@ -881,11 +1022,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		return nacc/ntot;
     }
 
+    //! resample empty components of the base mixture from the prior
     void ResampleBaseEmptyComponents()  {
         basecenterarray->PriorResample(*baseoccupancy);
         baseconcentrationarray->PriorResample(*baseoccupancy);
     }
 
+    //! Gibbs resample base mixture allocations 
     void ResampleBaseAlloc()    {
         vector<double> postprob(baseNcat,0);
         for (int i=0; i<Ncat; i++) {
@@ -895,11 +1038,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         UpdateBaseOccupancies();
     }
 
+    //! update base occupancy suff stats (for moving base weights)
     void UpdateBaseOccupancies()    {
         baseoccupancy->Clear();
         baseoccupancy->AddSuffStat(*componentalloc);
     }
 
+    //! get allocation posterior probability of a component of the first-level mixture to the components of the second-level mixture
     void GetBaseAllocPostProb(int cat, vector<double>& postprob)    {
 
         double max = 0;
@@ -923,6 +1068,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
+    //! MCMC sequence for label switching moves of the base mixture
     void BaseLabelSwitchingMove()   {
         Permutation permut(baseNcat);
         baseweight->LabelSwitchingMove(5,*baseoccupancy,permut);
@@ -932,10 +1078,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basesuffstatarray->Permute(permut);
     }
 
+    //! Gibbs resample base mixture weights (based on occupancy suff stats)
     void ResampleBaseWeights()  {
         baseweight->GibbsResample(*baseoccupancy);
     }
 
+    //! MH move on basekappa, concentration parameter of the base mixture
     void MoveBaseKappa()    {
         ScalingMove(basekappa,1.0,10,&AAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(basekappa,0.3,10,&AAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
@@ -946,6 +1094,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    //! return number of occupied components in first-level mixture (mixture of amino-acid fitness profiles)
     int GetNcluster() const {
 
         int n = 0;
@@ -957,6 +1106,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return n;
     }
 
+    //! return number of occupied components in base distribution
     int GetBaseNcluster() const {
 
         int n = 0;
@@ -968,10 +1118,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return n;
     }
 
+    //! return mean entropy of amino-acd fitness profiles
     double GetMeanAAEntropy() const {
         return componentaafitnessarray->GetMeanEntropy();
     }
 
+    //! return mean of concentration parameters of base distribution
     double GetMeanComponentAAConcentration() const {
 
         double tot = 0;
@@ -981,6 +1133,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return tot / Ncat;
     }
 
+    //! return mean entropy of centers of base distribution
     double GetMeanComponentAAEntropy() const {
 
         double tot = 0;
@@ -990,15 +1143,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return tot / Ncat;
     }
 
+    //! return entropy of vector of nucleotide exchange rates
     double GetNucRREntropy() const  {
         return Random::GetEntropy(nucrelrate);
     }
 
+    //! return entropy of vector of equilibrium nucleotide composition
     double GetNucStatEntropy() const    {
         return Random::GetEntropy(nucrelrate);
     }
 
-	void TraceHeader(std::ostream& os) const {
+	void TraceHeader(ostream& os) const override {
 		os << "#logprior\tlnL\tlength\t";
 		os << "omega\t";
         os << "ncluster\t";
@@ -1014,7 +1169,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		os << "rrent\n";
 	}
 
-	void Trace(ostream& os) const {	
+	void Trace(ostream& os) const override {	
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
         // 3x: per coding site (and not per nucleotide site)
@@ -1033,13 +1188,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		os << Random::GetEntropy(nucrelrate) << '\n';
 	}
 
-	void Monitor(ostream& os) const {
+	void Monitor(ostream& os) const override {
         os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\t' << basechrono.GetTime() << '\n';
         os << "prop time in aa moves  : " << aachrono.GetTime() / totchrono.GetTime() << '\n';
         os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
     }
 
-	void FromStream(istream& is) {
+	void FromStream(istream& is) override {
 
         if (blmode < 2) {
             is >> lambda;
@@ -1067,7 +1222,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         }
     }
 
-	void ToStream(ostream& os) const {
+	void ToStream(ostream& os) const override {
 
         if (blmode < 2) {
             os << lambda << '\t';

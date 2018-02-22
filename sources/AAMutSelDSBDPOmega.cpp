@@ -4,6 +4,10 @@
 #include "AAMutSelDSBDPOmegaModel.hpp"
 using namespace std;
 
+/**
+ * \brief Chain object for running an MCMC under AAMutSelDSBDPOmegaModel 
+ */
+
 class AAMutSelDSBDPOmegaChain : public Chain  {
 
   private:
@@ -101,8 +105,8 @@ int main(int argc, char* argv[])	{
     else    {
         string datafile = "";
         string treefile = "";
-        int Ncat = -1;
-        int baseNcat = -1;
+        int Ncat = 100;
+        int baseNcat = 1;
         name = "";
         int force = 1;
         int every = 1;
