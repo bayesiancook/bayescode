@@ -60,7 +60,7 @@ license and that you accept its terms.*/
 #include "IIDMVNormal.hpp"
 #include "DiffSelFitnessArray.hpp"
 #include "BranchAllocationSystem.hpp"
-#include "AAMutSelCodonMatrixArray.hpp"
+#include "AADiffSelCodonMatrixBidimArray.hpp"
 #include "SubMatrixSelector.hpp"
 #include "IIDGamma.hpp"
 #include "GammaSuffStat.hpp"
@@ -138,7 +138,7 @@ class DiffSelModel : public ProbModel {
 
     // codon substitution matrices
     // across conditions and sites
-    AAMutSelCodonMatrixArray* condsubmatrixarray;
+    AADiffSelCodonMatrixBidimArray* condsubmatrixarray;
 
     // branch- and site-substitution matrices (for phyloprocess)
     SubMatrixSelector* submatrixarray;
@@ -278,7 +278,7 @@ class DiffSelModel : public ProbModel {
 
         // codon matrices
         // per condition and per site
-        condsubmatrixarray = new AAMutSelCodonMatrixArray(*fitnessprofile,*GetCodonStateSpace(),*nucmatrix);
+        condsubmatrixarray = new AADiffSelCodonMatrixBidimArray(*fitnessprofile,*GetCodonStateSpace(),*nucmatrix);
 
         // sub matrices per branch and per site
         submatrixarray = new SubMatrixSelector(*condsubmatrixarray,*branchalloc);
