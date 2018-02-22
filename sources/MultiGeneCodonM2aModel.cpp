@@ -57,7 +57,7 @@ void MultiGeneCodonM2aModel::Allocate() {
 
     lambda = 10;
     branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-    blhyperinvshape = 1.0;
+    blhyperinvshape = 0.1;
     if (blmode == 2)    {
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
         lengthhypersuffstatarray = 0;
@@ -70,10 +70,10 @@ void MultiGeneCodonM2aModel::Allocate() {
     }
 
     nucrelratehypercenter.assign(Nrr,1.0/Nrr);
-    nucrelratehyperinvconc = 1.0 / Nrr;
+    nucrelratehyperinvconc = 0.1 / Nrr;
 
     nucstathypercenter.assign(Nnuc,1.0/Nnuc);
-    nucstathyperinvconc = 1.0 / Nnuc;
+    nucstathyperinvconc = 0.1 / Nnuc;
 
     if (nucmode == 2)   {
         nucrelratearray = new IIDDirichlet(1,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
