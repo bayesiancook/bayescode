@@ -2,7 +2,6 @@ use strict;
 
 my $infile = shift;
 my $burnin = shift;
-my $outfile = shift;
 
 open (LISTFILE, $infile.'.genelist') or die "input error for gene list\n";
 open (POSWFILE, $infile.'.posw') or die "input error for .posw file\n";
@@ -89,7 +88,7 @@ for (my $i=0; $i<$Ngene; $i++)	{
 	$gene2meanom{$genename[$i]} = $meanom[$i];
 }
 
-open (SOUTFILE, '>'.$outfile.'.sortedpp') or die "output error: $outfile\n";
+open (SOUTFILE, '>'.$infile.'.sortedpp') or die "output error: $infile\n";
 my $totpp = 0;
 my $count = 0;
 foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
@@ -99,7 +98,7 @@ foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
 	print SOUTFILE "$fdr\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\t$gene2index{$gene}\t$gene\n";
 }
 	
-open (PPOUTFILE, '>'.$outfile.'.pp') or die "output error: $outfile\n";
+open (PPOUTFILE, '>'.$infile.'.pp') or die "output error: $infile\n";
 for (my $g=0; $g<$Ngene; $g++)  {
     my $gene = $genename[$g];
     print PPOUTFILE "$gene2index{$gene}\t$gene\t$gene2pp{$gene}\t$gene2meanw{$gene}\t$gene2meanom{$gene}\n";
