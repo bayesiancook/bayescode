@@ -23,8 +23,23 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // branch lengths: shared across genes
 	double lambda;
 	BranchIIDGamma* branchlength;
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat hyperlengthsuffstat;
+
+    double blhyperinvshape;
+    GammaWhiteNoiseArray* branchlengtharray;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+    GammaSuffStatBranchArray* lengthhypersuffstatarray;
+
+    // gene-specific nuc rates
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    IIDDirichlet* nucrelratearray;
+    DirichletSuffStat nucrelratesuffstat;
+
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    IIDDirichlet* nucstatarray;
+    DirichletSuffStat nucstatsuffstat;
 
     // omega*: iid gamma across genes
 	double omegahypermean;
@@ -79,7 +94,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs) {
+    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -114,7 +129,26 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        blhyperinvshape = 0.1;
+        if (blmode == 2)    {
+            lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+            lengthhypersuffstatarray = 0;
+        }
+        else    {
+            branchlength->SetAllBranches(1.0/lambda);
+            branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
+            lengthpathsuffstatarray = 0;
+            lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
+        }
+
+        nucrelratehypercenter.assign(Nrr,1.0/Nrr);
+        nucrelratehyperinvconc = 0.1 / Nrr;
+
+        nucstathypercenter.assign(Nnuc,1.0/Nnuc);
+        nucstathyperinvconc = 0.1 / Nnuc;
+
+        nucrelratearray = new IIDDirichlet(GetLocalNgene(),nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        nucstatarray = new IIDDirichlet(GetLocalNgene(),nucstathypercenter,1.0/nucstathyperinvconc);
 
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
@@ -173,7 +207,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void FastUpdate()   {
-        branchlength->SetScale(lambda);
+        if (blmode == 2)    {
+            branchlength->SetScale(lambda);
+        }
+        else    {
+            branchlength->SetAllBranches(1.0/lambda);
+            branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
+        }
+
+        nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
+        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
         omegaarray->SetShape(alpha);
@@ -185,12 +229,22 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         FastUpdate();
 
         if (nprocs > 1) {
+
             if (blmode >= 2)    {
                 MasterSendGlobalBranchLengths();
             }
+            else    {
+                MasterSendBranchLengthsHyperParameters();
+                MasterSendGeneBranchLengths();
+            }
+
+            MasterSendNucRatesHyperParameters();
+            MasterSendGeneNucRates();
+
             if (basemode >= 2)  {
                 MasterSendBaseMixture();
             }
+
             if (omegamode == 1) {
                 MasterSendOmegaHyperParameters();
                 MasterSendOmega();
@@ -204,6 +258,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         if (blmode >= 2)    {
             SlaveReceiveGlobalBranchLengths();
         }
+        else    {
+            SlaveReceiveBranchLengthsHyperParameters();
+            SlaveReceiveGeneBranchLengths();
+        }
+
+        SlaveReceiveNucRatesHyperParameters();
+        SlaveReceiveGeneNucRates();
+
         if (basemode >= 2)  {
             SlaveReceiveBaseMixture();
         }
@@ -253,29 +315,59 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void TraceHeader(ostream& os) const {
 
-        os << "#logprior\tlnL\tlength\t";
+        os << "#logprior\tlnL\t";
+        os << "length\t";
+        if (blmode < 2) {
+            os << "stdev\t";
+        }
         os << "meanomega\t";
         os << "varomega\t";
         os << "ncluster\t";
-        os << "nbasecluster\t";
+        // os << "nbasecluster\t";
         os << "basekappa\t";
         os << "aastatent\t";
         os << "baseconc\t";
-        os << "baseent\n";
+        os << "baseent\t";
+        os << "nucrr\tinvconc\t";
+        os << "nucstat\tinvconc\n";
+    }
+
+    double GetMeanTotalLength() const {
+        double tot = 0;
+        for (int j=0; j<Nbranch; j++)	{
+            tot += branchlength->GetVal(j);
+        }
+        return tot;
+    }
+
+    double GetMeanLength() const {
+        return branchlengtharray->GetMeanLength();
+    }
+
+    double GetVarLength() const {
+        return branchlengtharray->GetVarLength();
     }
 
     void Trace(ostream& os) const {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-        os << 3*branchlength->GetTotalLength() << '\t';
+        if (blmode == 2)    {
+            os << GetMeanTotalLength() << '\t';
+        }
+        else    {
+            os << GetMeanLength() << '\t';
+            os << sqrt(GetVarLength()) << '\t';
+        }
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
         os << MeanNcluster << '\t';
-        os << GetBaseNcluster() << '\t';
+        // os << GetBaseNcluster() << '\t';
         os << basekappa << '\t';
         os << MeanStatEnt << '\t';
         os << MeanAAConc << '\t';
-		os << MeanAACenterEnt << '\n';
+		os << MeanAACenterEnt << '\t';
+        os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
+        os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
 		os.flush();
     }
 
@@ -298,29 +390,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime() << '\n';
     }
 
-    /*
-	void FromStream(istream& is) {
-        if (! myid) {
-            MasterFromStream(is);
-        }
-        else    {
-            SlaveFromStream();
-        }
-    }
-
-    void ToStream(ostream& os) const    {
-        if (! myid) {
-            MasterToStream(os);
-        }
-        else    {
-            SlaveToStream();
-        }
-    }
-    */
-
     void MasterFromStream(istream& is) override {
         is >> lambda;
         is >> *branchlength;
+        is >> blhyperinvshape;
+        is >> nucrelratehypercenter;
+        is >> nucrelratehyperinvconc;
+        is >> nucstathypercenter;
+        is >> nucstathyperinvconc;
+        is >> *nucrelratearray;
+        is >> *nucstatarray;
+
         if (omegamode != 3) {
             is >> omegahypermean;
             is >> omegahyperinvshape;
@@ -368,6 +448,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         os << lambda << '\t';
         os << *branchlength << '\t';
+        os << blhyperinvshape << '\t';
+        os << nucrelratehypercenter << '\t';
+        os << nucrelratehyperinvconc << '\t';
+        os << nucstathypercenter << '\t';
+        os << nucstathyperinvconc << '\t';
+        os << *nucrelratearray << '\t';
+        os << *nucstatarray << '\t';
+
         if (omegamode != 3) {
             os << omegahypermean << '\t';
             os << omegahyperinvshape << '\t';
@@ -444,9 +532,20 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
+
 		double total = GeneLogPrior;
-		total += BranchLengthsHyperLogPrior();
-		total += BranchLengthsLogPrior();
+
+        if (blmode == 2)    {
+            total += GlobalBranchLengthsLogPrior();
+        }
+        else if (blmode == 1)   {
+            total += GeneBranchLengthsHyperLogPrior();
+        }
+
+        if (nucmode == 1)   {
+            total += GeneNucRatesHyperLogPrior();
+        }
+
         if (omegamode != 3) {
             total += OmegaHyperLogPrior();
             total += OmegaLogPrior();
@@ -457,13 +556,31 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 		return total;
     }
 
-	double BranchLengthsHyperLogPrior() const {
-		return -lambda / 10;
-	}
+    double LambdaHyperLogPrior() const {
+        return -lambda/10;
+    }
 
-	double BranchLengthsLogPrior() const {
-		return branchlength->GetLogProb();
-	}
+    double GlobalBranchLengthsLogPrior() const {
+        return LambdaHyperLogPrior() + branchlength->GetLogProb();
+    }
+
+    // exponential of mean 1 for blhyperinvshape
+    double BranchLengthsHyperInvShapeLogPrior() const {
+        return -blhyperinvshape;
+    }
+
+    double GeneBranchLengthsHyperLogPrior() const {
+        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
+    }
+
+    double GeneNucRatesHyperLogPrior() const {
+        double total = 0;
+        if (nucmode == 1)   {
+            total -= nucrelratehyperinvconc;
+            total -= nucstathyperinvconc;
+        }
+        return total;
+    }
 
     double OmegaHyperLogPrior() const {
         double total = 0;
@@ -479,19 +596,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double BaseStickBreakingHyperLogPrior() const   {
         return -basekappa/10;
     }
-
-    /*
-    double BaseStickBreakingLogPrior() const    {
-        double ret = baseweight->GetLogProb(basekappa);
-        if (std::isinf(ret)) {
-            cerr << "in BaseStickBreakingLogPrior: inf\n";
-            cerr << *baseweight << '\n';
-            cerr << basekappa << '\n';
-            exit(1);
-        }
-        return ret;
-    }
-    */
 
     double BaseStickBreakingSuffStatLogProb() const    {
         double ret = baseweight->GetMarginalLogProb(*baseoccupancy);
@@ -528,10 +632,23 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // Suff Stat Log Probs
     //-------------------
 
-    // suff stat for moving branch lengths hyperparameter (lambda)
-	double BranchLengthsHyperSuffStatLogProb() const {
-		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
-	}
+    // suff stat for global branch lengths, as a function of lambda
+	double LambdaHyperSuffStatLogProb() const {
+        return hyperlengthsuffstat.GetLogProb(1.0,lambda);
+    }
+
+    // suff stat for gene-specific branch lengths, as a function of bl hyperparameters
+    double BranchLengthsHyperSuffStatLogProb() const {
+        return lengthhypersuffstatarray->GetLogProb(*branchlength,blhyperinvshape);
+    }
+
+    // suff stat for gene-specific nuc rates, as a function of nucrate hyperparameters
+    double NucRatesHyperSuffStatLogProb() const {
+        double total = 0;
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
+        return total;
+    }
 
     // suff stats for moving omega hyper parameters
     double OmegaHyperSuffStatLogProb() const {
@@ -548,9 +665,19 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // Log Probs for MH moves
     //-------------------
 
-    // log prob for moving branch lengths hyperparameter (lambda)
+    // logprob for moving lambda
+    double LambdaHyperLogProb() const {
+        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
+    }
+
+    // logprob for moving hyperparameters of gene-specific branchlengths
     double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
+        return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
+    }
+
+    // log prob for moving nuc rates hyper params
+    double NucRatesHyperLogProb() const {
+        return GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
     }
 
     // log prob for moving omega hyperparameters
@@ -608,17 +735,39 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             blchrono.Start();
 
-            MasterReceiveLengthSuffStat();
-            movechrono.Start();
-            ResampleBranchLengths();
-            MoveBranchLengthsHyperParameter();
-            movechrono.Stop();
-            MasterSendGlobalBranchLengths();
-
+            // global branch lengths, or gene branch lengths hyperparameters
+            if (blmode == 2)    {
+                MasterReceiveBranchLengthsSuffStat();
+                movechrono.Start();
+                ResampleBranchLengths();
+                MoveLambda();
+                movechrono.Stop();
+                MasterSendGlobalBranchLengths();
+            }
+            else if (blmode == 1)    {
+                MasterReceiveBranchLengthsHyperSuffStat();
+                movechrono.Start();
+                MoveBranchLengthsHyperParameters();
+                movechrono.Stop();
+                MasterSendBranchLengthsHyperParameters();
+            }
             blchrono.Stop();
+
+            if (nucmode == 1)  {
+                MasterReceiveNucRatesHyperSuffStat();
+                movechrono.Start();
+                MoveNucRatesHyperParameters();
+                movechrono.Stop();
+                MasterSendNucRatesHyperParameters();
+            }
+
             paramchrono.Stop();
         }
 
+        if (blmode != 2)    {
+            MasterReceiveGeneBranchLengths();
+        }
+        MasterReceiveGeneNucRates();
         MasterReceiveOmega();
         MasterReceiveLogProbs();
         totchrono.Stop();
@@ -667,14 +816,34 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 SlaveReceiveOmegaHyperParameters();
             }
 
-            movechrono.Start();
-            MoveGeneNucRates();
-            movechrono.Stop();
+            // global branch lengths, or gene branch lengths hyperparameters
+            if (blmode == 2)    {
+                SlaveSendBranchLengthsSuffStat();
+                SlaveReceiveGlobalBranchLengths();
+            }
+            else    {
+                MoveGeneBranchLengths();
+                if (blmode == 1)   {
+                    SlaveSendBranchLengthsHyperSuffStat();
+                    SlaveReceiveBranchLengthsHyperParameters();
+                }
+            }
 
-            SlaveSendLengthSuffStat();
-            SlaveReceiveGlobalBranchLengths();
+            // global nucrates, or gene nucrates hyperparameters
+            MoveGeneNucRates();
+            if (nucmode == 1)  {
+                SlaveSendNucRatesHyperSuffStat();
+                SlaveReceiveNucRatesHyperParameters();
+            }
+
+            movechrono.Start();
+            movechrono.Stop();
         }
 
+        if (blmode != 2)    {
+            SlaveSendGeneBranchLengths();
+        }
+        SlaveSendGeneNucRates();
         SlaveSendOmega();
         SlaveSendLogProbs();
     }
@@ -716,6 +885,13 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void MoveGeneNucRates() {
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->MoveNucRates();
+        }
+    }
+
+    void MoveGeneBranchLengths() {
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->MoveBranchLengths();
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
     }
 
@@ -820,13 +996,74 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
-	void MoveBranchLengthsHyperParameter()	{
+	void MoveLambda()	{
 
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-        ScalingMove(lambda,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(lambda,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::LambdaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::LambdaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
 		branchlength->SetScale(lambda);
+    }
+
+
+    void MoveBranchLengthsHyperParameters()   {
+
+        for (int j=0; j<Nbranch; j++)   {
+            BranchLengthsHyperScalingMove(1.0,10);
+            BranchLengthsHyperScalingMove(0.3,10);
+        }
+
+        ScalingMove(blhyperinvshape,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(blhyperinvshape,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+
+        branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        MoveLambda();
+    }
+
+
+    double BranchLengthsHyperScalingMove(double tuning, int nrep)  {
+
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep=0; rep<nrep; rep++)	{
+            for (int j=0; j<Nbranch; j++)   {
+                double deltalogprob = - branchlength->GetLogProb(j) - lengthhypersuffstatarray->GetVal(j).GetLogProb(1.0/blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                (*branchlength)[j] *= e;
+                deltalogprob += branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(1.0/blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
+                deltalogprob += m;
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted)	{
+                    nacc ++;
+                }
+                else	{
+                    (*branchlength)[j] /= e;
+                }
+                ntot++;
+            }
+        }
+        return nacc/ntot;
+    }
+
+    void MoveNucRatesHyperParameters()    {
+
+        ProfileMove(nucrelratehypercenter,1.0,1,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ProfileMove(nucrelratehypercenter,0.3,1,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ProfileMove(nucrelratehypercenter,0.1,3,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucrelratehyperinvconc,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucrelratehyperinvconc,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucrelratehyperinvconc,0.03,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+
+        ProfileMove(nucstathypercenter,1.0,1,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ProfileMove(nucstathypercenter,0.3,1,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ProfileMove(nucstathypercenter,0.1,2,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucstathyperinvconc,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucstathyperinvconc,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(nucstathyperinvconc,0.03,10,&MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+
+        nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
+        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
     }
 
     void MoveOmegaHyperParameters()  {
@@ -859,6 +1096,75 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveReceiveGlobal(*branchlength);
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->SetBranchLengths(*branchlength);
+        }
+    }
+
+    void MasterSendBranchLengthsHyperParameters() {
+        MasterSendGlobal(*branchlength,blhyperinvshape);
+    }
+
+    void SlaveReceiveBranchLengthsHyperParameters()   {
+        SlaveReceiveGlobal(*branchlength,blhyperinvshape);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength,blhyperinvshape);
+        }
+    }
+
+    void MasterSendGeneBranchLengths()    {
+        MasterSendGeneArray(*branchlengtharray);
+    }
+
+    void SlaveReceiveGeneBranchLengths()   {
+        SlaveReceiveGeneArray(*branchlengtharray);
+        for (int gene=0; gene<GetLocalNgene(); gene++)    {
+            geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
+        }
+    }
+
+    void SlaveSendGeneBranchLengths()    {
+        for (int gene=0; gene<GetLocalNgene(); gene++)    {
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+        }
+        SlaveSendGeneArray(*branchlengtharray);
+    }
+
+    void MasterReceiveGeneBranchLengths()    {
+        MasterReceiveGeneArray(*branchlengtharray);
+    }
+
+
+    void MasterSendGeneNucRates()    {
+        MasterSendGeneArray(*nucrelratearray,*nucstatarray);
+    }
+
+    void SlaveReceiveGeneNucRates()   {
+        SlaveReceiveGeneArray(*nucrelratearray,*nucstatarray);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetNucRates(nucrelratearray->GetVal(gene),nucstatarray->GetVal(gene));
+        }
+    }
+
+    void SlaveSendGeneNucRates()    {
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
+        }
+        SlaveSendGeneArray(*nucrelratearray,*nucstatarray);
+    }
+
+    void MasterReceiveGeneNucRates()    {
+        MasterReceiveGeneArray(*nucrelratearray,*nucstatarray);
+    }
+
+    void MasterSendNucRatesHyperParameters()   {
+        MasterSendGlobal(nucrelratehypercenter,nucrelratehyperinvconc);
+        MasterSendGlobal(nucstathypercenter,nucstathyperinvconc);
+    }
+
+    void SlaveReceiveNucRatesHyperParameters()   {
+        SlaveReceiveGlobal(nucrelratehypercenter,nucrelratehyperinvconc);
+        SlaveReceiveGlobal(nucstathypercenter,nucstathyperinvconc);
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,nucrelratehyperinvconc,nucstathypercenter,nucstathyperinvconc);
         }
     }
 
@@ -932,8 +1238,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     // branch length suff stat
-
-    void SlaveSendLengthSuffStat()  {
+    void SlaveSendBranchLengthsSuffStat()  {
         lengthpathsuffstatarray->Clear();
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->CollectLengthSuffStat();
@@ -942,9 +1247,38 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
-    void MasterReceiveLengthSuffStat()  {
+    void MasterReceiveBranchLengthsSuffStat()  {
         lengthpathsuffstatarray->Clear();
         MasterReceiveAdditive(*lengthpathsuffstatarray);
+    }
+
+    void SlaveSendBranchLengthsHyperSuffStat()   {
+        lengthhypersuffstatarray->Clear();
+        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
+        SlaveSendAdditive(*lengthhypersuffstatarray);
+    }
+
+    void MasterReceiveBranchLengthsHyperSuffStat()   {
+        lengthhypersuffstatarray->Clear();
+        MasterReceiveAdditive(*lengthhypersuffstatarray);
+    }
+
+    void SlaveSendNucRatesHyperSuffStat()   {
+        nucrelratesuffstat.Clear();
+        nucrelratearray->AddSuffStat(nucrelratesuffstat);
+        SlaveSendAdditive(nucrelratesuffstat);
+
+        nucstatsuffstat.Clear();
+        nucstatarray->AddSuffStat(nucstatsuffstat);
+        SlaveSendAdditive(nucstatsuffstat);
+    }
+
+    void MasterReceiveNucRatesHyperSuffStat()   {
+        nucrelratesuffstat.Clear();
+        MasterReceiveAdditive(nucrelratesuffstat);
+
+        nucstatsuffstat.Clear();
+        MasterReceiveAdditive(nucstatsuffstat);
     }
 
     // log probs

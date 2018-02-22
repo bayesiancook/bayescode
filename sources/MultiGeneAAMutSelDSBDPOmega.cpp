@@ -177,15 +177,15 @@ int main(int argc, char* argv[])	{
     else    {
         string datafile = "";
         string treefile = "";
-        int Ncat = -1;
-        int baseNcat = -1;
+        int Ncat = 100;
+        int baseNcat = 1;
         int force = 1;
         int every = 1;
         int until = -1;
 
-        int blmode = 2;
-        int nucmode = 0;
-        int basemode = 2;
+        int blmode = 1;
+        int nucmode = 1;
+        int basemode = 0;
         int omegamode = 3;
 
         try	{
@@ -209,6 +209,40 @@ int main(int argc, char* argv[])	{
                 else if (s == "-f")	{
                     force = 1;
                 }
+                else if (s == "-nucrates")  {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared")    {
+                        nucmode = 2;
+                    }
+                    else if (tmp == "shrunken")   {
+                        nucmode = 1;
+                    }
+                    else if ((tmp == "ind") || (tmp == "independent"))  {
+                        nucmode = 0;
+                    }
+                    else    {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                }
+                else if (s == "-bl")    {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared")    {
+                        blmode = 2;
+                    }
+                    else if (tmp == "shrunken")   {
+                        blmode = 1;
+                    }
+                    else if ((tmp == "ind") || (tmp == "independent"))  {
+                        blmode = 0;
+                    }
+                    else    {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
+                }
                 else if (s == "-ncat") {
                     i++;
                     Ncat = atoi(argv[i]);
@@ -223,7 +257,7 @@ int main(int argc, char* argv[])	{
                     if (tmp == "shared")    {
                         basemode = 2;
                     }
-                    else if (tmp == "independent")  {
+                    else if ((tmp == "ind") || (tmp == "independent"))  {
                         basemode = 0;
                     }
                     else    {

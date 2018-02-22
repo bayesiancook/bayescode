@@ -58,9 +58,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 	int Nbranch;
 
 	double lambda;
-	BranchIIDGamma* branchlength;
+	BranchIIDGamma* blhypermean;
+    double blhyperinvshape;
+    GammaWhiteNoise* branchlength;
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat hyperlengthsuffstat;
+
+    // nucleotide rates hyperparameters
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
 
 	std::vector<double> nucstat;
 	std::vector<double> nucrelrate;
@@ -248,8 +256,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         // branch lengths
 		lambda = 10;
-		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        blhypermean = new BranchIIDGamma(*tree,1.0,lambda);
+        blhypermean->SetAllBranches(1.0 / lambda);
+        blhyperinvshape = 1.0;
+        branchlength = new GammaWhiteNoise(*tree,*blhypermean,1.0/blhyperinvshape);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+
+        nucrelratehypercenter.assign(Nrr,1.0/Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc,1.0/Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
 
         // nucleotide mutation matrix
 		nucrelrate.assign(Nrr,0);
@@ -362,6 +379,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
+    //! get a copy of branch lengths into array given as argument
+    void GetBranchLengths(BranchArray<double>& inbranchlength) const    {
+        inbranchlength.Copy(*branchlength);
+    }
+
+    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
+    void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape)   {
+        blhypermean->Copy(inblmean);
+        blhyperinvshape = inblinvshape;
+        branchlength->SetShape(1.0 / blhyperinvshape);
+    }
+
     //! set omega to new value (multi-gene analyses)
     void SetOmega(double inomega)   {
         omega = inomega;
@@ -374,11 +403,25 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         omegahyperinvshape = inomegahyperinvshape;
     }
 
-    //! set nuc rates to new value (multi-gene analyses)
+    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
+    void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc) {
+        nucrelratehypercenter = innucrelratehypercenter;
+        nucrelratehyperinvconc = innucrelratehyperinvconc;
+        nucstathypercenter = innucstathypercenter;
+        nucstathyperinvconc = innucstathyperinvconc;
+    }
+
+    //! set nucleotide rates to a new value (multi-gene analyses)
     void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         UpdateMatrices();
+    }
+
+    //! copy nucleotide rates into vectors given as arguments (multi-gene analyses)
+    void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const {
+        innucrelrate = nucrelrate;
+        innucstat = nucstat;
     }
 
     //! set base mixture concentration and center parameters to new value (multi-gene analyses)
@@ -420,7 +463,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void NoUpdate() {}
 
     void Update() override {
-        branchlength->SetScale(lambda);
+        blhypermean->SetAllBranches(1.0/lambda);
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
@@ -437,7 +480,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double GetLogPrior() const {
         double total = 0;
         if (blmode < 2) {
-            total += BranchLengthsHyperLogPrior();
             total += BranchLengthsLogPrior();
         }
         if (nucmode < 2)    {
@@ -470,13 +512,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
-	double BranchLengthsHyperLogPrior() const {
+	double LambdaHyperLogPrior() const {
 		return -lambda / 10;
 	}
 
     //! log prior over branch lengths (iid exponential of rate lambda)
 	double BranchLengthsLogPrior() const {
-		return branchlength->GetLogProb();
+		double ret = branchlength->GetLogProb();
+        if (blmode == 0)    {
+            ret += LambdaHyperLogPrior();
+        }
+        return ret;
 	}
 
     //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
@@ -488,7 +534,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
-        return 0;
+        double total = 0;
+        total += Random::logDirichletDensity(nucrelrate,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(nucstat,nucstathypercenter,1.0/nucstathyperinvconc);
+        return total;
     }
 
     //! log prior over concentration parameters basekappa of mixture of base distribution
@@ -556,7 +605,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     //! return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
-	double BranchLengthsHyperSuffStatLogProb() const {
+	double LambdaHyperSuffStatLogProb() const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
 
@@ -569,9 +618,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //  Log probs for MH moves
     //-------------------
 
-    //! log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
-    double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
+    //! log prob factor to be recomputed when moving branch lengths hyperparameter lambda
+    double LambdaHyperLogProb() const {
+        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
 
     //! log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
@@ -639,8 +688,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
             totchrono.Start();
             if (blmode < 2) {
-                ResampleBranchLengths();
-                MoveBranchLengthsHyperParameter();
+                MoveBranchLengths();
             }
 
 			CollectSitePathSuffStat();
@@ -682,13 +730,22 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
+
+    //! MCMC move schedule on branch lengths 
+    void MoveBranchLengths()    {
+        ResampleBranchLengths();
+        if (blmode == 0)    {
+            MoveLambda();
+        }
+    }
+
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
-	void MoveBranchLengthsHyperParameter()	{
+	void MoveLambda()	{
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda,1.0,10,&AAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
-        ScalingMove(lambda,0.3,10,&AAMutSelDSBDPOmegaModel::BranchLengthsHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
-		branchlength->SetScale(lambda);
+        ScalingMove(lambda,1.0,10,&AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,&AAMutSelDSBDPOmegaModel::NoUpdate,this);
+        blhypermean->SetAllBranches(1.0/lambda);
 	}
 
     //! MH move on omega
@@ -1034,6 +1091,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         for (int i=0; i<Ncat; i++) {
             GetBaseAllocPostProb(i,postprob);
             componentalloc->GibbsResample(i,postprob);
+            if ((componentalloc->GetVal(i) < 0) || (componentalloc->GetVal(i) >= baseNcat)) {
+                cerr << "error in ResampleBaseAlloc: out of bound\n";
+                exit(1);
+            }
         }
         UpdateBaseOccupancies();
     }
