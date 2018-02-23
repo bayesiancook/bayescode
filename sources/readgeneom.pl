@@ -82,17 +82,14 @@ for (my $i=0; $i<$Ngene; $i++)	{
 	$gene2meanom{$genename[$i]} = $meanom[$i];
 }
 
-open (SOUTFILE, '>'.$infile.'.sortedpp') or die "output error: $infile\n";
+open (SOUTFILE, '>'.$infile.'.sortedpostom') or die "output error: $infile\n";
 my $totpp = 0;
 my $count = 0;
-foreach my $gene (sort {$gene2pp{$b} <=> $gene2pp{$a}} keys %gene2pp)	{
-	$count++;
-	$totpp += $gene2pp{$gene};
-	my $fdr = int(100 * $totpp / $count);
-	print SOUTFILE "$fdr\t$gene2pp{$gene}\t$gene2meanom{$gene}\t$gene\n";
+foreach my $gene (sort {$gene2meanom{$b} <=> $gene2meanom{$a}} keys %gene2meanom)	{
+	print SOUTFILE "$gene2meanom{$gene}\t$gene2pp{$gene}\t$gene\n";
 }
 	
-open (PPOUTFILE, '>'.$infile.'.pp') or die "output error: $infile\n";
+open (PPOUTFILE, '>'.$infile.'.postom') or die "output error: $infile\n";
 for (my $g=0; $g<$Ngene; $g++)  {
     my $gene = $genename0[$g];
     print PPOUTFILE "$gene\t$gene2pp{$gene}\t$gene2meanom{$gene}\n";
