@@ -151,7 +151,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         nucstatarray = new IIDDirichlet(GetLocalNgene(),nucstathypercenter,1.0/nucstathyperinvconc);
 
         omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
+        omegahyperinvshape = 0.5;
 		omegaarray = new IIDGamma(GetLocalNgene(),1.0,1.0);
         if (omegamode == 3) {
             for (int i=0; i<GetLocalNgene(); i++)   {
@@ -196,11 +196,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             geneprocess.assign(GetLocalNgene(),(AAMutSelDSBDPOmegaModel*) 0);
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene] = new AAMutSelDSBDPOmegaModel(GetLocalGeneName(gene),treefile,Ncat,baseNcat);
+                geneprocess[gene] = new AAMutSelDSBDPOmegaModel(GetLocalGeneName(gene),treefile,omegamode,Ncat,baseNcat);
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetBaseMode(basemode);
-                geneprocess[gene]->SetOmegaMode(omegamode);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -369,6 +368,15 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
         os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
 		os.flush();
+    }
+
+    void TraceOmega(ostream& os) const {
+
+        for (int gene=0; gene<Ngene; gene++)    {
+            os << omegaarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+        os.flush();
     }
 
     void TraceMixture(ostream& os) const {
@@ -1073,8 +1081,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         ScalingMove(omegahypermean,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(omegahypermean,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        ScalingMove(omegahypermean,0.1,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        /*
         ScalingMove(omegahyperinvshape,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
         ScalingMove(omegahyperinvshape,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        SlidingMove(omegahypermean,1.0,10,1.0,100,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        SlidingMove(omegahypermean,0.3,10,1.0,100,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        SlidingMove(omegahypermean,0.1,10,1.0,100,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        */
+        SlidingMove(omegahyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        SlidingMove(omegahyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+        SlidingMove(omegahyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
 
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;

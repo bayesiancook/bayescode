@@ -159,12 +159,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
     //! - Ncat: truncation of the first-level stick-breaking process (by default: 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by default: 1)
-	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inNcat, int inbaseNcat)   {
+	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inNcat, int inbaseNcat)   {
 
         blmode = 0;
         nucmode = 0;
         basemode = 0;
-        omegamode = 3;
+        omegamode = inomegamode;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);

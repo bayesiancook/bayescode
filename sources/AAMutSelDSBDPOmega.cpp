@@ -13,7 +13,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int Ncat, baseNcat;
+    int omegamode, Ncat, baseNcat;
 
   public:
     AAMutSelDSBDPOmegaModel* GetModel() {
@@ -22,7 +22,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat) {
+    AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inomegamode, int inNcat, int inbaseNcat, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), omegamode(inomegamode), Ncat(inNcat), baseNcat(inbaseNcat) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -37,7 +37,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
 
     void New(int force) override {
         cerr << "new model\n";
-        model = new AAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat);
+        model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,Ncat,baseNcat);
         cerr << "allocate\n";
         GetModel()->Allocate();
         cerr << "update\n";
@@ -56,7 +56,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> Ncat >> baseNcat;
+        is >> omegamode >> Ncat >> baseNcat;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -66,7 +66,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
-            model = new AAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat);
+            model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,Ncat,baseNcat);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -83,7 +83,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
-        param_os << Ncat << '\t' << baseNcat << '\n';
+        param_os << omegamode << '\t' << Ncat << '\t' << baseNcat << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -107,6 +107,7 @@ int main(int argc, char* argv[])	{
         string treefile = "";
         int Ncat = 100;
         int baseNcat = 1;
+        int omegamode = 3;
         name = "";
         int force = 1;
         int every = 1;
@@ -141,6 +142,12 @@ int main(int argc, char* argv[])	{
                     i++;
                     baseNcat = atoi(argv[i]);
                 }
+                else if (s == "-fixomega")  {
+                    omegamode = 3;
+                }
+                else if (s == "-freeomega") {
+                    omegamode = 1;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -167,7 +174,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,every,until,name,force);
+        chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,omegamode,Ncat,baseNcat,every,until,name,force);
     }
 
     cerr << "chain " << name << " started\n";

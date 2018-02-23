@@ -13,6 +13,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    int writegenedata;
     int Ncat;
     int baseNcat;
     int blmode, nucmode, basemode, omegamode;
@@ -24,9 +25,10 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inevery, int inuntil, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode) {
+    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode) {
         every = inevery;
         until = inuntil;
+        writegenedata = inwritegenedata;
         name = inname;
         New(force);
     }
@@ -62,6 +64,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> writegenedata;
         is >> Ncat >> baseNcat;
         is >> blmode >> nucmode >> basemode >> omegamode;
         int tmp;
@@ -95,6 +98,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
+            param_os << writegenedata << '\n';
             param_os << Ncat << '\t' << baseNcat << '\n';
             param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\n';
             param_os << 0 << '\n';
@@ -106,6 +110,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         }
     }
 
+    /*
     void Monitor() override {
         if (myid)   {
             cerr << "error: in specialized monitor\n";
@@ -120,6 +125,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         ofstream sample_os((name + ".basesamplelogo").c_str());
         GetModel()->PrintBaseSampleLogo(sample_os);
     }
+    */
 
     void MakeFiles(int force) override  {
         if (myid)   {
@@ -127,9 +133,22 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             exit(1);
         }
         Chain::MakeFiles(force);
+        ofstream os((name + ".geneom").c_str());
+        /*
         ofstream trace_os((name + ".basemix").c_str());
         ofstream logo_os((name + ".basemixlogo").c_str());
         ofstream samplelogo_os((name + ".basesamplelogo").c_str());
+        */
+    }
+
+    void SavePoint() override   {
+        MultiGeneChain::SavePoint();
+        if (writegenedata)  {
+            if (! myid) {
+                ofstream os((name + ".geneom").c_str(),ios_base::app);
+                GetModel()->TraceOmega(os);
+            }
+        }
     }
 };
 
@@ -188,6 +207,8 @@ int main(int argc, char* argv[])	{
         int basemode = 0;
         int omegamode = 3;
 
+        int writegenedata = 1;
+
         try	{
 
             if (argc == 1)	{
@@ -208,6 +229,12 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "-f")	{
                     force = 1;
+                }
+                else if (s == "-g")  {
+                    writegenedata = 0;
+                }
+                else if (s == "+g")  {
+                    writegenedata = 1;
                 }
                 else if (s == "-nucrates")  {
                     i++;
@@ -297,7 +324,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,name,force,myid,nprocs);
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();
