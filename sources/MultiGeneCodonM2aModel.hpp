@@ -468,10 +468,5 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     Chrono movechrono;
     Chrono mapchrono;
     Chrono totchrono;
-
-    /*
-    double nucrracc1, nucrracc2, nucrracc3, nucrrtot1, nucrrtot2, nucrrtot3;
-    double nucstatacc1, nucstatacc2, nucstatacc3, nucstattot1, nucstattot2, nucstattot3;
-    */
 };
 

@@ -315,14 +315,6 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os) const {
     if (nucmode != 2)   {
         os << "\tstdevrr\tcenter\thyperinvconc";
         os << "\tstdevstat\tcenter\thyperinvconc";
-        if (nucmode == 1)   {
-            /*
-            os << "\tnucrracc1\tnucrracc2\tnucrracc3";
-            os << "\tnucstatacc1\tnucstatacc2\tnucstatacc3";
-            */
-            os << "\tnucrrlogprob\tnucstatlogprob";
-            os << "\tnucrrsuffstatlogprob\tnucstatsuffstatlogprob";
-        }
     }
     os << '\n';
 }
@@ -348,22 +340,6 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)  const {
     if (nucmode != 2)   {
         os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc;
         os << '\t' << sqrt(GetVarNucStat()) << '\t' << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc;
-        if (nucmode == 1)   {
-            /*
-            os << '\t' << 100*((double) nucrracc1) / nucrrtot1;
-            os << '\t' << 100*((double) nucrracc2) / nucrrtot2;
-            os << '\t' << 100*((double) nucrracc3) / nucrrtot3;
-            os << '\t' << 100*((double) nucstatacc1) / nucstattot1;
-            os << '\t' << 100*((double) nucstatacc2) / nucstattot2;
-            os << '\t' << 100*((double) nucstatacc3) / nucstattot3;
-            nucrracc1 = nucrracc2 = nucrracc3 = nucrrtot1 = nucrrtot2 = nucrrtot3 = 0;
-            nucstatacc1 = nucstatacc2 = nucstatacc3 = nucstattot1 = nucstattot2 = nucstattot3 = 0;
-            */
-            os << '\t' << nucrelratearray->GetLogProb();
-            os << '\t' << nucstatarray->GetLogProb();
-            os << '\t' << nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
-            os << '\t' << nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
-        }
     }
     os << '\n';
     os.flush();
