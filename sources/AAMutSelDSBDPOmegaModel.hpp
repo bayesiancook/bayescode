@@ -1306,7 +1306,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // os << *weight << '\t';
         os << *componentaafitnessarray << '\t';
         os << *sitealloc << '\t';
-        if (omega < 2)  {
+        if (omegamode < 2)  {
             os << omega << '\t';
         }
     }
@@ -1333,7 +1333,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         size += weight->GetMPISizeSB();
         size += componentaafitnessarray->GetMPISize();
         size += sitealloc->GetMPISize();
-        if (omega < 2)  {
+        if (omegamode < 2)  {
             size++;
         }
         return size;
@@ -1386,7 +1386,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         weight->MPIPutSB(os);
         os << *componentaafitnessarray;
         os << *sitealloc;
-        if (omega < 2)  {
+        if (omegamode < 2)  {
             os << omega;
         }
     }
