@@ -117,12 +117,9 @@ void MultiGeneCodonM2aModel::Allocate() {
 }
 
 void MultiGeneCodonM2aModel::FastUpdate()   {
-    if (blmode == 2)    {
-        branchlength->SetScale(lambda);
-    }
-    else    {
-        branchlength->SetAllBranches(1.0/lambda);
-        branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
+    branchlength->SetScale(lambda);
+    if (blmode == 1)    {
+        branchlengtharray->SetShape(1.0 / blhyperinvshape);
     }
     nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
     nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
@@ -247,15 +244,24 @@ void MultiGeneCodonM2aModel::SetMixtureArrays()    {
 
 void MultiGeneCodonM2aModel::MasterFromStream(istream& is)  {
 
-    is >> lambda;
-    is >> *branchlength;
-    is >> blhyperinvshape;
+    if (blmode == 2)    {
+        is >> lambda;
+        is >> *branchlength;
+    }
+    else    {
+        is >> lambda;
+        is >> *branchlength;
+        is >> blhyperinvshape;
+        is >> *branchlengtharray;
+    }
+
     is >> nucrelratehypercenter;
     is >> nucrelratehyperinvconc;
     is >> nucstathypercenter;
     is >> nucstathyperinvconc;
     is >> *nucrelratearray;
     is >> *nucstatarray;
+
     is >> puromhypermean >> puromhyperinvconc;
     is >> dposomhypermean >> dposomhyperinvshape;
     is >> purwhypermean >> purwhyperinvconc;
@@ -270,9 +276,17 @@ void MultiGeneCodonM2aModel::MasterFromStream(istream& is)  {
 
 void MultiGeneCodonM2aModel::MasterToStream(ostream& os) const  {
 
-    os << lambda << '\t';
-    os << *branchlength << '\t';
-    os << blhyperinvshape << '\t';
+    if (blmode == 2)    {
+        os << lambda << '\t';
+        os << *branchlength << '\t';
+    }
+    else    {
+        os << lambda << '\t';
+        os << *branchlength << '\t';
+        os << blhyperinvshape << '\t';
+        os << *branchlengtharray << '\t';
+    }
+
     os << nucrelratehypercenter << '\t';
     os << nucrelratehyperinvconc << '\t';
     os << nucstathypercenter << '\t';

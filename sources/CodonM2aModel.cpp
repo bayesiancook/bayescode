@@ -96,7 +96,9 @@ void CodonM2aModel::Allocate()	{
 
 void CodonM2aModel::Update()    {
 
-    blhypermean->SetAllBranches(1.0/lambda);
+    if (blmode == 0)    {
+        blhypermean->SetAllBranches(1.0/lambda);
+    }
     componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
     UpdateMatrices();
     GetIntegratedLogLikelihood();
