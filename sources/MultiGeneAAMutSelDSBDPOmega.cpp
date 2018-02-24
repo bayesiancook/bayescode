@@ -51,7 +51,6 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         GetModel()->Update();
         Reset(force);
         if (! myid) {
-            cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }
@@ -181,15 +180,6 @@ int main(int argc, char* argv[])	{
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(name,myid,nprocs);
-        if (!myid)  {
-            cerr << "chain " << name << " started\n";
-        }
-        if (!myid)  {
-            chain->Start();
-            cerr << "chain " << name << " stopped\n";
-            cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-            chain->GetModel()->Trace(cerr);
-        }
     }
 
     // new chain
@@ -322,6 +312,10 @@ int main(int argc, char* argv[])	{
             cerr << "multigeneaamutselddp -d <list> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
             exit(1);
+        }
+
+        if (omegamode == 3) {
+            writegenedata = 0;
         }
 
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,writegenedata,name,force,myid,nprocs);

@@ -463,7 +463,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void NoUpdate() {}
 
     void Update() override {
-        blhypermean->SetAllBranches(1.0/lambda);
+        if (blmode == 0)    {
+            blhypermean->SetAllBranches(1.0/lambda);
+        }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();

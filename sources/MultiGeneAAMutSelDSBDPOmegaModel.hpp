@@ -133,8 +133,15 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         if (blmode == 2)    {
             lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
             lengthhypersuffstatarray = 0;
+            branchlengtharray = 0;
         }
         else    {
+            // when blmode == 1:
+            // blarray ~ GammaWN(bl,invshape)
+            // but then bl's are iid ~ Gamma(1.0,lambda) (thus, not necessarily all equal)
+            //
+            // when blmode == 0
+            // each gene has its own lambda
             branchlength->SetAllBranches(1.0/lambda);
             branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
             lengthpathsuffstatarray = 0;
@@ -206,12 +213,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void FastUpdate()   {
-        if (blmode == 2)    {
-            branchlength->SetScale(lambda);
-        }
-        else    {
-            branchlength->SetAllBranches(1.0/lambda);
-            branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(),*tree,*branchlength,1.0/blhyperinvshape);
+        branchlength->SetScale(lambda);
+        if (blmode == 1)    {
+            branchlengtharray->SetShape(1.0 / blhyperinvshape);
         }
 
         nucrelratearray->SetConcentration(1.0/nucrelratehyperinvconc);
@@ -399,9 +403,18 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void MasterFromStream(istream& is) override {
-        is >> lambda;
-        is >> *branchlength;
-        is >> blhyperinvshape;
+
+        if (blmode == 2)    {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        else    {
+            is >> lambda;
+            is >> *branchlength;
+            is >> blhyperinvshape;
+            is >> *branchlengtharray;
+        }
+
         is >> nucrelratehypercenter;
         is >> nucrelratehyperinvconc;
         is >> nucstathypercenter;
@@ -454,9 +467,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
 	void MasterToStream(ostream& os) const override {
 
-        os << lambda << '\t';
-        os << *branchlength << '\t';
-        os << blhyperinvshape << '\t';
+        if (blmode == 2)    {
+            os << lambda << '\t';
+            os << *branchlength << '\t';
+        }
+        else    {
+            os << lambda << '\t';
+            os << *branchlength << '\t';
+            os << blhyperinvshape << '\t';
+            os << *branchlengtharray << '\t';
+        }
+
         os << nucrelratehypercenter << '\t';
         os << nucrelratehyperinvconc << '\t';
         os << nucstathypercenter << '\t';
