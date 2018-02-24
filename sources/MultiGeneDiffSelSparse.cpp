@@ -70,7 +70,6 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         GetModel()->Update();
         Reset(force);
         if (! myid) {
-            cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }

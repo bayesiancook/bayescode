@@ -43,7 +43,6 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
         Reset(force);
 
         if (! myid) {
-            cerr << "initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }

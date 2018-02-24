@@ -51,7 +51,6 @@ class MultiGeneAAMutSelHyperSBDPOmegaChain : public MultiGeneChain  {
         if (! myid) {
             cerr << "-- Reset" << endl;
             Reset(force);
-            cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }
