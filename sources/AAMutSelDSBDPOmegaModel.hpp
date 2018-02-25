@@ -83,6 +83,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet distributions
 
     int baseNcat;
+    int basemin;
     double basekappa;
     StickBreakingProcess* baseweight;
     OccupancySuffStat* baseoccupancy;
@@ -180,7 +181,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             }
         }
 
-        baseNcat = inbaseNcat;
+        if (inbaseNcat < 0) {
+            basemin = 1;
+            baseNcat = -inbaseNcat;
+        }
+        else    {
+            baseNcat = inbaseNcat;
+        }
 
 		std::cerr << "-- Number of sites: " << Nsite << std::endl;
         cerr << "ncat : " << Ncat << '\n';
@@ -294,6 +301,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         baseconcentrationarray = new IIDGamma(baseNcat,alpha,beta);
         for (int k=0; k<baseNcat; k++)  {
             (*baseconcentrationarray)[k] = 20.0;
+        }
+        if (basemin == 1)  {
+            (*baseconcentrationarray)[0] = 1.0;
         }
         // suff stats for component aa fitness arrays
         basesuffstatarray = new DirichletSuffStatArray(baseNcat,Naa);
@@ -1058,7 +1068,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double MoveBaseConcentrations(double tuning)  {
 		double nacc = 0;
 		double ntot = 0;
-        for (int k=0; k<baseNcat; k++)  {
+        for (int k=basemin; k<baseNcat; k++)  {
             if (baseoccupancy->GetVal(k))  {
                 double& c = (*baseconcentrationarray)[k];
                 double bk = c;
@@ -1190,10 +1200,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double GetMeanComponentAAConcentration() const {
 
         double tot = 0;
-        for (int i=0; i<baseNcat; i++)  {
+        double totw = 0;
+        for (int i=basemin; i<baseNcat; i++)  {
             tot += baseoccupancy->GetVal(i) * baseconcentrationarray->GetVal(i);
+            totw += baseoccupancy->GetVal(i);
         }
-        return tot / Ncat;
+        return tot / totw;
     }
 
     //! return mean entropy of centers of base distribution
