@@ -1012,7 +1012,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             MoveBaseComponents(10);
             ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
-                BaseLabelSwitchingMove();
+                if (baseNcat != 2)  {
+                    BaseLabelSwitchingMove();
+                }
                 ResampleBaseWeights();
                 MoveBaseKappa();
             }
@@ -1234,8 +1236,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         os << "ncluster\t";
         os << "kappa\t";
         if (baseNcat > 1)   {
-            os << "basencluster\t";
-            os << "basekappa\t";
+            if (baseNcat == 2)  {
+                os << "basencluster\t";
+                os << "baseweight1\t";
+            }
+            else    {
+                os << "basencluster\t";
+                os << "basekappa\t";
+            }
         }
         os << "aaent\t";
         os << "meanaaconc\t";
@@ -1253,8 +1261,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         os << GetNcluster() << '\t';
         os << kappa << '\t';
         if (baseNcat > 1)   {
-            os << GetBaseNcluster() << '\t';
-            os << basekappa << '\t';
+            if (baseNcat == 2)  {
+                os << GetBaseNcluster() << '\t';
+                os << baseweight->GetVal(1) << '\t';
+            }
+            else    {
+                os << GetBaseNcluster() << '\t';
+                os << basekappa << '\t';
+            }
         }
         os << GetMeanAAEntropy() << '\t';
 		os << GetMeanComponentAAConcentration() << '\t';
