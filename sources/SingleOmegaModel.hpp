@@ -433,8 +433,8 @@ class SingleOmegaModel : public ProbModel {
 	void TraceHeader(ostream& os) const override {
 		os << "#logprior\tlnL\tlength\tlambda\t";
 		os << "omega\t";
-		os << "statent\t";
-		os << "rrent\n";
+		os << "pi_a\tpi_c\tpi_g\tpi_t\t";
+        os << "r_ac\tr_ag\tr_at\tr_cg\tr_ct\tr_gt\n";
 	}
 
 	void Trace(ostream& os) const override {	
@@ -443,8 +443,7 @@ class SingleOmegaModel : public ProbModel {
         os << branchlength->GetTotalLength() << '\t';
 		os << lambda << '\t';
 		os << omega << '\t';
-		os << Random::GetEntropy(nucstat) << '\t';
-		os << Random::GetEntropy(nucrelrate) << '\n';
+		os << nucstat << nucrelrate << '\n';
 	}
 
 	void Monitor(ostream& os) const {}
