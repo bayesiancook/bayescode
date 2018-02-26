@@ -109,13 +109,13 @@ class MultiGeneAAMutSelSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void Monitor() override {
-        Chain::Monitor();
+        MultiGeneChain::Monitor();
         ofstream pos((name + ".geneom").c_str(), ios_base::app);
         GetModel()->TraceGeneOmegas(pos);
     }
 
     void MakeFiles(int force) override {
-        Chain::MakeFiles(force);
+        MultiGeneChain::MakeFiles(force);
         ofstream pos((name + ".geneom").c_str());
     }
 };

@@ -115,7 +115,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             cerr << "error: in specialized monitor\n";
             exit(1);
         }
-        Chain::Monitor();
+        MultiGeneChain::Monitor();
         // ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
         ofstream trace_os((name + ".basemix").c_str());
         GetModel()->TraceMixture(trace_os);
@@ -131,7 +131,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             cerr << "error: in specialized makefiles\n";
             exit(1);
         }
-        Chain::MakeFiles(force);
+        MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
         /*
         ofstream trace_os((name + ".basemix").c_str());

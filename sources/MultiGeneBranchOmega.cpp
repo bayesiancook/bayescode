@@ -95,7 +95,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
     }
 
     void MakeFiles(int force) override  {
-        Chain::MakeFiles(force);
+        MultiGeneChain::MakeFiles(force);
         ofstream gos((name + ".gene").c_str());
         ofstream bos((name + ".branch").c_str());
         ofstream bgos((name + ".branchgene").c_str());
@@ -109,7 +109,7 @@ class MultiGeneBranchOmegaChain : public MultiGeneChain  {
     }
 
     void SavePoint() override   {
-        Chain::SavePoint();
+        MultiGeneChain::SavePoint();
         if (!myid)  {
             ofstream gos((name + ".gene").c_str(),ios_base::app);
             GetModel()->PrintGeneEffects(gos);
