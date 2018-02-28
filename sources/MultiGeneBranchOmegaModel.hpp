@@ -248,11 +248,13 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
     void PrintGeneEffects(ostream& os) const    {
         os << *genewarray;
+        os << '\n';
         os.flush();
     }
 
     void PrintBranchEffects(ostream& os) const  {
         os << *branchvarray;
+        os << '\n';
         os.flush();
     }
 
