@@ -17,6 +17,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 	int Ntaxa;
 	int Nbranch;
 
+    int basemin;
     int baseNcat;
     int Ncat;
 
@@ -72,6 +73,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double lnL;
     double GeneLogPrior;
     double MeanNcluster;
+    double MeanBaseNcluster;
     double MeanStatEnt;
     double MeanAAConc;
     double MeanAACenterEnt;
@@ -99,7 +101,20 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         AllocateAlignments(datafile);
         treefile = intreefile;
         Ncat = inNcat;
-        baseNcat = inbaseNcat;
+
+        basemin = 0;
+        if (inbaseNcat < 0) {
+            basemin = 1;
+            baseNcat = -inbaseNcat;
+            if (baseNcat != 2)  {
+                cerr << "error in basencat\n";
+                exit(1);
+            }
+        }
+        else    {
+            baseNcat = inbaseNcat;
+        }
+
         blmode = inblmode;
         nucmode = innucmode;
         basemode = inbasemode;
@@ -191,6 +206,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         baseconcentrationarray = new IIDGamma(baseNcat,alpha,beta);
         for (int k=0; k<baseNcat; k++)  {
             (*baseconcentrationarray)[k] = 20.0;
+        }
+        if (basemin == 1)  {
+            (*baseconcentrationarray)[0] = 1.0;
         }
 
         // suff stats for component aa fitness arrays
@@ -326,8 +344,15 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << "meanomega\t";
         os << "varomega\t";
         os << "ncluster\t";
-        // os << "nbasecluster\t";
-        os << "basekappa\t";
+        if (baseNcat > 1)   {
+            if (basemin)    {
+                os << "baseweight1\t";
+            }
+            else    {
+                os << "basencluster\t";
+                os << "basekappa\t";
+            }
+        }
         os << "aastatent\t";
         os << "baseconc\t";
         os << "baseent\t";
@@ -364,8 +389,15 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os << omegaarray->GetMean() << '\t';
         os << omegaarray->GetVar() << '\t';
         os << MeanNcluster << '\t';
-        // os << GetBaseNcluster() << '\t';
-        os << basekappa << '\t';
+        if (baseNcat > 1)   {
+            if (basemin)  {
+                os << baseweight->GetVal(1) << '\t';
+            }
+            else    {
+                os << GetBaseNcluster() << '\t';
+                os << basekappa << '\t';
+            }
+        }
         os << MeanStatEnt << '\t';
         os << MeanAAConc << '\t';
 		os << MeanAACenterEnt << '\t';
@@ -930,7 +962,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             if (baseNcat > 1)   {
                 ResampleBaseEmptyComponents();
                 MoveBaseKappa();
-                BaseLabelSwitchingMove();
+                if (! basemin)  {
+                    BaseLabelSwitchingMove();
+                }
             }
         }
     }
@@ -974,7 +1008,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double MoveBaseConcentrations(double tuning)  {
 		double nacc = 0;
 		double ntot = 0;
-        for (int k=0; k<baseNcat; k++)  {
+        for (int k=basemin; k<baseNcat; k++)  {
             if (baseoccupancy->GetVal(k))  {
                 double& c = (*baseconcentrationarray)[k];
                 double bk = c;
@@ -1000,6 +1034,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void ResampleBaseEmptyComponents()  {
         basecenterarray->PriorResample(*baseoccupancy);
         baseconcentrationarray->PriorResample(*baseoccupancy);
+        if (basemin == 1)  {
+            (*baseconcentrationarray)[0] = 1.0;
+        }
     }
 
     void BaseLabelSwitchingMove()   {
@@ -1326,6 +1363,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         GeneLogPrior = 0;
         lnL = 0;
         MeanNcluster = 0;
+        MeanBaseNcluster = 0;
         MeanStatEnt = 0;
         MeanAAConc = 0;
         MeanAACenterEnt = 0;
@@ -1333,6 +1371,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
             MeanNcluster += geneprocess[gene]->GetNcluster();
+            MeanBaseNcluster += geneprocess[gene]->GetBaseNcluster();
             MeanStatEnt += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanAAEntropy();
             MeanAAConc += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanComponentAAConcentration();
             MeanAACenterEnt += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanComponentAAEntropy();
@@ -1340,6 +1379,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
         SlaveSendAdditive(MeanNcluster);
+        SlaveSendAdditive(MeanBaseNcluster);
         SlaveSendAdditive(MeanStatEnt);
         SlaveSendAdditive(MeanAAConc);
         SlaveSendAdditive(MeanAACenterEnt);
@@ -1357,14 +1397,17 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         MasterReceiveAdditive(GeneLogPrior);
         MasterReceiveAdditive(lnL);
         MeanNcluster = 0;
+        MeanBaseNcluster = 0;
         MeanStatEnt = 0;
         MeanAAConc = 0;
         MeanAACenterEnt = 0;
         MasterReceiveAdditive(MeanNcluster);
+        MasterReceiveAdditive(MeanBaseNcluster);
         MasterReceiveAdditive(MeanStatEnt);
         MasterReceiveAdditive(MeanAAConc);
         MasterReceiveAdditive(MeanAACenterEnt);
         MeanNcluster /= GetLocalNgene();
+        MeanBaseNcluster /= GetLocalNgene();
         MeanStatEnt /= GetTotNsite();
         MeanAAConc /= GetTotNsite();
         MeanAACenterEnt /= GetTotNsite();

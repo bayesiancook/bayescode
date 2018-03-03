@@ -181,9 +181,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             }
         }
 
+        basemin = 0;
         if (inbaseNcat < 0) {
             basemin = 1;
             baseNcat = -inbaseNcat;
+            if (baseNcat != 2)  {
+                cerr << "error in basencat\n";
+                exit(1);
+            }
         }
         else    {
             baseNcat = inbaseNcat;
@@ -1012,7 +1017,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             MoveBaseComponents(10);
             ResampleBaseEmptyComponents();
             if (baseNcat > 1)   {
-                if (baseNcat != 2)  {
+                if (! basemin)  {
                     BaseLabelSwitchingMove();
                 }
                 ResampleBaseWeights();
@@ -1097,6 +1102,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void ResampleBaseEmptyComponents()  {
         basecenterarray->PriorResample(*baseoccupancy);
         baseconcentrationarray->PriorResample(*baseoccupancy);
+        if (basemin == 1)  {
+            (*baseconcentrationarray)[0] = 1.0;
+        }
     }
 
     //! Gibbs resample base mixture allocations 
@@ -1236,7 +1244,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         os << "ncluster\t";
         os << "kappa\t";
         if (baseNcat > 1)   {
-            if (baseNcat == 2)  {
+            if (basemin)    {
                 os << "basencluster\t";
                 os << "baseweight1\t";
             }
@@ -1261,7 +1269,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         os << GetNcluster() << '\t';
         os << kappa << '\t';
         if (baseNcat > 1)   {
-            if (baseNcat == 2)  {
+            if (basemin)  {
                 os << GetBaseNcluster() << '\t';
                 os << baseweight->GetVal(1) << '\t';
             }
