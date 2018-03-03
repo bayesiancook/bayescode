@@ -341,17 +341,16 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         if (blmode < 2) {
             os << "stdev\t";
         }
-        os << "meanomega\t";
-        os << "varomega\t";
-        os << "ncluster\t";
-        if (baseNcat > 1)   {
-            if (basemin)    {
-                os << "baseweight1\t";
-            }
-            else    {
-                os << "basencluster\t";
-                os << "basekappa\t";
-            }
+        if (omegamode != 3) {
+            os << "meanomega\t";
+            os << "varomega\t";
+        }
+        if (Ncat > 1)   {
+            os << "ncluster\t";
+        }
+        if (basemode >= 2)   {
+            os << "basencluster\t";
+            os << "basekappa\t";
         }
         os << "aastatent\t";
         os << "baseconc\t";
@@ -386,17 +385,16 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             os << GetMeanLength() << '\t';
             os << sqrt(GetVarLength()) << '\t';
         }
-        os << omegaarray->GetMean() << '\t';
-        os << omegaarray->GetVar() << '\t';
-        os << MeanNcluster << '\t';
-        if (baseNcat > 1)   {
-            if (basemin)  {
-                os << baseweight->GetVal(1) << '\t';
-            }
-            else    {
-                os << GetBaseNcluster() << '\t';
-                os << basekappa << '\t';
-            }
+        if (omegamode != 3) {
+            os << omegaarray->GetMean() << '\t';
+            os << omegaarray->GetVar() << '\t';
+        }
+        if (Ncat > 1)   {
+            os << MeanNcluster << '\t';
+        }
+        if (basemode >= 2)   {
+            os << GetBaseNcluster() << '\t';
+            os << basekappa << '\t';
         }
         os << MeanStatEnt << '\t';
         os << MeanAAConc << '\t';
