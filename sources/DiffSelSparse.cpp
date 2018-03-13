@@ -13,7 +13,7 @@ class DiffSelSparseChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int ncond, nlevel, codonmodel;
+    int ncond, nlevel, codonmodel, fixhyper;
 
   public:
     DiffSelSparseModel* GetModel() {
@@ -22,14 +22,14 @@ class DiffSelSparseChain: public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel,
+    DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper,
                                               int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel)  {
+          codonmodel(incodonmodel), fixhyper(infixhyper)  {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -45,6 +45,7 @@ class DiffSelSparseChain: public Chain {
 
     void New(int force) override {
         model = new DiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel);
+        GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -62,6 +63,7 @@ class DiffSelSparseChain: public Chain {
         is >> modeltype;
         is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
+        is >> fixhyper;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -90,6 +92,7 @@ class DiffSelSparseChain: public Chain {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << codonmodel << '\n';
+        param_os << fixhyper << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
@@ -144,6 +147,8 @@ int main(int argc, char* argv[]) {
         int nlevel = 1;
         int codonmodel = 1;
 
+        int fixhyper = 0;
+
         name = "";
         int every = 1;
         int until = -1;
@@ -181,6 +186,9 @@ int main(int argc, char* argv[]) {
                     i++;
                     ncond = atoi(argv[i]);
                 }
+                else if (s == "-fixhyper")  {
+                    fixhyper = 3;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -202,7 +210,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,name,force);
+        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,every,until,saveall,name,force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();
