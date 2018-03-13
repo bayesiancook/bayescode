@@ -149,6 +149,10 @@ int main(int argc, char* argv[]) {
 				i++;
 				ncond = atoi(argv[i]);
 			}
+            else if (s == "-nlevel")    {
+                i++;
+                nlevel = atoi(argv[i]);
+            }
 			else if ( (s == "-x") || (s == "-extract") )	{
 				i++;
 				if (i == argc) throw(0);
