@@ -7,6 +7,7 @@ Sample::Sample(string filename, int in_burnin, int in_every, int in_until)	{
 	until = in_until;
 	name = filename;
 	chain_is = 0;
+	chainsaveall = 1;
 }
 
 Sample::~Sample()	{
@@ -15,6 +16,10 @@ Sample::~Sample()	{
 
 void Sample::OpenChainFile()	{
 
+	if (! chainsaveall)	{
+		cerr << "error: no chain file\n";
+		exit(1);
+	}
 	if (until == -1)	{
 		until = chainsize;
 	}

@@ -55,6 +55,8 @@ class Sample	{
 	int chainevery; 	// chain's saving frequency
 	int chainuntil;		// chain's intended size of the run (number of saved points)
 	int chainsize;		// chain's current size
+    //! flag: if 1, then complete state is saved at each interation in .chain file
+    int chainsaveall;
 	int burnin; 		// burnin
 	int every; 		// subsampling frequency
 	int until;		// reading chain until this point
