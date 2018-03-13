@@ -13,7 +13,7 @@ class DiffSelSparseChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int ncond, nlevel, codonmodel, fixglob, fixvar;
+    int ncond, nlevel, codonmodel;
 
   public:
     DiffSelSparseModel* GetModel() {

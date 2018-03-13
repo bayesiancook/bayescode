@@ -240,8 +240,8 @@ class DiffSelSparseModel : public ProbModel {
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
-        pi.assign(Ncond-1,0.1);
-        shiftprobhypermean.assign(Ncond-1,0.5);
+        pi.assign(Ncond-1,1.0);
+        shiftprobhypermean.assign(Ncond-1,0.1);
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
         shiftprob.assign(Ncond-1,0.1);
 
@@ -337,6 +337,10 @@ class DiffSelSparseModel : public ProbModel {
                 array[j++] = toggle->GetVal(k-1,i)[a];
             }
         }
+    }
+
+    const vector<vector<int> > & GetCondToggleArray(int k) const {
+        return toggle->GetSubArray(k-1);
     }
 
     void Update() override {
@@ -449,6 +453,10 @@ class DiffSelSparseModel : public ProbModel {
                 total += log(pi[k-1]) + Random::logBetaDensity(shiftprob[k-1],alpha,beta);
             }
             else    {
+                if (pi[k-1] == 1.0)   {
+                    cerr << "error in ToggleHyperLogPrior: inf\n";
+                    exit(1);
+                }
                 total += log(1 - pi[k-1]);
             }
         }
@@ -821,7 +829,7 @@ class DiffSelSparseModel : public ProbModel {
             }
             int nn = Nsite*Naa;
 
-            if (nshift) {
+            if (nshift || (pi[k-1] == 1.0)) {
                 shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
             }
             else    {
@@ -853,7 +861,7 @@ class DiffSelSparseModel : public ProbModel {
     //! helper function: returns the marginal log prob of distribution of toggles for a condition, given number of toggles in active state and given hyperparameters
     double ToggleMarginalLogPrior(int nn, int nshift, double pi, double alpha, double beta) const {
         double logp1 = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha+nshift) + Random::logGamma(beta + nn - nshift) - Random::logGamma(alpha + beta + nn);
-        if (nshift) {
+        if (nshift || (pi == 1.0)) {
             return logp1;
         }
         double logp0 = log(1-pi);
