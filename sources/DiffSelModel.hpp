@@ -287,22 +287,10 @@ class DiffSelModel : public ProbModel {
 
         // create phyloprocess
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
+        phyloprocess->Unfold();
 
         // create suffstat arrays
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
-    }
-
-    void Unfold(bool sample)   {
-
-        // unfold phyloprocess (allocate conditional likelihood vectors, etc)
-        std::cerr << "-- unfolding\n";
-        phyloprocess->Unfold();
-
-        if (sample) {
-            // stochastic mapping of substitution histories
-            std::cerr << "-- mapping substitutions\n";
-            phyloprocess->ResampleSub();
-        }
     }
 
     // ------------------
@@ -334,9 +322,9 @@ class DiffSelModel : public ProbModel {
     }
 
     void Update() override {
-        fitnessprofile->Update();
-        CorruptMatrices();
-        phyloprocess->GetLogLikelihood();
+        branchlength->SetScale(lambda);
+        UpdateAll();
+        ResampleSub(1.0);
     }
 
     //! update fitness profiles and matrices across all sites and conditions
@@ -674,6 +662,10 @@ class DiffSelModel : public ProbModel {
     int GetNsite() { return Nsite; }
     //! return number of conditions
     int GetNcond() { return Ncond; }
+
+    const vector<vector<double> > & GetCondDeltaArray(int k) const {
+        return delta->GetSubArray(k-1);
+    }
 
     //-------------------
     // Traces and monitors

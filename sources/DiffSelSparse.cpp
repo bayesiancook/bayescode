@@ -80,6 +80,7 @@ class DiffSelSparseChain: public Chain {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();

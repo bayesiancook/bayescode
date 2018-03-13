@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
+ALL= multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -169,6 +169,10 @@ $(PROGSDIR)/gammasiteom$(EXEEXT): GammaSiteOmega.o $(OBJS)
 readdiffselsparse$(EXEEXT): $(PROGSDIR)/readdiffselsparse$(EXEEXT)
 $(PROGSDIR)/readdiffselsparse$(EXEEXT): ReadDiffSelSparse.o $(OBJS)
 	$(CC) ReadDiffSelSparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readdiffsel$(EXEEXT): $(PROGSDIR)/readdiffsel$(EXEEXT)
+$(PROGSDIR)/readdiffsel$(EXEEXT): ReadDiffSel.o $(OBJS)
+	$(CC) ReadDiffSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 diffselsparse$(EXEEXT): $(PROGSDIR)/diffselsparse$(EXEEXT)
 $(PROGSDIR)/diffselsparse$(EXEEXT): DiffSelSparse.o $(OBJS)
