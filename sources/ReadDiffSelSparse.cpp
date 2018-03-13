@@ -17,7 +17,7 @@ class DiffSelSparseSample : public Sample {
 	string modeltype;
 	string datafile;
 	string treefile;
-    int ncond, nlevel, codonmodel;
+    int ncond, nlevel, codonmodel, fixhyper;
 
 	public:
 
@@ -45,6 +45,7 @@ class DiffSelSparseSample : public Sample {
 		is >> modeltype;
         is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
+        is >> fixhyper;
         int check;
         is >> check;
         if (check) {
@@ -56,6 +57,7 @@ class DiffSelSparseSample : public Sample {
 		// make a new model depending on the type obtained from the file
 		if (modeltype == "DIFFSELSPARSE")	{
             model = new DiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel);
+            GetModel()->SetFitnessHyperMode(fixhyper);
 		}
 		else	{
 			cerr << "error when opening file "  << name << '\n';
@@ -112,7 +114,7 @@ class DiffSelSparseSample : public Sample {
         // write output
         for (int k=1; k<Ncond; k++) {
             ostringstream s;
-            s << name << "_" << k << ".pp";
+            s << name << "_" << k << ".sitepp";
             ofstream os(s.str().c_str());
             os << "site\tsitepp";
             for (int a=0; a<Naa; a++)   {
@@ -126,6 +128,21 @@ class DiffSelSparseSample : public Sample {
                         os << '\t' << int(100*pp[k-1][j][a]);
                     }
                     os << '\n';
+                }
+            }
+        }
+
+        // write output
+        for (int k=1; k<Ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k << ".pp";
+            ofstream os(s.str().c_str());
+            os << "site\tAA\tpp\n";
+            for (int j=0; j<Nsite; j++) {
+                for (int a=0; a<Naa; a++)   {
+                    if (pp[k-1][j][a] > cutoff) {
+                        os << j+siteoffset << '\t' << AminoAcids[a] << '\t' << int(100*pp[k-1][j][a]) << '\n';
+                    }
                 }
             }
         }
