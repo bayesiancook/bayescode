@@ -417,7 +417,7 @@ class DiffSelSparseModel : public ProbModel {
     //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior()	const {
         // exponential of mean 10
-		return -lambda / 10;
+		return -log(10.0) - lambda / 10;
 	}
 
     //! log prior over branch lengths (iid exponential of rate lambda)
@@ -903,11 +903,6 @@ class DiffSelSparseModel : public ProbModel {
                     // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
                     UpdateSite(i);
                     deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-                    /*
-                    double c1 = ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) - ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta);
-                    double c2 = log(alpha + nshift) - log(beta + nn - nshift - 1);
-                    cerr << nshift << c2 - c1 << '\n';
-                    */
                     // deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);

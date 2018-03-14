@@ -69,11 +69,13 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double> >    {
         for (int k=0; k<GetDim(); k++) {
             int l = 0;
             if (i>0)    {
-                if ((Nlevel == 2) && (toggle.GetVal(0,j)[k]))   {
-                    l = 1;
-                }
-                if ((i>1) && (toggle.GetVal(i-1,j)[k]))   {
+                if (toggle.GetVal(i-1,j)[k])   {
                     l = i;
+                }
+                else    {
+                    if ((Nlevel == 2) && (toggle.GetVal(0,j)[k]))   {
+                        l = 1;
+                    }
                 }
             }
             x[k] = fitness.GetVal(l,j)[k];
