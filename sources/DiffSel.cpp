@@ -120,13 +120,14 @@ int main(int argc, char* argv[]) {
         string datafile = "";
         string treefile = "";
         int ncond = 2;
-        int nlevel = 1;
+        int nlevel = 2;
         int fixglob = 1;
         int fixvar = 1;
         int codonmodel = 1;
 
         int every = 1;
         int until = -1;
+        int force = 0;
 
         try	{
 
@@ -145,6 +146,9 @@ int main(int argc, char* argv[]) {
                 else if ((s == "-t") || (s == "-T"))	{
                     i++;
                     treefile = argv[i];
+                }
+                else if (s == "-f")	{
+                    force = 1;
                 }
                 else if (s == "-ncond")	{
                     i++;
@@ -175,7 +179,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelChain(datafile,treefile,ncond,nlevel,every,until,fixglob,fixvar,codonmodel,name,true);
+        chain = new DiffSelChain(datafile,treefile,ncond,nlevel,every,until,fixglob,fixvar,codonmodel,name,force);
     }
 
     cerr << "chain " << name << " started\n";
