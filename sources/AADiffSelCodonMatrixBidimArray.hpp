@@ -44,7 +44,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>, public Bidi
     void Create()   {
         for (int i=0; i<GetNrow(); i++)  {
             for (int j=0; j<GetNcol(); j++)   {
-                matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(&codonstatespace,&nucmatrix,fitnessarray.GetVal(i,j),1.0,false);
+                matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(&codonstatespace,&nucmatrix,fitnessarray.GetVal(i,j),1.0,1.0,false);
             }
         }
     }
