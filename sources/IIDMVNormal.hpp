@@ -43,6 +43,18 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double> >    {
         }
     }
 
+    //! set all entries to 0
+    void SetToZero()   {
+        for (int i=0; i<GetNrow(); i++)  {
+            for (int j=0; j<GetNcol(); j++)   {
+                vector<double>& x = (*this)(i,j);
+                for (int k=0; k<GetDim(); k++) {
+                    x[k] = 0;
+                }
+            }
+        }
+    }
+
     //! sample entry i,j
     void Sample(int i, int j)   {
         vector<double>& x = (*this)(i,j);
