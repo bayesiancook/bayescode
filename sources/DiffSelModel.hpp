@@ -186,6 +186,9 @@ class DiffSelModel : public ProbModel {
         Ncond = inNcond;
 
         Nlevel = inNlevel;
+        if (Ncond <= 2) {
+            Nlevel = 1;
+        }
 
         ReadFiles(datafile, treefile);
         MakePattern();
@@ -248,9 +251,9 @@ class DiffSelModel : public ProbModel {
 		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // nucleotide matrix
-		nucrelrate.assign(Nrr,0);
+		nucrelrate.assign(Nrr,1.0/Nrr);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
-		nucstat.assign(Nnuc,0);
+		nucstat.assign(Nnuc,1.0/Nnuc);
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
@@ -259,6 +262,7 @@ class DiffSelModel : public ProbModel {
         vector<double> center(20,1.0/20);
         double concentration = 20.0;
         baseline = new IIDDirichlet(Nsite,center,concentration);
+        // baseline->SetUniform();
 
         // variance parameters (one for each condition, 1..Ncond)
         double shape = 1.0;
@@ -271,6 +275,7 @@ class DiffSelModel : public ProbModel {
         // differential selection effects
         // normally distributed
         delta = new BidimIIDMVNormal(Nsite,20,*varsel);
+        // delta->SetToZero();
 
         // fitnessprofiles...
         fitnessprofile = new DiffSelFitnessArray(*baseline,*delta,Nlevel);
@@ -337,6 +342,7 @@ class DiffSelModel : public ProbModel {
     void UpdateSite(int i) {
         fitnessprofile->UpdateColumn(i);
         condsubmatrixarray->CorruptColumn(i);
+        CorruptMatrices();
     }
 
     //! update fitness profile and matrix for site i and condition k
@@ -377,7 +383,7 @@ class DiffSelModel : public ProbModel {
     //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
 	double BranchLengthsHyperLogPrior()	const {
         // exponential of mean 10
-		return -lambda / 10;
+		return -log(10.0) -lambda / 10;
 	}
 
     //! log prior over branch lengths (iid exponential of rate lambda)
@@ -492,6 +498,7 @@ class DiffSelModel : public ProbModel {
 
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaseline();
+                UpdateAll();
                 MoveDelta();
                 if (!fixvar) {
                     MoveVarSel();
@@ -675,7 +682,7 @@ class DiffSelModel : public ProbModel {
         os << "#logprior\tlnL\tlength\t";
         os << "globent\t";
         for (int k = 1; k < Ncond; k++) {
-            os << "selvar" << k << '\t';
+			os << "var" << k << '\t';
         }
         os << "statent\t";
         os << "rrent\n";
@@ -730,5 +737,4 @@ class DiffSelModel : public ProbModel {
             condalloc[l][l] = 1;
         }
     }
-
 };
