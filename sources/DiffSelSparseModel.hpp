@@ -175,6 +175,9 @@ class DiffSelSparseModel : public ProbModel {
 
         Ncond = inNcond;
         Nlevel = inNlevel;
+        if (Ncond <= 2) {
+            Nlevel = 1;
+        }
 
         ReadFiles(datafile, treefile);
 

@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
         string datafile = "";
         string treefile = "";
         int ncond = 2;
-        int nlevel = 1;
+        int nlevel = 2;
         int codonmodel = 1;
 
         int fixhyper = 0;
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
         int every = 1;
         int until = -1;
         int saveall = 1;
-        int force = 1;
+        int force = 0;
 
         try	{
 
@@ -186,6 +186,10 @@ int main(int argc, char* argv[]) {
                 else if (s == "-ncond")	{
                     i++;
                     ncond = atoi(argv[i]);
+                }
+                else if (s == "-nlevel")    {
+                    i++;
+                    nlevel = atoi(argv[i]);
                 }
                 else if (s == "-fixhyper")  {
                     fixhyper = 3;
