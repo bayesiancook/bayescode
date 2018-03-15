@@ -13,11 +13,20 @@ class SequenceAlignment {
   public:
 
     //! default constructor
-    SequenceAlignment() {}
+    SequenceAlignment() : Ntaxa(0), Nsite(0), taxset(nullptr), statespace(nullptr), owntaxset(true), ownstatespace(true) {}
+
+    //! copy constructor
+    SequenceAlignment(const SequenceAlignment& from) : Ntaxa(from.Ntaxa), Nsite(from.Nsite), taxset(from.taxset), statespace(from.statespace), owntaxset(from.owntaxset), ownstatespace(from.ownstatespace), Data(from.Data) {}
 
     virtual ~SequenceAlignment()    {
-        delete taxset;
-        delete statespace;
+        if (owntaxset)  {
+            delete taxset;
+            taxset = nullptr;
+        }
+        if (ownstatespace)  {
+            delete statespace;
+            statespace = nullptr;
+        }
     }
 
     //! return the state space (A,C,G,T for nucleotides, etc..)
@@ -31,6 +40,9 @@ class SequenceAlignment {
 
     //! return the number of aligned positions
     int GetNsite() const { return Nsite; }
+
+    //! return the number of aligned positions such as printed out (Nsite for nucleotide models, 3*Nsite for codon models)
+    int GetPrintNsite() const { return GetStateSpace()->GetSymbolLength() * Nsite; }
 
     //! return the number of taxa (number of aligned sequences)
     int GetNtaxa() const { return taxset->GetNtaxa(); }
@@ -131,6 +143,8 @@ class SequenceAlignment {
     int Nsite;
     const TaxonSet *taxset;
     const StateSpace *statespace;
+    bool owntaxset;
+    bool ownstatespace;
     std::vector<std::vector<int> > Data;
 };
 

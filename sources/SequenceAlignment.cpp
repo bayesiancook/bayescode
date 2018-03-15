@@ -10,14 +10,28 @@ using namespace std;
 //     SequenceAlignment
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
+
+
 int Int(string s) { return atoi(s.c_str()); }
 
 double Double(string s) { return atof(s.c_str()); }
 
+void SequenceAlignment::ToStream(ostream &os) const {
+    os << Ntaxa << '\t' << GetPrintNsite() << '\n';
+    for (int i = 0; i < Ntaxa; i++) {
+        os << taxset->GetTaxon(i) << '\t';
+        for (int j = 0; j < Nsite; j++) {
+            os << statespace->GetState(GetState(i, j));
+        }
+        os << '\n';
+    }
+}
+
+
 void SequenceAlignment::ToFasta(ostream &os) const {
     for (int i = 0; i < Ntaxa; i++) {
         os << '>' << taxset->GetTaxon(i) << '\n';
-        for (int j = 0; j < Nsite; j++) {
+        for (int j = 0; j < GetPrintNsite(); j++) {
             os << statespace->GetState(GetState(i, j));
         }
         os << '\n';
