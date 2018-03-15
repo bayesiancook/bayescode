@@ -30,6 +30,9 @@ class StateSpace {
     virtual bool isCompatible(int state1, int state2) const {
         return ((state1 == unknown) || (state2 == unknown) || (state1 == state2));
     }
+
+    //! return length of symbol used when printing state (normally, 1 for nucleotides or amino-acids, 3 for codons)
+    virtual int GetSymbolLength() const {return 1;}
 };
 
 /**

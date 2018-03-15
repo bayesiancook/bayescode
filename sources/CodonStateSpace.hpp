@@ -26,6 +26,9 @@ class CodonStateSpace : public StateSpace {
 
     int GetNstate() const override { return Nstate; }
 
+    //! return length of symbol used when printing state (normally, 1 for nucleotides or amino-acids, 3 for codons)
+    virtual int GetSymbolLength() const {return 3;}
+
     //! given a 3-nucleotide string, returns codon index, in 0..Nstate-1 (if stop or unrecognized, exits with error message)
     int GetState(std::string word) const override;
 
