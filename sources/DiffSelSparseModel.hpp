@@ -102,12 +102,21 @@ class DiffSelSparseModel : public ProbModel {
     //  model structure
     // -----
 
-    // branch lengths iid expo (gamma of shape 1 and scale lambda)
-    // where lambda is a hyperparameter
+    // branch lengths 
 	double lambda;
-	BranchIIDGamma* branchlength;
+	BranchIIDGamma* blhypermean;
+    double blhyperinvshape;
+    GammaWhiteNoise* branchlength;
+	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
+	GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary probabilities)
+    // hyperparameters
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    // parameters
 	std::vector<double> nucrelrate;
 	std::vector<double> nucstat;
 	GTRSubMatrix* nucmatrix;
@@ -147,12 +156,6 @@ class DiffSelSparseModel : public ProbModel {
     // path suff stats across conditions and sites
     PathSuffStatBidimArray* suffstatarray;
 
-    // Poisson suffstats for substitution histories, as a function of branch lengths
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-
-    // suff stats branch lengths, as a function of their hyper parameter lambda
-    // (bl are iid gamma, of scale parameter lambda)
-	GammaSuffStat hyperlengthsuffstat;
     MultiGammaSuffStat hyperfitnesssuffstat;
 
   public:
@@ -229,10 +232,19 @@ class DiffSelSparseModel : public ProbModel {
 
         // branch lengths
 		lambda = 10;
-		branchlength = new BranchIIDGamma(*tree,1.0,lambda);
-		lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        blhypermean = new BranchIIDGamma(*tree,1.0,lambda);
+        blhypermean->SetAllBranches(1.0 / lambda);
+        blhyperinvshape = 1.0;
+        branchlength = new GammaWhiteNoise(*tree,*blhypermean,1.0/blhyperinvshape);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
-        // nucleotide matrix
+        nucrelratehypercenter.assign(Nrr,1.0/Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc,1.0/Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
+
+        // nucleotide mutation matrix
 		nucrelrate.assign(Nrr,0);
         Random::DirichletSample(nucrelrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
 		nucstat.assign(Nnuc,0);
@@ -309,6 +321,39 @@ class DiffSelSparseModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
+    //! get a copy of branch lengths into array given as argument
+    void GetBranchLengths(BranchArray<double>& inbranchlength) const    {
+        inbranchlength.Copy(*branchlength);
+    }
+
+    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
+    void SetBranchLengthsHyperParameters(const BranchSelector<double>& inblmean, double inblinvshape)   {
+        blhypermean->Copy(inblmean);
+        blhyperinvshape = inblinvshape;
+        branchlength->SetShape(1.0 / blhyperinvshape);
+    }
+
+    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
+    void SetNucRatesHyperParameters(const std::vector<double>& innucrelratehypercenter, double innucrelratehyperinvconc, const std::vector<double>& innucstathypercenter, double innucstathyperinvconc) {
+        nucrelratehypercenter = innucrelratehypercenter;
+        nucrelratehyperinvconc = innucrelratehyperinvconc;
+        nucstathypercenter = innucstathypercenter;
+        nucstathyperinvconc = innucstathyperinvconc;
+    }
+
+    //! set nucleotide rates to a new value (multi-gene analyses)
+    void SetNucRates(const std::vector<double>& innucrelrate, const std::vector<double>& innucstat) {
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
+        CorruptMatrices();
+    }
+
+    //! copy nucleotide rates into vectors given as arguments (multi-gene analyses)
+    void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const {
+        innucrelrate = nucrelrate;
+        innucstat = nucstat;
+    }
+
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc) to specified values (used in multi-gene context)
     void SetShiftProbHyperParameters(const vector<double>& inpi, const vector<double>& inshiftprobhypermean, const vector<double>& inshiftprobhyperinvconc)    {
         pi = inpi;
@@ -347,7 +392,9 @@ class DiffSelSparseModel : public ProbModel {
     }
 
     void Update() override {
-        branchlength->SetScale(lambda);
+        if (blmode == 0)    {
+            blhypermean->SetAllBranches(1.0/lambda);
+        }
 		fitness->SetShape(fitnessshape);
         UpdateAll();
         ResampleSub(1.0);
@@ -399,7 +446,6 @@ class DiffSelSparseModel : public ProbModel {
     double GetLogPrior() const {
         double total = 0;
         if (blmode < 2) {
-            total += BranchLengthsHyperLogPrior();
             total += BranchLengthsLogPrior();
         }
         if (nucmode < 2)    {
@@ -415,22 +461,24 @@ class DiffSelSparseModel : public ProbModel {
     }
 
     //! \brief log prior over hyperparameter of prior over branch lengths (here, lambda ~ exponential of rate 10)
-	double BranchLengthsHyperLogPrior()	const {
-        // exponential of mean 10
+	double BranchLengthsHyperLogPrior() const {
 		return -log(10.0) - lambda / 10;
 	}
 
     //! log prior over branch lengths (iid exponential of rate lambda)
-	double BranchLengthsLogPrior()	const {
-		return branchlength->GetLogProb();
+	double BranchLengthsLogPrior() const {
+		double ret = branchlength->GetLogProb();
+        if (blmode == 0)    {
+            ret += BranchLengthsHyperLogPrior();
+        }
+        return ret;
 	}
 
-    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq. freqs. (nucstat) -- uniform Dirichlet in both cases
+    //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
-        // uniform on relrates and nucstat
         double total = 0;
-        total += Random::logGamma((double)Nnuc);
-        total += Random::logGamma((double)Nrr);
+        total += Random::logDirichletDensity(nucrelrate,nucrelratehypercenter,1.0/nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(nucstat,nucstathypercenter,1.0/nucstathyperinvconc);
         return total;
     }
 
@@ -576,9 +624,7 @@ class DiffSelSparseModel : public ProbModel {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
 
             if (blmode < 2)    {
-                CollectLengthSuffStat();
-                ResampleBranchLengths();
-                MoveBranchLengthsHyperParameter();
+                MoveBranchLengths();
             }
 
             CollectPathSuffStat();
@@ -614,14 +660,22 @@ class DiffSelSparseModel : public ProbModel {
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
 	}
 
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
-	void MoveBranchLengthsHyperParameter()	{
 
+    //! MCMC move schedule on branch lengths 
+    void MoveBranchLengths()    {
+        ResampleBranchLengths();
+        if (blmode == 0)    {
+            MoveLambda();
+        }
+    }
+
+    //! MH move on branch lengths hyperparameters (here, scaling move on lambda, based on suffstats for branch lengths)
+	void MoveLambda()	{
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda,1.0,10,&DiffSelSparseModel::BranchLengthsHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
         ScalingMove(lambda,0.3,10,&DiffSelSparseModel::BranchLengthsHyperLogProb,&DiffSelSparseModel::NoUpdate,this);
-		branchlength->SetScale(lambda);
+        blhypermean->SetAllBranches(1.0/lambda);
 	}
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
@@ -971,7 +1025,7 @@ class DiffSelSparseModel : public ProbModel {
     void Trace(ostream& os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
+        os << 3*branchlength->GetTotalLength() << '\t';
         os << fitness->GetMeanRelVar(0) << '\t';
         os << fitnessshape << '\t';
         os << Random::GetEntropy(fitnesscenter) << '\t';
