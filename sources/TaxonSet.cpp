@@ -23,6 +23,8 @@ TaxonSet::TaxonSet(const std::vector<string>& names) : Ntaxa(names.size()), taxl
     }
 }
 
+TaxonSet::TaxonSet(const TaxonSet& from) : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist)   {}
+
 /*
 TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {
     Ntaxa = tree->GetSize(subgroup);
