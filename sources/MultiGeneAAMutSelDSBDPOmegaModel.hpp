@@ -21,7 +21,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     int baseNcat;
     int Ncat;
 
-    // branch lengths: shared across genes
+    // branch lengths
 	double lambda;
 	BranchIIDGamma* branchlength;
 	GammaSuffStat hyperlengthsuffstat;
@@ -629,7 +629,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     double GeneBranchLengthsHyperLogPrior() const {
-        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
+        return LambdaHyperLogPrior() + BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
     }
 
     double GeneNucRatesHyperLogPrior() const {
