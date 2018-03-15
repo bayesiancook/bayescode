@@ -243,7 +243,7 @@ class DiffSelSparseModel : public ProbModel {
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
-        pi.assign(Ncond-1,1.0);
+        pi.assign(Ncond-1,0.1);
         shiftprobhypermean.assign(Ncond-1,0.1);
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
         shiftprob.assign(Ncond-1,0.1);
