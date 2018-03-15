@@ -583,15 +583,21 @@ void PhyloProcess::ResampleSub(const Link *from, int site) {
     }
 }
 
-void PhyloProcess::PostPredSample(bool rootprior) {
+void PhyloProcess::PostPredSample(string name, bool rootprior) {
     for (int i = 0; i < GetNsite(); i++) {
         PostPredSample(i, rootprior);
     }
+    SequenceAlignment tmpdata(*GetData());
+    GetLeafData(&tmpdata);
+    ofstream os(name.c_str());
+    tmpdata.ToStream(os);
+    os.close();
 }
 
 void PhyloProcess::PostPredSample(int site, bool rootprior) {
-    // why pruning?
-    Pruning(GetRoot(), site);
+    if (! rootprior)    {
+        Pruning(GetRoot(), site);
+    }
     PriorSample(GetRoot(), site, rootprior);
 }
 
