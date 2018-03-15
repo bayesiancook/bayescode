@@ -71,19 +71,6 @@ class SingleOmegaSample : public Sample {
 		// all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
-    void PostPred() {
-
-        cerr << size << " points to read\n";
-
-        for (int i=0; i<size; i++)  {
-            cerr << '.';
-            GetNextPoint();
-            ostringstream s;
-            s << name << "_" << i << ".ali";
-            GetModel()->PostPred(s.str());
-        }
-    }
-
 	//! \brief computes the posterior mean estimate (and the posterior standard deviation) of omega
 	void Read()	{
 

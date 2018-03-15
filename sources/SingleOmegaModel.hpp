@@ -221,6 +221,16 @@ class SingleOmegaModel : public ProbModel {
     }
 
     //-------------------
+    // Posterior Predictive
+    // ------------------
+
+    void PostPred(string name)  {
+        branchlength->SetScale(lambda);
+	    TouchMatrices();
+        phyloprocess->PostPredSample(name);
+    }
+
+    //-------------------
     // Priors and likelihood
     //-------------------
 
@@ -464,21 +474,6 @@ class SingleOmegaModel : public ProbModel {
         is >> *branchlength;
     }
     
-    //-------------------
-    // Posterior Predictive
-    // ------------------
-
-    void PostPred(string name)  {
-        Update();
-        CodonSequenceAlignment* ppreddata = new CodonSequenceAlignment(data, true);
-        phyloprocess->PostPredSample();
-        phyloprocess->GetLeafData(ppreddata);
-        ofstream os(name.c_str());
-        ppreddata->ToStream(os);
-        os.close();
-        delete ppreddata;
-    }
-
 };
 
 
