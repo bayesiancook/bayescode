@@ -18,9 +18,9 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
         Ntaxa = from->GetNtaxa();
         auto tempstatespace = new CodonStateSpace(type);
         statespace = tempstatespace;
-        // DNAStateSpace* nucspace = tempstatespace->GetDNAStateSpace();
 
         taxset = DNAsource->GetTaxonSet();
+        owntaxset = false;
 
         // make my own arrays
         // make translation
