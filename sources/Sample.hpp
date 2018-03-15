@@ -32,6 +32,8 @@ class Sample	{
             //! the parameter configuration specified by this point of the MCMC is then accessible through GetModel()
 	virtual void 		GetNextPoint();
 
+    virtual void        PostPred();
+
 			//! \brief return a pointer to model configuration specified by current point (i.e. last point that was read from file)
             //!
 			//! in general this function will be overriden by derived classes,

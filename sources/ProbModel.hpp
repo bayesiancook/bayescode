@@ -30,7 +30,16 @@ class ProbModel {
     virtual double Move() {return 1;}
 
     //! update the entire model
-    virtual void Update() {}
+    virtual void Update() {
+        cerr << "error : in ProbModel::Update\n";
+        exit(1);
+    }
+
+    //! post pred method 
+    virtual void PostPred(string name) {
+        cerr << "error: in ProbModel::PostPred\n";
+        exit(1);
+    }
 
     //! return lof prob of the current model configuration
     virtual double GetLogProb() const {return 0;}

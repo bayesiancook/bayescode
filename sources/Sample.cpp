@@ -62,3 +62,15 @@ void Sample::GetNextPoint()	{
 	currentpoint++;
 }
 
+void Sample::PostPred() {
+
+    cerr << size << " points to read\n";
+    for (int i=0; i<size; i++)  {
+        cerr << '.';
+        GetNextPoint();
+        ostringstream s;
+        s << name << "_" << i << ".ali";
+        model->PostPred(s.str());
+    }
+}
+
