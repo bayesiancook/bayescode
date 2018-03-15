@@ -91,6 +91,12 @@ public:
     //! delete data structures
 	void Cleanup();
 
+    //! posterior predictive resampling under current parameter configuration
+	void PostPredSample(bool rootprior = true);  // unclamped Nielsen
+
+    //! get data from tips (after simulation) and put in into sequence alignment
+	void GetLeafData(SequenceAlignment *data);
+
     private:
 
     //! \brief const access to substitution history (BranchSitePath) for given node and given site
@@ -162,7 +168,6 @@ public:
 	int& GetState(const Node *node, int site) { return statemap[node][site]; }
 	const int& GetState(const Node *node, int site) const { return statemap[node][site]; }
 
-	void GetLeafData(SequenceAlignment *data);
 	void RecursiveGetLeafData(const Link *from, SequenceAlignment *data);
 
 	bool isDataCompatible(int taxon, int site, int state) const {
@@ -200,7 +205,6 @@ public:
 	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const;
 	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat) const;
 
-	void PostPredSample(bool rootprior = false);  // unclamped Nielsen
 	void PostPredSample(int site, bool rootprior = false);
 	// rootprior == true : root state drawn from stationary probability of the
 	// process

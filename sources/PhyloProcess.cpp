@@ -506,7 +506,7 @@ void PhyloProcess::PriorSample(const Link *from, int site, bool rootprior) {
         }
     }
     for (const Link *link = from->Next(); link != from; link = link->Next()) {
-        GetState(link->Out()->GetNode(), site) = GetSubMatrix(link->GetBranch()->GetIndex(), site).DrawWaitingTime(state);
+        GetState(link->Out()->GetNode(), site) = GetSubMatrix(link->GetBranch()->GetIndex(), site).DrawFiniteTime(state,GetBranchLength(link->GetBranch()->GetIndex()) * GetSiteRate(site));
         PriorSample(link->Out(), site, rootprior);
     }
 }

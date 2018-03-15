@@ -97,6 +97,8 @@ class SubMatrix {
 
     //! draw state of next event given current state
 	int 			DrawOneStep(int state) const;
+    //! draw state after total time, given current state
+	int			DrawFiniteTime(int state,double time) const;
     //! draw waiting time until next event, given current state
 	double			DrawWaitingTime(int state) const;
     //! draw state from equilibrium frequencies
@@ -466,6 +468,19 @@ inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedo
 		nunisubcount++;
 	}
 	return m;
+}
+
+inline int SubMatrix::DrawFiniteTime(int initstate, double time) const	{
+	double t = 0;
+	int s = initstate;
+	while (t < time)	{
+		double dt = DrawWaitingTime(s);
+		t += dt;
+		if (t < time)	{
+			s = DrawOneStep(s);
+		}
+	}
+	return s;
 }
 
 inline double SubMatrix::DrawWaitingTime(int state)	const {
