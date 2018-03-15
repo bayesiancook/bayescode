@@ -71,6 +71,19 @@ class SingleOmegaSample : public Sample {
 		// all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
+    void PostPred() {
+
+        cerr << size << " points to read\n";
+
+        for (int i=0; i<size; i++)  {
+            cerr << '.';
+            GetNextPoint();
+            ostringstream s;
+            s << name << "_" << i << ".ali";
+            GetModel()->PostPred(s.str());
+        }
+    }
+
 	//! \brief computes the posterior mean estimate (and the posterior standard deviation) of omega
 	void Read()	{
 
@@ -101,6 +114,8 @@ int main(int argc, char* argv[])	{
 	int burnin = 0;
 	int every = 1;
 	int until = -1;
+    int ppred = 0;
+
 	string name;
 
 	try	{
@@ -126,6 +141,9 @@ int main(int argc, char* argv[])	{
 				s = argv[i];
 				until = atoi(argv[i]);
 			}
+            else if (s == "-ppred") {
+                ppred = 1;
+            }
 			else	{
 					if (i != (argc -1))	{
 					throw(0);
@@ -145,7 +163,12 @@ int main(int argc, char* argv[])	{
 	}
 
 	SingleOmegaSample* sample = new SingleOmegaSample(name,burnin,every,until);
-    sample->Read();
+    if (ppred)  {
+        sample->PostPred();
+    }
+    else    {
+        sample->Read();
+    }
 }
 
 
