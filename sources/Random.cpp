@@ -577,6 +577,7 @@ double Random::RealVectorProposeMove(std::vector<double>& x, int dim, double tun
 		double u = tuning * (Random::Uniform() - 0.5);
 		x[indices[i]] += u;
 	}
+    delete[] indices;
 	return 0;
 }
 
@@ -589,6 +590,7 @@ double Random::PosRealVectorProposeMove(std::vector<double>& x, int dim, double 
 		x[indices[i]] *= exp(u);
         logh += u;
 	}
+    delete[] indices;
 	return logh;
 }
 	
