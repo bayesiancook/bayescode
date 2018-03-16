@@ -67,11 +67,11 @@ class Random {
 
     static double GammaSample(double alpha, double beta);
     static double BetaSample(double alpha, double beta);
-    static void DirichletSample(vector<double>& x, const vector<double>& center, double concentration);
+    static void DirichletSample(vector<double>& x, const vector<double>& center, double concentration = 1);
 
     static double logGammaDensity(double x, double alpha, double beta);
     static double logBetaDensity(double x, double alpha, double beta);
-    static double logDirichletDensity(const vector<double>& x, const vector<double>& center, double concentration);
+    static double logDirichletDensity(const vector<double>& x, const vector<double>& center, double concentration = 1);
 
   private:
     static int Seed;

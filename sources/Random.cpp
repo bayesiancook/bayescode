@@ -668,10 +668,13 @@ double Random::logDirichletDensity(const vector<double>& x, const vector<double>
         cerr << "error in Random::logDirichletDensity: non matching vector size\n";
         exit(1);
     }
-    double tot = logGamma(concentration);
+    double tot = 0;
+    double totcenter = 0;
     for (unsigned int k=0; k<x.size(); k++)  {
         tot += -logGamma(concentration*center[k]) + (concentration*center[k]-1)*log(x[k]);
+        totcenter += center[k];
     }
+    tot += logGamma(concentration*totcenter);
     return tot;
 }
 
