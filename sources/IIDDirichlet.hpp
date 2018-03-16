@@ -336,12 +336,20 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 	public: 
 
     //! constructor, parameterized by arrays of center and concentration parameters (both of same size, which will also be the size of this array)
-	MultiDirichlet(const Selector<vector<double> >* incenterarray, const Selector<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray) {
+	MultiDirichlet(const Selector<vector<double> >* incenterarray, const Selector<double>* inconcentrationarray) : SimpleArray<vector<double> >(incenterarray->GetSize()), dim(incenterarray->GetVal(0).size()), centerarray(incenterarray), concentrationarray(inconcentrationarray), weightarray(0) {
         if (centerarray->GetSize() != concentrationarray->GetSize())    {
             cerr << "error in multi dirichlet: center and concentration arrays should have same size\n";
             exit(1);
         }
 
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].assign(dim,0);
+        }
+		Sample();
+	}
+
+    //! constructor, parameterized by arrays of center and concentration parameters (both of same size, which will also be the size of this array)
+	MultiDirichlet(const Selector<vector<double> >* inweightarray) : SimpleArray<vector<double> >(inweightarray->GetSize()), dim(inweightarray->GetVal(0).size()), centerarray(0), concentrationarray(0), weightarray(inweightarray) {
         for (int i=0; i<GetSize(); i++) {
             (*this)[i].assign(dim,0);
         }
@@ -357,9 +365,16 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
     //! sample all entries from prior
 	void Sample()	{
-		for (int i=0; i<GetSize(); i++)	{
-            Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
-		}
+        if (weightarray)    {
+            for (int i=0; i<GetSize(); i++)	{
+                Random::DirichletSample((*this)[i],weightarray->GetVal(i));
+            }
+        }
+        else    {
+            for (int i=0; i<GetSize(); i++)	{
+                Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
+            }
+        }
 	}
 
     //! get total log prob (sum over all array)
@@ -373,7 +388,14 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
 
     //! get log prob for entry i
 	double GetLogProb(int i) const {
-        return Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
+        double ret = 0;
+        if (weightarray)    {
+            ret = Random::logDirichletDensity(GetVal(i),weightarray->GetVal(i));
+        }
+        else    {
+            ret = Random::logDirichletDensity(GetVal(i),centerarray->GetVal(i),concentrationarray->GetVal(i));
+        }
+        return ret;
 	}
 
     //! \brief add entries of this array to an array DirichletSuffStat, based on specified allocation vector
@@ -387,24 +409,12 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
     void PriorResample(const Selector<int>& occupancy)    {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
-                Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
-                /*
-                int pos = 1;
-                for (int j=0; j<GetDim(); j++)  {
-                    if (! GetVal(i)[j]) {
-                        pos = 0;
-                    }
+                if (weightarray)    {
+                    Random::DirichletSample((*this)[i],weightarray->GetVal(i));
                 }
-                if (! pos)  {
-                    cerr << "in MultiDirichlet::PriorResample\n";
-                    for (int j=0; j<GetDim(); j++)  {
-                        cerr << GetVal(i)[j] << '\t';
-                    }
-                    cerr << '\n';
-                    cerr << "hyperconcentration: " << concentrationarray->GetVal(i) << '\n';
-                    exit(1);
+                else    {
+                    Random::DirichletSample((*this)[i],centerarray->GetVal(i),concentrationarray->GetVal(i));
                 }
-                */
             }
 		}
     }
@@ -448,6 +458,7 @@ class MultiDirichlet: public SimpleArray<vector<double> >	{
     int dim;
     const Selector<vector<double> >* centerarray;
     const Selector<double>* concentrationarray;
+    const Selector<vector<double> >* weightarray;
 };
 
 #endif
