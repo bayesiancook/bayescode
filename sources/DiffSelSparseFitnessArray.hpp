@@ -53,15 +53,6 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double> >    {
         }
     }
 
-    //! update of column j (i.e. site j), but only for those conditions that are flagged
-    void UpdateColumn(int j, const vector<int>& flag)  {
-        for (int i=0; i<GetNrow(); i++) {
-            if (flag[i])    {
-                Update(i,j);
-            }
-        }
-    }
-
     //! update of column j (i.e. site j) and condition i
     void Update(int i, int j)   {
         vector<double>& x = (*this)(i,j);
@@ -91,6 +82,73 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double> >    {
     const BidimSelector<vector<double> >& fitness;
     const BidimSelector<vector<int> >& toggle;
     int Nlevel;
+};
+
+class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >    {
+
+    public:
+
+    //! constructor, parameterized by input fitness array, toggle array and Nlevel
+    DiffSelDoublySparseFitnessArray(const BidimSelector<vector<double> >& infitness, const BidimSelector<vector<int> >& intoggle, int inNlevel, double inepsilon) : 
+        SimpleBidimArray<vector<double> >(infitness.GetNrow(),infitness.GetNcol(),vector<double>(infitness.GetVal(0,0).size(),0)),
+        fitness(infitness), toggle(intoggle), Nlevel(inNlevel), epsilon(inepsilon)  {
+            Update();
+    }
+
+    //! returns dimension of fitness profiles (should normally be 20)
+    int GetDim() const {return GetVal(0,0).size();}
+
+    //! full update of the array
+    void Update()   {
+        for (int i=0; i<GetNrow(); i++)  {
+            for (int j=0; j<GetNcol(); j++)   {
+                Update(i,j);
+            }
+        }
+    }
+
+    //! update of column j (i.e. site j)
+    void UpdateColumn(int j)    {
+        for (int i=0; i<GetNrow(); i++) {
+            Update(i,j);
+        }
+    }
+
+    //! update of column j (i.e. site j) and condition i
+    void Update(int i, int j)   {
+        vector<double>& x = (*this)(i,j);
+        double total = 0;
+        for (int k=0; k<GetDim(); k++) {
+            if (toggle.GetVal(0,j)[k])  {
+                int l = 0;
+                if (i>0)    {
+                    if (toggle.GetVal(i,j)[k])   {
+                        l = i;
+                    }
+                    else    {
+                        if ((Nlevel == 2) && (toggle.GetVal(1,j)[k]))   {
+                            l = 1;
+                        }
+                    }
+                }
+                x[k] = fitness.GetVal(l,j)[k];
+            }
+            else    {
+                x[k] = epsilon;
+            }
+            total += x[k];
+        }
+        for (int k=0; k<GetDim(); k++) {
+            x[k] /= total;
+        }
+    }
+
+    protected:
+
+    const BidimSelector<vector<double> >& fitness;
+    const BidimSelector<vector<int> >& toggle;
+    int Nlevel;
+    double epsilon;
 };
 
 #endif
