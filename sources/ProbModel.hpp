@@ -74,6 +74,7 @@ class ProbModel {
         double nacc = 0;
         double ntot = 0;
         for (int rep=0; rep<nrep; rep++)	{
+            double bk = x;
             double deltalogprob = -(This->*logprobf)();
             double m = tuning * (Random::Uniform() - 0.5);
             x += m;
@@ -94,7 +95,7 @@ class ProbModel {
                 nacc ++;
             }
             else	{
-                x -= m;
+                x = bk;
                 (This->*updatef)();
             }
             ntot++;
