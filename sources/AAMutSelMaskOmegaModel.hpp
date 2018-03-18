@@ -53,7 +53,8 @@ class IIDProfileMask : public SimpleArray<vector<int> >     {
             cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
         }
-        return naa*log(1-pi) + (GetDim()-naa)*log(pi);
+        // probability is conditional on at least one entry being 1
+        return naa*log(pi) + (GetDim()-naa)*log(1.0-pi) - log(1.0 - exp(GetDim()*log(1.0-pi)));
     }
 
     double GetMeanWidth() const {
@@ -107,7 +108,13 @@ class MultiMaskWeight : public SimpleArray<vector<double> > {
                 x[k] = concentration*center[k]*(1-epsilon);
             }
             else    {
+                // x[k] = epsilon;
                 x[k] = concentration*center[k]*epsilon;
+            }
+            if (x[k] < 0)   {
+                cerr << "error: negative weight\n";
+                cerr << mask[k] << '\t' << concentration << '\t' << center[k] << '\t' << epsilon << '\n';
+                exit(1);
             }
         }
     }
@@ -286,8 +293,8 @@ class AAMutSelMaskOmegaModel : public ProbModel {
         // base distribution for masks: parameterized by pi
         pi = 0.1;
         // total prior weight of minor amino-acids
-        epsilon0 = 0.02;
-        epsilon = 0.01;
+        epsilon0 = 0.1;
+        epsilon = 0.05;
         // base center and concentration for the 20 amino-acids
         aacenter.assign(Naa,1.0/Naa);
         aaconcentration = Naa;
@@ -696,17 +703,17 @@ class AAMutSelMaskOmegaModel : public ProbModel {
             ProfileMove(aacenter,0.1,1,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
             ProfileMove(aacenter,0.03,3,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
             ProfileMove(aacenter,0.01,3,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
-            // ScalingMove(aaconcentration,1.0,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
-            // ScalingMove(aaconcentration,0.3,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
-            SlidingMove(epsilon,1.0,10,0,1.0,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
-            SlidingMove(epsilon,0.1,10,0,1.0,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
+            ScalingMove(aaconcentration,1.0,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
+            ScalingMove(aaconcentration,0.3,10,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
+            SlidingMove(epsilon,1.0,10,0,epsilon0,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
+            SlidingMove(epsilon,0.1,10,0,epsilon0,&AAMutSelMaskOmegaModel::AALogProb,&AAMutSelMaskOmegaModel::UpdateAA,this);
         }
     }
 
     void MoveMaskHyperParameters(int nrep)  {
         for (int rep=0; rep<nrep; rep++)  {
-            SlidingMove(pi,1.0,10,0,1.0,&AAMutSelMaskOmegaModel::MaskLogProb,&AAMutSelMaskOmegaModel::UpdateMask,this);
-            SlidingMove(pi,0.1,10,0,1.0,&AAMutSelMaskOmegaModel::MaskLogProb,&AAMutSelMaskOmegaModel::UpdateMask,this);
+            SlidingMove(pi,1.0,10,0.05,0.975,&AAMutSelMaskOmegaModel::MaskLogProb,&AAMutSelMaskOmegaModel::UpdateMask,this);
+            SlidingMove(pi,0.1,10,0.05,0.975,&AAMutSelMaskOmegaModel::MaskLogProb,&AAMutSelMaskOmegaModel::UpdateMask,this);
         }
     }
 
@@ -797,10 +804,10 @@ class AAMutSelMaskOmegaModel : public ProbModel {
 	}
 
     //! helper function: log density of 20 gammas
-    double GammaAALogPrior(const vector<double>& x, const vector<double>& aacenter, double aaconc = 1) {
+    double GammaAALogPrior(const vector<double>& x, const vector<double>& weight)   {
         double total = 0;
         for (int l=0; l<Naa; l++)   {
-            total += (aaconc*aacenter[l] -1)*log(x[l]) - x[l] - Random::logGamma(aaconc*aacenter[l]);
+            total += (weight[l] -1)*log(x[l]) - x[l] - Random::logGamma(weight[l]);
         }
         return total;
     }
@@ -813,8 +820,13 @@ class AAMutSelMaskOmegaModel : public ProbModel {
         for (int i=0; i<Nsite; i++) {
 
                 vector<double>& aa = (*siteaafitnessarray)[i];
+                const vector<double>& weight = siteweightarray->GetVal(i);
+                double conc = 0;
+                for (int k=0; k<Naa; k++)   {
+                    conc += weight[k];
+                }
                 vector<double> x(Naa,0);
-                double z = Random::sGamma(aaconcentration);
+                double z = Random::sGamma(conc);
                 for (int l=0; l<Naa; l++)   {
                     x[l] = z*aa[l];
                 }
@@ -825,7 +837,7 @@ class AAMutSelMaskOmegaModel : public ProbModel {
 
                 for (int rep=0; rep<nrep; rep++)	{
 
-                    double deltalogprob = -GammaAALogPrior(x,aacenter,aaconcentration) - PathSuffStatLogProb(i);
+                    double deltalogprob = -GammaAALogPrior(x,weight) - PathSuffStatLogProb(i);
 
                     double loghastings = 0;
                     z = 0;
@@ -847,7 +859,7 @@ class AAMutSelMaskOmegaModel : public ProbModel {
 
                     UpdateCodonMatrix(i);
 
-                    deltalogprob += GammaAALogPrior(x,aacenter,aaconcentration) + PathSuffStatLogProb(i);
+                    deltalogprob += GammaAALogPrior(x,weight) + PathSuffStatLogProb(i);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted)	{
@@ -902,6 +914,14 @@ class AAMutSelMaskOmegaModel : public ProbModel {
 	}
 
 	void Monitor(ostream& os) const override {
+        os << GetNsite() << '\t' << Naa << '\n';
+        for (int i=0; i<GetNsite(); i++)    {
+            os << i;
+            for (int a=0; a<Naa; a++)   {
+                os << '\t' << siteaafitnessarray->GetVal(i)[a];
+            }
+            os << '\n';
+        }
     }
 
 	void FromStream(istream& is) override {
