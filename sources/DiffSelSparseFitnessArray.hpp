@@ -84,6 +84,52 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double> >    {
     int Nlevel;
 };
 
+class MutSelSparseFitnessArray : public SimpleArray<vector<double> >    {
+
+    public:
+
+    //! constructor, parameterized by input fitness array, toggle array and Nlevel
+    MutSelSparseFitnessArray(const Selector<vector<double> >& infitness, const Selector<vector<int> >& intoggle, double inepsilon) : 
+        SimpleArray<vector<double> >(infitness.GetSize(),vector<double>(infitness.GetVal(0).size(),0)),
+        fitness(infitness), toggle(intoggle), epsilon(inepsilon)  {
+            Update();
+    }
+
+    //! returns dimension of fitness profiles (should normally be 20)
+    int GetDim() const {return GetVal(0).size();}
+
+    //! full update of the array
+    void Update()   {
+        for (int i=0; i<GetSize(); i++) {
+            Update(i);
+        }
+    }
+
+    //! update site i
+    void Update(int i)   {
+        vector<double>& x = (*this)[i];
+        double total = 0;
+        for (int k=0; k<GetDim(); k++) {
+            if (toggle.GetVal(i)[k])    {
+                x[k] = fitness.GetVal(i)[k];
+            }
+            else    {
+                x[k] = epsilon;
+            }
+            total += x[k];
+        }
+        for (int k=0; k<GetDim(); k++) {
+            x[k] /= total;
+        }
+    }
+
+    protected:
+
+    const Selector<vector<double> >& fitness;
+    const Selector<vector<int> >& toggle;
+    double epsilon;
+};
+
 class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >    {
 
     public:
