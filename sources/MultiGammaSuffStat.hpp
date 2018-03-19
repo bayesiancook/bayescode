@@ -83,6 +83,12 @@ class MultiGammaSuffStat : public SuffStat  {
 		}
     }
 
+    void AddSuffStat(const IIDMultiGamma& array)    {
+	    for (int i=0; i<array.GetSize(); i++)	{
+		    AddSuffStat(array.GetVal(i));
+	    }
+    }
+
     void AddSuffStat(const IIDMultiGamma& array, const Selector<vector<int> >& mask)	{
 	    for (int i=0; i<array.GetSize(); i++)	{
 		    AddSuffStat(array.GetVal(i),mask.GetVal(i));

@@ -99,7 +99,7 @@ class IIDGamma: public SimpleArray<double>	{
     }
 
     //! resample all entries for which occupancy[i] == 0 from the prior (from a Gamma(shape,scale))
-    void PriorResample(const Selector<int>& occupancy)	{
+    void PriorResample(const Selector<int>& occupancy)  {
 		for (int i=0; i<GetSize(); i++)	{
             if (! occupancy.GetVal(i)) {
                 (*this)[i] = Random::GammaSample(shape,scale);

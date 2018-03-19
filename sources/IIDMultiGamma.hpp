@@ -37,6 +37,21 @@ class IIDMultiGamma : public SimpleArray<vector<double> >    {
         }
     }
 
+    void PriorResample(const Selector<vector<int> >& mask, double min = 0)  {
+        for (int i=0; i<GetSize(); i++)   {
+            vector<double>& x = (*this)[i];
+            const vector<int>& s = mask.GetVal(i);
+            for (int k=0; k<GetDim(); k++) {
+                if (!s[k])   {
+                    x[k] = Random::sGamma(shape*center[k]);
+                    if (x[k] < min) {
+                        x[k] = min;
+                    }
+                }
+            }
+        }
+    }
+
     //! return total log prob, summed over all entries
     double GetLogProb() const {
         double total = 0;
