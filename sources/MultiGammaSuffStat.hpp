@@ -83,6 +83,12 @@ class MultiGammaSuffStat : public SuffStat  {
 		}
     }
 
+    void AddSuffStat(const IIDMultiGamma& array, const Selector<vector<int> >& mask)	{
+	    for (int i=0; i<array.GetSize(); i++)	{
+		    AddSuffStat(array.GetVal(i),mask.GetVal(i));
+	    }
+    }
+
     //! return object size, when put into an MPI buffer
     unsigned int GetMPISize() const {return 3*dim;}
 

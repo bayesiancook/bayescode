@@ -5,6 +5,77 @@
 #include "BidimArray.hpp"
 
 
+class IIDMultiGamma : public SimpleArray<vector<double> >    {
+
+    public:
+
+    //! constructor, parameterized by number of rows, of columns, dimension of the vectors, shape parameter and center (frequency vector)
+    IIDMultiGamma(int insize, int indim, double inshape, const vector<double>& incenter) :
+        SimpleArray(insize,vector<double>(indim,1.0/indim)), dim(indim), shape(inshape), center(incenter) {
+        Sample();
+    }
+
+    //! set shape parameter to new value
+    void SetShape(double inshape)   {
+        shape = inshape;
+    }
+
+    //! return dimension of vectors
+    int GetDim() const {return dim;}
+
+    //! sample all entries from prior distribution
+    void Sample()   {
+        for (int i=0; i<GetSize(); i++)   {
+            Sample(i);
+        }
+    }
+
+    void Sample(int i)  {
+        vector<double>& x = (*this)[i];
+        for (int k=0; k<GetDim(); k++) {
+            x[k] = Random::sGamma(shape*center[k]);
+        }
+    }
+
+    //! return total log prob, summed over all entries
+    double GetLogProb() const {
+        double total = 0;
+        for (int i=0; i<GetSize(); i++) {
+            total += GetLogProb(i);
+        }
+        return total;
+    }
+
+    //! return log prob for entry i
+    double GetLogProb(int i) const {
+        const vector<double>& x = GetVal(i);
+        double total = 0;
+        for (int k=0; k<GetDim(); k++) {
+            double alpha = shape*center[k];
+            total += - Random::logGamma(alpha) + (alpha-1)*log(x[k]) - x[k];
+        }
+        return total;
+    }
+
+    double GetLogProb(int i, const vector<int>& toggle) const {
+        const vector<double>& x = GetVal(i);
+        double total = 0;
+        for (int k=0; k<GetDim(); k++) {
+            if (toggle[k])  {
+                double alpha = shape*center[k];
+                total += - Random::logGamma(alpha) + (alpha-1)*log(x[k]) - x[k];
+            }
+        }
+        return total;
+    }
+
+    protected:
+
+    int dim;
+    double shape;
+    const vector<double>& center;
+};
+
 /**
  * \brief A BidimArray of iid vectors (of dimension dim) of gamma random variables.
  *
