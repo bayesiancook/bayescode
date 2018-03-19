@@ -42,62 +42,10 @@ license and that you accept its terms.*/
 #include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
 #include "PathSuffStat.hpp"
-
-class IIDProfileMask : public SimpleArray<vector<int> >     {
-
-    public:
-
-    IIDProfileMask(int size, int indim, double pi) : SimpleArray(size,vector<int>(indim,1)), dim(indim), pi(0.1) {}
-
-    int GetDim() const  {
-        return dim;
-    }
-
-    void SetPi(double inpi) {
-        pi = inpi;
-    }
-
-    double GetLogProb() const   {
-        double total = 0;
-        for (int i=0; i<GetSize(); i++) {
-            total += GetLogProb(i);
-        }
-        return total;
-    }
-
-    double GetLogProb(int i) const  {
-        int naa = 0;
-        const vector<int>& x = GetVal(i);
-        for (int k=0; k<GetDim(); k++)  {
-            naa += x[k];
-        }
-        if (! naa)  {
-            cerr << "error in IIDProfileMask: all entries are null\n";
-            exit(1);
-        }
-        // probability is conditional on at least one entry being 1
-        return naa*log(pi) + (GetDim()-naa)*log(1.0-pi) - log(1.0 - exp(GetDim()*log(1.0-pi)));
-    }
-
-    double GetMeanWidth() const {
-        double mean = 0;
-        for (int i=0; i<GetSize(); i++) {
-            const vector<int>& x = GetVal(i);
-            for (int k=0; k<GetDim(); k++)  {
-                mean += x[k];
-            }
-        }
-        mean /= GetSize();
-        return mean;
-    }
-
-    private:
-    int dim;
-    double pi;
-};
+#include "IIDProfileMask.hpp"
 
 /**
- * \brief A sparse version of the differential selection model (see DiffSelModel)
+ * \brief A doubly-sparse version of the differential selection model (see DiffSelModel)
  *
  * This is a codon model, based on the mutation-selection formalism,
  * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
@@ -123,6 +71,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     int blmode;
     int nucmode;
     int fitnesshypermode;
+    int maskmode;
 
     // -----
     // external parameters
@@ -147,8 +96,6 @@ class DiffSelDoublySparseModel : public ProbModel {
     // baseline  || fitness1 (for condition 1)
     // baseline || fitness1  || fitnessk  (for condition k=2..Ncond)
     int Nlevel;
-
-    double epsilon;
 
     // which branch is under which condition
     BranchAllocationSystem* branchalloc;
@@ -179,6 +126,10 @@ class DiffSelDoublySparseModel : public ProbModel {
     double fitnessshape;
     vector<double> fitnesscenter;
     BidimIIDMultiGamma* fitness;
+
+    double maskprob;
+    double maskepsilon;
+    IIDProfileMask* sitemaskarray;
 
     // shiftprob (across conditions):
     // either Beta(shiftprobhypermean,shiftprobhyperinvconc), estimated across genes
@@ -231,13 +182,13 @@ class DiffSelDoublySparseModel : public ProbModel {
         nucmode = 0;
         fitnesshypermode = 3;
 
+        maskepsilon = 0.01;
+
         Ncond = inNcond;
         Nlevel = inNlevel;
         if (Ncond <= 2) {
             Nlevel = 1;
         }
-
-        epsilon = 0.01;
 
         ReadFiles(datafile, treefile);
 
@@ -312,14 +263,17 @@ class DiffSelDoublySparseModel : public ProbModel {
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
-        pi.assign(Ncond,0.1);
-        shiftprobhypermean.assign(Ncond,0.1);
-        shiftprobhyperinvconc.assign(Ncond,0.5);
-        shiftprob.assign(Ncond,0.1);
+        maskprob = 0.1;
+        sitemaskarray = new IIDProfileMask(Nsite,Naa,maskprob);
 
-        toggle = new BidimIIDMultiBernoulli(Ncond,Nsite,Naa,shiftprob);
+        pi.assign(Ncond-1,0.1);
+        shiftprobhypermean.assign(Ncond-1,0.1);
+        shiftprobhyperinvconc.assign(Ncond-1,0.5);
+        shiftprob.assign(Ncond-1,0.1);
 
-        fitnessprofile = new DiffSelDoublySparseFitnessArray(*fitness,*toggle,Nlevel,epsilon);
+        toggle = new BidimIIDMultiBernoulli(Ncond-1,Nsite,Naa,shiftprob);
+
+        fitnessprofile = new DiffSelDoublySparseFitnessArray(*fitness,*sitemaskarray,*toggle,Nlevel,maskepsilon);
         
         // codon matrices
         // per condition and per site
@@ -365,6 +319,21 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetFitnessHyperMode(int in)    {
         fitnesshypermode = in;
+    }
+
+    //! \brief set estimation method for site profile masks
+    //!
+    //! Used in a multigene context.
+    //! - mode == 3: no mask
+    //! - mode == 2: parameter (maskprob) shared across genes
+    //! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated across genes
+    //! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
+    void SetMaskMode(int in)    {
+        maskmode = in;
+    }
+
+    void SetMaskEpsilon(double in)  {
+        maskepsilon = in;
     }
 
     // ------------------
@@ -439,22 +408,31 @@ class DiffSelDoublySparseModel : public ProbModel {
         int j = 0;
         for (int i=0; i<GetNsite(); i++)    {
             for (int a=0; a<Naa; a++)   {
-                array[j++] = toggle->GetVal(k,i)[a];
+                array[j++] = toggle->GetVal(k-1,i)[a];
             }
         }
     }
 
     const vector<vector<int> > & GetCondToggleArray(int k) const {
-        return toggle->GetSubArray(k);
+        return toggle->GetSubArray(k-1);
+    }
+
+    const vector<vector<int> >& GetMaskArray() const    {
+        return sitemaskarray->GetArray();
     }
 
     void Update() override {
         if (blmode == 0)    {
             blhypermean->SetAllBranches(1.0/lambda);
         }
+        UpdateMask();
 		fitness->SetShape(fitnessshape);
         UpdateAll();
         ResampleSub(1.0);
+    }
+
+    void UpdateMask()   {
+        sitemaskarray->SetPi(maskprob);
     }
 
     //! \brief dummy function that does not do anything.
@@ -512,6 +490,8 @@ class DiffSelDoublySparseModel : public ProbModel {
             total += FitnessHyperLogPrior();
         }
         total += FitnessLogPrior();
+        total += MaskHyperLogPrior();
+        total += MaskLogPrior();
         total += ToggleHyperLogPrior();
         total += ToggleLogPrior();
         return total;
@@ -551,21 +531,36 @@ class DiffSelDoublySparseModel : public ProbModel {
         return fitness->GetLogProb();
     }
 
+    //! log prior over mask array hyperparameters
+    double MaskHyperLogPrior() const  {
+        return 0;
+    }
+
+    //! log prior over mask array
+    double MaskLogPrior() const   {
+        return sitemaskarray->GetLogProb();
+    }
+
+    //! log prior over mask array
+    double MaskLogPrior(int i) const   {
+        return sitemaskarray->GetLogProb(i);
+    }
+
     //! log prior over toggle array hyperparameters
     double ToggleHyperLogPrior() const  {
         double total = 0;
-        for (int k=0; k<Ncond; k++) {
-            double alpha = shiftprobhypermean[k] / shiftprobhyperinvconc[k];
-            double beta = (1-shiftprobhypermean[k]) / shiftprobhyperinvconc[k];
-            if (shiftprob[k] != 0)    {
-                total += log(pi[k]) + Random::logBetaDensity(shiftprob[k],alpha,beta);
+        for (int k=1; k<Ncond; k++) {
+            double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+            double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+            if (shiftprob[k-1] != 0)    {
+                total += log(pi[k-1]) + Random::logBetaDensity(shiftprob[k-1],alpha,beta);
             }
             else    {
-                if (pi[k] == 1.0)   {
+                if (pi[k-1] == 1.0)   {
                     cerr << "error in ToggleHyperLogPrior: inf\n";
                     exit(1);
                 }
-                total += log(1 - pi[k]);
+                total += log(1 - pi[k-1]);
             }
         }
         return total;
@@ -628,22 +623,15 @@ class DiffSelDoublySparseModel : public ProbModel {
 	}
 
     //! return number of shifts (i.e. number of toggles in active state) under condition cond (and across all sites and all amino-acids)
+    /*
     int GetNshift(int cond) const {
         if (! cond) {
             cerr << "error: GetNshift called on baseline\n";
             exit(1);
         }
-        return toggle->GetRowEventNumber(cond);
+        return toggle->GetRowEventNumber(cond-1);
     }
-
-    //! return number of shifts (i.e. number of toggles in active state) under condition cond and for site i (across all amino-acids)
-    int GetNshift(int cond, int site) const {
-        if (! cond) {
-            cerr << "error: GetNshift called on baseline\n";
-            exit(1);
-        }
-        return toggle->GetEventNumber(cond,site);
-    }
+    */
 
     // ---------------
     // log probs for MH moves
@@ -662,6 +650,11 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! \brief log prob factor to be recomputed when moving fitness hyperparameters
     double FitnessHyperLogProb() const  {
         return FitnessHyperLogPrior() + FitnessHyperSuffStatLogProb();
+    }
+
+    //! \brief log prob factor to be recomputed when moving mask hyperparameter pi
+    double MaskLogProb() const  {
+        return MaskHyperLogPrior() + MaskLogPrior();
     }
 
     // ---------------
@@ -690,6 +683,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness();
                 CompMoveFitness();
+                if (maskmode < 3)   {
+                    MoveMasks();
+                }
+                if (maskmode < 2)   {
+                    MoveMaskHyperParameters(3);
+                }
                 MoveFitnessShifts();
                 MoveShiftToggles();
                 if (fitnesshypermode < 2)   {
@@ -764,11 +763,14 @@ class DiffSelDoublySparseModel : public ProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
 
+                vector<double>& x = (*fitness)(0,i);
+                const vector<int>& mask = (*sitemaskarray)[i];
+
                 double deltalogprob = 0;
 
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
-                        if (((*toggle)(0,i)[a]) && ((*toggle)(k,i)[a]))   {
+                        if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
                             double alpha = fitnessshape*fitnesscenter[a];
                             deltalogprob -= - Random::logGamma(alpha) + (alpha-1)*log((*fitness)(k,i)[a]) - (*fitness)(k,i)[a];
                         }
@@ -781,7 +783,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 int n = 0;
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
-                        if (((*toggle)(0,i)[a]) && ((*toggle)(k,i)[a]))   {
+                        if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
                             (*fitness)(k,i)[a] *= e;
                             n++;
                         }
@@ -792,7 +794,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
-                        if (((*toggle)(0,i)[a]) && ((*toggle)(k,i)[a]))   {
+                        if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
                             double alpha = fitnessshape*fitnesscenter[a];
                             deltalogprob += - Random::logGamma(alpha) + (alpha-1)*log((*fitness)(k,i)[a]) - (*fitness)(k,i)[a];
                         }
@@ -807,7 +809,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 } else {
                     for (int k=0; k<Ncond; k++) {
                         for (int a=0; a<Naa; a++)   {
-                            if (((*toggle)(0,i)[a]) && ((*toggle)(k,i)[a]))   {
+                            if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
                                 (*fitness)(k,i)[a] /= e;
                             }
                         }
@@ -821,16 +823,20 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! MH moves on baseline fitness parameters (for condition k=0)
     void MoveBaselineFitness() {
-        /*
-        MoveBaselineFitness(1.0, 3, 10);
-        MoveBaselineFitness(1.0, 10, 10);
-        */
-        MoveBaselineFitness(1.0, 20, 10);
-        MoveBaselineFitness(0.3, 20, 10);
+        if (maskmode == 3)  {
+            MoveAllBaselineFitness(1.0, 3, 10);
+            MoveAllBaselineFitness(1.0, 10, 10);
+            MoveAllBaselineFitness(1.0, 20, 10);
+            MoveAllBaselineFitness(0.3, 20, 10);
+        }
+        else    {
+            MoveBaselineFitness(1.0, 10);
+            MoveBaselineFitness(0.3, 10);
+        }
     }
 
     //! MH moves on baseline fitness parameters (for condition k=0)
-    double MoveBaselineFitness(double tuning, int n, int nrep) {
+    double MoveAllBaselineFitness(double tuning, int n, int nrep) {
 
         double nacc = 0;
         double ntot = 0;
@@ -841,7 +847,43 @@ class DiffSelDoublySparseModel : public ProbModel {
             for (int i = 0; i < Nsite; i++) {
 
                 vector<double>& x = (*fitness)(0,i);
-                const vector<int>& s = (*toggle)(0,i);
+
+                bk = x;
+
+                double deltalogprob = -fitness->GetLogProb(0,i) - SiteSuffStatLogProb(i);
+                double loghastings = Random::PosRealVectorProposeMove(x, Naa, tuning, n);
+                deltalogprob += loghastings;
+
+                UpdateSite(i);
+
+                deltalogprob += fitness->GetLogProb(0,i) + SiteSuffStatLogProb(i);
+
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted) {
+                    nacc++;
+                } else {
+                    x = bk;
+                    UpdateSite(i);
+                }
+                ntot++;
+            }
+        }
+        return nacc / ntot;
+    }
+
+    //! MH moves on baseline fitness parameters (for condition k=0)
+    double MoveBaselineFitness(double tuning, int nrep) {
+
+        double nacc = 0;
+        double ntot = 0;
+        vector<double> bk(Naa,0);
+
+
+        for (int rep = 0; rep < nrep; rep++) {
+            for (int i = 0; i < Nsite; i++) {
+
+                vector<double>& x = (*fitness)(0,i);
+                const vector<int>& s = (*sitemaskarray)[i];
 
                 bk = x;
 
@@ -883,10 +925,22 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                if (GetNshift(k,i))  {
 
-                    vector<double>& x = (*fitness)(k,i);
-                    const vector<int>& s = (*toggle)(k,i);
+                vector<double>& x = (*fitness)(k,i);
+                const vector<int>& t = (*toggle)(k-1,i);
+                const vector<int>& m = sitemaskarray->GetVal(i);
+
+                vector<int> s(Naa,0);
+
+                int nshift = 0;
+                int nmask = 0;
+                for (int a=0; a<Naa; a++)   {
+                    s[a] = t[a]*m[a];
+                    nmask += m[a];
+                    nshift += s[a];
+                }
+
+                if ((nmask > 1) && nshift) {
 
                     bk = x;
 
@@ -927,31 +981,44 @@ class DiffSelDoublySparseModel : public ProbModel {
         ProfileMove(fitnesscenter,0.1,3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
 
 		fitness->SetShape(fitnessshape);
-
     }
 
     //! gibbs resampling of prior probability of a shift 
     void ResampleShiftProb()    {
 
-        for (int k=0; k<Ncond; k++) {
+        for (int k=1; k<Ncond; k++) {
 
-            double alpha = shiftprobhypermean[k] / shiftprobhyperinvconc[k];
-            double beta = (1-shiftprobhypermean[k]) / shiftprobhyperinvconc[k];
+            double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+            double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
 
             int nshift = 0;
+            int nn = 0;
             for (int i=0; i<Nsite; i++) {
+                const vector<int>& t = (*toggle)(k-1,i);
+                const vector<int>& m = sitemaskarray->GetVal(i);
+                int nm = 0;
+                int ns = 0;
                 for (int a=0; a<Naa; a++)   {
-                    nshift += (*toggle)(k,i)[a];
+                    nm += m[a];
+                    ns += m[a]*t[a];
+                }
+
+                if (nm > 1) {
+                    nn += nm;
+                    nshift += ns;
                 }
             }
-            int nn = Nsite*Naa;
 
-            if (nshift || (pi[k] == 1.0)) {
-                shiftprob[k] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+            if (nn<nshift)  {
+                cerr << "error: nshift\n";
+                exit(1);
+            }
+            if (nshift || (pi[k-1] == 1.0)) {
+                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
             }
             else    {
-                double logp0 = log(1-pi[k]);
-                double logp1 = log(pi[k]) + Random::logGamma(alpha+beta) + Random::logGamma(beta + nn) - Random::logGamma(beta) - Random::logGamma(alpha+beta+nn);
+                double logp0 = log(1-pi[k-1]);
+                double logp1 = log(pi[k-1]) + Random::logGamma(alpha+beta) + Random::logGamma(beta + nn) - Random::logGamma(beta) - Random::logGamma(alpha+beta+nn);
                 double max = (logp0 > logp1) ? logp0 : logp1;
                 double p0 = exp(logp0-max);
                 double p1 = exp(logp1-max);
@@ -959,18 +1026,97 @@ class DiffSelDoublySparseModel : public ProbModel {
                 p0/=tot;
                 p1/=tot;
                 if (Random::Uniform() < p0) {
-                    shiftprob[k] = 0;
+                    shiftprob[k-1] = 0;
                 }
                 else    {
-                    shiftprob[k] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+                    shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
                 }
             }
         }
     }
 
+    void MoveMaskHyperParameters(int nrep)  {
+        for (int rep=0; rep<nrep; rep++)  {
+            SlidingMove(maskprob,1.0,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
+            SlidingMove(maskprob,0.1,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
+        }
+    }
+
+    double MoveMasks()    {
+		double nacc = 0;
+		double ntot = 0;
+        for (int i=0; i<Nsite; i++) {
+            vector<int>& mask = (*sitemaskarray)[i];
+            int naa = 0;
+            for (int k=0; k<Naa; k++)   {
+                naa += mask[k];
+            }
+            for (int k=0; k<Naa; k++)   {
+                if ((!mask[k]) || (naa > 1))    {
+                    double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
+                    int oldnaa = naa;
+                    naa -= mask[k];
+                    mask[k] = 1-mask[k];
+                    naa += mask[k];
+                    if (mask[k])    {
+                        (*fitness)(0,i)[k] = Random::sGamma(fitnessshape * fitnesscenter[k]);
+                        if (! (*fitness)(0,i)[k]) {
+                            (*fitness)(0,i)[k] = 1e-8;
+                        }
+                        for (int c=1; c<Ncond; c++) {
+                            (*toggle)(c-1,i)[k] = (Random::Uniform() < pi[k-1]);
+                            if ((*toggle)(c-1,i)[k])    {
+                                (*fitness)(c,i)[k] = Random::sGamma(fitnessshape * fitnesscenter[k]);
+                                if (! (*fitness)(c,i)[k]) {
+                                    (*fitness)(c,i)[k] = 1e-8;
+                                }
+                            }  
+                        }
+                    }
+                    if ((oldnaa == 1) && (naa == 2)) {
+                        // the other unmasked amino-acid should also redraw its toggles and fitness shifts (but not the baseline fitness)
+                        int l = -1;
+                        for (int a=0; a<Naa; a++)   {
+                            if (mask[a] && (a!=k))  {
+                                l = a;
+                            }
+                        }
+                        if (l == -1)    {
+                            cerr << "error in Move masks\n";
+                            exit(1);
+                        }
+                        for (int c=1; c<Ncond; c++) {
+                            (*toggle)(c-1,i)[l] = (Random::Uniform() < pi[l-1]);
+                            if ((*toggle)(c-1,i)[l])    {
+                                (*fitness)(c,i)[l] = Random::sGamma(fitnessshape * fitnesscenter[l]);
+                                if (! (*fitness)(c,i)[l]) {
+                                    (*fitness)(c,i)[l] = 1e-8;
+                                }
+                            }  
+                        }
+                    }
+                    UpdateSite(i);
+                    deltalogprob += MaskLogPrior(i) + SiteSuffStatLogProb(i);
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted)	{
+                        nacc ++;
+                    }
+                    else	{
+                        naa -= mask[k];
+                        mask[k] = 1-mask[k];
+                        naa += mask[k];
+                        UpdateSite(i);
+                    }
+                    ntot++;
+                }
+            }
+        }
+		return nacc/ntot;
+	}
+
     //! MH moves on toggles
     void MoveShiftToggles() {
-        for (int k=0; k<Ncond; k++) {
+        for (int k=1; k<Ncond; k++) {
             MoveShiftToggles(k,10);
         }
     }
@@ -992,76 +1138,107 @@ class DiffSelDoublySparseModel : public ProbModel {
     double MoveShiftToggles(int k, int nrep)  {
 
         int nshift = 0;
+        int nn = 0;
         for (int i=0; i<Nsite; i++) {
+            const vector<int>& t = (*toggle)(k-1,i);
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int nm = 0;
+            int ns = 0;
             for (int a=0; a<Naa; a++)   {
-                nshift += (*toggle)(k,i)[a];
+                nm += m[a];
+                ns += m[a]*t[a];
+            }
+
+            if (nm > 1) {
+                nn += nm;
+                nshift += ns;
             }
         }
-        int nn = Nsite*Naa;
 
-        double alpha = shiftprobhypermean[k] / shiftprobhyperinvconc[k];
-        double beta = (1-shiftprobhypermean[k]) / shiftprobhyperinvconc[k];
-        double pp = pi[k];
+        double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+        double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+        double pp = pi[k-1];
 
         double ntot = 0;
         double nacc = 0;
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                int a = (int) (Naa * Random::Uniform());
 
-                if (!(*toggle)(k,i)[a])    {
+                const vector<int>& t = (*toggle)(k-1,i);
+                const vector<int>& m = sitemaskarray->GetVal(i);
+                int nm = 0;
+                int ns = 0;
+                for (int a=0; a<Naa; a++)   {
+                    nm += m[a];
+                    ns += m[a]*t[a];
+                }
 
-                    double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
-                    (*toggle)(k,i)[a] = 1;
-                    if (! k)    {
-                        // resample the whole column of toggles and fitness parameters
-                        (*fitness)(0,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                        for (int l=1; l<Ncond; l++) {
-                            if (Random::Uniform() < pi[l])  {
-                                (*toggle)(l,i)[a] = 1;
-                                (*fitness)(l,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                            }
-                            else    {
-                                (*toggle)(l,i)[a] = 0;
-                            }
+                if (nm > 1) {
+
+                    int b = (int) (nm * Random::Uniform()) + 1;
+                    int a = 0;
+                    while (b && (a<Naa))    {
+                        if (m[a])   {
+                            b--;
+                        }
+                        if (b) {
+                            a++;
                         }
                     }
-                    else    {
-                        // resample only the local fitness parameter
+                    if (a == Naa)   {
+                        cerr << "error in move shift toggles: overflow when choosing target amino-acid\n";
+                        exit(1);
+                    }
+
+                    if (! m[a]) {
+                        cerr << "error in move shift toggles: a is not within mask\n";
+                        exit(1);
+                    }
+
+                    if (!(*toggle)(k-1,i)[a])    {
+                        double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
+                        (*toggle)(k-1,i)[a] = 1;
                         (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                    }
-                    UpdateSite(i);
-                    deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-
-                    int accepted = (log(Random::Uniform()) < deltalogprob);
-                    if (accepted) {
-                        nacc++;
-                        nshift++;
-                    } else {
-                        (*toggle)(k,i)[a] = 0;
+                        // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
                         UpdateSite(i);
-                    }
-                    ntot++;
-                }
-                else    {
-                    double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
-                    (*toggle)(k,i)[a] = 0;
-                    UpdateSite(i);
-                    deltalogprob += ToggleMarginalLogPrior(nn,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
+                        deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
+                        // deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
 
-                    int accepted = (log(Random::Uniform()) < deltalogprob);
-                    if (accepted) {
-                        nacc++;
-                        nshift--;
-                    } else {
-                        (*toggle)(k,i)[a] = 1;
-                        UpdateSite(i);
+                        int accepted = (log(Random::Uniform()) < deltalogprob);
+                        if (accepted) {
+                            nacc++;
+                            nshift++;
+                        } else {
+                            (*toggle)(k-1,i)[a] = 0;
+                            UpdateSite(i);
+                        }
+                        ntot++;
                     }
-                    ntot++;
+                    else    {
+                        double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
+                        (*toggle)(k-1,i)[a] = 0;
+                        UpdateSite(i);
+                        deltalogprob += ToggleMarginalLogPrior(nn,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
+                        // deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
+
+                        int accepted = (log(Random::Uniform()) < deltalogprob);
+                        if (accepted) {
+                            nacc++;
+                            nshift--;
+                        } else {
+                            (*toggle)(k-1,i)[a] = 1;
+                            UpdateSite(i);
+                        }
+                        ntot++;
+                    }
                 }
             }
         }
-        shiftprob[k] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+        if (nshift > nn)    {
+            cerr << "before resampling shiftprob: " << nshift << '\t' << nn << '\n';
+            exit(1);
+        }
+        shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
         return nacc / ntot;
     }
 
@@ -1085,10 +1262,11 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
-        os << "meanvar0\t";
+        os << "pi\t";
+        os << "width\t";
         os << "shape\t";
         os << "center\t";
-        for (int k = 0; k < Ncond; k++) {
+        for (int k = 1; k < Ncond; k++) {
             os << "prob" << k << '\t';
         }
         os << "statent\t";
@@ -1099,11 +1277,12 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << 3*branchlength->GetTotalLength() << '\t';
-        os << fitness->GetMeanRelVar(0) << '\t';
+        os << maskprob << '\t';
+        os << sitemaskarray->GetMeanWidth() << '\t';
         os << fitnessshape << '\t';
         os << Random::GetEntropy(fitnesscenter) << '\t';
-        for (int k=0; k<Ncond; k++) {
-            os << shiftprob[k] << '\t';
+        for (int k=1; k<Ncond; k++) {
+            os << shiftprob[k-1] << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
@@ -1113,7 +1292,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     void TraceToggle(int k, ostream& os) const {
         for (int i=0; i<GetNsite(); i++)    {
             for (int a=0; a<Naa; a++)   {
-                os << toggle->GetVal(k,i)[a] << '\t';
+                os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k-1,i)[a] << '\t';
             }
         }
         os << '\n';
@@ -1145,6 +1324,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             is >> fitnesscenter;
         }
         is >> *fitness;
+        if (maskmode < 2)   {
+            is >> maskprob;
+        }
+        if (maskmode < 3)   {
+            is >> *sitemaskarray;
+        }
         is >> shiftprob;
         is >> *toggle;
     }
@@ -1163,6 +1348,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << fitnesscenter << '\t';
         }
         os << *fitness << '\t';
+        if (maskmode < 2)   {
+            os << maskprob << '\t';
+        }
+        if (maskmode < 3)  {
+            os << *sitemaskarray << '\t';
+        }
         os << shiftprob << '\t';
         os << *toggle << '\t';
     }
@@ -1183,6 +1374,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             size += fitnesscenter.size();
         }
         size += fitness->GetMPISize();
+        if (maskmode < 2)   {
+            size++;
+        }
+        if (maskmode < 3)   {
+            size += sitemaskarray->GetMPISize();
+        }
         size += shiftprob.size();
         size += toggle->GetMPISize();
         return size;
@@ -1203,6 +1400,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             is >> fitnesscenter;
         }
         is >> *fitness;
+        if (maskmode < 2)   {
+            is >> maskprob;
+        }
+        if (maskmode < 3)   {
+            is >> *sitemaskarray;
+        }
         is >> shiftprob;
         is >> *toggle;
     }
@@ -1222,6 +1425,12 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << fitnesscenter;
         }
         os << *fitness;
+        if (maskmode < 2)   {
+            os << maskprob;
+        }
+        if (maskmode < 3)   {
+            os << *sitemaskarray;
+        }
         os << shiftprob;
         os << *toggle;
     }

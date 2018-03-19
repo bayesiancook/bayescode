@@ -135,9 +135,9 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >
     public:
 
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
-    DiffSelDoublySparseFitnessArray(const BidimSelector<vector<double> >& infitness, const BidimSelector<vector<int> >& intoggle, int inNlevel, double inepsilon) : 
+    DiffSelDoublySparseFitnessArray(const BidimSelector<vector<double> >& infitness, const Selector<vector<int> >& inmask, const BidimSelector<vector<int> >& intoggle, int inNlevel, double inepsilon) : 
         SimpleBidimArray<vector<double> >(infitness.GetNrow(),infitness.GetNcol(),vector<double>(infitness.GetVal(0,0).size(),0)),
-        fitness(infitness), toggle(intoggle), Nlevel(inNlevel), epsilon(inepsilon)  {
+        fitness(infitness), mask(inmask), toggle(intoggle), Nlevel(inNlevel), epsilon(inepsilon)  {
             Update();
     }
 
@@ -165,14 +165,14 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >
         vector<double>& x = (*this)(i,j);
         double total = 0;
         for (int k=0; k<GetDim(); k++) {
-            if (toggle.GetVal(0,j)[k])  {
+            if (mask.GetVal(j)[k])  {
                 int l = 0;
                 if (i>0)    {
-                    if (toggle.GetVal(i,j)[k])   {
+                    if (toggle.GetVal(i-1,j)[k])   {
                         l = i;
                     }
                     else    {
-                        if ((Nlevel == 2) && (toggle.GetVal(1,j)[k]))   {
+                        if ((Nlevel == 2) && (toggle.GetVal(0,j)[k]))   {
                             l = 1;
                         }
                     }
@@ -192,6 +192,7 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >
     protected:
 
     const BidimSelector<vector<double> >& fitness;
+    const Selector<vector<int> >& mask;
     const BidimSelector<vector<int> >& toggle;
     int Nlevel;
     double epsilon;
