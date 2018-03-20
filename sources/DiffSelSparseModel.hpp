@@ -891,7 +891,10 @@ class DiffSelSparseModel : public ProbModel {
             }
             else    {
                 double logp0 = log(1-pi[k-1]);
-                double logp1 = log(pi[k-1]) + Random::logGamma(alpha+beta) + Random::logGamma(beta + nn) - Random::logGamma(beta) - Random::logGamma(alpha+beta+nn);
+                double logp1 = log(pi[k-1]);
+                logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha+beta);
+                logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nn - nshift) - Random::logGamma(alpha+beta+nn);
+
                 double max = (logp0 > logp1) ? logp0 : logp1;
                 double p0 = exp(logp0-max);
                 double p1 = exp(logp1-max);

@@ -52,6 +52,17 @@ class MultiGammaSuffStat : public SuffStat  {
         }
 	}
 
+    //! add the contribution of one gamma variate (x) to this suffstat
+	void AddSuffStat(const vector<double>& x, const vector<int>& t1, const vector<int>& t2)   {
+        for (int k=0; k<GetDim(); k++)  {
+            if (t1[k] && t2[k])   {
+                sum[k] += x[k];
+                sumlog[k] += log(x[k]);
+                n[k]++;
+            }
+        }
+	}
+
     //! (*this) += from
     void Add(const MultiGammaSuffStat& from) {
         for (int k=0; k<GetDim(); k++)  {
@@ -78,6 +89,22 @@ class MultiGammaSuffStat : public SuffStat  {
             else    {
                 for (int j=0; j<array.GetNcol(); j++)   {
                     AddSuffStat(array.GetVal(i,j),toggle.GetVal(i-1,j));
+                }
+            }
+		}
+    }
+
+    //! get suff stats from an IIDGamma array, with a double system of masks
+    void AddSuffStat(const BidimIIDMultiGamma& array, const Selector<vector<int> >& mask, const BidimSelector<vector<int> >& toggle) {
+        for (int i=0; i<array.GetNrow(); i++)  {
+            if (!i) {
+                for (int j=0; j<array.GetNcol(); j++)   {
+                    AddSuffStat(array.GetVal(i,j),mask.GetVal(j));
+                }
+            }
+            else    {
+                for (int j=0; j<array.GetNcol(); j++)   {
+                    AddSuffStat(array.GetVal(i,j),mask.GetVal(j),toggle.GetVal(i-1,j));
                 }
             }
 		}

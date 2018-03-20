@@ -181,6 +181,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         blmode = 0;
         nucmode = 0;
         fitnesshypermode = 3;
+        maskmode = 0;
 
         maskepsilon = 0.01;
 
@@ -259,20 +260,40 @@ class DiffSelDoublySparseModel : public ProbModel {
         Random::DirichletSample(nucstat,vector<double>(Nnuc,1.0/Nnuc),((double) Nnuc));
 		nucmatrix = new GTRSubMatrix(Nnuc,nucrelrate,nucstat,true);
 
+        // fitness parameters: IID Gamma, across all conditions, sites, and amino-acids
+        // those are not the final fitness values (depends on the system of masks and toggles, specified below)
         fitnessshape = 20.0;
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
+        // profiles across sites are masked:
+        // each site has a 20-dim mask, iid bernoulli of prob maskprob, conditional on at least one entry being 1
+        // if mask[a] == 0 for amino-acid a, then its fitness is equal to maskepsilon, across all conditions, for that site
         maskprob = 0.1;
         sitemaskarray = new IIDProfileMask(Nsite,Naa,maskprob);
 
+        // hyperparameters for the system of toggles
+        // shiftprob is a vector of Ncond-1 probabilities;
+        // for each non-baseline condition, k=1..Ncond:
+        //     - with probability 1-pi[k-1], shiftprob[k-1] = 0 
+        //     - with probability pi[k-1]  , shiftprob[k-1] ~ Beta(shiftprobhypermean, shiftprobhyperinvconc)
         pi.assign(Ncond-1,0.1);
         shiftprobhypermean.assign(Ncond-1,0.1);
         shiftprobhyperinvconc.assign(Ncond-1,0.5);
         shiftprob.assign(Ncond-1,0.1);
 
+        // toggles specifying the sites and amino-acids displaying fitness modulations across conditions
+        // for each k=1..Ncond;
+        // all toggles across all sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
         toggle = new BidimIIDMultiBernoulli(Ncond-1,Nsite,Naa,shiftprob);
 
+        // final amino-acid fitness profiles across sites
+        // (*fitnessprofile)(k,i)[a]: fitness of amino-acid a for site i under condition k
+        // deterministic functions of the gamma fitness parameters, the system of masks across sites and toggles across sites and conditions
+        // for site i and amino-acid a:
+        // if sitemaskarray[i][a] == 0 : fitnessprofile(k,i)[a] = maskepsilon across all conditions
+        // if sitemaskarray[i][a] == 1 : fitnessprofile(k,i)[a] determined by the system of fitness(0:Ncond,i)[a] and toggle(1:Ncond,i)[a]
+        // as in the simple DiffSelSparseModel
         fitnessprofile = new DiffSelDoublySparseFitnessArray(*fitness,*sitemaskarray,*toggle,Nlevel,maskepsilon);
         
         // codon matrices
@@ -332,6 +353,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         maskmode = in;
     }
 
+    //! \brief value of background fitness of low-fitness amino-acids
     void SetMaskEpsilon(double in)  {
         maskepsilon = in;
     }
@@ -413,10 +435,12 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
     }
 
+    //! const ref access to toggles for condition k=1..Ncond
     const vector<vector<int> > & GetCondToggleArray(int k) const {
         return toggle->GetSubArray(k-1);
     }
 
+    //! const ref access to masks across sites
     const vector<vector<int> >& GetMaskArray() const    {
         return sitemaskarray->GetArray();
     }
@@ -431,6 +455,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    //! update mask array
     void UpdateMask()   {
         sitemaskarray->SetPi(maskprob);
     }
@@ -489,11 +514,13 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (fitnesshypermode < 2)   {
             total += FitnessHyperLogPrior();
         }
-        total += FitnessLogPrior();
+        // not updated at all times 
+        // total += FitnessLogPrior();
         total += MaskHyperLogPrior();
         total += MaskLogPrior();
         total += ToggleHyperLogPrior();
-        total += ToggleLogPrior();
+        // not updated at all times
+        // total += ToggleLogPrior();
         return total;
     }
 
@@ -531,22 +558,22 @@ class DiffSelDoublySparseModel : public ProbModel {
         return fitness->GetLogProb();
     }
 
-    //! log prior over mask array hyperparameters
+    //! log prior over mask array hyperparameter (maskprob: uniform between 0 and 1 -- could be hyperparameterized)
     double MaskHyperLogPrior() const  {
         return 0;
     }
 
-    //! log prior over mask array
+    //! log prior over mask arrays across sites (iid Bernoulli conditional on at least one entry being 1)
     double MaskLogPrior() const   {
         return sitemaskarray->GetLogProb();
     }
 
-    //! log prior over mask array
+    //! log prior over mask array for site i
     double MaskLogPrior(int i) const   {
         return sitemaskarray->GetLogProb(i);
     }
 
-    //! log prior over toggle array hyperparameters
+    //! log prior over toggle array hyperparameters (shiftprob vector)
     double ToggleHyperLogPrior() const  {
         double total = 0;
         for (int k=1; k<Ncond; k++) {
@@ -566,7 +593,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         return total;
     }
 
-    //! log prior over toggle array
+    //! log prior over toggle array (IID bernoulli)
     double ToggleLogPrior() const   {
         return toggle->GetLogProb();
     }
@@ -754,7 +781,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         CompMoveFitness(1.0,10);
     }
 
-    //! MH compensatory move on fitness parameters and hyper-parameters
+    //! \brief MH compensatory move on fitness parameters and hyper-parameters
+    //!
+    //! for a given amino-acid.
+    //! shift by a constant factor e all *active* gamma fitness parameters across all amino-acids and conditions
     double CompMoveFitness(double tuning, int nrep) {
 
         double nacc = 0;
@@ -763,11 +793,11 @@ class DiffSelDoublySparseModel : public ProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
 
-                vector<double>& x = (*fitness)(0,i);
                 const vector<int>& mask = (*sitemaskarray)[i];
 
                 double deltalogprob = 0;
 
+                // calculate log prior for active fitness parameters across amino-acids and conditions before the move
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
                         if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
@@ -780,6 +810,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 double m = tuning*(Random::Uniform() - 0.5);
                 double e = exp(m);
 
+                // multiply all active fitness parameters across amino-acids and conditions by e
                 int n = 0;
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
@@ -792,6 +823,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
                 double loghastings = n * m;
 
+                // calculate log prior for active fitness parameters across amino-acids and conditions after the move
                 for (int k=0; k<Ncond; k++) {
                     for (int a=0; a<Naa; a++)   {
                         if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
@@ -807,6 +839,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 if (accepted) {
                     nacc++;
                 } else {
+                    // restore previous value for active fitness parameters
                     for (int k=0; k<Ncond; k++) {
                         for (int a=0; a<Naa; a++)   {
                             if ((mask[k]) && ((!k) || ((*toggle)(k-1,i)[a])))   {
@@ -821,21 +854,23 @@ class DiffSelDoublySparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on baseline fitness parameters (for condition k=0)
+    //! MH move schedule on baseline gamma fitness parameters (for condition k=0)
     void MoveBaselineFitness() {
+        // if masks are not activated (all entries equal to 1), move a random subset of entries over the 20 amino-acids (2d parameter of call)
         if (maskmode == 3)  {
             MoveAllBaselineFitness(1.0, 3, 10);
             MoveAllBaselineFitness(1.0, 10, 10);
             MoveAllBaselineFitness(1.0, 20, 10);
             MoveAllBaselineFitness(0.3, 20, 10);
         }
+        // if masks are activated, move all active entries
         else    {
             MoveBaselineFitness(1.0, 10);
             MoveBaselineFitness(0.3, 10);
         }
     }
 
-    //! MH moves on baseline fitness parameters (for condition k=0)
+    //! elementary MH move on baseline gamma fitness parameters (for condition k=0)
     double MoveAllBaselineFitness(double tuning, int n, int nrep) {
 
         double nacc = 0;
@@ -871,7 +906,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on baseline fitness parameters (for condition k=0)
+    //! elementary MH move on baseline fitness parameters (for condition k=0): version used when masks are activated
     double MoveBaselineFitness(double tuning, int nrep) {
 
         double nacc = 0;
@@ -882,24 +917,25 @@ class DiffSelDoublySparseModel : public ProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
 
-                vector<double>& x = (*fitness)(0,i);
-                const vector<int>& s = (*sitemaskarray)[i];
+                vector<double>& fit = (*fitness)(0,i);
+                const vector<int>& mask = (*sitemaskarray)[i];
 
-                bk = x;
+                bk = fit;
 
-                double deltalogprob = -fitness->GetLogProb(0,i,s) - SiteSuffStatLogProb(i);
-                double loghastings = Random::PosRealVectorProposeMove(x, Naa, tuning, s);
+                // calculate log prob before the move (for the prior factor, only those entries that are not masked are counted)
+                double deltalogprob = -fitness->GetLogProb(0,i,mask) - SiteSuffStatLogProb(i);
+                double loghastings = Random::PosRealVectorProposeMove(fit, Naa, tuning, mask);
                 deltalogprob += loghastings;
 
                 UpdateSite(i);
 
-                deltalogprob += fitness->GetLogProb(0,i,s) + SiteSuffStatLogProb(i);
+                deltalogprob += fitness->GetLogProb(0,i,mask) + SiteSuffStatLogProb(i);
 
                 int accepted = (log(Random::Uniform()) < deltalogprob);
                 if (accepted) {
                     nacc++;
                 } else {
-                    x = bk;
+                    fit = bk;
                     UpdateSite(i);
                 }
                 ntot++;
@@ -908,7 +944,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on toggles (fitness shifts)
+    //! MH move schedule on gamma fitness parameters (fitness shifts) for non-baseline conditions
     void MoveFitnessShifts()    {
         for (int k=1; k<Ncond; k++) {
             MoveFitnessShifts(k,1,10);
@@ -916,7 +952,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
     }
 
-    //! MH moves on fitness shifts (i.e. for conditions k=1..Ncond-1)
+    //! elementary MH move on fitness shifts for non-baseline conditions
     double MoveFitnessShifts(int k, double tuning, int nrep) {
 
         double nacc = 0;
@@ -930,8 +966,12 @@ class DiffSelDoublySparseModel : public ProbModel {
                 const vector<int>& t = (*toggle)(k-1,i);
                 const vector<int>& m = sitemaskarray->GetVal(i);
 
+                // compute condition-specific mask, which is the conjunction of baseline mask and condition-specific vector of toggles: s = m*t
+                // this mask specifies which amino-acids are both active (across the tree) and undergoing a fitness shift in current condition
                 vector<int> s(Naa,0);
 
+                // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+                // nmask : number of amino-acids that are active in baseline
                 int nshift = 0;
                 int nmask = 0;
                 for (int a=0; a<Naa; a++)   {
@@ -940,16 +980,24 @@ class DiffSelDoublySparseModel : public ProbModel {
                     nshift += s[a];
                 }
 
+                // fitness shifts are impacting the final fitness only if 
+                // (1) there are at least 2 active amino-acids
+                // (2) at least one amino-acid is undergoing a fitness shift
                 if ((nmask > 1) && nshift) {
 
                     bk = x;
 
+                    // log prob before the move (for the prior factor, only those amino-acids that are concerned, such as specified by s, are counted)
                     double deltalogprob = -fitness->GetLogProb(k,i,s) - SiteSuffStatLogProb(i);
+
+                    // propose move (only for the relevant amino-acids)
                     double loghastings = Random::PosRealVectorProposeMove(x, Naa, tuning, s);
+
                     deltalogprob += loghastings;
 
                     UpdateSite(i);
 
+                    // log prob after the move
                     deltalogprob += fitness->GetLogProb(k,i,s) + SiteSuffStatLogProb(i);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -970,7 +1018,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveFitnessHyperParameters() {
         // collect suff stats across all active fitness parameters
         hyperfitnesssuffstat.Clear();
-        hyperfitnesssuffstat.AddSuffStat(*fitness,*toggle);
+        hyperfitnesssuffstat.AddSuffStat(*fitness,*sitemaskarray,*toggle);
 
         ScalingMove(fitnessshape,1.0,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
         ScalingMove(fitnessshape,0.3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
@@ -983,58 +1031,65 @@ class DiffSelDoublySparseModel : public ProbModel {
 		fitness->SetShape(fitnessshape);
     }
 
-    //! gibbs resampling of prior probability of a shift 
+    //! Gibbs resampling of probability of a shift 
     void ResampleShiftProb()    {
 
         for (int k=1; k<Ncond; k++) {
 
+            // pre-calculate parameters of the Beta distribution for non-zero case
             double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
             double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
 
+            // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+            // nmask : number of amino-acids that are active in baseline
+            // both are summed across all sites: sufficient statistics for shiftprob
             int nshift = 0;
-            int nn = 0;
+            int nmask = 0;
             for (int i=0; i<Nsite; i++) {
                 const vector<int>& t = (*toggle)(k-1,i);
                 const vector<int>& m = sitemaskarray->GetVal(i);
-                int nm = 0;
                 int ns = 0;
+                int nm = 0;
                 for (int a=0; a<Naa; a++)   {
-                    nm += m[a];
                     ns += m[a]*t[a];
+                    nm += m[a];
                 }
 
+                // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
                 if (nm > 1) {
-                    nn += nm;
                     nshift += ns;
+                    nmask += nm;
                 }
             }
 
-            if (nn<nshift)  {
-                cerr << "error: nshift\n";
-                exit(1);
-            }
             if (nshift || (pi[k-1] == 1.0)) {
-                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
             }
             else    {
                 double logp0 = log(1-pi[k-1]);
-                double logp1 = log(pi[k-1]) + Random::logGamma(alpha+beta) + Random::logGamma(beta + nn) - Random::logGamma(beta) - Random::logGamma(alpha+beta+nn);
+
+                double logp1 = log(pi[k-1]);
+                logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha+beta);
+                logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nmask - nshift) - Random::logGamma(alpha+beta+nmask);
+
                 double max = (logp0 > logp1) ? logp0 : logp1;
                 double p0 = exp(logp0-max);
                 double p1 = exp(logp1-max);
                 double tot = p0+p1;
                 p0/=tot;
                 p1/=tot;
+
                 if (Random::Uniform() < p0) {
                     shiftprob[k-1] = 0;
                 }
                 else    {
-                    shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+                    shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
                 }
             }
         }
     }
 
+    //! MH move schedule on mask hyperparameter (maskprob)
     void MoveMaskHyperParameters(int nrep)  {
         for (int rep=0; rep<nrep; rep++)  {
             SlidingMove(maskprob,1.0,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
@@ -1042,69 +1097,107 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
     }
 
+    //! MH move on masks
     double MoveMasks()    {
+
 		double nacc = 0;
 		double ntot = 0;
+
         for (int i=0; i<Nsite; i++) {
             vector<int>& mask = (*sitemaskarray)[i];
+
+            // compute number of active entries 
             int naa = 0;
-            for (int k=0; k<Naa; k++)   {
-                naa += mask[k];
+            for (int a=0; a<Naa; a++)   {
+                naa += mask[a];
             }
-            for (int k=0; k<Naa; k++)   {
-                if ((!mask[k]) || (naa > 1))    {
+
+            // attempt move successively on each amino-acid
+            for (int a=0; a<Naa; a++)   {
+
+                // don't propose move if this leads to 0 active entry in the end
+                if ((!mask[a]) || (naa > 1))    {
+
+                    // logprob before the move
                     double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
+
+                    // do the move on the entry mask[k]
                     int oldnaa = naa;
-                    naa -= mask[k];
-                    mask[k] = 1-mask[k];
-                    naa += mask[k];
-                    if (mask[k])    {
-                        (*fitness)(0,i)[k] = Random::sGamma(fitnessshape * fitnesscenter[k]);
-                        if (! (*fitness)(0,i)[k]) {
-                            (*fitness)(0,i)[k] = 1e-8;
+                    naa -= mask[a];
+                    mask[a] = 1-mask[a];
+                    naa += mask[a];
+
+                    // if move is from inactive to active
+                    if (mask[a])    {
+                        // resample baseline fitness
+                        (*fitness)(0,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
+                        if (! (*fitness)(0,i)[a]) {
+                            (*fitness)(0,i)[a] = 1e-8;
                         }
-                        for (int c=1; c<Ncond; c++) {
-                            (*toggle)(c-1,i)[k] = (Random::Uniform() < pi[k-1]);
-                            if ((*toggle)(c-1,i)[k])    {
-                                (*fitness)(c,i)[k] = Random::sGamma(fitnessshape * fitnesscenter[k]);
-                                if (! (*fitness)(c,i)[k]) {
-                                    (*fitness)(c,i)[k] = 1e-8;
+                        // resample toggles and fitness shifts across all non-baseline conditions
+                        for (int k=1; k<Ncond; k++) {
+                            (*toggle)(k-1,i)[a] = (Random::Uniform() < pi[k-1]);
+                            if ((*toggle)(k-1,i)[a])    {
+                                (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
+                                if (! (*fitness)(k,i)[a]) {
+                                    (*fitness)(k,i)[a] = 1e-8;
                                 }
                             }  
                         }
                     }
+
+                    // if move is from 1 to 2 active amino-acids,
+                    // the other unmasked amino-acid should also redraw its toggles and fitness shifts (but not the baseline fitness)
                     if ((oldnaa == 1) && (naa == 2)) {
-                        // the other unmasked amino-acid should also redraw its toggles and fitness shifts (but not the baseline fitness)
-                        int l = -1;
-                        for (int a=0; a<Naa; a++)   {
-                            if (mask[a] && (a!=k))  {
-                                l = a;
+                        // grep the index of the other active amino-acid
+                        int b = 0;
+                        while ((b<Naa) && ((!mask[b]) || (b==a)))   {
+                            b++;
+                        }
+                        if (b == Naa)   {
+                            cerr << "error in MoveMasks, when choosing other amino-acid\n";
+                            exit(1);
+                        }
+                        /*
+                        int b = -1;
+                        for (int c=0; c<Naa; c++)   {
+                            if (mask[c] && (c!=a))  {
+                                b = c;
                             }
                         }
-                        if (l == -1)    {
+                        if (b == -1)    {
                             cerr << "error in Move masks\n";
                             exit(1);
                         }
-                        for (int c=1; c<Ncond; c++) {
-                            (*toggle)(c-1,i)[l] = (Random::Uniform() < pi[l-1]);
-                            if ((*toggle)(c-1,i)[l])    {
-                                (*fitness)(c,i)[l] = Random::sGamma(fitnessshape * fitnesscenter[l]);
-                                if (! (*fitness)(c,i)[l]) {
-                                    (*fitness)(c,i)[l] = 1e-8;
+                        */
+
+                        // resample toggles and fitness shifts across all non-baseline conditions
+                        for (int k=1; k<Ncond; k++) {
+                            (*toggle)(k-1,i)[b] = (Random::Uniform() < pi[k-1]);
+                            if ((*toggle)(k-1,i)[b])    {
+                                (*fitness)(k,i)[b] = Random::sGamma(fitnessshape * fitnesscenter[b]);
+                                if (! (*fitness)(k,i)[b]) {
+                                    (*fitness)(k,i)[b] = 1e-8;
                                 }
                             }  
                         }
                     }
+
+                    // logprob after the move
                     UpdateSite(i);
                     deltalogprob += MaskLogPrior(i) + SiteSuffStatLogProb(i);
+
+                    // decision
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted)	{
                         nacc ++;
                     }
                     else	{
-                        naa -= mask[k];
-                        mask[k] = 1-mask[k];
-                        naa += mask[k];
+                        // restore state (not necessary to restore all fitness parameters and toggles that have been modified during the move,
+                        // since they all go back to inactive state anyway and will be resampled upon next activation)
+                        naa -= mask[a];
+                        mask[a] = 1-mask[a];
+                        naa += mask[a];
                         UpdateSite(i);
                     }
                     ntot++;
@@ -1114,16 +1207,17 @@ class DiffSelDoublySparseModel : public ProbModel {
 		return nacc/ntot;
 	}
 
-    //! MH moves on toggles
+    //! MH move schedule on toggles
     void MoveShiftToggles() {
         for (int k=1; k<Ncond; k++) {
             MoveShiftToggles(k,10);
         }
     }
 
-    //! helper function: returns the marginal log prob of distribution of toggles for a condition, given number of toggles in active state and given hyperparameters
-    double ToggleMarginalLogPrior(int nn, int nshift, double pi, double alpha, double beta) const {
-        double logp1 = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha+nshift) + Random::logGamma(beta + nn - nshift) - Random::logGamma(alpha + beta + nn);
+    //! helper function: returns the marginal log prob of distribution of toggles for a condition,
+    //! given number of toggles in active state and given hyperparameters
+    double ToggleMarginalLogPrior(int nmask, int nshift, double pi, double alpha, double beta) const {
+        double logp1 = log(pi) + Random::logGamma(alpha+beta) - Random::logGamma(alpha) - Random::logGamma(beta) + Random::logGamma(alpha+nshift) + Random::logGamma(beta + nmask - nshift) - Random::logGamma(alpha + beta + nmask);
         if (nshift || (pi == 1.0)) {
             return logp1;
         }
@@ -1134,27 +1228,33 @@ class DiffSelDoublySparseModel : public ProbModel {
         return ret;
     }
 
-    //! MH moves on toggles
+    //! elementary MH move on toggles
     double MoveShiftToggles(int k, int nrep)  {
 
+        // to achieve better MCMC mixing, shiftprob[k-1] is integrated out during this MH move on toggles (and Gibbs-resampled upon leaving this MH update)
+        // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+        // nmask : number of amino-acids that are active in baseline
+        // both are summed across all sites: sufficient statistics for shiftprob
         int nshift = 0;
-        int nn = 0;
+        int nmask = 0;
         for (int i=0; i<Nsite; i++) {
             const vector<int>& t = (*toggle)(k-1,i);
             const vector<int>& m = sitemaskarray->GetVal(i);
-            int nm = 0;
             int ns = 0;
+            int nm = 0;
             for (int a=0; a<Naa; a++)   {
-                nm += m[a];
                 ns += m[a]*t[a];
+                nm += m[a];
             }
 
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
             if (nm > 1) {
-                nn += nm;
+                nmask += nm;
                 nshift += ns;
             }
         }
 
+        // pre-calculate parameters of the Beta distribution for non-zero case
         double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
         double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
         double pp = pi[k-1];
@@ -1166,15 +1266,19 @@ class DiffSelDoublySparseModel : public ProbModel {
 
                 const vector<int>& t = (*toggle)(k-1,i);
                 const vector<int>& m = sitemaskarray->GetVal(i);
-                int nm = 0;
+
+                // compute nshift and nmask for this site only
                 int ns = 0;
+                int nm = 0;
                 for (int a=0; a<Naa; a++)   {
-                    nm += m[a];
                     ns += m[a]*t[a];
+                    nm += m[a];
                 }
 
+                // do move only if there are at least 2 active amino-acids
                 if (nm > 1) {
 
+                    // randomly choose one active amino-acid (for which mask[a] == 1)
                     int b = (int) (nm * Random::Uniform()) + 1;
                     int a = 0;
                     while (b && (a<Naa))    {
@@ -1189,20 +1293,22 @@ class DiffSelDoublySparseModel : public ProbModel {
                         cerr << "error in move shift toggles: overflow when choosing target amino-acid\n";
                         exit(1);
                     }
-
                     if (! m[a]) {
                         cerr << "error in move shift toggles: a is not within mask\n";
                         exit(1);
                     }
 
+                    // 0 -> 1 case
                     if (!(*toggle)(k-1,i)[a])    {
-                        double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
+                        double deltalogprob = -ToggleMarginalLogPrior(nmask,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
                         (*toggle)(k-1,i)[a] = 1;
+                        // redraw fitness parameter
                         (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                        // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
+                        if (! (*fitness)(k,i)[a]) {
+                            (*fitness)(k,i)[a] = 1e-8;
+                        }
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-                        // deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
+                        deltalogprob += ToggleMarginalLogPrior(nmask,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
@@ -1214,12 +1320,13 @@ class DiffSelDoublySparseModel : public ProbModel {
                         }
                         ntot++;
                     }
+
+                    // 1 -> 0 case
                     else    {
-                        double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
+                        double deltalogprob = -ToggleMarginalLogPrior(nmask,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
                         (*toggle)(k-1,i)[a] = 0;
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nn,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-                        // deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
+                        deltalogprob += ToggleMarginalLogPrior(nmask,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
@@ -1234,11 +1341,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 }
             }
         }
-        if (nshift > nn)    {
-            cerr << "before resampling shiftprob: " << nshift << '\t' << nn << '\n';
-            exit(1);
-        }
-        shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nn - nshift);
+        shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
         return nacc / ntot;
     }
 
