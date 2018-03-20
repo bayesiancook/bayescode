@@ -98,6 +98,11 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double> >    {
     //! returns dimension of fitness profiles (should normally be 20)
     int GetDim() const {return GetVal(0).size();}
 
+    //! notify new value for epsilon parameter
+    void SetEpsilon(double ineps)   {
+        epsilon = ineps;
+    }
+
     //! full update of the array
     void Update()   {
         for (int i=0; i<GetSize(); i++) {
@@ -143,6 +148,11 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double> >
 
     //! returns dimension of fitness profiles (should normally be 20)
     int GetDim() const {return GetVal(0,0).size();}
+
+    //! notify new value for epsilon parameter
+    void SetEpsilon(double ineps)   {
+        epsilon = ineps;
+    }
 
     //! full update of the array
     void Update()   {
