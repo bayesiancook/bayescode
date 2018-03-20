@@ -14,7 +14,9 @@ class AAMutSelSparseOmegaChain : public Chain  {
     // Chain parameters
     string modeltype, datafile, treefile;
     int omegamode;
+    int fixhyper;
     // -1: estimated
+    // 1 : no mask
     double epsilon;
 
   public:
@@ -24,7 +26,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelSparseOmegaChain(string indatafile, string intreefile, int inomegamode, double inepsilon, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELSparseOMEGA"), datafile(indatafile), treefile(intreefile), omegamode(inomegamode), epsilon(inepsilon)    {
+    AAMutSelSparseOmegaChain(string indatafile, string intreefile, int inomegamode, int infixhyper, double inepsilon, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELSparseOMEGA"), datafile(indatafile), treefile(intreefile), omegamode(inomegamode), fixhyper(infixhyper), epsilon(inepsilon)    {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -39,7 +41,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
 
     void New(int force) override {
         cerr << "new model\n";
-        model = new AAMutSelSparseOmegaModel(datafile,treefile,omegamode,epsilon);
+        model = new AAMutSelSparseOmegaModel(datafile,treefile,omegamode,fixhyper,epsilon);
         cerr << "allocate\n";
         GetModel()->Allocate();
         cerr << "update\n";
@@ -59,6 +61,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> omegamode;
+        is >> fixhyper;
         is >> epsilon;
         int tmp;
         is >> tmp;
@@ -69,7 +72,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELSparseOMEGA") {
-            model = new AAMutSelSparseOmegaModel(datafile,treefile,omegamode,epsilon);
+            model = new AAMutSelSparseOmegaModel(datafile,treefile,omegamode,fixhyper,epsilon);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -87,6 +90,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
         param_os << omegamode << '\n';
+        param_os << fixhyper << '\n';
         param_os << epsilon << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -110,7 +114,8 @@ int main(int argc, char* argv[])	{
         string datafile = "";
         string treefile = "";
         int omegamode = 3;
-        double epsilon = 0.001;
+        int fixhyper = 3;
+        double epsilon = -1;
         name = "";
         int force = 1;
         int every = 1;
@@ -142,6 +147,12 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "-freeomega") {
                     omegamode = 1;
+                }
+                else if (s == "-fixhyper")  {
+                    fixhyper = 3;
+                }
+                else if (s == "-freehyper") {
+                    fixhyper = 0;
                 }
                 else if ((s == "-eps") || (s == "-epsilon"))   {
                     i++;
@@ -179,7 +190,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new AAMutSelSparseOmegaChain(datafile,treefile,omegamode,epsilon,every,until,name,force);
+        chain = new AAMutSelSparseOmegaChain(datafile,treefile,omegamode,fixhyper,epsilon,every,until,name,force);
     }
 
     cerr << "chain " << name << " started\n";

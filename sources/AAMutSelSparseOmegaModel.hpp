@@ -59,6 +59,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     int nucmode;
     int omegamode;
     int maskepsilonmode;
+    int maskmode;
     int fitnesshypermode;
 
     // -----
@@ -132,19 +133,26 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! parameters:
     //! - datafile: name of file containing codon sequence alignment
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
-    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, double inepsilon) : hyperfitnesssuffstat(Naa) {
+    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, int infitnesshypermode, double inepsilon) : hyperfitnesssuffstat(Naa) {
 
         blmode = 0;
         nucmode = 0;
         omegamode = inomegamode;
-        fitnesshypermode = 3;
+        fitnesshypermode = infitnesshypermode;
 
-        if (inepsilon >= 0) {
+        if (inepsilon == 1)   {
+            maskepsilon = 1;
+            maskmode = 3;
+            maskepsilonmode = 3;
+        }
+        else if (inepsilon >= 0) {
             maskepsilon = inepsilon;
             maskepsilonmode = 3;
+            maskmode = 0;
         }
         else    {
             maskepsilonmode = 0;
+            maskmode = 0;
         }
 
         ReadFiles(datafile, treefile);
@@ -264,13 +272,6 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         fitnesshypermode = in;
     }
 
-    //! \brief set estimation method for fitness hyperparameters
-    //!
-    //! thus far, mask model gives reasonable and interesting results only with fixed hyper params
-    void SetMaskEpsilonMode(int in)    {
-        maskepsilonmode = in;
-    }
-
     //! \brief set estimation method for nuc rates
     //!
     //! - mode == 3: fixed to 1
@@ -283,6 +284,21 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         omegamode = mode;
     }
 
+    //! \brief set estimation method for site profile masks
+    //!
+    //! Used in a multigene context.
+    //! - mode == 3: no mask
+    //! - mode == 2: parameter (maskprob) shared across genes
+    //! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated across genes
+    //! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
+    void SetMaskMode(int in)    {
+        maskmode = in;
+    }
+
+    //! \brief set estimation method for background fitness (maskepsilon)
+    void SetMaskEpsilonMode(int in)    {
+        maskepsilonmode = in;
+    }
 
     // ------------------
     // Update system
@@ -345,7 +361,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         omegahyperinvshape = inomegahyperinvshape;
     }
 
-    //! \brief value of background fitness of low-fitness amino-acids
+    //! \brief set value of background fitness of low-fitness amino-acids
     void SetMaskEpsilon(double in)  {
         maskepsilon = in;
         fitnessprofile->SetEpsilon(maskepsilon);
@@ -357,7 +373,6 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         }
         UpdateMask();
 		fitness->SetShape(fitnessshape);
-        fitnessprofile->SetEpsilon(maskepsilon);
         UpdateAll();
         ResampleSub(1.0);
     }
@@ -431,8 +446,10 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             total += FitnessHyperLogPrior();
         }
         total += FitnessLogPrior();
-        total += MaskHyperLogPrior();
-        total += MaskLogPrior();
+        if (maskmode < 2)   {
+            total += MaskHyperLogPrior();
+            total += MaskLogPrior();
+        }
         if (omegamode < 2)  {
             total += OmegaLogPrior();
         }
@@ -611,13 +628,17 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveFitness();
                 CompMoveFitness();
-                MoveMasks();
-                MoveMaskHyperParameters();
+                if (maskmode < 3)   {
+                    MoveMasks();
+                }
+                if (maskmode < 2)   {
+                    MoveMaskHyperParameters();
+                }
                 // works best when not used
                 if (fitnesshypermode < 2)   {
                     MoveFitnessHyperParameters();
                 }
-                if (maskepsilonmode < 3)    {
+                if (maskepsilonmode < 2)    {
                     MoveMaskEpsilon();
                 }
             }
@@ -756,14 +777,18 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 
     //! MH moves on baseline fitness parameters (for condition k=0)
     void MoveFitness() {
-        MoveFitness(1.0, 10);
-        MoveFitness(0.3, 10);
-        /*
-        MoveFitnessAll(1.0, 1, 10);
-        MoveFitnessAll(1.0, 3, 10);
-        MoveFitnessAll(1.0, 20, 10);
-        MoveFitnessAll(0.3, 20, 10);
-        */
+        // if masks are not activated (all entries equal to 1), move a random subset of entries over the 20 amino-acids (2d parameter of call)
+        if (maskmode == 3)  {
+            MoveFitnessAll(1.0, 1, 10);
+            MoveFitnessAll(1.0, 3, 10);
+            MoveFitnessAll(1.0, 20, 10);
+            MoveFitnessAll(0.3, 20, 10);
+        }
+        // if masks are activated, move all active entries
+        else    {
+            MoveFitness(1.0, 10);
+            MoveFitness(0.3, 10);
+        }
     }
 
     //! MH moves on baseline fitness parameters (for condition k=0)
@@ -985,9 +1010,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             is >> fitnesscenter;
         }
         is >> *fitness;
-        is >> pi;
-        is >> maskepsilon;
-        is >> *sitemaskarray;
+        if (maskmode < 2)   {
+            is >> pi;
+        }
+        if (maskmode < 3)   {
+            is >> *sitemaskarray;
+        }
+        if (maskepsilonmode < 2)    {
+            is >> maskepsilon;
+        }
     }
 
     void ToStream(ostream& os) const override {
@@ -1007,9 +1038,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             os << fitnesscenter << '\t';
         }
         os << *fitness << '\t';
-        os << pi << '\t';
-        os << maskepsilon << '\t';
-        os << *sitemaskarray << '\t';
+        if (maskmode < 2)   {
+            os << pi << '\t';
+        }
+        if (maskmode < 3)   {
+            os << *sitemaskarray << '\t';
+        }
+        if (maskepsilonmode < 2)    {
+            os << maskepsilon << '\t';
+        }
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
@@ -1032,8 +1069,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         }
         size += fitness->GetMPISize();
         // pi and epsilon
-        size+=2;
-        size += sitemaskarray->GetMPISize();
+        if (maskmode < 2)   {
+            size++;
+        }
+        if (maskmode < 3)   {
+            size += sitemaskarray->GetMPISize();
+        }
+        if (maskepsilonmode < 2)    {
+            size++;
+        }
         return size;
     }
 
@@ -1055,9 +1099,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             is >> fitnesscenter;
         }
         is >> *fitness;
-        is >> pi;
-        is >> maskepsilon;
-        is >> *sitemaskarray;
+        if (maskmode < 2)   {
+            is >> pi;
+        }
+        if (maskmode < 3)   {
+            is >> *sitemaskarray;
+        }
+        if (maskepsilonmode < 2)    {
+            is >> maskepsilon;
+        }
     }
 
     //! write array into MPI buffer
@@ -1078,8 +1128,14 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             os << fitnesscenter;
         }
         os << *fitness;
-        os << pi;
-        os << maskepsilon;
-        os << *sitemaskarray;
+        if (maskmode < 2)   {
+            os << pi;
+        }
+        if (maskmode < 3)   {
+            os << *sitemaskarray;
+        }
+        if (maskepsilonmode < 2)    {
+            os << maskepsilon;
+        }
     }
 };

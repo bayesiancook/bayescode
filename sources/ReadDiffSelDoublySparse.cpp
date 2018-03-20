@@ -18,6 +18,7 @@ class DiffSelDoublySparseSample : public Sample {
 	string datafile;
 	string treefile;
     int ncond, nlevel, codonmodel, fixhyper;
+    double epsilon;
 
 	public:
 
@@ -56,7 +57,7 @@ class DiffSelDoublySparseSample : public Sample {
 
 		// make a new model depending on the type obtained from the file
 		if (modeltype == "DIFFSELSPARSE")	{
-            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel);
+            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon);
             GetModel()->SetFitnessHyperMode(fixhyper);
 		}
 		else	{

@@ -72,6 +72,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     int nucmode;
     int fitnesshypermode;
     int maskmode;
+    int maskepsilonmode;
 
     // -----
     // external parameters
@@ -174,16 +175,28 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - Ncond: number of conditions (K)
     //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
     //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
-    DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel) : hyperfitnesssuffstat(Naa) {
+    DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon) : hyperfitnesssuffstat(Naa) {
 
         codonmodel = incodonmodel;
 
         blmode = 0;
         nucmode = 0;
         fitnesshypermode = 3;
-        maskmode = 0;
 
-        maskepsilon = 0.01;
+        if (inepsilon == 1)   {
+            maskepsilon = 1;
+            maskmode = 3;
+            maskepsilonmode = 3;
+        }
+        else if (inepsilon >= 0) {
+            maskepsilon = inepsilon;
+            maskepsilonmode = 3;
+            maskmode = 0;
+        }
+        else    {
+            maskepsilonmode = 0;
+            maskmode = 0;
+        }
 
         Ncond = inNcond;
         Nlevel = inNlevel;
@@ -353,9 +366,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         maskmode = in;
     }
 
-    //! \brief value of background fitness of low-fitness amino-acids
-    void SetMaskEpsilon(double in)  {
-        maskepsilon = in;
+    //! \brief set estimation method for background fitness (maskepsilon)
+    void SetMaskEpsilonMode(int in)    {
+        maskepsilonmode = in;
     }
 
     // ------------------
@@ -400,6 +413,12 @@ class DiffSelDoublySparseModel : public ProbModel {
     void GetNucRates(std::vector<double>& innucrelrate, std::vector<double>& innucstat) const {
         innucrelrate = nucrelrate;
         innucstat = nucstat;
+    }
+
+    //! \brief set value of background fitness of low-fitness amino-acids
+    void SetMaskEpsilon(double in)  {
+        maskepsilon = in;
+        fitnessprofile->SetEpsilon(maskepsilon);
     }
 
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc) to specified values (used in multi-gene context)
@@ -486,6 +505,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! update fitness profiles and matrices across all sites and conditions
     void UpdateAll() {
+        fitnessprofile->SetEpsilon(maskepsilon);
         fitnessprofile->Update();
         CorruptMatrices();
     }
@@ -516,8 +536,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
         // not updated at all times 
         // total += FitnessLogPrior();
-        total += MaskHyperLogPrior();
-        total += MaskLogPrior();
+        if (maskmode < 2)   {
+            total += MaskHyperLogPrior();
+            total += MaskLogPrior();
+        }
         total += ToggleHyperLogPrior();
         // not updated at all times
         // total += ToggleLogPrior();
@@ -649,17 +671,6 @@ class DiffSelDoublySparseModel : public ProbModel {
 		return hyperfitnesssuffstat.GetLogProb(fitnessshape,fitnesscenter);
 	}
 
-    //! return number of shifts (i.e. number of toggles in active state) under condition cond (and across all sites and all amino-acids)
-    /*
-    int GetNshift(int cond) const {
-        if (! cond) {
-            cerr << "error: GetNshift called on baseline\n";
-            exit(1);
-        }
-        return toggle->GetRowEventNumber(cond-1);
-    }
-    */
-
     // ---------------
     // log probs for MH moves
     // ---------------
@@ -682,6 +693,11 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! \brief log prob factor to be recomputed when moving mask hyperparameter pi
     double MaskLogProb() const  {
         return MaskHyperLogPrior() + MaskLogPrior();
+    }
+
+    //! \brief log prob factor to be recomputed when moving maskepsilon
+    double MaskEpsilonLogProb() const  {
+        return MaskHyperLogPrior() + SuffStatLogProb();
     }
 
     // ---------------
@@ -720,6 +736,9 @@ class DiffSelDoublySparseModel : public ProbModel {
                 MoveShiftToggles();
                 if (fitnesshypermode < 2)   {
                     MoveFitnessHyperParameters();
+                }
+                if (maskepsilonmode < 2)    {
+                    MoveMaskEpsilon();
                 }
             }
 
@@ -1097,6 +1116,12 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
     }
 
+    //! MH move schedule on background fitness (maskepsilon)
+    void MoveMaskEpsilon()  {
+        SlidingMove(maskepsilon,1.0,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        SlidingMove(maskepsilon,0.1,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+    }
+
     //! MH move on masks
     double MoveMasks()    {
 
@@ -1367,6 +1392,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "#logprior\tlnL\tlength\t";
         os << "pi\t";
         os << "width\t";
+        os << "epsilon\t";
         os << "shape\t";
         os << "center\t";
         for (int k = 1; k < Ncond; k++) {
@@ -1382,6 +1408,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << 3*branchlength->GetTotalLength() << '\t';
         os << maskprob << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
+        os << maskepsilon << '\t';
         os << fitnessshape << '\t';
         os << Random::GetEntropy(fitnesscenter) << '\t';
         for (int k=1; k<Ncond; k++) {
@@ -1433,6 +1460,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskmode < 3)   {
             is >> *sitemaskarray;
         }
+        if (maskepsilonmode < 2)    {
+            is >> maskepsilon;
+        }
         is >> shiftprob;
         is >> *toggle;
     }
@@ -1456,6 +1486,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
         if (maskmode < 3)  {
             os << *sitemaskarray << '\t';
+        }
+        if (maskepsilonmode < 2)    {
+            os << maskepsilon << '\t';
         }
         os << shiftprob << '\t';
         os << *toggle << '\t';
@@ -1483,6 +1516,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskmode < 3)   {
             size += sitemaskarray->GetMPISize();
         }
+        if (maskepsilonmode < 2)    {
+            size++;
+        }
         size += shiftprob.size();
         size += toggle->GetMPISize();
         return size;
@@ -1509,6 +1545,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskmode < 3)   {
             is >> *sitemaskarray;
         }
+        if (maskepsilonmode < 2)    {
+            is >> maskepsilon;
+        }
         is >> shiftprob;
         is >> *toggle;
     }
@@ -1533,6 +1572,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
         if (maskmode < 3)   {
             os << *sitemaskarray;
+        }
+        if (maskepsilonmode < 2)    {
+            os << maskepsilon;
         }
         os << shiftprob;
         os << *toggle;

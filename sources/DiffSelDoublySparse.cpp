@@ -14,6 +14,9 @@ class DiffSelDoublySparseChain: public Chain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel, codonmodel, fixhyper;
+    // -1: estimated
+    // 1 : no mask
+    double epsilon;
 
   public:
     DiffSelDoublySparseModel* GetModel() {
@@ -22,14 +25,14 @@ class DiffSelDoublySparseChain: public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper,
+    DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper, double inepsilon,
                                               int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel), fixhyper(infixhyper)  {
+          codonmodel(incodonmodel), fixhyper(infixhyper), epsilon(inepsilon) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -44,7 +47,7 @@ class DiffSelDoublySparseChain: public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel);
+        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon);
         GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
         GetModel()->Update();
@@ -64,6 +67,7 @@ class DiffSelDoublySparseChain: public Chain {
         is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
         is >> fixhyper;
+        is >> epsilon;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -74,7 +78,7 @@ class DiffSelDoublySparseChain: public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -94,6 +98,7 @@ class DiffSelDoublySparseChain: public Chain {
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << codonmodel << '\n';
         param_os << fixhyper << '\n';
+        param_os << epsilon << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
@@ -147,8 +152,9 @@ int main(int argc, char* argv[]) {
         int ncond = 2;
         int nlevel = 2;
         int codonmodel = 1;
+        double epsilon = -1;
 
-        int fixhyper = 0;
+        int fixhyper = 3;
 
         name = "";
         int every = 1;
@@ -194,6 +200,19 @@ int main(int argc, char* argv[]) {
                 else if (s == "-fixhyper")  {
                     fixhyper = 3;
                 }
+                else if (s == "-freehyper") {
+                    fixhyper = 0;
+                }
+                else if ((s == "-eps") || (s == "-epsilon"))   {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "free")  {
+                        epsilon = -1;
+                    }
+                    else    {
+                        epsilon = atof(argv[i]);
+                    }
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -215,7 +234,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,every,until,saveall,name,force);
+        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,epsilon,every,until,saveall,name,force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();
