@@ -21,6 +21,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     private:
 
+    const double minshiftprobhypermean = 0.01;
+
 	Tree* tree;
 	CodonSequenceAlignment* refcodondata;
 	const TaxonSet* taxonset;
@@ -413,10 +415,18 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     }
 
     double GetShiftProbHyperMeanLogPrior(int k) const {
+        if (shiftprobhypermean[k-1] < minshiftprobhypermean) {
+            return Random::INFPROB;
+        }
         return 0;
     }
 
     double GetShiftProbHyperInvConcLogPrior(int k) const {
+        double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+        double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+        if ((alpha < 1.0) || (beta < 1.0))  {
+            return Random::INFPROB;
+        }
         return -shiftprobhyperinvconc[k-1];
     }
 
