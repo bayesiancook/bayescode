@@ -40,7 +40,7 @@ int Random::Seed = 0;
 int Random::mt_index = 0;
 unsigned long long Random::mt_buffer[MT_LEN];
 
-const double Random::INFPROB = 250;
+const double Random::INFPROB = -250;
 
 // ---------------------------------------------------------------------------------
 //		¥ Random()
