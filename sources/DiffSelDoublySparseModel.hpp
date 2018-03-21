@@ -790,14 +790,14 @@ class DiffSelDoublySparseModel : public ProbModel {
                 MoveBaselineFitness();
                 CompMoveFitness();
                 if (maskmode < 3)   {
-                    MoveMasks();
+                    MoveMasks(10);
                 }
                 if (maskmode < 2)   {
-                    MoveMaskHyperParameters(3);
+                    MoveMaskHyperParameters();
                 }
                 if (withtoggle) {
-                    MoveFitnessShifts();
-                    MoveShiftToggles();
+                    MoveFitnessShifts(10);
+                    MoveShiftToggles(10);
                 }
                 if ((fitnessshapemode < 2) || (fitnesscentermode < 2))   {
                     MoveFitnessHyperParameters();
@@ -1029,10 +1029,10 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH move schedule on gamma fitness parameters (fitness shifts) for non-baseline conditions
-    void MoveFitnessShifts()    {
+    void MoveFitnessShifts(int nrep)    {
         for (int k=1; k<Ncond; k++) {
-            MoveFitnessShifts(k,1,10);
-            MoveFitnessShifts(k,0.3,10);
+            MoveFitnessShifts(k,1,nrep);
+            MoveFitnessShifts(k,0.3,nrep);
         }
     }
 
@@ -1295,11 +1295,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH move schedule on mask hyperparameter (maskprob)
-    void MoveMaskHyperParameters(int nrep)  {
-        for (int rep=0; rep<nrep; rep++)  {
-            SlidingMove(maskprob,1.0,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
-            SlidingMove(maskprob,0.1,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
-        }
+    void MoveMaskHyperParameters()  {
+        SlidingMove(maskprob,1.0,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
+        SlidingMove(maskprob,0.1,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
@@ -1311,7 +1309,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH move on masks
-    double MoveMasks()    {
+    double MoveMasks(int nrep)    {
 
 		double nacc = 0;
 		double ntot = 0;
@@ -1325,8 +1323,10 @@ class DiffSelDoublySparseModel : public ProbModel {
                 naa += mask[a];
             }
 
-            // attempt move successively on each amino-acid
-            for (int a=0; a<Naa; a++)   {
+            for (int rep = 0; rep < nrep; rep++) {
+
+                // randomly choose amino-acid
+                int a = (int) (Naa * Random::Uniform());
 
                 // don't propose move if this leads to 0 active entry in the end
                 if ((!mask[a]) || (naa > 1))    {
@@ -1424,9 +1424,9 @@ class DiffSelDoublySparseModel : public ProbModel {
 	}
 
     //! MH move schedule on toggles
-    void MoveShiftToggles() {
+    void MoveShiftToggles(int nrep) {
         for (int k=1; k<Ncond; k++) {
-            MoveShiftToggles(k,10);
+            MoveShiftToggles(k,nrep);
         }
     }
 
