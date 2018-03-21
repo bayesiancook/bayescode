@@ -74,6 +74,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     int maskmode;
     int maskepsilonmode;
 
+    int withtoggle;
+
     // -----
     // external parameters
     // -----
@@ -176,6 +178,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
     //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
     DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon) : hyperfitnesssuffstat(Naa) {
+
+        withtoggle = 0;
 
         codonmodel = incodonmodel;
 
@@ -299,6 +303,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         // for each k=1..Ncond;
         // all toggles across all sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
         toggle = new BidimIIDMultiBernoulli(Ncond-1,Nsite,Naa,shiftprob);
+        if (!withtoggle)    {
+            toggle->Reset();
+        }
 
         // final amino-acid fitness profiles across sites
         // (*fitnessprofile)(k,i)[a]: fitness of amino-acid a for site i under condition k
@@ -324,6 +331,11 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         // create suffstat arrays
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
+    }
+
+    //! \brief set toggle status: 0: toggles all to 0, no move on them, 1:random toggles, MCMC move on them
+    void SetWithToggles(int in)   {
+        withtoggle = in;
     }
 
     //! \brief set estimation method for branch lengths
@@ -732,8 +744,10 @@ class DiffSelDoublySparseModel : public ProbModel {
                 if (maskmode < 2)   {
                     MoveMaskHyperParameters(3);
                 }
-                MoveFitnessShifts();
-                MoveShiftToggles();
+                if (withtoggle) {
+                    MoveFitnessShifts();
+                    MoveShiftToggles();
+                }
                 if (fitnesshypermode < 2)   {
                     MoveFitnessHyperParameters();
                 }

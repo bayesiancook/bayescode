@@ -17,6 +17,7 @@ class DiffSelDoublySparseChain: public Chain {
     // -1: estimated
     // 1 : no mask
     double epsilon;
+    int burnin;
 
   public:
     DiffSelDoublySparseModel* GetModel() {
@@ -26,13 +27,14 @@ class DiffSelDoublySparseChain: public Chain {
     string GetModelType() override { return modeltype; }
 
     DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper, double inepsilon,
-                                              int inevery, int inuntil, int insaveall, string inname, int force)
+                                              int inburnin, int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
           ncond(inncond),
           nlevel(innlevel),
           codonmodel(incodonmodel), fixhyper(infixhyper), epsilon(inepsilon) {
+        burnin = inburnin;
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -48,6 +50,12 @@ class DiffSelDoublySparseChain: public Chain {
 
     void New(int force) override {
         model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon);
+        if (burnin) {
+            GetModel()->SetWithToggles(0);
+        }
+        else    {
+            GetModel()->SetWithToggles(1);
+        }
         GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
         GetModel()->Update();
@@ -74,6 +82,7 @@ class DiffSelDoublySparseChain: public Chain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
+        is >> burnin;
         is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSELSPARSE") {
@@ -83,6 +92,12 @@ class DiffSelDoublySparseChain: public Chain {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
+        }
+        if (size < burnin)  {
+            GetModel()->SetWithToggles(0);
+        }
+        else    {
+            GetModel()->SetWithToggles(1);
         }
         GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
@@ -100,9 +115,14 @@ class DiffSelDoublySparseChain: public Chain {
         param_os << fixhyper << '\n';
         param_os << epsilon << '\n';
         param_os << 0 << '\n';
+        param_os << burnin << '\n';
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
+
+        if (size == burnin)  {
+            GetModel()->SetWithToggles(1);
+        }
     }
 
     void SavePoint() override   {
@@ -157,6 +177,7 @@ int main(int argc, char* argv[]) {
         int fixhyper = 3;
 
         name = "";
+        int burnin = 0;
         int every = 1;
         int until = -1;
         int saveall = 1;
@@ -213,6 +234,10 @@ int main(int argc, char* argv[]) {
                         epsilon = atof(argv[i]);
                     }
                 }
+                else if (s == "-b") {
+                    i++;
+                    burnin = atoi(argv[i]);
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -234,7 +259,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,epsilon,every,until,saveall,name,force);
+        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,epsilon,burnin,every,until,saveall,name,force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

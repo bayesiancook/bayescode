@@ -42,6 +42,18 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int> >    {
         }
     }
 
+    //! set all entries to 0
+    void Reset()   {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++)   {
+                vector<int>& x = (*this)(i,j);
+                for (int k=0; k<GetDim(); k++) {
+                    x[k] = 0;
+                }
+            }
+        }
+    }
+
     //! sample entry i,j
     void Sample(int i, int j)   {
         vector<int>& x = (*this)(i,j);
