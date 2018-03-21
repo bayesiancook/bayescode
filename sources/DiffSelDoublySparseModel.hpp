@@ -214,6 +214,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         else    {
             maskepsilonmode = 0;
             maskmode = 0;
+            maskepsilon = 0.01;
         }
 
         Ncond = inNcond;
