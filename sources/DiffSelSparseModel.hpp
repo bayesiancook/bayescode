@@ -158,6 +158,8 @@ class DiffSelSparseModel : public ProbModel {
 
     MultiGammaSuffStat hyperfitnesssuffstat;
 
+    int gammanullcount;
+
   public:
 
     //! \brief constructor
@@ -454,9 +456,11 @@ class DiffSelSparseModel : public ProbModel {
         if (fitnesshypermode < 2)   {
             total += FitnessHyperLogPrior();
         }
-        total += FitnessLogPrior();
+        // not updated at all times 
+        // total += FitnessLogPrior();
         total += ToggleHyperLogPrior();
-        total += ToggleLogPrior();
+        // not updated at all times 
+        // total += ToggleLogPrior();
         return total;
     }
 
@@ -613,6 +617,7 @@ class DiffSelSparseModel : public ProbModel {
 
     //! \brief complete MCMC move schedule
 	double Move() override {
+        gammanullcount = 0;
         ResampleSub(1.0);
         MoveParameters(3,20);
         return 1.0;
@@ -870,14 +875,18 @@ class DiffSelSparseModel : public ProbModel {
 
     }
 
-    //! gibbs resampling of prior probability of a shift 
+    //! Gibbs resampling of prior probability of a shift 
     void ResampleShiftProb()    {
 
         for (int k=1; k<Ncond; k++) {
 
+            // pre-calculate parameters of the Beta distribution for non-zero case
             double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
             double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
 
+            // nshift: number of amino-acids that are undergoing a fitness shift in current condition
+            // nn : total number of amino-acids 
+            // both are summed across all sites: sufficient statistics for shiftprob
             int nshift = 0;
             for (int i=0; i<Nsite; i++) {
                 for (int a=0; a<Naa; a++)   {
@@ -957,10 +966,12 @@ class DiffSelSparseModel : public ProbModel {
                     double deltalogprob = -ToggleMarginalLogPrior(nn,nshift,pp,alpha,beta) - SiteSuffStatLogProb(i);
                     (*toggle)(k-1,i)[a] = 1;
                     (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                    // (*fitness)(k,i)[a] = Random::Gamma(fitnessshape, fitnessshape / fitnesscenter[a]);
+                    if (! (*fitness)(k,i)[a]) {
+                        gammanullcount++;
+                        (*fitness)(k,i)[a] = 1e-8;
+                    }
                     UpdateSite(i);
                     deltalogprob += ToggleMarginalLogPrior(nn,nshift+1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-                    // deltalogprob += log(alpha + nshift) - log(beta + nn - nshift - 1);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted) {
@@ -977,7 +988,6 @@ class DiffSelSparseModel : public ProbModel {
                     (*toggle)(k-1,i)[a] = 0;
                     UpdateSite(i);
                     deltalogprob += ToggleMarginalLogPrior(nn,nshift-1,pp,alpha,beta) + SiteSuffStatLogProb(i);
-                    // deltalogprob += log(beta + nn - nshift) + log(alpha + nshift - 1);
 
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted) {
@@ -1022,7 +1032,8 @@ class DiffSelSparseModel : public ProbModel {
             os << "prob" << k << '\t';
         }
         os << "statent\t";
-        os << "rrent\n";
+        os << "rrent\t";
+        os << "gammanulls\n";
     }
 
     void Trace(ostream& os) const override {
@@ -1036,7 +1047,8 @@ class DiffSelSparseModel : public ProbModel {
             os << shiftprob[k-1] << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
+        os << Random::GetEntropy(nucrelrate) << '\t';
+        os << gammanullcount << '\n';
     }
 
     //! trace the current value of toggles, across all sites and all amino-acids, under condition k (one single line in output stream)

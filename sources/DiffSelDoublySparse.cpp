@@ -13,7 +13,9 @@ class DiffSelDoublySparseChain: public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int ncond, nlevel, codonmodel, fixhyper;
+    int ncond, nlevel, codonmodel;
+    double fitnessshape;
+    int fitnesscentermode;
     // -1: estimated
     // 1 : no mask
     double epsilon;
@@ -26,14 +28,14 @@ class DiffSelDoublySparseChain: public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper, double inepsilon,
+    DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, double infitnessshape, int infitnesscentermode, double inepsilon,
                                               int inburnin, int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel), fixhyper(infixhyper), epsilon(inepsilon) {
+          codonmodel(incodonmodel), fitnessshape(infitnessshape), fitnesscentermode(infitnesscentermode), epsilon(inepsilon) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -49,14 +51,14 @@ class DiffSelDoublySparseChain: public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon);
+        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         }
         else    {
             GetModel()->SetWithToggles(1);
         }
-        GetModel()->SetFitnessHyperMode(fixhyper);
+        GetModel()->SetFitnessCenterMode(fitnesscentermode);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -74,7 +76,8 @@ class DiffSelDoublySparseChain: public Chain {
         is >> modeltype;
         is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
-        is >> fixhyper;
+        is >> fitnessshape;
+        is >> fitnesscentermode;
         is >> epsilon;
         int tmp;
         is >> tmp;
@@ -87,7 +90,7 @@ class DiffSelDoublySparseChain: public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -99,7 +102,7 @@ class DiffSelDoublySparseChain: public Chain {
         else    {
             GetModel()->SetWithToggles(1);
         }
-        GetModel()->SetFitnessHyperMode(fixhyper);
+        GetModel()->SetFitnessCenterMode(fitnesscentermode);
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();
@@ -112,7 +115,8 @@ class DiffSelDoublySparseChain: public Chain {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << codonmodel << '\n';
-        param_os << fixhyper << '\n';
+        param_os << fitnessshape << '\n';
+        param_os << fitnesscentermode << '\n';
         param_os << epsilon << '\n';
         param_os << 0 << '\n';
         param_os << burnin << '\n';
@@ -174,7 +178,8 @@ int main(int argc, char* argv[]) {
         int codonmodel = 1;
         double epsilon = -1;
 
-        int fixhyper = 3;
+        double fitnessshape = 20;
+        int fitnesscentermode = 3;
 
         name = "";
         int burnin = 0;
@@ -218,11 +223,25 @@ int main(int argc, char* argv[]) {
                     i++;
                     nlevel = atoi(argv[i]);
                 }
-                else if (s == "-fixhyper")  {
-                    fixhyper = 3;
+                else if (s == "-shape")  {
+                    i++;
+                    string tmp = argv[i];
+                    if (s == "free")   {
+                        fitnessshape = 0;
+                    }
+                    else    {
+                        fitnessshape = atof(argv[i]);
+                    }
                 }
-                else if (s == "-freehyper") {
-                    fixhyper = 0;
+                else if (s == "-center")    {   
+                    i++;
+                    string tmp = argv[i];
+                    if (s == "free")   {
+                        fitnesscentermode = 0;
+                    }
+                    else if ((s == "fixed") || (s == "uniform"))    {
+                        fitnesscentermode = 3;
+                    }
                 }
                 else if ((s == "-eps") || (s == "-epsilon"))   {
                     i++;
@@ -259,7 +278,7 @@ int main(int argc, char* argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,epsilon,burnin,every,until,saveall,name,force);
+        chain = new DiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,fitnessshape,fitnesscentermode,epsilon,burnin,every,until,saveall,name,force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

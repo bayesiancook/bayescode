@@ -70,7 +70,8 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     int blmode;
     int nucmode;
-    int fitnesshypermode;
+    int fitnessshapemode;
+    int fitnesscentermode;
     int maskmode;
     int maskepsilonmode;
 
@@ -167,6 +168,8 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     MultiGammaSuffStat hyperfitnesssuffstat;
 
+    int gammanullcount;
+
   public:
 
     //! \brief constructor
@@ -177,7 +180,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - Ncond: number of conditions (K)
     //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
     //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
-    DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon) : hyperfitnesssuffstat(Naa) {
+    DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon, double inshape) : hyperfitnesssuffstat(Naa) {
 
         withtoggle = 0;
 
@@ -185,7 +188,15 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         blmode = 0;
         nucmode = 0;
-        fitnesshypermode = 3;
+
+        if (inshape > 0)    {
+            fitnessshapemode = 3;
+            fitnessshape = inshape;
+        }
+        else    {
+            fitnessshapemode = 0;
+            fitnessshape = 20.0;
+        }
 
         if (inepsilon == 1)   {
             maskepsilon = 1;
@@ -279,7 +290,6 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         // fitness parameters: IID Gamma, across all conditions, sites, and amino-acids
         // those are not the final fitness values (depends on the system of masks and toggles, specified below)
-        fitnessshape = 20.0;
         fitnesscenter.assign(Naa,1.0/Naa);
         fitness = new BidimIIDMultiGamma(Ncond,Nsite,Naa,fitnessshape,fitnesscenter);
 
@@ -358,13 +368,27 @@ class DiffSelDoublySparseModel : public ProbModel {
         nucmode = in;
     }
 
-    //! \brief set estimation method for fitness hyperparameters
+    //! \brief set estimation method for fitness hyperparameter (center of Dirichlet distribution)
     //!
-    //! Used in a multigene context.
+    //! - mode == 3: fixed (uniform)
+    //! - mode == 2: shared across genes, estimated 
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetFitnessHyperMode(int in)    {
-        fitnesshypermode = in;
+    void SetFitnessCenterMode(int in)    {
+        fitnesscentermode = in;
+    }
+
+    //! \brief set estimation method for fitness hyperparameter (shape of Dirichlet distribution)
+    //!
+    //! - mode == 3: fixed
+    //! - mode == 2: shared across genes, estimated 
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
+    void SetFitnessShapeMode(int in, double inshape = 0)    {
+        fitnessshapemode = in;
+        if (inshape > 0)    {
+            fitnessshape = inshape;
+        }
     }
 
     //! \brief set estimation method for site profile masks
@@ -543,7 +567,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (nucmode < 2)    {
             total += NucRatesLogPrior();
         }
-        if (fitnesshypermode < 2)   {
+        if ((fitnessshapemode < 2) || (fitnesscentermode < 2))   {
             total += FitnessHyperLogPrior();
         }
         // not updated at all times 
@@ -582,7 +606,23 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
-        // uniform on center
+        double ret = 0;
+        if (fitnessshapemode < 2)   {
+            ret += FitnessShapeLogPrior();
+        }
+        if (fitnesscentermode < 2)  {
+            ret += FitnessCenterLogPrior();
+        }
+        return ret;
+    }
+
+    //! log prior over fitness center hyperparameter
+    double FitnessCenterLogPrior() const {
+        return 0;
+    }
+
+    //! log prior over fitness shape hyperparameter
+    double FitnessShapeLogPrior() const {
         // exponential on shape
         return -fitnessshape;
     }
@@ -718,6 +758,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! \brief complete MCMC move schedule
 	double Move() override {
+        gammanullcount = 0;
         ResampleSub(1.0);
         MoveParameters(3,20);
         return 1.0;
@@ -748,7 +789,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                     MoveFitnessShifts();
                     MoveShiftToggles();
                 }
-                if (fitnesshypermode < 2)   {
+                if ((fitnessshapemode < 2) || (fitnesscentermode < 2))   {
                     MoveFitnessHyperParameters();
                 }
                 if (maskepsilonmode < 2)    {
@@ -1053,73 +1094,153 @@ class DiffSelDoublySparseModel : public ProbModel {
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness,*sitemaskarray,*toggle);
 
-        ScalingMove(fitnessshape,1.0,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-        ScalingMove(fitnessshape,0.3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-        ScalingMove(fitnessshape,0.1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-
-        ProfileMove(fitnesscenter,0.3,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-        ProfileMove(fitnesscenter,0.1,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-        ProfileMove(fitnesscenter,0.1,3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-
+        if (fitnessshapemode < 2)   {
+            ScalingMove(fitnessshape,1.0,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ScalingMove(fitnessshape,0.3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ScalingMove(fitnessshape,0.1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+        }
 		fitness->SetShape(fitnessshape);
+
+        if (fitnesscentermode < 2)  {
+            ProfileMove(fitnesscenter,0.3,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ProfileMove(fitnesscenter,0.1,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ProfileMove(fitnesscenter,0.1,3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+        }
     }
 
-    //! Gibbs resampling of probability of a shift 
+    //! Move schedule for Gibbs resampling of shifting probabilities
     void ResampleShiftProb()    {
-
         for (int k=1; k<Ncond; k++) {
+            ResampleShiftProb(k);
+        }
+    }
+    
+    //! Gibbs resampling of shifting probability under condition k
+    void ResampleShiftProb(int k)   {
+        // pre-calculate parameters of the Beta distribution for non-zero case
+        double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+        double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
 
-            // pre-calculate parameters of the Beta distribution for non-zero case
-            double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
-            double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
-
-            // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
-            // nmask : number of amino-acids that are active in baseline
-            // both are summed across all sites: sufficient statistics for shiftprob
-            int nshift = 0;
-            int nmask = 0;
-            for (int i=0; i<Nsite; i++) {
-                const vector<int>& t = (*toggle)(k-1,i);
-                const vector<int>& m = sitemaskarray->GetVal(i);
-                int ns = 0;
-                int nm = 0;
-                for (int a=0; a<Naa; a++)   {
-                    ns += m[a]*t[a];
-                    nm += m[a];
-                }
-
-                // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
-                if (nm > 1) {
-                    nshift += ns;
-                    nmask += nm;
-                }
+        // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+        // nmask : number of amino-acids that are active in baseline
+        // both are summed across all sites: sufficient statistics for shiftprob
+        int nshift = 0;
+        int nmask = 0;
+        for (int i=0; i<Nsite; i++) {
+            const vector<int>& t = (*toggle)(k-1,i);
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int ns = 0;
+            int nm = 0;
+            for (int a=0; a<Naa; a++)   {
+                ns += m[a]*t[a];
+                nm += m[a];
             }
 
-            if (nshift || (pi[k-1] == 1.0)) {
-                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
-            }
-            else    {
-                double logp0 = log(1-pi[k-1]);
-
-                double logp1 = log(pi[k-1]);
-                logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha+beta);
-                logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nmask - nshift) - Random::logGamma(alpha+beta+nmask);
-
-                double max = (logp0 > logp1) ? logp0 : logp1;
-                double p0 = exp(logp0-max);
-                double p1 = exp(logp1-max);
-                double tot = p0+p1;
-                p0/=tot;
-                p1/=tot;
-
-                if (Random::Uniform() < p0) {
-                    shiftprob[k-1] = 0;
-                }
-                else    {
-                    shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
-                }
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
+            if (nm > 1) {
+                nshift += ns;
+                nmask += nm;
             }
         }
+
+        if (nshift || (pi[k-1] == 1.0)) {
+            shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
+        }
+        else    {
+            double logp0 = log(1-pi[k-1]);
+
+            double logp1 = log(pi[k-1]);
+            logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha+beta);
+            logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nmask - nshift) - Random::logGamma(alpha+beta+nmask);
+
+            double max = (logp0 > logp1) ? logp0 : logp1;
+            double p0 = exp(logp0-max);
+            double p1 = exp(logp1-max);
+            double tot = p0+p1;
+            p0/=tot;
+            p1/=tot;
+
+            if (Random::Uniform() < p0) {
+                shiftprob[k-1] = 0;
+            }
+            else    {
+                shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
+            }
+        }
+    }
+
+    //! empirical fraction of allowed positions that undergo a shift
+    double GetPropShift(int k)  const {
+
+        // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+        // nmask : number of amino-acids that are active in baseline
+        // both are summed across all sites: sufficient statistics for shiftprob
+        int nshift = 0;
+        int nmask = 0;
+        for (int i=0; i<Nsite; i++) {
+            const vector<int>& t = (*toggle)(k-1,i);
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int ns = 0;
+            int nm = 0;
+            for (int a=0; a<Naa; a++)   {
+                ns += m[a]*t[a];
+                nm += m[a];
+            }
+
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
+            if (nm > 1) {
+                nshift += ns;
+                nmask += nm;
+            }
+        }
+
+        return ((double) nshift) / nmask;
+    }
+
+    //! conditional posterior probability of the null hypothesis (null proportion of shifts) in condition k
+    double GetProbNull(int k)  const {
+
+        // pre-calculate parameters of the Beta distribution for non-zero case
+        double alpha = shiftprobhypermean[k-1] / shiftprobhyperinvconc[k-1];
+        double beta = (1-shiftprobhypermean[k-1]) / shiftprobhyperinvconc[k-1];
+
+        // nshift: number of amino-acids that are active in baseline and undergoing a fitness shift in current condition
+        // nmask : number of amino-acids that are active in baseline
+        // both are summed across all sites: sufficient statistics for shiftprob
+        int nshift = 0;
+        int nmask = 0;
+        for (int i=0; i<Nsite; i++) {
+            const vector<int>& t = (*toggle)(k-1,i);
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int ns = 0;
+            int nm = 0;
+            for (int a=0; a<Naa; a++)   {
+                ns += m[a]*t[a];
+                nm += m[a];
+            }
+
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
+            if (nm > 1) {
+                nshift += ns;
+                nmask += nm;
+            }
+        }
+
+        if (nshift || (pi[k-1] == 1.0)) {
+            return 0;
+        }
+        double logp0 = log(1-pi[k-1]);
+        double logp1 = log(pi[k-1]);
+        logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha+beta);
+        logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nmask - nshift) - Random::logGamma(alpha+beta+nmask);
+
+        double max = (logp0 > logp1) ? logp0 : logp1;
+        double p0 = exp(logp0-max);
+        double p1 = exp(logp1-max);
+        double tot = p0+p1;
+        p0/=tot;
+        p1/=tot;
+        return p0;
     }
 
     //! MH move schedule on mask hyperparameter (maskprob)
@@ -1171,6 +1292,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                         // resample baseline fitness
                         (*fitness)(0,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
                         if (! (*fitness)(0,i)[a]) {
+                            gammanullcount++;
                             (*fitness)(0,i)[a] = 1e-8;
                         }
                         // resample toggles and fitness shifts across all non-baseline conditions
@@ -1179,6 +1301,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                             if ((*toggle)(k-1,i)[a])    {
                                 (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
                                 if (! (*fitness)(k,i)[a]) {
+                                    gammanullcount++;
                                     (*fitness)(k,i)[a] = 1e-8;
                                 }
                             }  
@@ -1216,6 +1339,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                             if ((*toggle)(k-1,i)[b])    {
                                 (*fitness)(k,i)[b] = Random::sGamma(fitnessshape * fitnesscenter[b]);
                                 if (! (*fitness)(k,i)[b]) {
+                                    gammanullcount++;
                                     (*fitness)(k,i)[b] = 1e-8;
                                 }
                             }  
@@ -1344,6 +1468,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                         // redraw fitness parameter
                         (*fitness)(k,i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
                         if (! (*fitness)(k,i)[a]) {
+                            gammanullcount++;
                             (*fitness)(k,i)[a] = 1e-8;
                         }
                         UpdateSite(i);
@@ -1380,7 +1505,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 }
             }
         }
-        shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
+        ResampleShiftProb(k);
         return nacc / ntot;
     }
 
@@ -1411,9 +1536,12 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "center\t";
         for (int k = 1; k < Ncond; k++) {
             os << "prob" << k << '\t';
+            os << "probnull" << k << '\t';
+            os << "nshift" << k << '\t';
         }
         os << "statent\t";
-        os << "rrent\n";
+        os << "rrent\t";
+        os << "gammanulls\n";
     }
 
     void Trace(ostream& os) const override {
@@ -1427,9 +1555,12 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << Random::GetEntropy(fitnesscenter) << '\t';
         for (int k=1; k<Ncond; k++) {
             os << shiftprob[k-1] << '\t';
+            os << GetProbNull(k) << '\t';
+            os << GetPropShift(k) << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
+        os << Random::GetEntropy(nucrelrate) << '\t';
+        os << gammanullcount << '\n';
     }
 
     //! trace the current value of toggles, across all sites and all amino-acids, under condition k (one single line in output stream)
@@ -1463,8 +1594,10 @@ class DiffSelDoublySparseModel : public ProbModel {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (fitnesshypermode < 2)   {
+        if (fitnessshapemode < 2)   {
             is >> fitnessshape;
+        }
+        if (fitnesscentermode < 2)  {
             is >> fitnesscenter;
         }
         is >> *fitness;
@@ -1490,8 +1623,10 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << nucrelrate << '\t';
             os << nucstat << '\t';
         }
-        if (fitnesshypermode < 2)   {
+        if (fitnessshapemode < 2)   {
             os << fitnessshape << '\t';
+        }
+        if (fitnesscentermode < 2)  {
             os << fitnesscenter << '\t';
         }
         os << *fitness << '\t';
@@ -1519,8 +1654,10 @@ class DiffSelDoublySparseModel : public ProbModel {
             size += nucrelrate.size();
             size += nucstat.size();
         }
-        if (fitnesshypermode < 2)   {
+        if (fitnessshapemode < 2)   {
             size ++;
+        }
+        if (fitnesscentermode < 2)  {
             size += fitnesscenter.size();
         }
         size += fitness->GetMPISize();
@@ -1548,8 +1685,10 @@ class DiffSelDoublySparseModel : public ProbModel {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (fitnesshypermode < 2)   {
+        if (fitnessshapemode < 2)   {
             is >> fitnessshape;
+        }
+        if (fitnesscentermode < 2)  {
             is >> fitnesscenter;
         }
         is >> *fitness;
@@ -1576,8 +1715,10 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << nucrelrate;
             os << nucstat;
         }
-        if (fitnesshypermode < 2)   {
+        if (fitnessshapemode < 2)   {
             os << fitnessshape;
+        }
+        if (fitnesscentermode < 2)  {
             os << fitnesscenter;
         }
         os << *fitness;

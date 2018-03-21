@@ -17,8 +17,11 @@ class DiffSelDoublySparseSample : public Sample {
 	string modeltype;
 	string datafile;
 	string treefile;
-    int ncond, nlevel, codonmodel, fixhyper;
+    int ncond, nlevel, codonmodel;
+    double fitnessshape;
+    int fitnesscentermode;
     double epsilon;
+    int chainburnin;
 
 	public:
 
@@ -46,19 +49,26 @@ class DiffSelDoublySparseSample : public Sample {
 		is >> modeltype;
         is >> datafile >> treefile >> ncond >> nlevel;
         is >> codonmodel;
-        is >> fixhyper;
+        is >> fitnessshape;
+        is >> fitnesscentermode;
         int check;
         is >> check;
         if (check) {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
+        is >> chainburnin;
 		is >> chainevery >> chainuntil >> chainsaveall >> chainsize;
+
+        if (burnin < chainburnin) {
+            cerr << "error: sample burnin smaller than chain burnin\n";
+            exit(1);
+        }
 
 		// make a new model depending on the type obtained from the file
 		if (modeltype == "DIFFSELSPARSE")	{
-            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon);
-            GetModel()->SetFitnessHyperMode(fixhyper);
+            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape);
+            GetModel()->SetFitnessCenterMode(fitnesscentermode);
 		}
 		else	{
 			cerr << "error when opening file "  << name << '\n';
