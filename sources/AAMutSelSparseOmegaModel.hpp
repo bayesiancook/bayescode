@@ -569,7 +569,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! return log prob of current fitness parameters, conditional on their hyperparameters
 	double FitnessHyperSuffStatLogProb() const {
 		double ret = hyperfitnesssuffstat.GetLogProb(fitnessshape,fitnesscenter);
-        if (isinf(ret)) {
+        if (std::isinf(ret)) {
             cerr << "fitness hypersuffstat log prob is inf\n";
             exit(1);
         }
