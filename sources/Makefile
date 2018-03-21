@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= aamutselsparse diffseldsparse readdiffseldsparse aamutselmask readglobom multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
+ALL= aamutselsparse diffseldsparse readdiffseldsparse aamutselmask readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -197,6 +197,10 @@ $(PROGSDIR)/diffselsparse$(EXEEXT): DiffSelSparse.o $(OBJS)
 multigenediffselsparse$(EXEEXT): $(PROGSDIR)/multigenediffselsparse$(EXEEXT)
 $(PROGSDIR)/multigenediffselsparse$(EXEEXT): MultiGeneDiffSelSparse.o $(OBJS)
 	$(CC) MultiGeneDiffSelSparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigenediffseldsparse$(EXEEXT): $(PROGSDIR)/multigenediffseldsparse$(EXEEXT)
+$(PROGSDIR)/multigenediffseldsparse$(EXEEXT): MultiGeneDiffSelDoublySparse.o $(OBJS)
+	$(CC) MultiGeneDiffSelDoublySparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 diffsel$(EXEEXT): $(PROGSDIR)/diffsel$(EXEEXT)
 $(PROGSDIR)/diffsel$(EXEEXT): DiffSel.o $(OBJS)

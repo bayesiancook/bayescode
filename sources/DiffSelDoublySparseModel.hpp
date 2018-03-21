@@ -183,6 +183,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon, double inshape) : hyperfitnesssuffstat(Naa) {
 
         withtoggle = 0;
+        fitnesscentermode = 3;
+        fitnessshapemode = 3;
+        fitnessshape = 20.0;
 
         codonmodel = incodonmodel;
 
@@ -1167,6 +1170,47 @@ class DiffSelDoublySparseModel : public ProbModel {
                 shiftprob[k-1] = Random::BetaSample(alpha + nshift, beta + nmask - nshift);
             }
         }
+    }
+
+    //! number of shifts in condition k
+    double GetNShift(int k)  const {
+
+        int nshift = 0;
+        for (int i=0; i<Nsite; i++) {
+            const vector<int>& t = (*toggle)(k-1,i);
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int ns = 0;
+            int nm = 0;
+            for (int a=0; a<Naa; a++)   {
+                ns += m[a]*t[a];
+                nm += m[a];
+            }
+
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
+            if (nm > 1) {
+                nshift += ns;
+            }
+        }
+        return nshift;
+    }
+
+    //! number of amino acids allowed to undergo a shift
+    double GetNTarget()  const {
+
+        int nmask = 0;
+        for (int i=0; i<Nsite; i++) {
+            const vector<int>& m = sitemaskarray->GetVal(i);
+            int nm = 0;
+            for (int a=0; a<Naa; a++)   {
+                nm += m[a];
+            }
+
+            // fitness shifts are counted (have an effect) only if there are at least 2 active amino-acids
+            if (nm > 1) {
+                nmask += nm;
+            }
+        }
+        return nmask;
     }
 
     //! empirical fraction of allowed positions that undergo a shift
