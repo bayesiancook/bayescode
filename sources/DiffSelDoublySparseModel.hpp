@@ -503,6 +503,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         return sitemaskarray->GetArray();
     }
 
+    double GetMaskEpsilon() const   {
+        return maskepsilon;
+    }
+
     void Update() override {
         if (blmode == 0)    {
             blhypermean->SetAllBranches(1.0/lambda);
@@ -637,6 +641,9 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! log prior over mask array hyperparameter (maskprob: uniform between 0 and 1 -- could be hyperparameterized)
     double MaskHyperLogPrior() const  {
+        if (maskepsilon > 1)    {
+            return Random::INFPROB;
+        }
         return 0;
     }
 
@@ -1299,6 +1306,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveMaskEpsilon()  {
         SlidingMove(maskepsilon,1.0,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
         SlidingMove(maskepsilon,0.1,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        ScalingMove(maskepsilon,1.0,10,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        ScalingMove(maskepsilon,0.1,10,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
     }
 
     //! MH move on masks
@@ -1571,6 +1580,10 @@ class DiffSelDoublySparseModel : public ProbModel {
     // Traces and monitors
     // ------------------
 
+    double GetMeanWidth() const {
+        return sitemaskarray->GetMeanWidth();
+    }
+
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "pi\t";
@@ -1593,7 +1606,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << GetLogLikelihood() << '\t';
         os << 3*branchlength->GetTotalLength() << '\t';
         os << maskprob << '\t';
-        os << sitemaskarray->GetMeanWidth() << '\t';
+        os << GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
         os << fitnessshape << '\t';
         os << Random::GetEntropy(fitnesscenter) << '\t';

@@ -78,11 +78,15 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     // total logprior for gene-specific variables (here, omega only)
     // summed over all genes
     double GeneLogPrior;
+    double meanWidth;
+    double meanEps;
 
     double moveTime;
     double mapTime;
     Chrono movechrono;
     Chrono mapchrono;
+
+    int withtoggle;
 
     public:
 
@@ -91,6 +95,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneDiffSelDoublySparseModel(string datafile, string intreefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon, double infitnessshape, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+
+        withtoggle = 0;
 
         epsilon = inepsilon;
         fitnessshape = infitnessshape;
@@ -123,6 +129,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
         GeneLogPrior = 0;
         lnL = 0;
+        geneprocess.assign(0,(DiffSelDoublySparseModel*) 0);
     }
 
     void Allocate() {
@@ -163,6 +170,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 geneprocess[gene] = new DiffSelDoublySparseModel(GetLocalGeneName(gene),treefile,Ncond,Nlevel,codonmodel,epsilon,fitnessshape);
                 geneprocess[gene]->SetBLMode(1);
                 geneprocess[gene]->SetNucMode(1);
+                geneprocess[gene]->SetWithToggles(withtoggle);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -198,6 +206,15 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         SlaveSendLogProbs();
     }
 
+    void SetWithToggles(int in)   {
+        withtoggle = in;
+        if (myid && geneprocess.size())   {
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
+                geneprocess[gene]->SetWithToggles(in);
+            }
+        }
+    }
+
     void GeneUpdate()	{
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             geneprocess[gene]->Update();
@@ -231,24 +248,34 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     void TraceHeader(ostream& os) const {
 
         os << "#logprior\tlnL\tlength\t";
-        os << "stdev\t";
+        os << "invshape\t";
+        os << "meanwidth\t";
+        os << "meaneps\t";
         for (int k=1;k<Ncond;k++)   {
             os << "pi" << k << '\t';
             os << "mean\t";
             os << "invconc\t";
         }
+        os << "nucstatcenter\tinvconc\trelratecenter\tinvconc\t";
         os << '\n';
     }
 
     void Trace(ostream& os) const {
 		os << GetLogPrior() << '\t';
 		os << GetLogLikelihood() << '\t';
-        os << GetMeanLength() << '\t' << GetVarLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t' << blhyperinvshape << '\t';
+        // os << GetMeanLength() << '\t' << GetVarLength() << '\t';
+        os << meanWidth << '\t';
+        os << meanEps << '\t';
         for (int k=1;k<Ncond;k++)   {
             os << pi[k-1] << '\t';
             os << shiftprobhypermean[k-1] << '\t';
             os << shiftprobhyperinvconc[k-1] << '\t';
         }
+        os << Random::GetEntropy(nucstathypercenter) << '\t';
+        os << nucstathyperinvconc << '\t';
+        os << Random::GetEntropy(nucrelratehypercenter) << '\t';
+        os << nucrelratehyperinvconc << '\t';
         os << '\n';
 		os.flush();
     }
@@ -507,11 +534,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
 		for (int rep=0; rep<nrep; rep++)	{
 
-            MasterReceiveShiftCounts();
-            movechrono.Start();
-            MoveShiftProbHyperParameters(3);
-            movechrono.Stop();
-            MasterSendShiftProbHyperParameters();
+            if (withtoggle) {
+                MasterReceiveShiftCounts();
+                movechrono.Start();
+                MoveShiftProbHyperParameters(3);
+                movechrono.Stop();
+                MasterSendShiftProbHyperParameters();
+            }
 
             MasterReceiveBranchLengthsHyperSuffStat();
             movechrono.Start();
@@ -526,6 +555,10 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             MasterSendNucRatesHyperParameters();
         }
 
+        /*
+        MasterReceiveGeneBranchLengths();
+        MasterReceiveGeneNucRates();
+        */
         MasterReceiveLogProbs();
     }
 
@@ -547,11 +580,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             GeneMove();
             movechrono.Stop();
 
-            SlaveSendShiftCounts();
-            SlaveReceiveShiftProbHyperParameters();
-            movechrono.Start();
-            GeneResampleShiftProbs();
-            movechrono.Stop();
+            if (withtoggle) {
+                SlaveSendShiftCounts();
+                SlaveReceiveShiftProbHyperParameters();
+                movechrono.Start();
+                GeneResampleShiftProbs();
+                movechrono.Stop();
+            }
 
             SlaveSendBranchLengthsHyperSuffStat();
             SlaveReceiveBranchLengthsHyperParameters();
@@ -560,6 +595,10 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             SlaveReceiveNucRatesHyperParameters();
         }
 
+        /*
+        SlaveSendGeneBranchLengths();
+        SlaveSendGeneNucRates();
+        */
         SlaveSendLogProbs();
     }
 
@@ -833,12 +872,18 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     void SlaveSendLogProbs()   {
         GeneLogPrior = 0;
         lnL = 0;
+        meanWidth = 0;
+        meanEps = 0;
         for (int gene=0; gene<GetLocalNgene(); gene++)   {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
+            meanWidth += geneprocess[gene]->GetMeanWidth();
+            meanEps += geneprocess[gene]->GetMaskEpsilon();
         }
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
+        SlaveSendAdditive(meanWidth);
+        SlaveSendAdditive(meanEps);
 
         moveTime = movechrono.GetTime();
         mapTime = mapchrono.GetTime();
@@ -851,6 +896,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
         MasterReceiveAdditive(lnL);
+        meanWidth = 0;
+        MasterReceiveAdditive(meanWidth);
+        meanWidth /= GetLocalNgene();
+        meanEps = 0;
+        MasterReceiveAdditive(meanEps);
+        meanEps /= GetLocalNgene();
+
         moveTime = 0;
         mapTime = 0;
         MasterReceiveAdditive(moveTime);

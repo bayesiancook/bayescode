@@ -64,6 +64,12 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
 
     void New(int force) override {
         model = new MultiGeneDiffSelDoublySparseModel(datafile,treefile,ncond,nlevel,codonmodel,epsilon,fitnessshape,myid,nprocs);
+        if (burnin) {
+            GetModel()->SetWithToggles(0);
+        }
+        else    {
+            GetModel()->SetWithToggles(1);
+        }
         if (! myid) {
             cerr << " -- master allocate\n";
         }
@@ -104,6 +110,12 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        if (size < burnin)  {
+            GetModel()->SetWithToggles(0);
+        }
+        else    {
+            GetModel()->SetWithToggles(1);
+        }
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();
@@ -127,6 +139,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
         }
         else    {
             GetModel()->SlaveToStream();
+        }
+        if (size == burnin)  {
+            GetModel()->SetWithToggles(1);
         }
     }
 
@@ -252,6 +267,10 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "+G")  {
                     writegenedata = 2;
+                }
+                else if (s == "-b") {
+                    i++;
+                    burnin = atoi(argv[i]);
                 }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
