@@ -16,6 +16,25 @@ int Int(string s) { return atoi(s.c_str()); }
 
 double Double(string s) { return atof(s.c_str()); }
 
+
+vector<double> SequenceAlignment::GetEmpiricalFreq() const {
+
+    vector<double> in(GetNstate(),0);
+    int n = 0;
+	for (int i=0; i<GetNtaxa(); i++)	{
+		for (int j=0; j<GetNsite(); j++)	{
+			if (GetState(i,j) != unknown)	{
+				in[GetState(i,j)]++;
+				n++;
+			}
+		}
+	}
+	for (int i=0; i<GetNstate(); i++)	{
+		in[i] /= n;
+	}
+    return in;
+}
+
 void SequenceAlignment::ToStream(ostream &os) const {
     os << Ntaxa << '\t' << GetPrintNsite() << '\n';
     for (int i = 0; i < Ntaxa; i++) {

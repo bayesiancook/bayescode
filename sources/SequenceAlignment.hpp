@@ -59,6 +59,9 @@ class SequenceAlignment {
     //! set the state to a new value (note: should really re-consider this option, currently used by PhyloProcess to simulate new data)
     void SetState(int taxon, int site, int state) { Data[taxon][site] = state; }
 
+    //! return empirical frequencies into a vector
+    std::vector<double> GetEmpiricalFreq() const;
+
   protected:
 
     bool AllMissingColumn(int site) const {
