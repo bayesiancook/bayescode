@@ -163,8 +163,11 @@ class CodonM2aModel : public ProbModel {
     // Matrices
     //-------------------
 
-    //! \brief global update function
+    //! \brief global update function (includes the stochastic mapping of character history)
     void Update() override;
+
+    //! \brief post pred function (does the update of all fields before doing the simulation)
+    void PostPred(string name) override;
 
     //! \brief tell the nucleotide matrix that its parameters have changed and that it should be updated
     //!
@@ -378,6 +381,28 @@ class CodonM2aModel : public ProbModel {
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
 	void MoveNucRates();
+
+    void SetLengthsFromTree()    {
+        cerr << "before set lengths: " << branchlength->GetTotalLength() << '\n';
+        RecursiveSetLengthsFromTree(tree->GetRoot());
+        cerr << "after set lengths: " << branchlength->GetTotalLength() << '\n';
+    }
+
+    void RecursiveSetLengthsFromTree(const Link* from)  {
+        if (! from->isRoot())   {
+            double tmp = atof(from->GetBranch()->GetName().c_str());
+            if (tmp <= 0)   {
+                cerr << "error: branch length is not positive: " << tmp << '\n';
+                exit(1);
+            }
+            (*branchlength)[from->GetBranch()->GetIndex()] = tmp;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveSetLengthsFromTree(link->Out());
+        }
+    }
+
+    void FromStreamCodeML(istream& is);
 
     //-------------------
     // Data structures

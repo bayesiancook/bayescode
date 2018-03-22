@@ -105,6 +105,17 @@ void CodonM2aModel::Update()    {
     ResampleSub(1.0);
 }
 
+void CodonM2aModel::PostPred(string name)    {
+
+    if (blmode == 0)    {
+        blhypermean->SetAllBranches(1.0/lambda);
+    }
+    componentomegaarray->SetParameters(purom,dposom+1,purw,posw);
+    UpdateMatrices();
+    sitealloc->SampleAlloc();
+    phyloprocess->PostPredSample(name);
+}
+
 // setting model features and (hyper)parameters
 //
 
@@ -579,3 +590,22 @@ void CodonM2aModel::FromStream(istream& is) {
     is >> nucrelrate;
     is >> nucstat;
 }
+
+void CodonM2aModel::FromStreamCodeML(istream& is)   {
+
+    is >> purom >> dposom >> purw >> posw;
+    cerr << "purw: " << purw << '\n';
+    cerr << "posw: " << posw << '\n';
+    cerr << "w0  : " << purw * (1-posw) << '\n';
+    double kappa;
+    is >> kappa;
+    double tot = 4 + 2*kappa;
+    nucrelrate[0] = 1.0 / tot;
+    nucrelrate[1] = kappa / tot;
+    nucrelrate[2] = 1.0 / tot;
+    nucrelrate[3] = 1.0 / tot;
+    nucrelrate[4] = kappa / tot;
+    nucrelrate[5] = 1.0 / tot;
+    nucstat = data->GetEmpiricalFreq();
+}
+

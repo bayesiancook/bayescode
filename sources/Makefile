@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= aamutselsparse diffseldsparse readdiffseldsparse aamutselmask readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
+ALL= simucodonm2a aamutselsparse diffseldsparse readdiffseldsparse aamutselmask readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -113,6 +113,10 @@ $(PROGSDIR)/aamutsel$(EXEEXT): AAMutSelOmega.o $(OBJS)
 aamutselm2a$(EXEEXT): $(PROGSDIR)/aamuselm2a$(EXEEXT)
 $(PROGSDIR)/aamutselm2a$(EXEEXT): AAMutSelM2a.o $(OBJS)
 	$(CC) AAMutSelM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+simucodonm2a$(EXEEXT): $(PROGSDIR)/simucodonm2a$(EXEEXT)
+$(PROGSDIR)/simucodonm2a$(EXEEXT): SimuCodonM2a.o $(OBJS)
+	$(CC) SimuCodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
 $(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
