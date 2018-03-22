@@ -23,6 +23,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     double epsilon;
     double fitnessshape;
+    int fitnesscentermode;
 
     const double minshiftprobhypermean = 0.01;
 
@@ -100,6 +101,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
         epsilon = inepsilon;
         fitnessshape = infitnessshape;
+        fitnesscentermode = 3;
 
         codonmodel = incodonmodel;
         Ncond = inNcond;
@@ -170,6 +172,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 geneprocess[gene] = new DiffSelDoublySparseModel(GetLocalGeneName(gene),treefile,Ncond,Nlevel,codonmodel,epsilon,fitnessshape);
                 geneprocess[gene]->SetBLMode(1);
                 geneprocess[gene]->SetNucMode(1);
+                geneprocess[gene]->SetFitnessCenterMode(fitnesscentermode);
                 geneprocess[gene]->SetWithToggles(withtoggle);
                 geneprocess[gene]->Allocate();
             }
@@ -213,6 +216,16 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 geneprocess[gene]->SetWithToggles(in);
             }
         }
+    }
+
+    //! \brief set estimation method for fitness hyperparameter (center of Dirichlet distribution)
+    //!
+    //! - mode == 3: fixed (uniform)
+    //! - mode == 2: shared across genes, estimated 
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
+    void SetFitnessCenterMode(int in)    {
+        fitnesscentermode = in;
     }
 
     void GeneUpdate()	{
@@ -529,7 +542,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     void MasterMove() override {
 
-		int nrep = 1;
+		int nrep = 10;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
@@ -570,12 +583,12 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-		int nrep = 1;
+		int nrep = 10;
 
 		for (int rep=0; rep<nrep; rep++)	{
 
             movechrono.Start();
-            GeneMove(1,10);
+            GeneMove(1,3);
             movechrono.Stop();
 
             if (withtoggle) {

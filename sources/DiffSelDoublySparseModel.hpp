@@ -777,7 +777,6 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
-
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
 
             if (blmode < 2)    {

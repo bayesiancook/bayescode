@@ -21,6 +21,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
     int codonmodel;
     double epsilon;
     double fitnessshape;
+    int fitnesscentermode;
     int burnin;
     int writegenedata;
 
@@ -45,7 +46,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
     //! \param name: base name for all files related to this MCMC run
     //! \param force: overwrite existing files with same name
     //! \param inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, double inepsilon, double infitnessshape, int inburnin, int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel), epsilon(inepsilon), fitnessshape(infitnessshape) {
+    MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, double inepsilon, double infitnessshape, int infitnesscentermode, int inburnin, int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel), epsilon(inepsilon), fitnessshape(infitnessshape), fitnesscentermode(infitnesscentermode) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -70,6 +71,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
         else    {
             GetModel()->SetWithToggles(1);
         }
+        GetModel()->SetFitnessCenterMode(fitnesscentermode);
         if (! myid) {
             cerr << " -- master allocate\n";
         }
@@ -94,6 +96,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
         is >> datafile >> treefile;
         is >> ncond >> nlevel >> codonmodel;
         is >> epsilon >> fitnessshape;
+        is >> fitnesscentermode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -116,6 +119,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
         else    {
             GetModel()->SetWithToggles(1);
         }
+        GetModel()->SetFitnessCenterMode(fitnesscentermode);
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();
@@ -132,6 +136,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain  {
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << epsilon << '\t' << fitnessshape << '\n';
+            param_os << fitnesscentermode << '\n';
             param_os << 0 << '\n';
             param_os << burnin << '\t';
             param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t' << size << '\n';
@@ -223,6 +228,7 @@ int main(int argc, char* argv[])	{
         int writegenedata = 1;
         double fitnessshape = 20;
         double epsilon = -1;
+        int fitnesscentermode = 3;
 
         try	{
 
@@ -258,6 +264,36 @@ int main(int argc, char* argv[])	{
                 else if (s == "-nlevel")	{
                     i++;
                     nlevel = atoi(argv[i]);
+                }
+                else if (s == "-shape")  {
+                    i++;
+                    string tmp = argv[i];
+                    if (s == "free")   {
+                        fitnessshape = 0;
+                    }
+                    else    {
+                        fitnessshape = atof(argv[i]);
+                    }
+                }
+                else if (s == "-center")    {   
+                    i++;
+                    string tmp = argv[i];
+                    if (s == "free")   {
+                        fitnesscentermode = 0;
+                    }
+                    else if ((s == "fixed") || (s == "uniform"))    {
+                        fitnesscentermode = 3;
+                    }
+                }
+                else if ((s == "-eps") || (s == "-epsilon"))   {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "free")  {
+                        epsilon = -1;
+                    }
+                    else    {
+                        epsilon = atof(argv[i]);
+                    }
                 }
                 else if (s == "-g")  {
                     writegenedata = 0;
@@ -298,7 +334,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,epsilon,fitnessshape,burnin,every,until,saveall,writegenedata,name,force,myid,nprocs);
+        chain = new MultiGeneDiffSelDoublySparseChain(datafile,treefile,ncond,nlevel,codonmodel,epsilon,fitnessshape,fitnesscentermode,burnin,every,until,saveall,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();
