@@ -787,29 +787,32 @@ class DiffSelDoublySparseModel : public ProbModel {
             CollectPathSuffStat();
             UpdateAll();
 
+            int weight = 10;
+
             for (int rep = 0; rep < nrep; rep++) {
-                MoveBaselineFitness();
-                CompMoveFitness();
+
+                MoveBaselineFitness(weight);
+                CompMoveFitness(weight);
                 if (maskmode < 3)   {
-                    MoveMasks(10);
+                    MoveMasks(weight);
                 }
                 if (maskmode < 2)   {
-                    MoveMaskHyperParameters();
+                    MoveMaskHyperParameters(10*weight);
                 }
                 if (withtoggle) {
-                    MoveFitnessShifts(10);
-                    MoveShiftToggles(10);
+                    MoveFitnessShifts(weight);
+                    MoveShiftToggles(weight);
                 }
                 if ((fitnessshapemode < 2) || (fitnesscentermode < 2))   {
-                    MoveFitnessHyperParameters();
+                    MoveFitnessHyperParameters(10*weight);
                 }
                 if (maskepsilonmode < 2)    {
-                    MoveMaskEpsilon();
+                    MoveMaskEpsilon(weight);
                 }
             }
 
             if (nucmode < 2)    {
-                MoveNucRates();
+                MoveNucRates(weight);
             }
         }
 
@@ -847,23 +850,23 @@ class DiffSelDoublySparseModel : public ProbModel {
 	}
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using ProfileMove)
-	void MoveNucRates()	{
+	void MoveNucRates(int nrep)	{
 
         CorruptMatrices();
 
-        ProfileMove(nucrelrate,0.1,1,10,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.03,3,10,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
-        ProfileMove(nucrelrate,0.01,3,10,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.1,1,nrep,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.03,3,nrep,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
+        ProfileMove(nucrelrate,0.01,3,nrep,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
 
-        ProfileMove(nucstat,0.1,1,10,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
-        ProfileMove(nucstat,0.01,1,10,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.1,1,nrep,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
+        ProfileMove(nucstat,0.01,1,nrep,&DiffSelDoublySparseModel::NucRatesLogProb,&DiffSelDoublySparseModel::CorruptMatrices,this);
 
         CorruptMatrices();
 	}
 
     //! MH compensatory move on fitness parameters and hyper-parameters
-    void CompMoveFitness()  {
-        CompMoveFitness(1.0,10);
+    void CompMoveFitness(int nrep)  {
+        CompMoveFitness(1.0,nrep);
     }
 
     //! \brief MH compensatory move on fitness parameters and hyper-parameters
@@ -940,18 +943,18 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH move schedule on baseline gamma fitness parameters (for condition k=0)
-    void MoveBaselineFitness() {
+    void MoveBaselineFitness(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset of entries over the 20 amino-acids (2d parameter of call)
         if (maskmode == 3)  {
-            MoveAllBaselineFitness(1.0, 3, 10);
-            MoveAllBaselineFitness(1.0, 10, 10);
-            MoveAllBaselineFitness(1.0, 20, 10);
-            MoveAllBaselineFitness(0.3, 20, 10);
+            MoveAllBaselineFitness(1.0, 3, nrep);
+            MoveAllBaselineFitness(1.0, 10, nrep);
+            MoveAllBaselineFitness(1.0, 20, nrep);
+            MoveAllBaselineFitness(0.3, 20, nrep);
         }
         // if masks are activated, move all active entries
         else    {
-            MoveBaselineFitness(1.0, 10);
-            MoveBaselineFitness(0.3, 10);
+            MoveBaselineFitness(1.0, nrep);
+            MoveBaselineFitness(0.3, nrep);
         }
     }
 
@@ -1100,22 +1103,22 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH moves on hyperparameters of distribution of fitness factors
-    void MoveFitnessHyperParameters() {
+    void MoveFitnessHyperParameters(int nrep) {
         // collect suff stats across all active fitness parameters
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness,*sitemaskarray,*toggle);
 
         if (fitnessshapemode < 2)   {
-            ScalingMove(fitnessshape,1.0,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-            ScalingMove(fitnessshape,0.3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-            ScalingMove(fitnessshape,0.1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ScalingMove(fitnessshape,1.0,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ScalingMove(fitnessshape,0.3,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ScalingMove(fitnessshape,0.1,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
         }
 		fitness->SetShape(fitnessshape);
 
         if (fitnesscentermode < 2)  {
-            ProfileMove(fitnesscenter,0.3,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-            ProfileMove(fitnesscenter,0.1,1,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
-            ProfileMove(fitnesscenter,0.1,3,100,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ProfileMove(fitnesscenter,0.3,1,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ProfileMove(fitnesscenter,0.1,1,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
+            ProfileMove(fitnesscenter,0.1,3,nrep,&DiffSelDoublySparseModel::FitnessHyperLogProb,&DiffSelDoublySparseModel::NoUpdate,this);
         }
     }
 
@@ -1296,17 +1299,17 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! MH move schedule on mask hyperparameter (maskprob)
-    void MoveMaskHyperParameters()  {
-        SlidingMove(maskprob,1.0,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
-        SlidingMove(maskprob,0.1,10,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
+    void MoveMaskHyperParameters(int nrep)  {
+        SlidingMove(maskprob,1.0,nrep,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
+        SlidingMove(maskprob,0.1,nrep,0.05,0.975,&DiffSelDoublySparseModel::MaskLogProb,&DiffSelDoublySparseModel::UpdateMask,this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
-    void MoveMaskEpsilon()  {
-        SlidingMove(maskepsilon,1.0,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
-        SlidingMove(maskepsilon,0.1,10,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
-        ScalingMove(maskepsilon,1.0,10,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
-        ScalingMove(maskepsilon,0.1,10,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+    void MoveMaskEpsilon(int nrep)  {
+        SlidingMove(maskepsilon,1.0,nrep,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        SlidingMove(maskepsilon,0.1,nrep,0,1.0,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        ScalingMove(maskepsilon,1.0,nrep,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
+        ScalingMove(maskepsilon,0.1,nrep,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
     }
 
     //! MH move on masks
