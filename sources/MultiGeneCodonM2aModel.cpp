@@ -180,6 +180,60 @@ void MultiGeneCodonM2aModel::GeneUpdate()   {
     }
 }
 
+void MultiGeneCodonM2aModel::MasterPostPred(string name) {
+    FastUpdate();
+    if (nprocs > 1) {
+        MasterSendBranchLengthsHyperParameters();
+        MasterSendNucRatesHyperParameters();
+        MasterSendMixtureHyperParameters();
+
+        if (blmode == 2)    {
+            MasterSendGlobalBranchLengths();
+        }
+        else    {
+            MasterSendGeneBranchLengths();
+        }
+
+        if (nucmode == 2)   {
+            MasterSendGlobalNucRates();
+        }
+        else    {
+            MasterSendGeneNucRates();
+        }
+
+        MasterSendMixture();
+        // MasterReceiveLogProbs();
+    }
+}
+
+void MultiGeneCodonM2aModel::SlavePostPred(string name)  {
+    SlaveReceiveBranchLengthsHyperParameters();
+    SlaveReceiveNucRatesHyperParameters();
+    SlaveReceiveMixtureHyperParameters();
+    if (blmode == 2)    {
+        SlaveReceiveGlobalBranchLengths();
+    }
+    else    {
+        SlaveReceiveGeneBranchLengths();
+    }
+    if (nucmode == 2)   {
+        SlaveReceiveGlobalNucRates();
+    }
+    else    {
+        SlaveReceiveGeneNucRates();
+    }
+
+    SlaveReceiveMixture();
+    GenePostPred(name);
+    // SlaveSendLogProbs();
+}
+
+void MultiGeneCodonM2aModel::GenePostPred(string name)   {
+    for (int gene=0; gene<GetLocalNgene(); gene++)   {
+        geneprocess[gene]->PostPred(GetLocalGeneName(gene) + name);
+    }
+}
+
 void MultiGeneCodonM2aModel::SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode)  {
     blmode = inblmode;
     nucmode = innucmode;

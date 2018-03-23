@@ -65,15 +65,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
-	// a very simple (and quite uninteresting) method for obtaining
-	// the posterior mean and variance of the total length of the tree
-    void SlaveRead()    {
-        for (int i=0; i<size; i++)  {
-            GetNextPoint();
-        }
-    }
-
-	void MasterRead()	{
+	void Read()	{
 
         cerr << size << " points to read\n";
 
@@ -127,6 +119,7 @@ int main(int argc, char* argv[])	{
 	int every = 1;
 	int until = -1;
 	string name;
+    int ppred = 0;
 
 	try	{
 
@@ -137,7 +130,10 @@ int main(int argc, char* argv[])	{
 		int i = 1;
 		while (i < argc)	{
 			string s = argv[i];
-			if ( (s == "-x") || (s == "-extract") )	{
+            if (s == "-ppred")  {
+                ppred = 1;
+            }
+            else if ( (s == "-x") || (s == "-extract") )	{
 				i++;
 				if (i == argc) throw(0);
 				s = argv[i];
@@ -183,11 +179,16 @@ int main(int argc, char* argv[])	{
 	}
 
 	MultiGeneSingleOmegaSample* sample = new MultiGeneSingleOmegaSample(name,burnin,every,until,myid,nprocs);
-    if (! myid) {
-        sample->MasterRead();
+    if (ppred)  {
+        sample->PostPred();
     }
     else    {
-        sample->SlaveRead();
+        if (! myid) {
+            sample->Read();
+        }
+        else    {
+            sample->SlaveRead();
+        }
     }
 
 	MPI_Finalize();

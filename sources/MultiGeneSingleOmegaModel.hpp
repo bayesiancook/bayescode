@@ -170,6 +170,30 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void MasterPostPred(string name) override {
+        FastUpdate();
+        if (nprocs > 1) {
+            MasterSendGlobalBranchLengths();
+            MasterSendGlobalNucRates();
+            MasterSendOmegaHyperParameters();
+            MasterSendOmega();
+        }
+    }
+
+    void SlavePostPred(string name) override {
+        SlaveReceiveGlobalBranchLengths();
+        SlaveReceiveGlobalNucRates();
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmega();
+        GenePostPred(name);
+    }
+
+    void GenePostPred(string name)	{
+        for (int gene=0; gene<GetLocalNgene(); gene++)   {
+            geneprocess[gene]->PostPred(GetLocalGeneName(gene) + name);
+        }
+    }
+
 	CodonStateSpace* GetCodonStateSpace() const {
 		return (CodonStateSpace*) refcodondata->GetStateSpace();
 	}

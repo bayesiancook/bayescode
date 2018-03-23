@@ -27,6 +27,9 @@ class MultiGeneSample: public Sample    {
 
     void OpenChainFile() override;
     void GetNextPoint() override;
+    void SlaveRead();
+
+    virtual void PostPred() override;
 
     protected:
 

@@ -72,5 +72,6 @@ void Sample::PostPred() {
         s << name << "_" << i << ".ali";
         model->PostPred(s.str());
     }
+    cerr << '\n';
 }
 

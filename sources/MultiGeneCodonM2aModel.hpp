@@ -88,6 +88,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     void GeneUpdate();
     void NoUpdate() {}
 
+    void MasterPostPred(string name) override;
+    void SlavePostPred(string name) override;
+    void GenePostPred(string name);
+
     //-------------------
     // Traces and Monitors
     // ------------------

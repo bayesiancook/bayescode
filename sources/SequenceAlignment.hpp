@@ -16,7 +16,7 @@ class SequenceAlignment {
     SequenceAlignment() : Ntaxa(0), Nsite(0), taxset(nullptr), statespace(nullptr), owntaxset(true), ownstatespace(true) {}
 
     //! copy constructor
-    SequenceAlignment(const SequenceAlignment& from) : Ntaxa(from.Ntaxa), Nsite(from.Nsite), taxset(from.taxset), statespace(from.statespace), owntaxset(from.owntaxset), ownstatespace(from.ownstatespace), Data(from.Data) {}
+    SequenceAlignment(const SequenceAlignment& from) : Ntaxa(from.Ntaxa), Nsite(from.Nsite), taxset(from.taxset), statespace(from.statespace), owntaxset(false), ownstatespace(false), Data(from.Data) {}
 
     virtual ~SequenceAlignment()    {
         if (owntaxset)  {
