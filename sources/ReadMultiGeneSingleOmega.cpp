@@ -65,7 +65,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // all these points can be accessed to (only once) by repeated calls to GetNextPoint()
 	}
 
-	void Read()	{
+	void MasterRead()	{
 
         cerr << size << " points to read\n";
 
@@ -92,6 +92,12 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             os << GetModel()->GetLocalGeneName(gene) << '\t' << meanom[gene] << '\t' << sqrt(varom[gene]) << '\n';
         }
         cerr << "posterior mean omega per gene in " << name << ".postmeanomega\n";
+    }
+
+    void SlaveRead()    {
+        for (int i=0; i<size; i++)  {
+            GetNextPoint();
+        }
     }
 };
 
@@ -179,12 +185,18 @@ int main(int argc, char* argv[])	{
 	}
 
 	MultiGeneSingleOmegaSample* sample = new MultiGeneSingleOmegaSample(name,burnin,every,until,myid,nprocs);
+
     if (ppred)  {
-        sample->PostPred();
+        if (! myid) {
+            sample->MasterPostPred();
+        }
+        else    {
+            sample->SlavePostPred();
+        }
     }
     else    {
         if (! myid) {
-            sample->Read();
+            sample->MasterRead();
         }
         else    {
             sample->SlaveRead();

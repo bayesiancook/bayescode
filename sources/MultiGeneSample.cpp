@@ -37,12 +37,6 @@ void MultiGeneSample::OpenChainFile()	{
     }
 }
 
-void MultiGeneSample::SlaveRead()    {
-    for (int i=0; i<size; i++)  {
-        GetNextPoint();
-    }
-}
-
 void MultiGeneSample::GetNextPoint()	{
 
 	if (currentpoint == size)	{
@@ -64,23 +58,28 @@ void MultiGeneSample::GetNextPoint()	{
 	currentpoint++;
 }
 
-void MultiGeneSample::PostPred() {
+void MultiGeneSample::MasterPostPred() {
 
-    if (! myid) {
-        cerr << size << " points to read\n";
-    }
+    cerr << size << " points to read\n";
     for (int i=0; i<size; i++)  {
-        if (! myid) {
-            cerr << '.';
-        }
+        cerr << '.';
         GetNextPoint();
         ostringstream s;
         s << name << "_" << i << ".ali";
         model->PostPred(s.str());
         MPI_Barrier(MPI_COMM_WORLD);
     }
-    if (! myid) {
-        cerr << '\n';
+    cerr << '\n';
+}
+
+void MultiGeneSample::SlavePostPred() {
+
+    for (int i=0; i<size; i++)  {
+        GetNextPoint();
+        ostringstream s;
+        s << name << "_" << i << ".ali";
+        model->PostPred(s.str());
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 
