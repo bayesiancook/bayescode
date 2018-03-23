@@ -500,6 +500,49 @@ double MultiGeneCodonM2aModel::GetLogPrior() const {
     return total;
 }
 
+double MultiGeneCodonM2aModel::MixtureHyperLogPrior() const {
+
+    double total = 0;
+    if (pi) {
+        // beta distribution for pi, if not 0
+        double pialpha = pihypermean / pihyperinvconc;
+        double pibeta = (1-pihypermean) / pihyperinvconc;
+        total += (pialpha-1) * log(1.0 - pi) + (pibeta-1) * log(pi);
+    }
+    // exponential of mean 1 for purom and purw hyperinvconc
+    total -= puromhyperinvconc;
+    total -= purwhyperinvconc;
+
+    // exponential of mean 0.1 for poswhyperinvconc
+    total -= 10*poswhyperinvconc;
+    // exponential of mean 1 for dposomhypermean
+    total -= dposomhypermean;
+    // exponential of mean 0.1 for dposomhyperinvshape
+    total -= 10*dposomhyperinvshape;
+
+    // dposom:
+    // distribution across genes should be modal
+    if (dposomhyperinvshape > 1.0)  {
+        total += Random::INFPROB;
+    }
+    // distribution mean should not be too close to 0 (hypermean>0.5)
+    if (dposomhypermean < 0.5)  {
+        total += Random::INFPROB;
+    }
+    // posw:
+    // distribution across genes should be modal
+    double alpha = poswhypermean / poswhyperinvconc;
+    double beta = (1-poswhypermean) / poswhyperinvconc;
+    if ((alpha < 1) || (beta < 1))  {
+        total += Random::INFPROB;
+    }
+    // distribution mean should not be too close to 0 (hypermean>0.1)
+    if (poswhypermean < 0.1)    {
+        total += Random::INFPROB;
+    }
+    return total;
+}
+
 //-------------------
 // Moves
 // ------------------

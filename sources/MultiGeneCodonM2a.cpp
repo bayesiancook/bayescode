@@ -254,17 +254,17 @@ int main(int argc, char* argv[])	{
         double puromhyperinvconc = 0.5;
         int purommode = 1;
 
-        double dposomhypermean = 1.0;
-        double dposomhyperinvshape = 1.0;
-        int dposommode = 1;
-
         double purwhypermean = 0.5;
         double purwhyperinvconc = 0.5;
         int purwmode = 1;
 
-        double poswhypermean = 0.1;
-        double poswhyperinvconc = 1;
+        double poswhypermean = 0.5;
+        double poswhyperinvconc = 0.1;
         int poswmode = 1;
+
+        double dposomhypermean = 1.0;
+        double dposomhyperinvshape = 0.5;
+        int dposommode = 1;
 
         int blmode = 1;
         int nucmode = 1;

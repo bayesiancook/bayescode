@@ -159,26 +159,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     }
 
     // mixture
-    double MixtureHyperLogPrior() const {
-
-        double total = 0;
-        if (pi) {
-            // beta distribution for pi, if not 0
-            double pialpha = pihypermean / pihyperinvconc;
-            double pibeta = (1-pihypermean) / pihyperinvconc;
-            total += (pialpha-1) * log(1.0 - pi) + (pibeta-1) * log(pi);
-        }
-        // exponential of mean 1 for purom and purw hyperinvconc
-        total -= puromhyperinvconc;
-        total -= purwhyperinvconc;
-        // exponential of mean 10 for poswhyperinvconc
-        total -= 10*poswhyperinvconc;
-        // exponential of mean 1 for dposomhypermean
-        total -= dposomhypermean;
-        // exponential of mean 10 for dposomhyperinvshape
-        total -= 10*dposomhyperinvshape;
-        return total;
-    }
+    double MixtureHyperLogPrior() const;
 
     //-------------------
     // Log Likelihood
