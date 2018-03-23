@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
+ALL= simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -82,30 +82,6 @@ multigeneaamutselddp$(EXEEXT): $(PROGSDIR)/multigeneaamutselddp$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselddp$(EXEEXT): MultiGeneAAMutSelDSBDPOmega.o $(OBJS)
 	$(CC) MultiGeneAAMutSelDSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-aamutseldp$(EXEEXT): $(PROGSDIR)/aamutseldp$(EXEEXT)
-$(PROGSDIR)/aamutseldp$(EXEEXT): AAMutSelSBDPOmega.o $(OBJS)
-	$(CC) AAMutSelSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-aamutseldpsw$(EXEEXT): $(PROGSDIR)/aamutseldpsw$(EXEEXT)
-$(PROGSDIR)/aamutseldpsw$(EXEEXT): AAMutSelSBDPOmegaSitewise.o $(OBJS)
-	$(CC) AAMutSelSBDPOmegaSitewise.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-multigeneaamutseldp$(EXEEXT): $(PROGSDIR)/multigeneaamutseldp$(EXEEXT)
-$(PROGSDIR)/multigeneaamutseldp$(EXEEXT): MultiGeneAAMutSelSBDPOmega.o $(OBJS)
-	$(CC) MultiGeneAAMutSelSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-multigeneaamutselhdp$(EXEEXT): $(PROGSDIR)/multigeneaamutselhdp$(EXEEXT)
-$(PROGSDIR)/multigeneaamutselhdp$(EXEEXT): MultiGeneAAMutSelHyperSBDPOmega.o $(OBJS)
-	$(CC) MultiGeneAAMutSelHyperSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-aamutselhdp$(EXEEXT): $(PROGSDIR)/aamutselhdp$(EXEEXT)
-$(PROGSDIR)/aamutselhdp$(EXEEXT): AAMutSelHyperSBDPOmega.o $(OBJS)
-	$(CC) AAMutSelHyperSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-aamutsel$(EXEEXT): $(PROGSDIR)/aamutsel$(EXEEXT)
-$(PROGSDIR)/aamutsel$(EXEEXT): AAMutSelOmega.o $(OBJS)
-	$(CC) AAMutSelOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
 aamutselm2a$(EXEEXT): $(PROGSDIR)/aamuselm2a$(EXEEXT)
 $(PROGSDIR)/aamutselm2a$(EXEEXT): AAMutSelM2a.o $(OBJS)
 	$(CC) AAMutSelM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
@@ -118,10 +94,6 @@ codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
 $(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
 	$(CC) CodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-codonm8$(EXEEXT): $(PROGSDIR)/codonm8$(EXEEXT)
-$(PROGSDIR)/codonm8$(EXEEXT): CodonM8.o $(OBJS)
-	$(CC) CodonM8.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
 multigenecodonm2a$(EXEEXT): $(PROGSDIR)/multigenecodonm2a$(EXEEXT)
 $(PROGSDIR)/multigenecodonm2a$(EXEEXT): MultiGeneCodonM2a.o $(OBJS)
 	$(CC) MultiGeneCodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
@@ -129,10 +101,6 @@ $(PROGSDIR)/multigenecodonm2a$(EXEEXT): MultiGeneCodonM2a.o $(OBJS)
 multigeneaamutselm2a$(EXEEXT): $(PROGSDIR)/multigeneaamutselm2a$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselm2a$(EXEEXT): MultiGeneAAMutSelM2a.o $(OBJS)
 	$(CC) MultiGeneAAMutSelM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-multigenecodonm8$(EXEEXT): $(PROGSDIR)/multigenecodonm8$(EXEEXT)
-$(PROGSDIR)/multigenecodonm8$(EXEEXT): MultiGeneCodonM8.o $(OBJS)
-	$(CC) MultiGeneCodonM8.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneglobom$(EXEEXT): $(PROGSDIR)/multigeneglobom$(EXEEXT)
 $(PROGSDIR)/multigeneglobom$(EXEEXT): MultiGeneSingleOmega.o $(OBJS)
