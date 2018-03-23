@@ -720,9 +720,8 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters()  {
     }
 
     if (dposommode == 1)    {
-        SlidingMove(dposomhypermean,3.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
-        SlidingMove(dposomhypermean,1.0,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
-        SlidingMove(dposomhypermean,0.3,10,0,1,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(dposomhypermean,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
+        ScalingMove(dposomhypermean,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
         ScalingMove(dposomhyperinvshape,1.0,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
         ScalingMove(dposomhyperinvshape,0.3,10,&MultiGeneCodonM2aModel::MixtureHyperLogProb,&MultiGeneCodonM2aModel::NoUpdate,this);
     }
