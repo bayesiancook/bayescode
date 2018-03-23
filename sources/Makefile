@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse aamutselmask readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
+ALL= simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom subsample multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -73,10 +73,6 @@ $(PROGSDIR)/chi2$(EXEEXT): Chi2.o $(OBJS)
 aamutselsparse$(EXEEXT): $(PROGSDIR)/aamutselsparse$(EXEEXT)
 $(PROGSDIR)/aamutselsparse$(EXEEXT): AAMutSelSparseOmega.o $(OBJS)
 	$(CC) AAMutSelSparseOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-aamutselmask$(EXEEXT): $(PROGSDIR)/aamutselmask$(EXEEXT)
-$(PROGSDIR)/aamutselmask$(EXEEXT): AAMutSelMaskOmega.o $(OBJS)
-	$(CC) AAMutSelMaskOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 aamutselddp$(EXEEXT): $(PROGSDIR)/aamutselddp$(EXEEXT)
 $(PROGSDIR)/aamutselddp$(EXEEXT): AAMutSelDSBDPOmega.o $(OBJS)
