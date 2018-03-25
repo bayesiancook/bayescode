@@ -61,7 +61,6 @@ class DiffSelDoublySparseChain: public Chain {
         GetModel()->SetFitnessCenterMode(fitnesscentermode);
         GetModel()->Allocate();
         GetModel()->Update();
-        cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);

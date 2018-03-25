@@ -37,6 +37,8 @@ license and that you accept its terms.*/
  *
  * Technically, the model defines K conditions;
  * condition 0 defines the background, and then condition k=1..K-1 represent the alternative conditions.
+ * Branches are a priori allocated to any one of the K conditions.
+ * The parameterization of the model is as follows:
  * An array of site-specific basal fitness profiles G_ia, for site i and amino-acid a, is defined for the background condition.
  * Then, for each alternative condition, a differential (log-fitness) contrast is defined:
  * D_kia, for condition k, site i and amino-acid a.

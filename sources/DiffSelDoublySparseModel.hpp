@@ -180,6 +180,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - Ncond: number of conditions (K)
     //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t. condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
     //! - codonmodel: type of codon substitution model (1: canonical mutation-selection model, 0: square-root model, see Parto and Lartillot, 2017)
+    //! - inepsilon: background fitness for low-fitness amino-acids: if 0<inepsilon<1, then epsilon is fixed, if epsilon == 1, then this is the model without masks, if epsilon == -1, then epsilon is estimated from the data
+    //! - inshape: shape parameter of the Gamma distribution of pre-fitness parameters. If inshape>0, shape parameter is fixed, if inshape == -1, shape parameter is estimated
     DiffSelDoublySparseModel(const std::string& datafile, const std::string& treefile, int inNcond, int inNlevel, int incodonmodel, double inepsilon, double inshape) : hyperfitnesssuffstat(Naa) {
 
         withtoggle = 0;
@@ -229,7 +231,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         branchalloc = new BranchAllocationSystem(*tree,Ncond);
     }
 
-    // DiffSelDoublySparseModel(const DiffSelDoublySparseModel&) = delete;
+    DiffSelDoublySparseModel(const DiffSelDoublySparseModel&) = delete;
 
     ~DiffSelDoublySparseModel() {}
 
@@ -347,7 +349,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         suffstatarray = new PathSuffStatBidimArray(Ncond,Nsite);
     }
 
-    //! \brief set toggle status: 0: toggles all to 0, no move on them, 1:random toggles, MCMC move on them
+    //! \brief set toggle status: 0: toggles all fixed to 0, 1:random toggles,i
     void SetWithToggles(int in)   {
         withtoggle = in;
     }
@@ -372,7 +374,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         nucmode = in;
     }
 
-    //! \brief set estimation method for fitness hyperparameter (center of Dirichlet distribution)
+    //! \brief set estimation method for fitness hyperparameter (center of multi-gamma distribution)
     //!
     //! - mode == 3: fixed (uniform)
     //! - mode == 2: shared across genes, estimated 
@@ -382,7 +384,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         fitnesscentermode = in;
     }
 
-    //! \brief set estimation method for fitness hyperparameter (shape of Dirichlet distribution)
+    //! \brief set estimation method for fitness hyperparameter (shape of multi-gamma distribution)
     //!
     //! - mode == 3: fixed
     //! - mode == 2: shared across genes, estimated 
@@ -504,6 +506,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         return sitemaskarray->GetArray();
     }
 
+    //! const access to low-fitness background value (mask epsilon)
     double GetMaskEpsilon() const   {
         return maskepsilon;
     }
@@ -818,13 +821,13 @@ class DiffSelDoublySparseModel : public ProbModel {
         UpdateAll();
     }
 
-    //! Gibbs resample substitution mappings conditional on current parameter configuration
+    //! Gibbs resampling of substitution histories conditional on current parameter configuration
     void ResampleSub(double frac)   {
         CorruptMatrices();
 		phyloprocess->Move(frac);
     }
 
-    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
+    //! Gibbs resampling of branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
@@ -863,7 +866,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         CorruptMatrices();
 	}
 
-    //! MH compensatory move on fitness parameters and hyper-parameters
+    //! MH compensatory move schedule on fitness parameters and hyper-parameters
     void CompMoveFitness(int nrep)  {
         CompMoveFitness(1.0,nrep);
     }
@@ -1311,7 +1314,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         ScalingMove(maskepsilon,0.1,nrep,&DiffSelDoublySparseModel::MaskEpsilonLogProb,&DiffSelDoublySparseModel::UpdateAll,this);
     }
 
-    //! MH move on masks
+    //! MH move on fitness masks across sites
     double MoveMasks(int nrep)    {
 
 		double nacc = 0;
@@ -1583,10 +1586,12 @@ class DiffSelDoublySparseModel : public ProbModel {
     // Traces and monitors
     // ------------------
 
+    //! return mean width of masks across sites
     double GetMeanWidth() const {
         return sitemaskarray->GetMeanWidth();
     }
 
+    //! write header of trace file
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "pi\t";
@@ -1604,6 +1609,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "gammanulls\n";
     }
 
+    //! write trace (one line summarizing current state) into trace file
     void Trace(ostream& os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
@@ -1643,8 +1649,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << '\n';
     }
 
+    //! monitoring MCMC statistics
     void Monitor(ostream&) const override {}
 
+    //! get complete parameter configuration from stream
     void FromStream(istream& is) override {
         if (blmode < 2) {
             is >> lambda;
@@ -1674,6 +1682,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         is >> *toggle;
     }
 
+    //! write complete current parameter configuration to stream
     void ToStream(ostream& os) const override {
         if (blmode < 2) {
             os << lambda << '\t';
@@ -1703,7 +1712,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << *toggle << '\t';
     }
 
-    //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
+    //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
         if (blmode < 2) {
@@ -1735,7 +1744,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         return size;
     }
 
-    //! get array from MPI buffer
+    //! get complete parameter configuration from MPI buffer
     void MPIGet(const MPIBuffer& is)    {
         if (blmode < 2) {
             is >> lambda;
@@ -1765,7 +1774,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         is >> *toggle;
     }
 
-    //! write array into MPI buffer
+    //! write complete current parameter configuration into MPI buffer
     void MPIPut(MPIBuffer& os) const {
         if (blmode < 2) {
             os << lambda;

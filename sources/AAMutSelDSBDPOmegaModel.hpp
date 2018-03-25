@@ -138,6 +138,11 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // currently: fixed or free with shrinkage
     int omegamode;
 
+    // 0: simple gamma prior
+    // 1: mix of (1-pi) at 1 and pi at 1+d, with d ~ Gamma(dposomhypermean,dposomhyperinvshape)
+    // 2: mix of 2 (modal) gamma distributions: one at 1 and another one with mean > 1 
+    // int omegaprior;
+
     Chrono aachrono;
     Chrono basechrono;
     Chrono totchrono;
@@ -158,6 +163,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! parameters:
     //! - datafile: name of file containing codon sequence alignment
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
+    //! - inomegamode: omega fixed (3), shared across genes (2) or estimated with shrinkage across genes (1) or without shrinkage (0)
     //! - Ncat: truncation of the first-level stick-breaking process (by default: 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by default: 1)
 	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inNcat, int inbaseNcat)   {

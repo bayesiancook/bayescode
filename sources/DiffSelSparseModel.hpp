@@ -52,6 +52,20 @@ license and that you accept its terms.*/
  * The model is meant to identify positions displaying significant patterns of directional convergent selection
  * (i.e. sites that tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
  *
+ * Technically, the model defines K conditions;
+ * condition 0 defines the background, and then condition k=1..K-1 represent the alternative conditions.
+ * Branches are a priori allocated to any one of the K conditions.
+ * The model is based on the following system of random variables:
+ * - G_kia: an array of site- and condition specific pre-fitness parameters, for condition k=0..K, site i and amino-acid a (gamma distribued).
+ * - d_kia: an array of site and condition-specific toggles (only for alternative conditions, k=1..K).
+ *
+ * The toggles determine whether the fitness for each amino-acid and at each site should change, upon going from condition 0 to condition k.
+ * Quantitatively, the fitness vector at site i under condition k F_kia is defined as follows (see also DiffSelSparseFitnessArray):
+ * - F_0ia = G_0ia;
+ * - F_kia = F_0ia^(1-d_kia) * G_kia^(d_kia), for k=1..K-1
+ *
+ * Statistical support for a differential effect between conditions, for a given site i and a given amino acid a, is 
+ * quantified by the posterior probability that the corresponding toggle is equal to 1.
  */
 
 class DiffSelSparseModel : public ProbModel {
@@ -190,7 +204,7 @@ class DiffSelSparseModel : public ProbModel {
         branchalloc = new BranchAllocationSystem(*tree,Ncond);
     }
 
-    // DiffSelSparseModel(const DiffSelSparseModel&) = delete;
+    DiffSelSparseModel(const DiffSelSparseModel&) = delete;
 
     ~DiffSelSparseModel() {}
 
@@ -389,6 +403,7 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
+    //! const ref to the array of toggles across sites and amino-acids for a given condition
     const vector<vector<int> > & GetCondToggleArray(int k) const {
         return toggle->GetSubArray(k-1);
     }
@@ -653,13 +668,13 @@ class DiffSelSparseModel : public ProbModel {
         UpdateAll();
     }
 
-    //! Gibbs resample substitution mappings conditional on current parameter configuration
+    //! Gibbs resampling of substitution histories conditional on current parameter configuration
     void ResampleSub(double frac)   {
         CorruptMatrices();
 		phyloprocess->Move(frac);
     }
 
-    //! Gibbs resample branch lengths (based on sufficient statistics and current value of lambda)
+    //! Gibbs resampling of branch lengths (based on sufficient statistics and current value of lambda)
 	void ResampleBranchLengths()	{
         CollectLengthSuffStat();
 		branchlength->GibbsResample(*lengthpathsuffstatarray);
@@ -698,7 +713,7 @@ class DiffSelSparseModel : public ProbModel {
         CorruptMatrices();
 	}
 
-    //! MH compensatory move on fitness parameters and hyper-parameters
+    //! MH compensatory move schedule on fitness parameters and hyper-parameters
     void CompMoveFitness()  {
         CompMoveFitness(1.0,10);
     }
@@ -767,7 +782,7 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on baseline fitness parameters (for condition k=0)
+    //! MH move schedule on baseline fitness parameters (for condition k=0)
     void MoveBaselineFitness() {
         MoveBaselineFitness(1.0, 3, 10);
         MoveBaselineFitness(1.0, 10, 10);
@@ -775,7 +790,7 @@ class DiffSelSparseModel : public ProbModel {
         MoveBaselineFitness(0.3, 20, 10);
     }
 
-    //! MH moves on baseline fitness parameters (for condition k=0)
+    //! MH move on baseline fitness parameters (for condition k=0)
     double MoveBaselineFitness(double tuning, int n, int nrep) {
 
         double nacc = 0;
@@ -811,7 +826,7 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on toggles (fitness shifts)
+    //! MH move schedule on fitness shifts (for non-baseline conditions k>0)
     void MoveFitnessShifts()    {
         for (int k=1; k<Ncond; k++) {
             MoveFitnessShifts(k,1,10);
@@ -819,7 +834,7 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
-    //! MH moves on fitness shifts (i.e. for conditions k=1..Ncond-1)
+    //! MH move on fitness shifts for condition k>0
     double MoveFitnessShifts(int k, double tuning, int nrep) {
 
         double nacc = 0;
@@ -857,7 +872,7 @@ class DiffSelSparseModel : public ProbModel {
         return nacc / ntot;
     }
 
-    //! MH moves on hyperparameters of distribution of fitness factors
+    //! MH move schedule on hyperparameters of distribution of fitness factors
     void MoveFitnessHyperParameters() {
         // collect suff stats across all active fitness parameters
         hyperfitnesssuffstat.Clear();
@@ -920,7 +935,7 @@ class DiffSelSparseModel : public ProbModel {
         }
     }
 
-    //! MH moves on toggles
+    //! MH move schedule on toggles
     void MoveShiftToggles() {
         for (int k=1; k<Ncond; k++) {
             MoveShiftToggles(k,10);
@@ -940,7 +955,7 @@ class DiffSelSparseModel : public ProbModel {
         return ret;
     }
 
-    //! MH moves on toggles
+    //! MH move on toggles for condition k>0
     double MoveShiftToggles(int k, int nrep)  {
 
         int nshift = 0;
@@ -1016,6 +1031,7 @@ class DiffSelSparseModel : public ProbModel {
 
     //! return number of aligned sites
     int GetNsite() const { return Nsite; }
+
     //! return number of conditions
     int GetNcond() const { return Ncond; }
 
@@ -1023,6 +1039,7 @@ class DiffSelSparseModel : public ProbModel {
     // Traces and monitors
     // ------------------
 
+    //! write header of trace file
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "meanvar0\t";
@@ -1036,6 +1053,7 @@ class DiffSelSparseModel : public ProbModel {
         os << "gammanulls\n";
     }
 
+    //! write trace (one line summarizing current state) into trace file
     void Trace(ostream& os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
@@ -1071,8 +1089,10 @@ class DiffSelSparseModel : public ProbModel {
         os << '\n';
     }
 
+    //! monitoring MCMC statistics
     void Monitor(ostream&) const override {}
 
+    //! get complete parameter configuration from stream
     void FromStream(istream& is) override {
         if (blmode < 2) {
             is >> lambda;
@@ -1091,6 +1111,7 @@ class DiffSelSparseModel : public ProbModel {
         is >> *toggle;
     }
 
+    //! write complete current parameter configuration to stream
     void ToStream(ostream& os) const override {
         if (blmode < 2) {
             os << lambda << '\t';
@@ -1109,7 +1130,7 @@ class DiffSelSparseModel : public ProbModel {
         os << *toggle << '\t';
     }
 
-    //! return size of model, when put into an MPI buffer (in multigene context -- only omegatree)
+    //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
         if (blmode < 2) {
@@ -1130,7 +1151,7 @@ class DiffSelSparseModel : public ProbModel {
         return size;
     }
 
-    //! get array from MPI buffer
+    //! get complete parameter configuration from MPI buffer
     void MPIGet(const MPIBuffer& is)    {
         if (blmode < 2) {
             is >> lambda;
@@ -1149,7 +1170,7 @@ class DiffSelSparseModel : public ProbModel {
         is >> *toggle;
     }
 
-    //! write array into MPI buffer
+    //! write complete current parameter configuration into MPI buffer
     void MPIPut(MPIBuffer& os) const {
         if (blmode < 2) {
             os << lambda;
