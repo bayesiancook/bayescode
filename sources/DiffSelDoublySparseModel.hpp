@@ -45,7 +45,7 @@ license and that you accept its terms.*/
 #include "IIDProfileMask.hpp"
 
 /**
- * \brief A doubly-sparse version of the differential selection model (see DiffSelModel)
+ * \brief A doubly-sparse version of the differential selection model (see also DiffSelModel and DiffSelSparseModel)
  *
  * This is a codon model, based on the mutation-selection formalism,
  * such that the fitness landscape (defined by site-specific amimo-acid fitness profiles)
@@ -53,6 +53,23 @@ license and that you accept its terms.*/
  * The model is meant to identify positions displaying significant patterns of directional convergent selection
  * (i.e. sites that tend to substitute their amino-acid state in a consistent manner, upon repeated transitions into a specific ecological condition).
  *
+ * Technically, the model defines K conditions;
+ * condition 0 defines the background, and then condition k=1..K-1 represent the alternative conditions.
+ * Branches are a priori allocated to any one of the K conditions.
+ * The model is based on the following system of random variables:
+ * - BidimIIDMultiGamma *fitness (G_kia): an array of site- and condition specific pre-fitness parameters, for condition k=0..K, site i and amino-acid a.
+ * - IIDProfileMask *sitemaskarray (m_ia): an array of masks (for amino-acid a and site i)
+ * - BidimIIDMultiBernoulli *toggle (d_kia): an array of site and condition-specific toggles (only for alternative conditions, k=1..K).
+ *
+ * As in AAMutSelSparseModel, the site-specific fitness masks specify which amino-acids have a high (1) or a low (0) fitness. High-fitness amino-acids take their fitness value from the G_kia vector; for low-fitness amino-acids, the fitness is equal to some background level (maskepsilon) -- and this, across all conditions.
+ * On the top of this masking system (which infuences all conditions uniformly),
+ * the toggles determine whether the fitness for each amino-acid and at each site should change, upon going from condition 0 to condition k.
+ * Quantitatively, the fitness vector at site i under condition k, (DiffSelDoublySparseFitnessArray *fitnessprofile in the code, mathematically denoted F_kia in the following) is defined as follows:
+ * - F_0ia = G_0ia * m_ia + epsilon * (1-m_ia)
+ * - F_kia = F_0ia^(1-d_kia) * G_kia^(d_kia), for k=1..K-1
+ *
+ * Statistical support for a differential effect between conditions, for a given site i and a given amino acid a, is 
+ * quantified by the posterior probability that the corresponding toggle is equal to 1.
  */
 
 class DiffSelDoublySparseModel : public ProbModel {

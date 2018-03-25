@@ -164,7 +164,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! - datafile: name of file containing codon sequence alignment
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
     //! - inomegamode: omega fixed (3), shared across genes (2) or estimated with shrinkage across genes (1) or without shrinkage (0)
-    //! - infitnesshypermode: fitnesshyperparameters ()
+    //! - inepsilon: background fitness for low-fitness amino-acids: if 0<inepsilon<1, then epsilon is fixed, if epsilon == 1, then this is the model without masks, if epsilon == -1, then epsilon is estimated from the data
+    //! - inshape: shape parameter of the Gamma distribution of pre-fitness parameters. If inshape>0, shape parameter is fixed, if inshape == -1, shape parameter is estimated
     AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, double inepsilon, double inshape) : hyperfitnesssuffstat(Naa) {
 
         blmode = 0;
