@@ -433,6 +433,9 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     double lnL;
     double GeneLogPrior;
+    double GeneBLLogPrior;
+    double GeneNucRatesLogPrior;
+    double GeneOmegaLogPrior;
     double moveTime;
     double mapTime;
 

@@ -384,6 +384,7 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream& os) const {
         os << "\tstdevrr\tcenter\thyperinvconc";
         os << "\tstdevstat\tcenter\thyperinvconc";
     }
+    os << "\tgenelogprior\tbl\tnuc\tomega";
     os << '\n';
 }
 
@@ -409,6 +410,7 @@ void MultiGeneCodonM2aModel::Trace(ostream& os)  const {
         os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc;
         os << '\t' << sqrt(GetVarNucStat()) << '\t' << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc;
     }
+    os << '\t' << GeneLogPrior << '\t' << GeneBLLogPrior << '\t' << GeneNucRatesLogPrior << '\t' << GeneOmegaLogPrior;
     os << '\n';
     os.flush();
 }
@@ -1125,14 +1127,23 @@ void MultiGeneCodonM2aModel::SlaveReceiveMixture()   {
 void MultiGeneCodonM2aModel::SlaveSendLogProbs()   {
 
     GeneLogPrior = 0;
+    GeneBLLogPrior = 0;
+    GeneNucRatesLogPrior = 0;
+    GeneOmegaLogPrior = 0;
     lnL = 0;
     moveTime = movechrono.GetTime();
     mapTime = mapchrono.GetTime();
     for (int gene=0; gene<GetLocalNgene(); gene++)   {
         GeneLogPrior += geneprocess[gene]->GetLogPrior();
+        GeneBLLogPrior += geneprocess[gene]->BranchLengthsLogPrior();
+        GeneNucRatesLogPrior += geneprocess[gene]->NucRatesLogPrior();
+        GeneOmegaLogPrior += geneprocess[gene]->OmegaLogPrior();
         lnL += geneprocess[gene]->GetLogLikelihood();
     }
     SlaveSendAdditive(GeneLogPrior);
+    SlaveSendAdditive(GeneBLLogPrior);
+    SlaveSendAdditive(GeneNucRatesLogPrior);
+    SlaveSendAdditive(GeneOmegaLogPrior);
     SlaveSendAdditive(lnL);
     SlaveSendAdditive(moveTime);
     SlaveSendAdditive(mapTime);
@@ -1142,6 +1153,12 @@ void MultiGeneCodonM2aModel::MasterReceiveLogProbs()    {
 
     GeneLogPrior = 0;
     MasterReceiveAdditive(GeneLogPrior);
+    GeneBLLogPrior = 0;
+    MasterReceiveAdditive(GeneBLLogPrior);
+    GeneNucRatesLogPrior = 0;
+    MasterReceiveAdditive(GeneNucRatesLogPrior);
+    GeneOmegaLogPrior = 0;
+    MasterReceiveAdditive(GeneOmegaLogPrior);
     lnL = 0;
     MasterReceiveAdditive(lnL);
     moveTime = 0;
