@@ -15,17 +15,7 @@
 #include "SimpleSubMatrixSelector.hpp"
 
 /**
- * \brief A site-homogeneous and branch-heterogeneous Muse and Gaut omega-codon model
- *
- * The model has the following structure:
- * - branch lengths iid Exponential of rate lambda
- * - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
- * - over branch j, omega_j = w * v_j, with v_j ~ Gamma(branchmean, branchinvshape)
- * - w ~ Gamma(sitemean,siteinvshape)
- * 
- * when model used in isolation: w = 1, and the v_j's are estimated, along with their hyperparameters branchmean and branchinvshape.
- * On the other hand, in a multi gene context, the v_j's are shared across genes, and w_i for gene i is allowed to vary
- * (and then all 4 hyperparameters are estimated across genes).
+ * \brief A Branch-mixture selector
  */
 
 template<class T> class BranchMixtureSelector : public BranchSelector<T>	{
@@ -45,6 +35,20 @@ template<class T> class BranchMixtureSelector : public BranchSelector<T>	{
 	const Selector<T>& components;
 	const BranchAllocationSystem& alloc;
 };
+
+/**
+ * \brief A site-homogeneous and branch-heterogeneous Muse and Gaut omega-codon model
+ *
+ * The model has the following structure:
+ * - branch lengths iid Exponential of rate lambda
+ * - nucleotide relative exchangeabilities and stationaries are uniform Dirichlet
+ * - over branch j, omega_j = w * v_j, with v_j ~ Gamma(branchmean, branchinvshape)
+ * - w ~ Gamma(sitemean,siteinvshape)
+ * 
+ * when model used in isolation: w = 1, and the v_j's are estimated, along with their hyperparameters branchmean and branchinvshape.
+ * On the other hand, in a multi gene context, the v_j's are shared across genes, and w_i for gene i is allowed to vary
+ * (and then all 4 hyperparameters are estimated across genes).
+ */
 
 class ConditionOmegaModel : public ProbModel {
 
