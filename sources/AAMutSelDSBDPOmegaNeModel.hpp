@@ -109,7 +109,8 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
 	// number of diff Ne categories
-	int Ncond;
+	size_t Ncond;
+	vector<double> Ne;
 
 	// which branch is under which condition
 	BranchAllocationSystem* branchalloc;
@@ -300,12 +301,24 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
         componentcenterarray = new MixtureSelector<vector<double> >(basecenterarray,componentalloc);
         componentconcentrationarray = new MixtureSelector<double>(baseconcentrationarray,componentalloc);
 
+
+				//
+        // Vector of Ne
+        //
+
+				Ne.push_back(1);
+				// We set the shape and scales to 1.0
+				for(size_t i = 1; i< Ncond; i++) {
+					Ne.push_back(Random::GammaSample(1.0,1.0));
+				}
+
         //
         // (truncated) Dirichlet mixture of aa fitness profiles
         //
 
         // Ncat fitness profiles iid from the base distribution
         componentaafitnessarray = new MultiDirichlet(componentcenterarray,componentconcentrationarray);
+
 
         // mixture weights (truncated stick breaking process)
         kappa = 1.0;
