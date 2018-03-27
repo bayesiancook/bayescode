@@ -51,6 +51,7 @@ class DiffSelDoublySparseSample : public Sample {
         is >> codonmodel;
         is >> fitnessshape;
         is >> fitnesscentermode;
+        is >> epsilon;
         int check;
         is >> check;
         if (check) {
