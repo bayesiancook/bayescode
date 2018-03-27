@@ -108,6 +108,14 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     // an array of codon matrices (one for each distinct aa fitness profile)
 	AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
 
+	// number of diff Ne categories
+	int Ncond;
+
+	// which branch is under which condition
+	BranchAllocationSystem* branchalloc;
+
+
+
 	// this one is used by PhyloProcess: has to be a Selector<SubMatrix>
 	MixtureSelector<SubMatrix>* sitesubmatrixarray;
 
@@ -154,7 +162,8 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
     //! - Ncat: truncation of the first-level stick-breaking process (by default: 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by default: 1)
-	AAMutSelDSBDPOmegaNeModel(string datafile, string treefile, int inNcat, int inbaseNcat)   {
+    //! - Ncond: number of conditions (by default: 2)
+	AAMutSelDSBDPOmegaNeModel(string datafile, string treefile, int inNcat, int inbaseNcat, int inNcond)   {
 
         blmode = 0;
         nucmode = 0;
@@ -192,10 +201,14 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 		tree->SetIndices();
 		Nbranch = tree->GetNbranch();
 
-        acca1=acca2=acca3=acca4=0;
-        tota1=tota2=tota3=tota4=0;
-        accb1=accb2=accb3=accb4=0;
-        totb1=totb2=totb3=totb4=0;
+		Ncond = inNcond;
+		// specifies which condition for which branch
+		branchalloc = new BranchAllocationSystem(*tree,Ncond);
+
+    acca1=acca2=acca3=acca4=0;
+    tota1=tota2=tota3=tota4=0;
+    accb1=accb2=accb3=accb4=0;
+    totb1=totb2=totb3=totb4=0;
 
 		// Allocate();
 	}
