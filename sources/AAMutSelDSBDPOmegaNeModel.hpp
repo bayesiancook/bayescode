@@ -2,6 +2,7 @@
 #include "Tree.hpp"
 #include "ProbModel.hpp"
 #include "GTRSubMatrix.hpp"
+#include "AAMutSelNeCodonMatrixBidimArray.hpp"
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "PhyloProcess.hpp"
 #include "IIDGamma.hpp"
@@ -13,6 +14,8 @@
 #include "MultinomialAllocationVector.hpp"
 #include "Chrono.hpp"
 #include "Permutation.hpp"
+#include "SubMatrixSelector.hpp"
+
 
 /**
  * \brief The mutation-selection model with constant fitness landscape over the tree -- double Dirichlet process version, but with condition-dependent variation in Ne.
@@ -69,11 +72,12 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	std::vector<double> nucrelrate;
 	GTRSubMatrix* nucmatrix;
 
-    // of mean omegahypermean and inverse shape parameter omegahyperinvshape
-    double omegahypermean;
-    double omegahyperinvshape;
-	double omega;
-	OmegaPathSuffStat omegapathsuffstat;
+		// Ne values of mean nehypermean and inverse shape parameter nehyperinvshape
+    double nehypermean;
+    double nehyperinvshape;
+		OmegaPathSuffStat omegapathsuffstat;
+
+		double omega;
 
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet distributions
 
@@ -105,8 +109,8 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 
 	MultinomialAllocationVector* sitealloc;
 
-    // an array of codon matrices (one for each distinct aa fitness profile)
-	AAMutSelOmegaCodonSubMatrixArray* componentcodonmatrixarray;
+    // an array of codon matrices (one for each distinct combination of aa fitness profile and Ne)
+	AAMutSelNeCodonMatrixBidimArray* componentcodonmatrixarray;
 
 	// number of diff Ne categories
 	size_t Ncond;
@@ -116,9 +120,11 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	BranchAllocationSystem* branchalloc;
 
 
+	// branch- and site-substitution matrices (for phyloprocess)
+	SubMatrixSelector* submatrixarray;
 
-	// this one is used by PhyloProcess: has to be a Selector<SubMatrix>
-	MixtureSelector<SubMatrix>* sitesubmatrixarray;
+	// and for root (condition 0)
+	RootSubMatrixSelector* rootsubmatrixarray;
 
 	PhyloProcess* phyloprocess;
 
@@ -310,6 +316,7 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 				// We set the shape and scales to 1.0
 				for(size_t i = 1; i< Ncond; i++) {
 					Ne.push_back(Random::GammaSample(1.0,1.0));
+					std::cout << "Initial Ne[i]: "<<Ne[i] <<std::endl;
 				}
 
         //
@@ -331,17 +338,24 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
         occupancy = new OccupancySuffStat(Ncat);
 
         // global omega (fixed to 1 by default)
-        omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
-		omega = 1.0;
+        nehypermean = 1.0;
+        nehyperinvshape = 1.0;
+				omega = 1.0;
 
         // Ncat mut sel codon matrices (based on the Ncat fitness profiles of the mixture)
-        componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
+        //delme componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
+				componentcodonmatrixarray = new AAMutSelNeCodonMatrixBidimArray(componentaafitnessarray, Ne, *GetCodonStateSpace(), *nucmatrix);
 
         // selector, specifying which codon matrix should be used for each site
-        sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
+      //delme  sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
-		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
+		// sub matrices per branch and per site
+		submatrixarray = new SubMatrixSelector(*componentcodonmatrixarray,*branchalloc);
+		// sub matrices for root, across sites
+		rootsubmatrixarray = new RootSubMatrixSelector(*componentcodonmatrixarray);
+
+
+		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,submatrixarray,rootsubmatrixarray);
 		phyloprocess->Unfold();
 
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -363,8 +377,8 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     }
 
     //! return current omega value
-    double GetOmega() const {
-        return omega;
+    vector<double> GetNe() const {
+        return Ne;
     }
 
     //! \brief const access to array of length-pathsuffstats across branches
@@ -391,16 +405,16 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
-    //! set omega to new value (multi-gene analyses)
-    void SetOmega(double inomega)   {
-        omega = inomega;
+    //! set Ne vector to new value (multi-gene analyses)
+    void SetNe(vector<double>& inNe)   {
+        Ne = inNe;
         UpdateCodonMatrices();
     }
 
-    //! set omega hyperparams to new value (multi-gene analyses)
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
+    //! set Ne hyperparams to new value (multi-gene analyses)
+    void SetNeHyperParameters(double innehypermean, double innehyperinvshape)   {
+        nehypermean = innehypermean;
+        nehyperinvshape = innehyperinvshape;
     }
 
     //! set nuc rates to new value (multi-gene analyses)
@@ -426,14 +440,15 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	}
 
     //! \brief tell the codon matrices that their parameters have changed and that they should be updated
+		// CHANGE ME
 	void UpdateCodonMatrices()	{
-        componentcodonmatrixarray->SetOmega(omega);
-		componentcodonmatrixarray->UpdateCodonMatrices();
+  //HERE: need to do a SetNe  componentcodonmatrixarray->SetOmega(omega);
+	//HERE: need to implement it	componentcodonmatrixarray->UpdateCodonMatrices();
 	}
 
-    //! \brief tell codon matrix k that its parameters have changed and that it should be updated
-    void UpdateCodonMatrix(int k)    {
-        (*componentcodonmatrixarray)[k].CorruptMatrix();
+    //! \brief tell codon matrix [k][l] that its parameters have changed and that it should be updated
+    void UpdateCodonMatrix(int k, int l)    {
+        (*componentcodonmatrixarray)[k][l].CorruptMatrix();
     }
 
     //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
@@ -508,11 +523,15 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 		return branchlength->GetLogProb();
 	}
 
-    //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
-	double OmegaLogPrior() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
+    //! log prior over Ne (gamma of mean nehypermean and inverse shape nehyperinvshape)
+	double NeLogPrior() const {
+        double alpha = 1.0 / nehyperinvshape;
+        double beta = alpha / nehypermean;
+				sumLogs = 0.0;
+				for (auto ne : Ne) {
+					sumLogs += alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(ne) - beta*ne;
+				}
+		return sumLogs;
 	}
 
     //! log prior over nuc rates rho and pi (uniform)
@@ -721,12 +740,13 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	}
 
     //! MH move on omega
-	void MoveOmega()	{
+		// CHANGE ME
+	void MoveNe()	{
 
 		omegapathsuffstat.Clear();
 		omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
+        double alpha = 1.0 / nehyperinvshape;
+        double beta = alpha / nehypermean;
 		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
 		UpdateCodonMatrices();
 	}
