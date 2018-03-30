@@ -17,6 +17,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     int Ncat;
     int baseNcat;
     int blmode, nucmode, basemode, omegamode, omegaprior;
+    double pihypermean, pihyperinvconc;
 
   public:
     MultiGeneAAMutSelDSBDPOmegaModel* GetModel() {
@@ -25,7 +26,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inomegaprior, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode), omegaprior(inomegaprior) {
+    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inomegaprior, double inpihypermean, double inpihyperinvconc, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode), omegaprior(inomegaprior), pihypermean(inpihypermean), pihyperinvconc(inpihyperinvconc) {
         every = inevery;
         until = inuntil;
         writegenedata = inwritegenedata;
@@ -40,7 +41,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,myid,nprocs);
+        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,pihypermean,pihyperinvconc,myid,nprocs);
         if (! myid) {
             cerr << " -- allocate\n";
         }
@@ -66,6 +67,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> writegenedata;
         is >> Ncat >> baseNcat;
         is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior;
+        is >> pihypermean >> pihyperinvconc;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -75,7 +77,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,myid,nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,pihypermean,pihyperinvconc,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -100,6 +102,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             param_os << writegenedata << '\n';
             param_os << Ncat << '\t' << baseNcat << '\n';
             param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\t' << omegaprior << '\n';
+            param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -198,6 +201,9 @@ int main(int argc, char* argv[])	{
         int omegamode = 3;
         int omegaprior = 0;
 
+        double pihypermean = 0.1;
+        double pihyperinvconc = 0.2;
+
         int writegenedata = 1;
 
         try	{
@@ -226,6 +232,12 @@ int main(int argc, char* argv[])	{
                 }
                 else if (s == "+g")  {
                     writegenedata = 1;
+                }
+                else if (s == "-pi")    {
+                    i++;
+                    pihypermean = atof(argv[i]);
+                    i++;
+                    pihyperinvconc = atof(argv[i]);
                 }
                 else if (s == "-nucrates")  {
                     i++;
@@ -325,7 +337,7 @@ int main(int argc, char* argv[])	{
             writegenedata = 0;
         }
 
-        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,every,until,writegenedata,name,force,myid,nprocs);
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,pihypermean,pihyperinvconc,every,until,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();
