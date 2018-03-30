@@ -931,6 +931,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         MasterReceiveOmega();
         MasterReceiveLogProbs();
         totchrono.Stop();
+
+        burnin++;
     }
 
     // slave move
@@ -1006,6 +1008,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendGeneNucRates();
         SlaveSendOmega();
         SlaveSendLogProbs();
+
+        burnin++;
     }
 
     void GeneResampleSub(double frac)  {
@@ -1263,8 +1267,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             ScalingMove(dposomhyperinvshape,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             ScalingMove(dposomhyperinvshape,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
 
-            if (burnin > 1)    {
-                ResampleDPosOmPi();
+            if (burnin > 10)    {
+                if (dposompihyperinvconc)    {
+                    ResampleDPosOmPi();
+                }
             }
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
