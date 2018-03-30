@@ -127,8 +127,8 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 
 	PhyloProcess* phyloprocess;
 
-	PathSuffStatArray* sitepathsuffstatarray;
-	PathSuffStatArray* componentpathsuffstatarray;
+	PathSuffStatBidimArray* sitepathsuffstatarray;
+	PathSuffStatBidimArray* componentpathsuffstatarray;
 
     // 0: free wo shrinkage
     // 1: free with shrinkage
@@ -351,14 +351,14 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 		// sub matrices per branch and per site
 		submatrixarray = new SubMatrixSelector(*componentcodonmatrixarray,*branchalloc);
 		// sub matrices for root, across sites
-		rootsubmatrixarray = new RootSubMatrixSelector(*submatrixarray);
+		rootsubmatrixarray = new RootSubMatrixSelector(*componentcodonmatrixarray);
 
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,submatrixarray,rootsubmatrixarray);
 		phyloprocess->Unfold();
 
-		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
-        componentpathsuffstatarray = new PathSuffStatArray(Ncat);
+		sitepathsuffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
+		componentpathsuffstatarray = new PathSuffStatBidimArray(Ncond, Ncat);
 	}
 
     //-------------------
@@ -440,13 +440,13 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 
     //! \brief tell the codon matrices that their parameters have changed and that they should be updated
 	void UpdateCodonMatrices()	{
-        componentcodonmatrixarray->SetOmega(omega);
-		componentcodonmatrixarray->UpdateCodonMatrices();
+		componentcodonmatrixarray->SetOmega(omega);
+		componentcodonmatrixarray->SetNe(Ne);
 	}
 
-    //! \brief tell codon matrix k that its parameters have changed and that it should be updated
-    void UpdateCodonMatrix(int k)    {
-        (*componentcodonmatrixarray)[k].CorruptMatrix();
+    //! \brief tell codon matrix in condition k and site l that its parameters have changed and that it should be updated
+    void UpdateCodonMatrix(int k, int l)    {
+        (*componentcodonmatrixarray)(k,l).CorruptMatrix();
     }
 
     //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
@@ -592,9 +592,9 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
         return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
-    //! return log prob of the substitution mappings over sites allocated to component k of the mixture
-    double PathSuffStatLogProb(int k) const {
-        return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k));
+    //! return log prob of the substitution mappings over sites allocated to component l of the mixture in condition k
+    double PathSuffStatLogProb(int k, int l) const {
+        return componentpathsuffstatarray->GetVal(k, l).GetLogProb(componentcodonmatrixarray->GetVal(k, l));
     }
 
     //! return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
@@ -643,7 +643,7 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     //! collect sufficient statistics if substitution mappings across sites
 	void CollectSitePathSuffStat()	{
 		sitepathsuffstatarray->Clear();
-        sitepathsuffstatarray->AddSuffStat(*phyloprocess);
+		sitepathsuffstatarray->AddSuffStat(*phyloprocess, *branchalloc);
 	}
 
     //! gather site-specific sufficient statistics component-wise
@@ -693,8 +693,13 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
             }
 
             if (omegamode < 2)  {
-                MoveOmega();
+							std::cout << "WARNING: We do not make any move on Omega"<<std::endl;
+                // TEMPORARY MoveOmega();
             }
+
+						// if (nemode < 2)  {
+            //     MoveNe();
+            // }
 
             aachrono.Start();
             MoveAAMixture(3);
@@ -734,15 +739,16 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 	}
 
     //! MH move on omega
-	void MoveOmega()	{
-
-		omegapathsuffstat.Clear();
-		omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
-		UpdateCodonMatrices();
-	}
+		// TEMPORARY: Removing the move on OMEGA, which we fix to 1
+	// void MoveOmega()	{
+	//
+	// 	omegapathsuffstat.Clear();
+	// 	omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
+  //       double alpha = 1.0 / omegahyperinvshape;
+  //       double beta = alpha / omegahypermean;
+	// 	omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
+	// 	UpdateCodonMatrices();
+	// }
 
     //! MH move on nucleotide rate parameters
 	void MoveNucRates()	{

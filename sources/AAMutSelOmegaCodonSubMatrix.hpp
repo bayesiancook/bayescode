@@ -35,14 +35,18 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public vir
     //! \brief access by copy to fitness of a given amino-acid
     //!
     //! Note: to avoid numerical errors, this function returns aa[a] + 1e-8.
+    // FIXME: pourquoi getfitness utilise Ne et pas GetAAFitnessProfile
     double GetFitness(int a) const {return Ne * aa[a] + 1e-8;}
-
-  protected:
 
     void SetNe(double inNe) {
         Ne = inNe;
         CorruptMatrix();
     }
+
+
+  protected:
+
+
 
     void ComputeArray(int i) const /*override*/;
     void ComputeStationary() const /*override*/;
@@ -54,5 +58,3 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public vir
 };
 
 #endif
-
-

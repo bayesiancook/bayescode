@@ -14,7 +14,7 @@
  *
  * The generic sufficient statistics for substitution histories (S) as a function of the rate matrix Q are defined in PathSuffStat.
  * They give all information needed in order to compute p(S | Q), up to a normalization constant.
- * When Q itself is a Muse and Gaut codon model parameterized by a nucleotide rate matrix M, 
+ * When Q itself is a Muse and Gaut codon model parameterized by a nucleotide rate matrix M,
  * then the probability of S as a function of M, p(S | M),
  * can be expressed in terms of an even more compact (4x4) suff stat.
  *
@@ -300,6 +300,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
             AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
 	}
+
 };
 
 /**
@@ -388,7 +389,7 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>, public Arr
 		total += GetSize() * (shape*log(scale) - Random::logGamma(shape));
 		return total;
 	}
-    
+
     //! return array size when put into an MPI buffer
     unsigned int GetMPISize() const {return 2 * GetSize();}
 
@@ -451,7 +452,7 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
     }
 
 	void RecursiveAddSuffStat(const Link* from, const BranchSelector<MGOmegaCodonSubMatrix>& codonsubmatrixarray, const MGOmegaCodonSubMatrix& rootcodonsubmatrix, const NodeSelector<PathSuffStat>& pathsuffstatarray)	{
-        
+
         if (!from->isRoot()) {
             (*this)[from->GetBranch()->GetIndex()].AddSuffStat(codonsubmatrixarray.GetVal(from->GetBranch()->GetIndex()),pathsuffstatarray.GetVal(from->GetNode()->GetIndex()));
         }
@@ -481,7 +482,7 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
 		total += GetNbranch() * (shape*log(scale) - Random::logGamma(shape));
 		return total;
 	}
-    
+
     //! return array size when put into an MPI buffer
     unsigned int GetMPISize() const {return 2 * GetNbranch();}
 

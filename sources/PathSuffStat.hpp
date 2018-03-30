@@ -32,10 +32,10 @@
  *
  * These path suffstats can be used for any Markovian substitution process (any Q).
  * In some cases (i.e. for Muse and Gaut codon models),
- * they can be furthered simplified, as a function of the nucleotide rate parameters or the omega parameter of the Q matrix,
+ * they can be further simplified, as a function of the nucleotide rate parameters or the omega parameter of the Q matrix,
  * leading to even more compact suff stats (see OmegaPathSuffStat and NucPathSuffStat).
  *
- * In terms of implementation, these suffstats are encoded as sparse data structures 
+ * In terms of implementation, these suffstats are encoded as sparse data structures
  * (since a very small subset of all possible pairs of codons will typcially be visited
  * by the substitution history of a given site, for instance).
  * This sparse encoding is crucial for efficiency (both in terms of time and in terms of RAM usage).
@@ -70,7 +70,7 @@ class PathSuffStat : public SuffStat	{
 	void AddPairCount(int state1, int state2, int in)	{
 		paircount[pair<int,int>(state1,state2)] += in;
 	}
-	
+
 	void AddWaitingTime(int state, double in)	{
 		waitingtime[state] += in;
 	}
@@ -121,7 +121,7 @@ class PathSuffStat : public SuffStat	{
         }
         return i->second;
 	}
-	
+
     //! return log p(S | Q) as a function of the Q matrix given as the argument
 	double GetLogProb(const SubMatrix& mat) const {
 		double total = 0;
@@ -277,6 +277,20 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat>	{
     void AddSuffStat(const PhyloProcess& process, const BranchAllocationSystem& branchalloc)   {
         process.AddPathSuffStat(*this,branchalloc);
     }
+
+
+		    //! \brief add suffstatarray given as argument to this array based on the allocations provided as the second argument (mixture models)
+		    //!
+		    //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] += suffstatarray[i]
+				void Add(const BidimSelector<PathSuffStat>& suffstatarray, const Selector<int>& alloc)   {
+					for (int i=0; i<this->GetNcol(); i++) {
+						for (int j=0; j<this->GetNrow(); j++)	{
+							(*this)(j,alloc.GetVal(i)) += suffstatarray.GetVal(j,i);
+						}
+					}
+				}
+
+
 
     //! return total log prob (summed over all items), given a bi-dimensional array of rate matrices
     double GetLogProb(const BidimSelector<SubMatrix>& matrixarray) const  {
