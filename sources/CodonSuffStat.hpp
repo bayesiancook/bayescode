@@ -300,6 +300,10 @@ class OmegaPathSuffStat : public PoissonSuffStat {
             AddSuffStat(codonsubmatrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
 		}
 	}
+
+    double GetLogProb(double omega) const {
+        return count*log(omega) - beta*omega;
+    }
 };
 
 /**
