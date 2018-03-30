@@ -16,7 +16,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     int writegenedata;
     int Ncat;
     int baseNcat;
-    int blmode, nucmode, basemode, omegamode;
+    int blmode, nucmode, basemode, omegamode, omegaprior;
 
   public:
     MultiGeneAAMutSelDSBDPOmegaModel* GetModel() {
@@ -25,7 +25,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode) {
+    MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inomegaprior, int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat), baseNcat(inbaseNcat), blmode(inblmode), nucmode(innucmode), basemode(inbasemode), omegamode(inomegamode), omegaprior(inomegaprior) {
         every = inevery;
         until = inuntil;
         writegenedata = inwritegenedata;
@@ -40,7 +40,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
+        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,myid,nprocs);
         if (! myid) {
             cerr << " -- allocate\n";
         }
@@ -65,7 +65,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> datafile >> treefile;
         is >> writegenedata;
         is >> Ncat >> baseNcat;
-        is >> blmode >> nucmode >> basemode >> omegamode;
+        is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -75,7 +75,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,myid,nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,myid,nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -99,7 +99,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain  {
             param_os << datafile << '\t' << treefile << '\n';
             param_os << writegenedata << '\n';
             param_os << Ncat << '\t' << baseNcat << '\n';
-            param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\t' << omegaprior << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -196,6 +196,7 @@ int main(int argc, char* argv[])	{
         int nucmode = 1;
         int basemode = 0;
         int omegamode = 3;
+        int omegaprior = 0;
 
         int writegenedata = 1;
 
@@ -288,6 +289,12 @@ int main(int argc, char* argv[])	{
                 else if (s == "-freeomega") {
                     omegamode = 1;
                 }
+                else if (s == "-gamomega")  {
+                    omegaprior = 0;
+                }
+                else if (s == "-mixomega")  {
+                    omegaprior = 1;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -318,7 +325,7 @@ int main(int argc, char* argv[])	{
             writegenedata = 0;
         }
 
-        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,every,until,writegenedata,name,force,myid,nprocs);
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile,treefile,Ncat,baseNcat,blmode,nucmode,basemode,omegamode,omegaprior,every,until,writegenedata,name,force,myid,nprocs);
     }
 
     chrono.Stop();

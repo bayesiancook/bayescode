@@ -13,7 +13,9 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int omegamode, Ncat, baseNcat;
+    int omegamode, omegaprior;
+    double dposompi, dposomhypermean, dposomhyperinvshape;
+    int Ncat, baseNcat;
 
   public:
     AAMutSelDSBDPOmegaModel* GetModel() {
@@ -22,7 +24,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inomegamode, int inNcat, int inbaseNcat, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), omegamode(inomegamode), Ncat(inNcat), baseNcat(inbaseNcat) {
+    AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inomegamode, int inomegaprior, double indposompi, double indposomhypermean, double indposomhyperinvshape, int inNcat, int inbaseNcat, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELDSBDPOMEGA"), datafile(indatafile), treefile(intreefile), omegamode(inomegamode), omegaprior(inomegaprior), dposompi(indposompi), dposomhypermean(indposomhypermean), dposomhyperinvshape(indposomhyperinvshape), Ncat(inNcat), baseNcat(inbaseNcat) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -37,7 +39,10 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
 
     void New(int force) override {
         cerr << "new model\n";
-        model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,Ncat,baseNcat);
+        model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,omegaprior,Ncat,baseNcat);
+        if (omegaprior == 1)    {
+            GetModel()->SetDPosOmHyperParameters(dposompi,dposomhypermean,dposomhyperinvshape);
+        }
         cerr << "allocate\n";
         GetModel()->Allocate();
         cerr << "update\n";
@@ -56,7 +61,7 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> omegamode >> Ncat >> baseNcat;
+        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >> Ncat >> baseNcat;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -66,7 +71,10 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
-            model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,Ncat,baseNcat);
+            model = new AAMutSelDSBDPOmegaModel(datafile,treefile,omegamode,omegaprior,Ncat,baseNcat);
+            if (omegaprior == 1)    {
+                GetModel()->SetDPosOmHyperParameters(dposompi,dposomhypermean,dposomhyperinvshape);
+            }
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -83,7 +91,8 @@ class AAMutSelDSBDPOmegaChain : public Chain  {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
-        param_os << omegamode << '\t' << Ncat << '\t' << baseNcat << '\n';
+        param_os << omegamode << '\t' << omegaprior << '\t' << dposompi<< '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
+        param_os << Ncat << '\t' << baseNcat << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -108,6 +117,10 @@ int main(int argc, char* argv[])	{
         int Ncat = 100;
         int baseNcat = 1;
         int omegamode = 3;
+        int omegaprior = 0;
+        double dposompi = 0.1;
+        double dposomhypermean = 1.0;
+        double dposomhyperinvshape = 0.5;
         name = "";
         int force = 1;
         int every = 1;
@@ -148,6 +161,18 @@ int main(int argc, char* argv[])	{
                 else if (s == "-freeomega") {
                     omegamode = 1;
                 }
+                else if (s == "-gamomega")  {
+                    omegaprior = 0;
+                }
+                else if (s == "-mixomega")   {
+                    omegaprior = 1;
+                    i++;
+                    dposompi = atof(argv[i]);
+                    i++;
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -174,7 +199,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,omegamode,Ncat,baseNcat,every,until,name,force);
+        chain = new AAMutSelDSBDPOmegaChain(datafile,treefile,omegamode,omegaprior,dposompi,dposomhypermean,dposomhyperinvshape,Ncat,baseNcat,every,until,name,force);
     }
 
     cerr << "chain " << name << " started\n";

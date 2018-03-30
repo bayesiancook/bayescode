@@ -82,7 +82,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     Chrono movechrono;
     Chrono mapchrono;
 
-    int blmode, nucmode, basemode, omegamode;
+    int blmode, nucmode, basemode, omegamode, omegaprior;
 
     Chrono totchrono;
     Chrono paramchrono;
@@ -96,7 +96,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+    MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode, int inomegaprior, int inmyid, int innprocs) : MultiGeneProbModel(inmyid,innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -119,6 +119,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         nucmode = innucmode;
         basemode = inbasemode;
         omegamode = inomegamode;
+        omegaprior = inomegaprior;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -221,7 +222,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             geneprocess.assign(GetLocalNgene(),(AAMutSelDSBDPOmegaModel*) 0);
 
             for (int gene=0; gene<GetLocalNgene(); gene++)   {
-                geneprocess[gene] = new AAMutSelDSBDPOmegaModel(GetLocalGeneName(gene),treefile,omegamode,Ncat,baseNcat);
+                geneprocess[gene] = new AAMutSelDSBDPOmegaModel(GetLocalGeneName(gene),treefile,omegamode,omegaprior,Ncat,baseNcat);
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetBaseMode(basemode);

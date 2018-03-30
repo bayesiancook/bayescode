@@ -138,10 +138,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // currently: fixed or free with shrinkage
     int omegamode;
 
+    double dposompi;
+    double dposomhypermean;
+    double dposomhyperinvshape;
+
     // 0: simple gamma prior
     // 1: mix of (1-pi) at 1 and pi at 1+d, with d ~ Gamma(dposomhypermean,dposomhyperinvshape)
     // 2: mix of 2 (modal) gamma distributions: one at 1 and another one with mean > 1 
-    // int omegaprior;
+    int omegaprior;
 
     Chrono aachrono;
     Chrono basechrono;
@@ -166,12 +170,13 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! - inomegamode: omega fixed (3), shared across genes (2) or estimated with shrinkage across genes (1) or without shrinkage (0)
     //! - Ncat: truncation of the first-level stick-breaking process (by default: 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by default: 1)
-	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inNcat, int inbaseNcat)   {
+	AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inomegaprior, int inNcat, int inbaseNcat)   {
 
         blmode = 0;
         nucmode = 0;
         basemode = 0;
         omegamode = inomegamode;
+        omegaprior = inomegaprior;
 
 		data = new FileSequenceAlignment(datafile);
 		codondata = new CodonSequenceAlignment(data, true);
@@ -255,6 +260,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! for single-gene analyses, either mode 3 and mode 0 can be used -- default mode is 3.
     void SetOmegaMode(int mode) {
         omegamode = mode;
+    }
+
+    //! \brief set prior for omega
+    //
+    //! 0: simple gamma prior
+    //! 1: mix of (1-pi) at 1 and pi at 1+d, with d ~ Gamma(dposomhypermean,dposomhyperinvshape)
+    void SetOmegaPrior(int inprior)   {
+        omegaprior = inprior;
     }
 
     //! \brief set estimation method for center and concentration parameters of base distribution
@@ -343,6 +356,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
 		omega = 1.0;
+        dposompi = 0.1;
+        dposomhypermean = 1;
+        dposomhyperinvshape = 0.5;
 
         // Ncat mut sel codon matrices (based on the Ncat fitness profiles of the mixture)
         componentcodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, componentaafitnessarray, omega);
@@ -422,6 +438,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
+    }
+
+    void SetDPosOmHyperParameters(double inpi, double inmean, double ininvshape)    {
+        dposompi = inpi;
+        dposomhypermean = inmean;
+        dposomhyperinvshape = ininvshape;
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -550,9 +572,37 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
 	double OmegaLogPrior() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
+        double ret = 0;
+        if (omegaprior == 0)    {
+            double alpha = 1.0 / omegahyperinvshape;
+            double beta = alpha / omegahypermean;
+            ret = alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
+        }
+        else if (omegaprior == 1)   {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0)  {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0)    {
+                ret = log(1-dposompi);
+            }
+            else    {
+                ret = log(dposompi);
+                double alpha = 1.0/dposomhyperinvshape;
+                double beta = alpha/dposomhypermean;
+                ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(dposom) - beta*dposom;
+            }
+        }
+        else    {
+            cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
+            exit(1);
+        }
+        return ret;
 	}
 
     //! log prior over nuc rates rho and pi (uniform)
@@ -776,11 +826,129 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
 		omegapathsuffstat.Clear();
 		omegapathsuffstat.AddSuffStat(*componentcodonmatrixarray,*componentpathsuffstatarray);
+        if (omegaprior == 0)    {
+            GibbsResampleOmega();
+        }
+        else    {
+            MultipleTryMoveOmega(100);
+        }
+		UpdateCodonMatrices();
+	}
+
+    void GibbsResampleOmega()   {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
 		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
-		UpdateCodonMatrices();
-	}
+    }
+
+    int MultipleTryMoveOmega(int ntry)  {
+        
+        /*
+        if (omega == 1.0)   {
+
+            // initial prob: (1-pi)*p(D | omega == 1.0)
+            // ntry values of dposom
+            // final prob: pi* < p(D | omega == 1.0 + dposom) >
+        }
+
+        else    {
+
+            // ntry values of dposom, with first value being equal to current omega - 1.0
+            // initial prob: pi* < p(D | omega == 1.0 + dposom) >
+            // final prob: (1-pi)*p(D | omega == 1.0)
+        }
+        // MH decision rule between omega == 1.0 or omega > 1.0
+        // if decision -> omega > 1.0, then randomly sample dposom among ntry values and set omega = 1.0 + dposom
+        */
+
+        double logp0 = omegapathsuffstat.GetLogProb(1.0);
+
+        double alpha = 1.0/dposomhyperinvshape;
+        double beta = alpha/dposomhypermean;
+
+        vector<double> logparray(ntry,0);
+        vector<double> dposomarray(ntry,0);
+        double max = 0;
+        for (int i=0; i<ntry; i++)  {
+            if ((!i) && (omega > 1.0))  {
+                dposomarray[i] = omega - 1.0;
+            }
+            else    {
+                dposomarray[i] = Random::Gamma(alpha,beta);
+            }
+            logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
+            if ((!i) || (max < logparray[i]))   {
+                max = logparray[i];
+            }
+        }
+
+        double tot = 0;
+        vector<double> cumulprob(ntry,0);
+        for (int i=0; i<ntry; i++)  {
+            tot += exp(logparray[i]-max);
+            cumulprob[i] = tot;
+        }
+        double logp1 = log(tot) + max;
+
+        // Multiple-Try Gibbs version
+        /*
+        double m = (logp0>logp1) ? logp0 : logp1;
+        double q0 = (1-dposompi) * exp(logp0-m);
+        double q1 = dposompi * exp(logp1-m);
+        double p0 = q0 / (q0+q1);
+
+        if (Random::Uniform() < p0) {
+            omega = 1.0;
+        }
+        else    {
+            // randomly choose dposom among the ntry values in array
+        }
+        */
+
+        // Multiple-Try MH version
+        int accept = 0;
+        int choice = 0;
+
+        if (omega == 1.0)   {
+            double logratio = log(dposompi) + logp1 - log(1.0-dposompi) - logp0;
+            if (log(Random::Uniform()) < logratio)  {
+                choice = 1;
+                accept = 1;
+            }
+            else    {
+                choice = 0;
+            }
+        }
+        else    {
+            double logratio = log(1.0-dposompi) + logp0 - log(dposompi) - logp1;
+            if (log(Random::Uniform()) < logratio)  {
+                choice = 0;
+                accept = 1;
+            }
+            else    {
+                choice = 1;
+            }
+        }
+
+        if (choice == 1)    {
+            // randomly choose dposom among the ntry values in array
+            double u = tot*Random::Uniform();
+            int i = 0;
+            while ((i<ntry) && (u>cumulprob[i]))    {
+                i++;
+            }
+            if (i == ntry)  {
+                cerr << "error in MultipleTryMoveOmega: overflow\n";
+                exit(1);
+            }
+            omega = 1.0 + dposomarray[i];
+        }
+        else    {
+            omega = 1.0;
+        }
+
+        return accept;
+    }
 
     //! MH move on nucleotide rate parameters 
 	void MoveNucRates()	{
