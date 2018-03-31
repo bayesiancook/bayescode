@@ -207,6 +207,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             dposomarray = new IIDBernoulliGamma(GetLocalNgene(),dposompi,alpha,beta);
+            for (int i=0; i<GetLocalNgene(); i++)   {
+                (*dposomarray)[i] = 0;
+            }
         }
         else    {
             cerr << "error: unrecognized omega prior\n";
