@@ -885,7 +885,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 basechrono.Stop();
             }
 
-            if (omegamode != 3) {
+            if ((burnin > 20) && (omegamode != 3)) {
                 MasterReceiveOmega();
                 movechrono.Start();
                 MoveOmegaHyperParameters();
@@ -970,7 +970,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 movechrono.Stop();
             }
 
-            if (omegamode != 3) {
+            if ((burnin>20) && (omegamode != 3)) {
                 movechrono.Start();
                 MoveGeneOmegas();
                 movechrono.Stop();
@@ -1268,7 +1268,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
 
-            if (burnin > 10)    {
+            if (burnin > 30)    {
                 if (dposompihyperinvconc)    {
                     ResampleDPosOmPi();
                 }
