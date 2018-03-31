@@ -388,7 +388,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << "varomega\t";
             }
             else    {
-                os << "dposom_pi\tmeandposom\tinvshape\t";
+                os << "npos\tposmean\tdposom_pi\tmeandposom\tinvshape\t";
             }
         }
         if (Ncat > 1)   {
@@ -437,6 +437,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << omegaarray->GetVar() << '\t';
             }
             else    {
+                os << dposomarray->GetNpos() << '\t';
+                os << dposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
             }
         }

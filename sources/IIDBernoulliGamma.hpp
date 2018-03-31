@@ -191,6 +191,17 @@ class IIDBernoulliGamma : public SimpleArray<double> {
 		}
 	}
 
+    //! get number of positive entries
+    int GetNpos() const {
+        int n = 0;
+        for (int i=0; i<GetSize(); i++) {
+            if (GetVal(i))  {
+                n++;
+            }
+        }
+        return n;
+    }
+
     //! get mean of all of those entries that are not 0
     double GetPosMean()  const {
         int tot = 0;
