@@ -1264,8 +1264,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             ScalingMove(dposomhypermean,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             ScalingMove(dposomhypermean,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            ScalingMove(dposomhyperinvshape,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            ScalingMove(dposomhyperinvshape,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
 
             if (burnin > 10)    {
                 if (dposompihyperinvconc)    {
