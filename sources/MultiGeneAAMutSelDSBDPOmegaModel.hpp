@@ -731,9 +731,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             double pibeta = (1-dposompihypermean) / dposompihyperinvconc;
             total += (pialpha-1) * log(1.0 - dposompi) + (pibeta-1) * log(dposompi);
             total -= dposomhypermean;
+            total -= dposomhyperinvshape;
+            /*
             if (dposomhyperinvshape > 1.0)  {
                 total += Random::INFPROB;
             }
+            */
         }
         return total;
     }
@@ -1269,9 +1272,13 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
             ScalingMove(dposomhypermean,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             ScalingMove(dposomhypermean,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            ScalingMove(dposomhyperinvshape,1.0,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            ScalingMove(dposomhyperinvshape,0.3,10,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            /*
             SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
             SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            */
 
             if (burnin > 30)    {
                 if (dposompihyperinvconc)    {
