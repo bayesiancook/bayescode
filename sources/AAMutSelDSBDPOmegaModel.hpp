@@ -875,6 +875,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             }
             else    {
                 dposomarray[i] = Random::Gamma(alpha,beta);
+                if (! dposomarray[i])   {
+                    dposomarray[i] = 1e-5;
+                }
             }
             logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
             if ((!i) || (max < logparray[i]))   {
