@@ -484,11 +484,8 @@ class SparseCATGTRModel : public ProbModel    {
 
     //! \brief complete MCMC move schedule
 	double Move() override {
-        cerr << "resample sub\n";
         ResampleSub(1.0);
-        cerr << "move params\n";
-        MoveParameters(3,20);
-        cerr << "move ok\n";
+        MoveParameters(3,10);
         return 1.0;
 	}
 
@@ -894,7 +891,7 @@ class SparseCATGTRModel : public ProbModel    {
         mean /= Nsite;
         var /= Nsite;
         var -= mean*mean;
-        return mean;
+        return var;
     }
 
     double GetRelRateEntropy() const    {
