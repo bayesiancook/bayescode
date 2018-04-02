@@ -15,6 +15,7 @@ class SparseCATGTRChain : public Chain  {
     string modeltype, datafile, treefile;
     // -1: estimated
     // 1 : no mask
+    int ratemode;
     double epsilon;
 
   public:
@@ -24,7 +25,7 @@ class SparseCATGTRChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    SparseCATGTRChain(string indatafile, string intreefile, double inepsilon, int inevery, int inuntil, string inname, int force) : modeltype("SPARSECATGTR"), datafile(indatafile), treefile(intreefile), epsilon(inepsilon)    {
+    SparseCATGTRChain(string indatafile, string intreefile, int inratemode, double inepsilon, int inevery, int inuntil, string inname, int force) : modeltype("SPARSECATGTR"), datafile(indatafile), treefile(intreefile), ratemode(inratemode), epsilon(inepsilon)    {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -38,7 +39,7 @@ class SparseCATGTRChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new SparseCATGTRModel(datafile,treefile,epsilon);
+        model = new SparseCATGTRModel(datafile,treefile,ratemode,epsilon);
         GetModel()->Allocate();
         GetModel()->Update();
         Reset(force);
@@ -54,6 +55,7 @@ class SparseCATGTRChain : public Chain  {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> ratemode;
         is >> epsilon;
         int tmp;
         is >> tmp;
@@ -64,7 +66,7 @@ class SparseCATGTRChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "SPARSECATGTR") {
-            model = new SparseCATGTRModel(datafile,treefile,epsilon);
+            model = new SparseCATGTRModel(datafile,treefile,ratemode,epsilon);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -81,6 +83,7 @@ class SparseCATGTRChain : public Chain  {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << ratemode << '\n';
         param_os << epsilon << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -104,6 +107,7 @@ int main(int argc, char* argv[])	{
         string datafile = "";
         string treefile = "";
         double epsilon = -1;
+        int ratemode = 1;
         name = "";
         int force = 1;
         int every = 1;
@@ -140,6 +144,12 @@ int main(int argc, char* argv[])	{
                         epsilon = atof(argv[i]);
                     }
                 }
+                else if (s == "-uni")   {
+                    ratemode = 0;
+                }
+                else if (s == "-cgam")  {
+                    ratemode = 1;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -166,7 +176,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new SparseCATGTRChain(datafile,treefile,epsilon,every,until,name,force);
+        chain = new SparseCATGTRChain(datafile,treefile,ratemode,epsilon,every,until,name,force);
     }
 
     cerr << "chain " << name << " started\n";

@@ -13,6 +13,7 @@
 #include "GTRSubMatrixArray.hpp"
 #include "PathSuffStat.hpp"
 #include "MultiGammaSuffStat.hpp"
+#include "GTRSuffStat.hpp"
 
 class SparseCATGTRModel : public ProbModel    {
 
@@ -41,13 +42,19 @@ class SparseCATGTRModel : public ProbModel    {
 	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
 	GammaSuffStat hyperlengthsuffstat;
 
+    // rates across sites
+    double alpha;
+    IIDGamma* siterate;
+    PoissonSuffStatArray* siteratepathsuffstatarray;
+    GammaSuffStat siteratehypersuffstat;
+
     // aa exchange rates
     vector<double> relratehypercenter;
     double relratehyperinvconc;
-	std::vector<double> relrate;
+	vector<double> relrate;
 
-    double shape;
-    vector<double> center;
+    double profileshape;
+    vector<double> profilecenter;
     IIDMultiGamma* preprofile;
 
     double maskepsilon;
@@ -65,19 +72,22 @@ class SparseCATGTRModel : public ProbModel    {
 
     // suff stats
 	PathSuffStatArray* sitepathsuffstatarray;
-    MultiGammaSuffStat hyperprofilesuffstat;
+    RelRateSuffStat rrsuffstat;
+    ProfileSuffStatArray* siteprofilesuffstatarray;
 
     int blmode;
     int rrmode;
     int maskepsilonmode;
     int maskmode;
+    int ratemode;
 
     public:
 
-    SparseCATGTRModel(const string& datafile, const string& treefile, double inepsilon) : hyperprofilesuffstat(Naa) {
+    SparseCATGTRModel(const string& datafile, const string& treefile, int inratemode, double inepsilon) : rrsuffstat(Naa) {
 
         blmode = 0;
         rrmode = 0;
+        ratemode = inratemode;
 
         if (inepsilon == 1)   {
             maskepsilon = 1;
@@ -110,6 +120,10 @@ class SparseCATGTRModel : public ProbModel    {
         Nsite = data->GetNsite();  // # columns
         Ntaxa = data->GetNtaxa();
         taxonset = data->GetTaxonSet();
+        if (data->GetNstate() != Naa)   {
+            cerr << "error: model works only for amino-acids\n";
+            exit(1);
+        }
 
         // get tree from file (newick format)
         tree = new Tree(treefile);
@@ -142,16 +156,26 @@ class SparseCATGTRModel : public ProbModel    {
         branchlength = new GammaWhiteNoise(*tree,*blhypermean,1.0/blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
-        // relative exchange rates
-        int Nrr = Naa*(Naa-1)/2; 
-        relratehypercenter.assign(Nrr,1.0/Nrr);
-        relratehyperinvconc = 1.0 / Nrr;
-		relrate.assign(Nrr,0);
-        Random::DirichletSample(relrate,vector<double>(Nrr,1.0/Nrr),((double) Nrr));
+        alpha = 1.0;
+        siterate = 0;
+        siteratepathsuffstatarray = 0;
+        if (ratemode == 1)  {
+            siterate = new IIDGamma(Nsite,alpha,alpha);
+            for (int i=0; i<Nsite; i++) {
+                (*siterate)[i] = 1.0;
+            }
+            siteratepathsuffstatarray = new PoissonSuffStatArray(Nsite);
+        }
 
-        shape = 20.0;
-        center.assign(Naa,1.0/Naa);
-        preprofile = new IIDMultiGamma(Nsite,Naa,shape,center);
+        // relative exchange rates
+        relratehypercenter.assign(GetNrr(),1.0/GetNrr());
+        relratehyperinvconc = 1.0 / GetNrr();
+		relrate.assign(GetNrr(),0);
+        SampleRelRate();
+
+        profileshape = 20.0;
+        profilecenter.assign(Naa,1.0/Naa);
+        preprofile = new IIDMultiGamma(Nsite,Naa,profileshape,profilecenter);
 
         pi = 0.1;
         sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
@@ -161,11 +185,12 @@ class SparseCATGTRModel : public ProbModel    {
         // mut sel matrices (based on the profiles of the mixture)
         sitematrixarray = new GTRSubMatrixArray(relrate, profile,false);
 
-		phyloprocess = new PhyloProcess(tree,data,branchlength,0,sitematrixarray);
+		phyloprocess = new PhyloProcess(tree,data,branchlength,siterate,sitematrixarray);
 		phyloprocess->Unfold();
 
         // create suffstat arrays
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
+        siteprofilesuffstatarray = new ProfileSuffStatArray(Nsite,Naa);
     }
 
     void SetBLMode(int in)   {
@@ -182,6 +207,16 @@ class SparseCATGTRModel : public ProbModel    {
 
     void SetMaskEpsilonMode(int in)    {
         maskepsilonmode = in;
+    }
+
+    int GetNrr() const {
+        return Naa * (Naa-1) / 2;
+    }
+
+    void SampleRelRate()    {
+        for (int i=0; i<GetNrr(); i++)  {
+            relrate[i] = Random::Gamma(relratehypercenter[i]/relratehyperinvconc,1.0);
+        }
     }
 
     // ------------------
@@ -208,19 +243,19 @@ class SparseCATGTRModel : public ProbModel    {
     }
 
     //! set relative exchange rate hyperparameters to a new value (multi-gene analyses)
-    void SetRelRatesHyperParameters(const std::vector<double>& inrelratehypercenter, double inrelratehyperinvconc)  {
+    void SetRelRatesHyperParameters(const vector<double>& inrelratehypercenter, double inrelratehyperinvconc)  {
         relratehypercenter = inrelratehypercenter;
         relratehyperinvconc = inrelratehyperinvconc;
     }
 
     //! set relative exchange rates to a new value (multi-gene analyses)
-    void SetRelRates(const std::vector<double>& inrelrate)  {
+    void SetRelRates(const vector<double>& inrelrate)  {
         relrate = inrelrate;
         CorruptMatrices();
     }
 
     //! copy relative exchange rates into vectors given as arguments (multi-gene analyses)
-    void GetRelRates(std::vector<double>& inrelrate) const  {
+    void GetRelRates(vector<double>& inrelrate) const  {
         inrelrate = relrate;
     }
 
@@ -244,8 +279,12 @@ class SparseCATGTRModel : public ProbModel    {
         if (blmode == 0)    {
             blhypermean->SetAllBranches(1.0/lambda);
         }
+        if (ratemode == 1)  {
+            siterate->SetShape(alpha);
+            siterate->SetScale(alpha);
+        }
         UpdateMask();
-		preprofile->SetShape(shape);
+		preprofile->SetShape(profileshape);
         UpdateAll();
         ResampleSub(1.0);
     }
@@ -294,8 +333,12 @@ class SparseCATGTRModel : public ProbModel    {
         if (blmode < 2) {
             total += BranchLengthsLogPrior();
         }
+        if (ratemode == 1)  {
+            total += SiteRateHyperLogPrior();
+            total += SiteRateLogPrior();
+        }
         if (rrmode < 2)    {
-            total += RelRateLogPrior();
+            total += RelRatesLogPrior();
         }
         if (maskmode < 2)   {
             total += MaskHyperLogPrior();
@@ -318,9 +361,21 @@ class SparseCATGTRModel : public ProbModel    {
         return ret;
 	}
 
+    double SiteRateHyperLogPrior() const {
+        return -alpha;
+    }
+
+    double SiteRateLogPrior() const {
+        return siterate->GetLogProb();
+    }
+
     //! log prior over nuc rates rho and pi (uniform)
-    double RelRateLogPrior() const {
-        return 0;
+    double RelRatesLogPrior() const {
+        double ret = 0;
+        for (int i=0; i<GetNrr(); i++)  {
+            ret += Random::logGammaDensity(relrate[i],relratehypercenter[i]/relratehyperinvconc,1.0);
+        }
+        return ret;
     }
 
     //! log prior over mask array hyperparameters
@@ -373,20 +428,31 @@ class SparseCATGTRModel : public ProbModel    {
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
     }
 
+    //! collect sufficient statistics for moving site rates (directly from the substitution mappings)
+    void CollectSiteRateSuffStat()    {
+		siteratepathsuffstatarray->Clear();
+        siteratepathsuffstatarray->AddRatePathSuffStat(*phyloprocess);
+    }
+
     //! return log prob of the current substitution mapping, as a function of the current substitution process
 	double SuffStatLogProb() const {
-        return sitepathsuffstatarray->GetLogProb(*sitematrixarray);
+        return siteprofilesuffstatarray->GetLogProb(*profile);
 	}
 
     //! return log prob of the substitution mappings for site i
     double SiteSuffStatLogProb(int i) const {
-        return sitepathsuffstatarray->GetVal(i).GetLogProb(sitematrixarray->GetVal(i));
+        return siteprofilesuffstatarray->GetVal(i).GetLogProb(profile->GetVal(i));
     }
 
     //! \brief return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
 	double BranchLengthsHyperSuffStatLogProb() const {
 		return hyperlengthsuffstat.GetLogProb(1.0,lambda);
 	}
+
+    //! \brief return log prob of current site rates, as a function of hyperparameter alpha
+    double SiteRateHyperSuffStatLogProb() const {
+        return siteratehypersuffstat.GetLogProb(alpha,alpha);
+    }
 
     // ---------------
     // log probs for MH moves
@@ -395,11 +461,6 @@ class SparseCATGTRModel : public ProbModel    {
     //! \brief log prob factor to be recomputed when moving branch lengths hyperparameters (here, lambda)
     double BranchLengthsHyperLogProb() const {
         return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
-    }
-
-    //! \brief log prob factor to be recomputed when moving nucleotide mutation rate parameters (nucrelrate and nucstat)
-    double RelRateLogProb() const {
-        return RelRateLogPrior() + SuffStatLogProb();
     }
 
     //! \brief log prob factor to be recomputed when moving mask hyperparameter pi
@@ -412,14 +473,22 @@ class SparseCATGTRModel : public ProbModel    {
         return MaskHyperLogPrior() + SuffStatLogProb();
     }
 
+    //! \brief log prob factor to be recomputed when moving alpha
+    double SiteRateHyperLogProb() const  {
+        return SiteRateHyperLogPrior() + SiteRateHyperSuffStatLogProb();
+    }
+
     // ---------------
     // Moves
     // ---------------
 
     //! \brief complete MCMC move schedule
 	double Move() override {
+        cerr << "resample sub\n";
         ResampleSub(1.0);
+        cerr << "move params\n";
         MoveParameters(3,20);
+        cerr << "move ok\n";
         return 1.0;
 	}
 
@@ -430,9 +499,13 @@ class SparseCATGTRModel : public ProbModel    {
             if (blmode < 2)    {
                 MoveBranchLengths();
             }
+            if (ratemode == 1)  {
+                MoveSiteRates();
+            }
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
+                CollectProfileSuffStat();
                 MovePreProfile();
                 CompMovePreProfile();
                 if (maskmode < 3)   {
@@ -447,6 +520,8 @@ class SparseCATGTRModel : public ProbModel    {
             }
             if (rrmode < 2)    {
                 MoveRelRates();
+                RelRateLengthCompMoveSchedule(10);
+                CorruptMatrices();
             }
         }
 
@@ -482,16 +557,77 @@ class SparseCATGTRModel : public ProbModel    {
         blhypermean->SetAllBranches(1.0/lambda);
 	}
 
+    void MoveSiteRates()    {
+        ResampleSiteRates();
+        MoveAlpha();
+    }
+
+    void ResampleSiteRates()    {
+        CollectSiteRateSuffStat();
+        siterate->GibbsResample(*siteratepathsuffstatarray);
+    }
+
+    void MoveAlpha()    {
+        siteratehypersuffstat.Clear();
+        siteratehypersuffstat.AddSuffStat(*siterate);
+        ScalingMove(alpha,1.0,10,&SparseCATGTRModel::SiteRateHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
+        ScalingMove(alpha,0.3,10,&SparseCATGTRModel::SiteRateHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
+        siterate->SetShape(alpha);
+        siterate->SetScale(alpha);
+	}
+
+    void CollectRelRateSuffStat()   {
+        rrsuffstat.Clear();
+        rrsuffstat.AddSuffStat(*sitematrixarray,*sitepathsuffstatarray);
+    }
+
+    void CollectProfileSuffStat()   {
+        siteprofilesuffstatarray->Clear();
+        siteprofilesuffstatarray->AddSuffStat(*sitematrixarray,*sitepathsuffstatarray);
+    }
+
     //! MH moves on relative exchange rates
 	void MoveRelRates()	{
-
-        CorruptMatrices();
-
-        ProfileMove(relrate,0.1,1,10,&SparseCATGTRModel::RelRateLogProb,&SparseCATGTRModel::CorruptMatrices,this);
-        ProfileMove(relrate,0.03,3,10,&SparseCATGTRModel::RelRateLogProb,&SparseCATGTRModel::CorruptMatrices,this);
-        ProfileMove(relrate,0.01,3,10,&SparseCATGTRModel::RelRateLogProb,&SparseCATGTRModel::CorruptMatrices,this);
+        CollectRelRateSuffStat();
+        for (int i=0; i<GetNrr(); i++)  {
+            relrate[i] = Random::Gamma(relratehypercenter[i]/relratehyperinvconc + rrsuffstat.GetCount(i), 1.0 + rrsuffstat.GetBeta(i));
+        }
         CorruptMatrices();
 	}
+
+    double RelRateLengthCompMoveSchedule(int nrep)  {
+        for (int rep=0; rep<nrep; rep++)    {
+            RelRateLengthCompMove(1);
+            RelRateLengthCompMove(0.1);
+        }
+        return 1.0;
+    }
+
+    double RelRateLengthCompMove(double tuning)   {
+
+        double m = tuning*(Random::Uniform() - 0.5);
+        double e = exp(m);
+        double logratio = -BranchLengthsLogPrior() - RelRatesLogPrior();
+        for (int j=0; j<Nbranch; j++)   {
+            (*branchlength)[j] *= e;
+        }
+        for (int i=0; i<GetNrr(); i++)  {
+            relrate[i] /= e;
+        }
+        double loghastings = m*(Nbranch-GetNrr());
+        logratio += loghastings;
+        logratio += BranchLengthsLogPrior() + RelRatesLogPrior();
+        int accept = (log(Random::Uniform()) < logratio);
+        if (! accept)   {
+            for (int j=0; j<Nbranch; j++)   {
+                (*branchlength)[j] /= e;
+            }
+            for (int i=0; i<GetNrr(); i++)  {
+                relrate[i] *= e;
+            }
+        }
+        return accept;
+    }
 
     //! MH compensatory move schedule on parameters and hyper-parameters
     void CompMovePreProfile()  {
@@ -517,7 +653,7 @@ class SparseCATGTRModel : public ProbModel    {
 
                 for (int a=0; a<Naa; a++)   {
                     if (mask[a])	{
-                        double alpha = shape*center[a];
+                        double alpha = profileshape*profilecenter[a];
                         deltalogprob -= - Random::logGamma(alpha) + (alpha-1)*log(x[a]) - x[a];
                     }
                 }
@@ -537,7 +673,7 @@ class SparseCATGTRModel : public ProbModel    {
 
                 for (int a=0; a<Naa; a++)   {
                     if (mask[a])	{
-                        double alpha = shape*center[a];
+                        double alpha = profileshape*profilecenter[a];
                         deltalogprob += - Random::logGamma(alpha) + (alpha-1)*log(x[a]) - x[a];
                     }
                 }
@@ -676,7 +812,7 @@ class SparseCATGTRModel : public ProbModel    {
                     mask[k] = 1-mask[k];
                     naa += mask[k];
                     if (mask[k])    {
-                        (*preprofile)[i][k] = Random::sGamma(shape * center[k]);
+                        (*preprofile)[i][k] = Random::sGamma(profileshape * profilecenter[k]);
                         if (! (*preprofile)[i][k]) {
                             (*preprofile)[i][k] = 1e-8;
                         }
@@ -714,9 +850,13 @@ class SparseCATGTRModel : public ProbModel    {
     //! write header of tracefile
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
+        if (ratemode == 1)  {
+            os << "alpha\tmeanrate\tvarrate\t";
+        }
         os << "pi\t";
         os << "width\t";
         os << "epsilon\t";
+        os << "meanrr\t";
         os << "rrent\n";
     }
 
@@ -725,10 +865,59 @@ class SparseCATGTRModel : public ProbModel    {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
+        if (ratemode == 1)  {
+            os << alpha << '\t';
+            os << GetMeanSiteRate() << '\t' << GetVarSiteRate() << '\t';
+        }
         os << pi << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
-        os << Random::GetEntropy(relrate) << '\n';
+        os << GetMeanRelRate() << '\t' << GetRelRateEntropy() << '\n';
+    }
+
+    double GetMeanSiteRate() const  {
+        double tot = 0;
+        for (int i=0; i<Nsite; i++) {
+            tot += (*siterate)[i];
+        }
+        tot /= Nsite;
+        return tot;
+    }
+
+    double GetVarSiteRate() const   {
+        double mean = 0;
+        double var = 0;
+        for (int i=0; i<Nsite; i++) {
+            mean += (*siterate)[i];
+            var += (*siterate)[i] * (*siterate)[i];
+        }
+        mean /= Nsite;
+        var /= Nsite;
+        var -= mean*mean;
+        return mean;
+    }
+
+    double GetRelRateEntropy() const    {
+
+        double tot = 0;
+        for (unsigned int i=0; i<relrate.size(); i++)    {
+            tot += relrate[i];
+        }
+        double ret = 0;
+        for (unsigned int i=0; i<relrate.size(); i++)    {
+            double tmp = relrate[i] / tot;
+            ret -= tmp*log(tmp);
+        }
+        return ret;
+    }
+
+    double GetMeanRelRate() const   {
+        double tot = 0;
+        for (unsigned int i=0; i<relrate.size(); i++)    {
+            tot += relrate[i];
+        }
+        tot /= relrate.size();
+        return tot;
     }
 
     //! monitoring MCMC statistics
