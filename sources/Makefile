@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
+ALL= sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -69,6 +69,10 @@ $(PROGSDIR)/subsample$(EXEEXT): RandomGeneSample.o $(OBJS)
 chi2$(EXEEXT): $(PROGSDIR)/chi2$(EXEEXT)
 $(PROGSDIR)/chi2$(EXEEXT): Chi2.o $(OBJS)
 	$(CC) Chi2.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+sparsecatgtr$(EXEEXT): $(PROGSDIR)/sparsecatgtr$(EXEEXT)
+$(PROGSDIR)/sparsecatgtr$(EXEEXT): SparseCATGTR.o $(OBJS)
+	$(CC) SparseCATGTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 aamutselsparse$(EXEEXT): $(PROGSDIR)/aamutselsparse$(EXEEXT)
 $(PROGSDIR)/aamutselsparse$(EXEEXT): AAMutSelSparseOmega.o $(OBJS)
