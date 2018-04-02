@@ -18,8 +18,8 @@ const char AAset[] = {'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N'
                       'h', 'i', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w',
                       'y', '-', '?', '$', '.', 'B', 'Z', '*', 'X', 'x'};
 const int AAN = 49;
-const int DNAN = 38;
-const int RNAN = 38;
+const int DNAN = 37;
+const int RNAN = 37;
 const char DNAset[] = {'A', 'C', 'G', 'T', 'a', 'c', 'g', 't', 'B', 'D', 'H', 'K', 'M',
                        'N', 'R', 'S', 'V', 'W', 'Y', 'b', 'd', 'h', 'k', 'm', 'n', 'r',
                        's', 'v', 'w', 'y', '-', '?', '$', '.', '*', 'X', 'x'};
