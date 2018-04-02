@@ -215,6 +215,7 @@ class SparseCATGTRModel : public ProbModel    {
 
     void SampleRelRate()    {
         for (int i=0; i<GetNrr(); i++)  {
+            // relrate[i] = Random::Gamma(10,1.0);
             relrate[i] = Random::Gamma(relratehypercenter[i]/relratehyperinvconc,1.0);
         }
     }
