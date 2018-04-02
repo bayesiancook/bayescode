@@ -32,6 +32,7 @@ public:
     friend class PathSuffStatArray;
     friend class PathSuffStatBidimArray;
     friend class PoissonSuffStatBranchArray;
+    friend class PoissonSuffStatArray;
     friend class PathSuffStatNodeArray;
 
 	//! \brief generic constructor
@@ -190,6 +191,9 @@ public:
 	//! compute path sufficient statistics for resampling branch lengths add them to branchlengthpathsuffstatarray
 	void AddLengthSuffStat(BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const;
 
+	//! compute path sufficient statistics for resampling branch lengths add them to branchlengthpathsuffstatarray
+	void AddRateSuffStat(Array<PoissonSuffStat>& siteratepathsuffstatarray) const;
+
 	void RecursiveAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
 	void LocalAddPathSuffStat(const Link* from, PathSuffStat& suffstat) const;
 
@@ -204,6 +208,9 @@ public:
 
 	void RecursiveAddLengthSuffStat(const Link* from, BranchArray<PoissonSuffStat>& branchlengthpathsuffstatarray) const;
 	void LocalAddLengthSuffStat(const Link* from, PoissonSuffStat& branchlengthsuffstat) const;
+
+	void RecursiveAddRateSuffStat(const Link* from, Array<PoissonSuffStat>& siteratepathsuffstatarray) const;
+	void LocalAddRateSuffStat(const Link* from, Array<PoissonSuffStat>& siteratepathsuffstatarray) const;
 
 	void PostPredSample(int site, bool rootprior = false);
 	// rootprior == true : root state drawn from stationary probability of the

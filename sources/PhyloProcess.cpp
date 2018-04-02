@@ -900,3 +900,29 @@ void PhyloProcess::LocalAddLengthSuffStat(const Link* link, PoissonSuffStat& suf
     }
 }
 
+void PhyloProcess::AddRateSuffStat(Array<PoissonSuffStat>& siteratepathsuffstatarray) const {
+
+	RecursiveAddRateSuffStat(GetRoot(),siteratepathsuffstatarray);
+}
+
+void PhyloProcess::RecursiveAddRateSuffStat(const Link* from, Array<PoissonSuffStat>& siteratepathsuffstatarray) const {
+
+    if (! from->isRoot())   {
+        LocalAddRateSuffStat(from,siteratepathsuffstatarray);
+    }
+	for (const Link* link=from->Next(); link!=from; link=link->Next())	{
+		RecursiveAddRateSuffStat(link->Out(),siteratepathsuffstatarray);
+	}
+}
+
+void PhyloProcess::LocalAddRateSuffStat(const Link* link, Array<PoissonSuffStat>& siteratepathsuffstatarray) const {
+
+    int nodeindex = link->GetNode()->GetIndex();
+    double length = GetBranchLength(link->GetBranch()->GetIndex());
+    for (int i=0; i<GetNsite(); i++)    {
+        if (missingmap[nodeindex][i] == 1)  {
+            pathmap[link->GetNode()][i]->AddLengthSuffStat(siteratepathsuffstatarray[i],length,GetSubMatrix(link->GetBranch()->GetIndex(),i));
+        }
+    }
+}
+

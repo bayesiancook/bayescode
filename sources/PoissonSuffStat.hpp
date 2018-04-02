@@ -150,6 +150,11 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat>	{
 		}
 	}
 
+    //! add path sufficient statistics for resampling branch lengths from PhyloProcess
+    void AddRatePathSuffStat(const PhyloProcess& process)   {
+        process.AddRateSuffStat(*this);
+    }
+
     //! member-wise addition: essentially (*this)[i] += from[i], for i=0..GetSize()-1
     void Add(const PoissonSuffStatArray& from)    {
 		for (int i=0; i<GetSize(); i++)	{
