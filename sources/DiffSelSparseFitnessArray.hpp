@@ -238,6 +238,15 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double> >    {
         }
     }
 
+    double GetMeanEntropy() const {
+        double mean = 0;
+        for (int i=0; i<GetSize(); i++) {
+            mean += Random::GetEntropy(GetVal(i));
+        }
+        mean /= GetSize();
+        return mean;
+    }
+
     protected:
 
     const Selector<vector<double> >& fitness;

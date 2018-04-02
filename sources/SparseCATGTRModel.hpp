@@ -853,6 +853,7 @@ class SparseCATGTRModel : public ProbModel    {
         os << "pi\t";
         os << "width\t";
         os << "epsilon\t";
+        os << "statent\t";
         os << "meanrr\t";
         os << "rrent\n";
     }
@@ -869,6 +870,7 @@ class SparseCATGTRModel : public ProbModel    {
         os << pi << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
+        os << profile->GetMeanEntropy() << '\t';
         os << GetMeanRelRate() << '\t' << GetRelRateEntropy() << '\n';
     }
 
