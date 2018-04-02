@@ -167,7 +167,7 @@ class ProfileSuffStat : public SuffStat {
 
         const std::map<pair<int,int>,int>& paircount = pathsuffstat.GetPairCountMap();
         for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
-            profilecount[rrindex(i->first.first,i->first.second)] += i->second;
+            profilecount[i->first.second] += i->second;
         }
     }
 
@@ -241,11 +241,6 @@ class ProfileSuffStat : public SuffStat {
 
     private:
 
-    int rrindex(int i, int j)    {
-        return (i < j) ? (2 * nstate - i - 1) * i / 2 + j - i - 1
-                       : (2 * nstate - j - 1) * j / 2 + i - j - 1;
-    }
-
     int nstate;
     vector<int> profilecount;
     vector<double> profilebeta;
@@ -255,7 +250,7 @@ class ProfileSuffStatArray: public SimpleArray<ProfileSuffStat>  {
 
     public:
 
-    ProfileSuffStatArray(int size, int nstate) : SimpleArray<ProfileSuffStat>(size,ProfileSuffStat(nstate)) {};
+    ProfileSuffStatArray(int insize, int innstate) : SimpleArray<ProfileSuffStat>(insize,ProfileSuffStat(innstate)) {};
     ~ProfileSuffStatArray() {}
 
 	void Clear()	{
