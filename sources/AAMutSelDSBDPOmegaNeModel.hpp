@@ -449,6 +449,13 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
         (*componentcodonmatrixarray)(k,l).CorruptMatrix();
     }
 
+		//! \brief tell codon matrices for site l and across conditions that their parameters have changed and that they should be updated
+    void UpdateCodonMatrix(int l)    {
+			for (size_t condition_k =0; condition_k<Ncond; condition_k++ ) {
+        (*componentcodonmatrixarray)(condition_k,l).CorruptMatrix();
+			}
+    }
+
     //! \brief tell the nucleotide and the codon matrices that their parameters have changed and that it should be updated
     void UpdateMatrices()   {
         UpdateNucMatrix();
@@ -590,6 +597,15 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     //! return log prob of the current substitution mapping, as a function of the current codon substitution process
 	double PathSuffStatLogProb() const {
         return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
+	}
+
+	//! return log prob of the substitution mappings over sites allocated to component l of the mixture over all conditions
+	double PathSuffStatLogProb(int l) const {
+		double loglk = 0.0;
+		for (size_t condition_k =0; condition_k<Ncond; condition_k++ ) {
+			loglk += componentpathsuffstatarray->GetVal(condition_k, l).GetLogProb(componentcodonmatrixarray->GetVal(condition_k, l));
+		}
+			return loglk;
 	}
 
     //! return log prob of the substitution mappings over sites allocated to component l of the mixture in condition k
