@@ -966,9 +966,11 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
 
         double max = 0;
         const vector<double>& w = weight->GetArray();
-        const PathSuffStat& suffstat = sitepathsuffstatarray->GetVal(site);
+				// Here the condition should not matter, so we use condition 0.
+        const PathSuffStat& suffstat = sitepathsuffstatarray->GetVal(site, 0);
         for (int i=0; i<Ncat; i++) {
-            double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i));
+					//Same as above, we use condition 0
+            double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i, 0));
             postprob[i] = tmp;
             if ((!i) || (max < tmp))    {
                 max = tmp;
