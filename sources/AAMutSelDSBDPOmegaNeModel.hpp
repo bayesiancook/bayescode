@@ -778,7 +778,12 @@ class AAMutSelDSBDPOmegaNeModel : public ProbModel {
     //! resample empty components of the mixture from prior
     void ResampleEmptyComponents()  {
         componentaafitnessarray->PriorResample(*occupancy);
-        componentcodonmatrixarray->UpdateCodonMatrices(*occupancy);
+				// Here we corrupt all matrices.
+				// It would be more efficient to only corrupt the matrices that need updating,
+				// i.e. that are occupied, with a call to something like:
+        //	componentcodonmatrixarray->UpdateCodonMatrices(*occupancy);
+				// but instead we corrupt everything.
+				componentcodonmatrixarray->Corrupt();
     }
 
     //! MH move on amino-acid fitness profiles (occupied components only)
