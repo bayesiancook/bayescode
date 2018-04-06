@@ -21,14 +21,14 @@ CPPFLAGS= -std=c++11 -g -Wall -O3 $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp MultiGeneAAMutSelM2aModel.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp AAMutSelM2aModel.cpp MultiGeneAAMutSelM2aModel.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
+ALL= sparseaamutsel sparseaasubsel sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -69,6 +69,14 @@ $(PROGSDIR)/subsample$(EXEEXT): RandomGeneSample.o $(OBJS)
 chi2$(EXEEXT): $(PROGSDIR)/chi2$(EXEEXT)
 $(PROGSDIR)/chi2$(EXEEXT): Chi2.o $(OBJS)
 	$(CC) Chi2.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+sparseaamutsel$(EXEEXT): $(PROGSDIR)/sparseaamutsel$(EXEEXT)
+$(PROGSDIR)/sparseaamutsel$(EXEEXT): SparseAAMutSel.o $(OBJS)
+	$(CC) SparseAAMutSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+sparseaasubsel$(EXEEXT): $(PROGSDIR)/sparseaasubsel$(EXEEXT)
+$(PROGSDIR)/sparseaasubsel$(EXEEXT): SparseAASubSel.o $(OBJS)
+	$(CC) SparseAASubSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 sparsecatgtr$(EXEEXT): $(PROGSDIR)/sparsecatgtr$(EXEEXT)
 $(PROGSDIR)/sparsecatgtr$(EXEEXT): SparseCATGTR.o $(OBJS)

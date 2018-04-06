@@ -5,6 +5,8 @@
 #include "PathSuffStat.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GTRSubMatrixArray.hpp"
+#include "AASubSelSubMatrix.hpp"
+#include "AASubSelSubMatrixArray.hpp"
 #include "MPIBuffer.hpp"
 
 class RelRateSuffStat : public SuffStat {
@@ -60,6 +62,37 @@ class RelRateSuffStat : public SuffStat {
     }
 
 	void AddSuffStat(const GTRSubMatrixArray& matrixarray, const PathSuffStatArray& pathsuffstatarray, const Selector<double>& rate)    {
+		for (int i=0; i<matrixarray.GetSize(); i++)	{
+            AddSuffStat(matrixarray.GetVal(i),pathsuffstatarray.GetVal(i),rate.GetVal(i));
+        }
+    }
+
+    void AddSuffStat(const AASubSelSubMatrix& matrix, const PathSuffStat& pathsuffstat, double rate = 1)  {
+
+        const std::map<int,double>& waitingtime = pathsuffstat.GetWaitingTimeMap();
+        for (std::map<int,double>::const_iterator i = waitingtime.begin(); i!= waitingtime.end(); i++)	{
+            int a = i->first;
+            for (int b=0; b<nstate; b++)    {
+                if (b != a) {
+                    rrbeta[rrindex(a,b)] += matrix(a,b) / matrix.RelativeRate(a,b) * i->second * rate;
+                }
+            }
+        }
+
+        const std::map<pair<int,int>,int>& paircount = pathsuffstat.GetPairCountMap();
+        for (std::map<pair<int,int>, int>::const_iterator i = paircount.begin(); i!= paircount.end(); i++)	{
+            rrcount[rrindex(i->first.first,i->first.second)] += i->second;
+        }
+
+    }
+
+	void AddSuffStat(const AASubSelSubMatrixArray& matrixarray, const PathSuffStatArray& pathsuffstatarray)    {
+		for (int i=0; i<matrixarray.GetSize(); i++)	{
+            AddSuffStat(matrixarray.GetVal(i),pathsuffstatarray.GetVal(i));
+        }
+    }
+
+	void AddSuffStat(const AASubSelSubMatrixArray& matrixarray, const PathSuffStatArray& pathsuffstatarray, const Selector<double>& rate)    {
 		for (int i=0; i<matrixarray.GetSize(); i++)	{
             AddSuffStat(matrixarray.GetVal(i),pathsuffstatarray.GetVal(i),rate.GetVal(i));
         }

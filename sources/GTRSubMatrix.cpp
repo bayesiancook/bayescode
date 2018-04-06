@@ -24,16 +24,6 @@ void GTRSubMatrix::CopyStationary(const std::vector<double>& instat) {
 
 void GTRSubMatrix::ComputeArray(int i) const {
 
-    double tot = 0;
-	for (int j = 0; j < Nstate; j++) {
-        tot += mStationary[j];
-    }
-    if (fabs(tot-1) > 1e-4) {
-        cerr << "error in GTRSubMatrix::ComputeArray\n";
-        cerr << "stat not normalized\n";
-        exit(1);
-    }
-
 	double total = 0;
 	for (int j = 0; j < Nstate; j++) {
 	    if (i != j) {

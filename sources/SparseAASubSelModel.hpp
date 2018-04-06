@@ -10,12 +10,12 @@
 #include "IIDMultiBernoulli.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
 #include "IIDProfileMask.hpp"
-#include "GTRSubMatrixArray.hpp"
+#include "AASubSelSubMatrixArray.hpp"
 #include "PathSuffStat.hpp"
 #include "MultiGammaSuffStat.hpp"
 #include "GTRSuffStat.hpp"
 
-class SparseCATGTRModel : public ProbModel    {
+class SparseAASubSelModel : public ProbModel    {
 
     // -----
     // external parameters
@@ -65,7 +65,7 @@ class SparseCATGTRModel : public ProbModel    {
     MutSelSparseFitnessArray* profile;
 
     // an array of site-specific matrices
-	GTRSubMatrixArray* sitematrixarray;
+	AASubSelSubMatrixArray* sitematrixarray;
 
     // phyloprocess
     PhyloProcess* phyloprocess;
@@ -73,7 +73,6 @@ class SparseCATGTRModel : public ProbModel    {
     // suff stats
 	PathSuffStatArray* sitepathsuffstatarray;
     RelRateSuffStat rrsuffstat;
-    ProfileSuffStatArray* siteprofilesuffstatarray;
 
     int blmode;
     int rrmode;
@@ -83,7 +82,7 @@ class SparseCATGTRModel : public ProbModel    {
 
     public:
 
-    SparseCATGTRModel(const string& datafile, const string& treefile, int inratemode, double inepsilon) : rrsuffstat(Naa) {
+    SparseAASubSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon) : rrsuffstat(Naa) {
 
         blmode = 0;
         rrmode = 0;
@@ -108,9 +107,9 @@ class SparseCATGTRModel : public ProbModel    {
         ReadFiles(datafile, treefile);
     }
 
-    SparseCATGTRModel(const SparseCATGTRModel& from) = delete;
+    SparseAASubSelModel(const SparseAASubSelModel& from) = delete;
 
-    ~SparseCATGTRModel() {}
+    ~SparseAASubSelModel() {}
 
     //! read data and tree files
     void ReadFiles(string datafile, string treefile) {
@@ -183,14 +182,13 @@ class SparseCATGTRModel : public ProbModel    {
         profile = new MutSelSparseFitnessArray(*preprofile,*sitemaskarray,maskepsilon);
         
         // mut sel matrices (based on the profiles of the mixture)
-        sitematrixarray = new GTRSubMatrixArray(relrate, profile,false);
+        sitematrixarray = new AASubSelSubMatrixArray(relrate, profile,false);
 
 		phyloprocess = new PhyloProcess(tree,data,branchlength,siterate,sitematrixarray);
 		phyloprocess->Unfold();
 
         // create suffstat arrays
 		sitepathsuffstatarray = new PathSuffStatArray(Nsite);
-        siteprofilesuffstatarray = new ProfileSuffStatArray(Nsite,Naa);
     }
 
     void SetBLMode(int in)   {
@@ -437,14 +435,12 @@ class SparseCATGTRModel : public ProbModel    {
 
     //! return log prob of the current substitution mapping, as a function of the current substitution process
 	double SuffStatLogProb() const {
-        // return sitepathsuffstatarray->GetLogProb(*sitematrixarray);
-        return siteprofilesuffstatarray->GetLogProb(*profile);
+        return sitepathsuffstatarray->GetLogProb(*sitematrixarray);
 	}
 
     //! return log prob of the substitution mappings for site i
     double SiteSuffStatLogProb(int i) const {
-        // return sitepathsuffstatarray->GetVal(i).GetLogProb(sitematrixarray->GetVal(i));
-        return siteprofilesuffstatarray->GetVal(i).GetLogProb(profile->GetVal(i));
+        return sitepathsuffstatarray->GetVal(i).GetLogProb(sitematrixarray->GetVal(i));
     }
 
     //! \brief return log prob of current branch lengths, as a function of branch lengths hyperparameter lambda
@@ -505,7 +501,6 @@ class SparseCATGTRModel : public ProbModel    {
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
-                CollectProfileSuffStat();
                 MovePreProfile();
                 CompMovePreProfile();
                 if (maskmode < 3)   {
@@ -552,8 +547,8 @@ class SparseCATGTRModel : public ProbModel    {
 	void MoveLambda()	{
 		hyperlengthsuffstat.Clear();
 		hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda,1.0,10,&SparseCATGTRModel::BranchLengthsHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
-        ScalingMove(lambda,0.3,10,&SparseCATGTRModel::BranchLengthsHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
+        ScalingMove(lambda,1.0,10,&SparseAASubSelModel::BranchLengthsHyperLogProb,&SparseAASubSelModel::NoUpdate,this);
+        ScalingMove(lambda,0.3,10,&SparseAASubSelModel::BranchLengthsHyperLogProb,&SparseAASubSelModel::NoUpdate,this);
         blhypermean->SetAllBranches(1.0/lambda);
 	}
 
@@ -570,8 +565,8 @@ class SparseCATGTRModel : public ProbModel    {
     void MoveAlpha()    {
         siteratehypersuffstat.Clear();
         siteratehypersuffstat.AddSuffStat(*siterate);
-        ScalingMove(alpha,1.0,10,&SparseCATGTRModel::SiteRateHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
-        ScalingMove(alpha,0.3,10,&SparseCATGTRModel::SiteRateHyperLogProb,&SparseCATGTRModel::NoUpdate,this);
+        ScalingMove(alpha,1.0,10,&SparseAASubSelModel::SiteRateHyperLogProb,&SparseAASubSelModel::NoUpdate,this);
+        ScalingMove(alpha,0.3,10,&SparseAASubSelModel::SiteRateHyperLogProb,&SparseAASubSelModel::NoUpdate,this);
         siterate->SetShape(alpha);
         siterate->SetScale(alpha);
 	}
@@ -579,11 +574,6 @@ class SparseCATGTRModel : public ProbModel    {
     void CollectRelRateSuffStat()   {
         rrsuffstat.Clear();
         rrsuffstat.AddSuffStat(*sitematrixarray,*sitepathsuffstatarray);
-    }
-
-    void CollectProfileSuffStat()   {
-        siteprofilesuffstatarray->Clear();
-        siteprofilesuffstatarray->AddSuffStat(*sitematrixarray,*sitepathsuffstatarray);
     }
 
     //! MH moves on relative exchange rates
@@ -785,14 +775,14 @@ class SparseCATGTRModel : public ProbModel    {
 
     //! MH move schedule on hyperparameter of mask across sites (maskprob, or pi)
     void MoveMaskHyperParameters()  {
-        SlidingMove(pi,1.0,10,0.05,0.975,&SparseCATGTRModel::MaskLogProb,&SparseCATGTRModel::UpdateMask,this);
-        SlidingMove(pi,0.1,10,0.05,0.975,&SparseCATGTRModel::MaskLogProb,&SparseCATGTRModel::UpdateMask,this);
+        SlidingMove(pi,1.0,10,0.05,0.975,&SparseAASubSelModel::MaskLogProb,&SparseAASubSelModel::UpdateMask,this);
+        SlidingMove(pi,0.1,10,0.05,0.975,&SparseAASubSelModel::MaskLogProb,&SparseAASubSelModel::UpdateMask,this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon()  {
-        SlidingMove(maskepsilon,1.0,10,0,1.0,&SparseCATGTRModel::MaskEpsilonLogProb,&SparseCATGTRModel::UpdateAll,this);
-        SlidingMove(maskepsilon,0.1,10,0,1.0,&SparseCATGTRModel::MaskEpsilonLogProb,&SparseCATGTRModel::UpdateAll,this);
+        SlidingMove(maskepsilon,1.0,10,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
+        SlidingMove(maskepsilon,0.1,10,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
     }
 
     //! MH move on masks across sites
