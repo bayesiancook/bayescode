@@ -44,8 +44,8 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix, public vir
         CorruptMatrix();
     }
 
-    void ComputeArray(int i) const /*override*/;
-    void ComputeStationary() const /*override*/;
+    void ComputeArray(int i) const override;
+    void ComputeStationary() const override;
 
     // data members
 

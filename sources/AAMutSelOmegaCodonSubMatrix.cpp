@@ -44,7 +44,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
                 } else if (deltaS < -50) {
                     Q(i,j) = 0;
                 }
-                if (deltaS != 0) {
+                else    {
                     Q(i,j) *= deltaS / (1.0 - exp(-deltaS));
                 }
                 if (!Synonymous(i, j)) {
