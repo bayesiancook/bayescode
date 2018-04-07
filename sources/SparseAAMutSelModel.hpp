@@ -59,8 +59,10 @@ class SparseAAMutSelModel : public ProbModel    {
     IIDMultiGamma* preprofile;
 
     double maskepsilon;
-    double pi;
-    IIDProfileMask* sitemaskarray;
+    // double pi;
+    // IIDProfileMask* sitemaskarray;
+    vector<double> pi;
+    ProfileMask* sitemaskarray;
 
     // across conditions and across sites
     MutSelSparseFitnessArray* profile;
@@ -200,8 +202,10 @@ class SparseAAMutSelModel : public ProbModel    {
             preprofile->SetUniform();
         }
 
-        pi = 0.1;
-        sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
+        // pi = 0.1;
+        // sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
+        pi.assign(Naa,0.1);
+        sitemaskarray = new ProfileMask(Nsite,pi);
         FitSiteMaskArray();
 
         profile = new MutSelSparseFitnessArray(*preprofile,*sitemaskarray,maskepsilon);
@@ -336,7 +340,7 @@ class SparseAAMutSelModel : public ProbModel    {
 
     //! update parameters of sitemaskarray (probability parameter pi)
     void UpdateMask()   {
-        sitemaskarray->SetPi(pi);
+        // sitemaskarray->SetPi(pi);
     }
 
     // ---------------
@@ -764,8 +768,10 @@ class SparseAAMutSelModel : public ProbModel    {
 
     //! MH move schedule on hyperparameter of mask across sites (maskprob, or pi)
     void MoveMaskHyperParameters()  {
-        SlidingMove(pi,1.0,10,0.05,0.975,&SparseAAMutSelModel::MaskLogProb,&SparseAAMutSelModel::UpdateMask,this);
-        SlidingMove(pi,0.1,10,0.05,0.975,&SparseAAMutSelModel::MaskLogProb,&SparseAAMutSelModel::UpdateMask,this);
+        for (int k=0; k<Naa; k++)   {
+            SlidingMove(pi[k],1.0,10,0.05,0.975,&SparseAAMutSelModel::MaskLogProb,&SparseAAMutSelModel::UpdateMask,this);
+            SlidingMove(pi[k],0.1,10,0.05,0.975,&SparseAAMutSelModel::MaskLogProb,&SparseAAMutSelModel::UpdateMask,this);
+        }
     }
 
     //! MH move schedule on background fitness (maskepsilon)
@@ -837,7 +843,9 @@ class SparseAAMutSelModel : public ProbModel    {
         if (ratemode == 1)  {
             os << "alpha\tmeanrate\tvarrate\t";
         }
-        os << "pi\t";
+        // os << "pi\t";
+        os << "meanpi\t";
+        os << "varpi\t";
         os << "width\t";
         os << "epsilon\t";
         os << "kappa\t";
@@ -859,7 +867,9 @@ class SparseAAMutSelModel : public ProbModel    {
             os << alpha << '\t';
             os << GetMeanSiteRate() << '\t' << GetVarSiteRate() << '\t';
         }
-        os << pi << '\t';
+        // os << pi << '\t';
+        os << GetMeanPi() << '\t';
+        os << GetVarPi() << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
         os << kappa << '\t';
@@ -870,6 +880,28 @@ class SparseAAMutSelModel : public ProbModel    {
             os << gc << '\t';
         }
         os << '\n';
+    }
+
+    double GetMeanPi() const    {
+        double mean = 0;
+        for (int k=0; k<Naa; k++)   {
+            mean += pi[k];
+        }
+        mean /= Naa;
+        return mean;
+    }
+
+    double GetVarPi() const {
+        double mean = 0;
+        double var = 0;
+        for (int k=0; k<Naa; k++)   {
+            mean += pi[k];
+            var += pi[k]*pi[k];
+        }
+        mean /= Naa;
+        var /= Naa;
+        var -= mean*mean;
+        return var;
     }
 
     double GetMeanSiteRate() const  {
@@ -964,7 +996,8 @@ class SparseAAMutSelModel : public ProbModel    {
             size += preprofile->GetMPISize();
         }
         if (maskmode < 2)   {
-            size++;
+            // size++;
+            size += Naa;
         }
         if (maskmode < 3)   {
             size += sitemaskarray->GetMPISize();
