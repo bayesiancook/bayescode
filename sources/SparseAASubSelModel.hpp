@@ -94,7 +94,7 @@ class SparseAASubSelModel : public ProbModel    {
         blmode = 0;
         rrmode = 0;
         ratemode = inratemode;
-        profilemode = 0;
+        profilemode = inprofilemode;
 
         if (inepsilon == 1)   {
             maskepsilon = 1;
@@ -189,6 +189,7 @@ class SparseAASubSelModel : public ProbModel    {
 
         pi = 0.1;
         sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
+        FitSiteMaskArray();
 
         profile = new MutSelSparseFitnessArray(*preprofile,*sitemaskarray,maskepsilon);
         
@@ -230,6 +231,20 @@ class SparseAASubSelModel : public ProbModel    {
         for (int i=0; i<GetNrr(); i++)  {
             // relrate[i] = Random::Gamma(10,1.0);
             relrate[i] = Random::Gamma(relratehypercenter[i]/relratehyperinvconc,1.0);
+        }
+    }
+
+    void FitSiteMaskArray() {
+        for (int i=0; i<Nsite; i++)    {
+            vector<int>& x = (*sitemaskarray)[i];
+            for (int k=0; k<Naa; k++)   {
+                x[k] = 0;
+            }
+            for (int j=0; j<Ntaxa; j++) {
+                if (data->GetState(j,i) != unknown) {
+                    x[data->GetState(j,i)] = 1;
+                }
+            }
         }
     }
 
@@ -846,7 +861,7 @@ class SparseAASubSelModel : public ProbModel    {
                     naa -= mask[k];
                     mask[k] = 1-mask[k];
                     naa += mask[k];
-                    if (mask[k])    {
+                    if ((profilemode < 2) && mask[k])    {
                         (*preprofile)[i][k] = Random::sGamma(profileshape * profilecenter[k]);
                         if (! (*preprofile)[i][k]) {
                             (*preprofile)[i][k] = 1e-8;

@@ -78,15 +78,17 @@ class SparseAAMutSelModel : public ProbModel    {
     int maskepsilonmode;
     int maskmode;
     int ratemode;
+    int profilemode;
     int ximode;
     int gcmode;
 
     public:
 
-    SparseAAMutSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon, double ingc, double inxi)   {
+    SparseAAMutSelModel(const string& datafile, const string& treefile, int inratemode, int inprofilemode, double inepsilon, double ingc, double inxi)   {
 
         blmode = 0;
         ratemode = inratemode;
+        profilemode = inprofilemode;
 
         if (inepsilon == 1)   {
             maskepsilon = 1;
@@ -194,9 +196,13 @@ class SparseAAMutSelModel : public ProbModel    {
         profileshape = 20.0;
         profilecenter.assign(Naa,1.0/Naa);
         preprofile = new IIDMultiGamma(Nsite,Naa,profileshape,profilecenter);
+        if (profilemode == 3)   {
+            preprofile->SetUniform();
+        }
 
         pi = 0.1;
         sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
+        FitSiteMaskArray();
 
         profile = new MutSelSparseFitnessArray(*preprofile,*sitemaskarray,maskepsilon);
         
@@ -214,12 +220,34 @@ class SparseAAMutSelModel : public ProbModel    {
         blmode = in;
     }
 
+    void SetProfileMode(int in)   {
+        profilemode = in;
+    }
+
+    void SetRateMode(int in)   {
+        ratemode = in;
+    }
+
     void SetMaskMode(int in)    {
         maskmode = in;
     }
 
     void SetMaskEpsilonMode(int in)    {
         maskepsilonmode = in;
+    }
+
+    void FitSiteMaskArray() {
+        for (int i=0; i<Nsite; i++)    {
+            vector<int>& x = (*sitemaskarray)[i];
+            for (int k=0; k<Naa; k++)   {
+                x[k] = 0;
+            }
+            for (int j=0; j<Ntaxa; j++) {
+                if (data->GetState(j,i) != unknown) {
+                    x[data->GetState(j,i)] = 1;
+                }
+            }
+        }
     }
 
     // ------------------
@@ -494,8 +522,10 @@ class SparseAAMutSelModel : public ProbModel    {
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
-                MovePreProfile(10);
-                CompMovePreProfile(3);
+                if (profilemode < 2)    {
+                    MovePreProfile(10);
+                    CompMovePreProfile(3);
+                }
                 if (maskmode < 3)   {
                     MoveMasks(20);
                 }
@@ -765,7 +795,7 @@ class SparseAAMutSelModel : public ProbModel    {
                     naa -= mask[k];
                     mask[k] = 1-mask[k];
                     naa += mask[k];
-                    if (mask[k])    {
+                    if ((profilemode < 2) && mask[k])    {
                         (*preprofile)[i][k] = Random::sGamma(profileshape * profilecenter[k]);
                         if (! (*preprofile)[i][k]) {
                             (*preprofile)[i][k] = 1e-8;
@@ -880,7 +910,9 @@ class SparseAAMutSelModel : public ProbModel    {
         if (gcmode < 2) {
             is >> gc;
         }
-        is >> *preprofile;
+        if (profilemode < 2)    {
+            is >> *preprofile;
+        }
         if (maskmode < 2)   {
             is >> pi;
         }
@@ -905,7 +937,9 @@ class SparseAAMutSelModel : public ProbModel    {
         if (gcmode < 2) {
             os << gc << '\t';
         }
-        os << *preprofile << '\t';
+        if (profilemode < 2)    {
+            os << *preprofile << '\t';
+        }
         if (maskmode < 2)   {
             os << pi << '\t';
         }
@@ -926,7 +960,9 @@ class SparseAAMutSelModel : public ProbModel    {
         }
         // mut rates
         size += 3;
-        size += preprofile->GetMPISize();
+        if (profilemode < 2)    {
+            size += preprofile->GetMPISize();
+        }
         if (maskmode < 2)   {
             size++;
         }
@@ -952,7 +988,9 @@ class SparseAAMutSelModel : public ProbModel    {
         if (gcmode < 2) {
             is >> gc;
         }
-        is >> *preprofile;
+        if (profilemode < 2)    {
+            is >> *preprofile;
+        }
         if (maskmode < 2)   {
             is >> pi;
         }
@@ -977,7 +1015,9 @@ class SparseAAMutSelModel : public ProbModel    {
         if (gcmode < 2) {
             os << gc;
         }
-        os << *preprofile;
+        if (profilemode < 2)    {
+            os << *preprofile;
+        }
         if (maskmode < 2)   {
             os << pi;
         }

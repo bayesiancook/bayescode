@@ -16,6 +16,7 @@ class SparseAAMutSelChain : public Chain  {
     // -1: estimated
     // 1 : no mask
     int ratemode;
+    int profilemode;
     double epsilon;
     double gc;
     double xi;
@@ -27,7 +28,7 @@ class SparseAAMutSelChain : public Chain  {
 
     string GetModelType() override { return modeltype; }
 
-    SparseAAMutSelChain(string indatafile, string intreefile, int inratemode, double inepsilon, double ingc, double inxi, int inevery, int inuntil, string inname, int force) : modeltype("SPARSEAASUBSEL"), datafile(indatafile), treefile(intreefile), ratemode(inratemode), epsilon(inepsilon), gc(ingc), xi(inxi) {
+    SparseAAMutSelChain(string indatafile, string intreefile, int inratemode, int inprofilemode, double inepsilon, double ingc, double inxi, int inevery, int inuntil, string inname, int force) : modeltype("SPARSEAASUBSEL"), datafile(indatafile), treefile(intreefile), ratemode(inratemode), profilemode(inprofilemode), epsilon(inepsilon), gc(ingc), xi(inxi) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -41,7 +42,7 @@ class SparseAAMutSelChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new SparseAAMutSelModel(datafile,treefile,ratemode,epsilon,gc,xi);
+        model = new SparseAAMutSelModel(datafile,treefile,ratemode,profilemode,epsilon,gc,xi);
         GetModel()->Allocate();
         GetModel()->Update();
         Reset(force);
@@ -58,6 +59,7 @@ class SparseAAMutSelChain : public Chain  {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ratemode;
+        is >> profilemode;
         is >> epsilon;
         is >> gc;
         is >> xi;
@@ -70,7 +72,7 @@ class SparseAAMutSelChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "SPARSEAASUBSEL") {
-            model = new SparseAAMutSelModel(datafile,treefile,ratemode,epsilon,gc,xi);
+            model = new SparseAAMutSelModel(datafile,treefile,ratemode,profilemode,epsilon,gc,xi);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -88,6 +90,7 @@ class SparseAAMutSelChain : public Chain  {
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
         param_os << ratemode << '\n';
+        param_os << profilemode << '\n';
         param_os << epsilon << '\n';
         param_os << gc << '\n';
         param_os << xi << '\n';
@@ -116,6 +119,7 @@ int main(int argc, char* argv[])	{
         double xi = 0;
         double gc = 0.5;
         int ratemode = 0;
+        int profilemode = 0;
         name = "";
         int force = 1;
         int every = 1;
@@ -178,6 +182,9 @@ int main(int argc, char* argv[])	{
                 else if (s == "-cgam")  {
                     ratemode = 1;
                 }
+                else if (s == "-flat")  {
+                    profilemode = 3;
+                }
                 else if ( (s == "-x") || (s == "-extract") )	{
                     i++;
                     if (i == argc) throw(0);
@@ -204,7 +211,7 @@ int main(int argc, char* argv[])	{
             exit(1);
         }
 
-        chain = new SparseAAMutSelChain(datafile,treefile,ratemode,epsilon,gc,xi,every,until,name,force);
+        chain = new SparseAAMutSelChain(datafile,treefile,ratemode,profilemode,epsilon,gc,xi,every,until,name,force);
     }
 
     cerr << "chain " << name << " started\n";
