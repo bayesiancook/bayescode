@@ -52,6 +52,15 @@ class IIDMultiGamma : public SimpleArray<vector<double> >    {
         }
     }
 
+    void SetUniform()   {
+        for (int i=0; i<GetSize(); i++) {
+            vector<double>& x = (*this)[i];
+            for (int k=0; k<GetDim(); k++)  {
+                x[k] = 1.0;
+            }
+        }
+    }
+
     //! return total log prob, summed over all entries
     double GetLogProb() const {
         double total = 0;
