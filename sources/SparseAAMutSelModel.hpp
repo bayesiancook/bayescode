@@ -78,10 +78,12 @@ class SparseAAMutSelModel : public ProbModel    {
     int maskepsilonmode;
     int maskmode;
     int ratemode;
+    int ximode;
+    int gcmode;
 
     public:
 
-    SparseAAMutSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon)   {
+    SparseAAMutSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon, double ingc, double inxi)   {
 
         blmode = 0;
         ratemode = inratemode;
@@ -100,6 +102,24 @@ class SparseAAMutSelModel : public ProbModel    {
             maskepsilonmode = 0;
             maskmode = 0;
             maskepsilon = 0.01;
+        }
+
+        xi = inxi;
+        if (xi == -1)   {
+            ximode = 0;
+            xi = 0.01;
+        }
+        else    {
+            ximode = 3;
+        }
+
+        gc = ingc;
+        if (gc == -1)   {
+            gcmode = 0;
+            gc = 0.5;
+        }
+        else    {
+            gcmode = 3;
         }
 
         ReadFiles(datafile, treefile);
@@ -166,9 +186,8 @@ class SparseAAMutSelModel : public ProbModel    {
 
         // mutation rate parameters
         kappa = 2.0;
-        gc = 0.4;
-        // xi = 0;
-        xi = 0.01;
+        // xi = 0.01;
+        // gc = 0.4;
         nucmatrix = new T92SubMatrix(kappa,gc,true);
         codonstatespace = new CodonStateSpace(Universal);
 
@@ -339,7 +358,11 @@ class SparseAAMutSelModel : public ProbModel    {
     }
 
     double NucRateLogPrior() const {
-        return -kappa/10 - 10*xi;
+        double ret = -kappa/10;
+        if (ximode < 2) {
+           ret -= 10*xi;
+        }
+        return ret;
     }
 
     //! log prior over mask array hyperparameters
@@ -454,7 +477,7 @@ class SparseAAMutSelModel : public ProbModel    {
     //! \brief complete MCMC move schedule
 	double Move() override {
         ResampleSub(1.0);
-        MoveParameters(3,10);
+        MoveParameters(3,1);
         return 1.0;
 	}
 
@@ -471,16 +494,16 @@ class SparseAAMutSelModel : public ProbModel    {
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
-                MovePreProfile();
-                CompMovePreProfile();
+                MovePreProfile(10);
+                CompMovePreProfile(3);
                 if (maskmode < 3)   {
-                    MoveMasks();
+                    MoveMasks(20);
                 }
                 if (maskmode < 2)   {
                     MoveMaskHyperParameters();
                 }
                 if (maskepsilonmode < 2)    {
-                    MoveMaskEpsilon();
+                    MoveMaskEpsilon(10);
                 }
             }
             MoveNucRate();
@@ -524,10 +547,12 @@ class SparseAAMutSelModel : public ProbModel    {
         ScalingMove(kappa,1.0,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
         ScalingMove(kappa,0.3,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
         ScalingMove(kappa,0.1,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
-        SlidingMove(gc,1.0,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
-        SlidingMove(gc,0.3,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
-        SlidingMove(gc,0.1,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
-        if (xi) {
+        if (gcmode < 2) {
+            SlidingMove(gc,1.0,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
+            SlidingMove(gc,0.3,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
+            SlidingMove(gc,0.1,3,0,1.0,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
+        }
+        if (ximode < 2) {
             ScalingMove(xi,1.0,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
             ScalingMove(xi,0.3,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
             ScalingMove(xi,0.1,3,&SparseAAMutSelModel::NucRateLogProb,&SparseAAMutSelModel::CorruptMatrices,this);
@@ -554,8 +579,8 @@ class SparseAAMutSelModel : public ProbModel    {
 	}
 
     //! MH compensatory move schedule on parameters and hyper-parameters
-    void CompMovePreProfile()  {
-        CompMovePreProfile(1.0,3);
+    void CompMovePreProfile(int nrep)  {
+        CompMovePreProfile(1.0,nrep);
     }
 
     //! \brief MH compensatory move on parameters and hyper-parameters
@@ -621,18 +646,18 @@ class SparseAAMutSelModel : public ProbModel    {
     }
 
     //! MH move schedule on baseline gamma parameters (for condition k=0)
-    void MovePreProfile() {
+    void MovePreProfile(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset of entries over the 20 amino-acids (2d parameter of call)
         if (maskmode == 3)  {
-            MovePreProfileAll(1.0, 1, 3);
-            MovePreProfileAll(1.0, 3, 3);
-            MovePreProfileAll(1.0, 20, 3);
-            MovePreProfileAll(0.3, 20, 3);
+            MovePreProfileAll(1.0, 1, 10);
+            MovePreProfileAll(1.0, 3, 10);
+            MovePreProfileAll(1.0, 20, 10);
+            MovePreProfileAll(0.3, 20, 10);
         }
         // if masks are activated, move all active entries
         else    {
-            MovePreProfile(1.0, 3);
-            MovePreProfile(0.3, 3);
+            MovePreProfile(1.0, 10);
+            MovePreProfile(0.3, 10);
         }
     }
 
@@ -714,13 +739,13 @@ class SparseAAMutSelModel : public ProbModel    {
     }
 
     //! MH move schedule on background fitness (maskepsilon)
-    void MoveMaskEpsilon()  {
-        SlidingMove(maskepsilon,1.0,3,0,1.0,&SparseAAMutSelModel::MaskEpsilonLogProb,&SparseAAMutSelModel::UpdateAll,this);
-        SlidingMove(maskepsilon,0.1,3,0,1.0,&SparseAAMutSelModel::MaskEpsilonLogProb,&SparseAAMutSelModel::UpdateAll,this);
+    void MoveMaskEpsilon(int nrep)  {
+        SlidingMove(maskepsilon,1.0,nrep,0,1.0,&SparseAAMutSelModel::MaskEpsilonLogProb,&SparseAAMutSelModel::UpdateAll,this);
+        SlidingMove(maskepsilon,0.1,nrep,0,1.0,&SparseAAMutSelModel::MaskEpsilonLogProb,&SparseAAMutSelModel::UpdateAll,this);
     }
 
     //! MH move on masks across sites
-    double MoveMasks()    {
+    double MoveMasks(int nrep)    {
 		double nacc = 0;
 		double ntot = 0;
         for (int i=0; i<Nsite; i++) {
@@ -729,7 +754,12 @@ class SparseAAMutSelModel : public ProbModel    {
             for (int k=0; k<Naa; k++)   {
                 naa += mask[k];
             }
-            for (int k=0; k<Naa; k++)   {
+            for (int rep=0; rep<nrep; rep++)    {
+                int k = (int) (Naa * Random::Uniform());
+                if (nrep == 20) {
+                    k = rep;
+                }
+                // for (int k=0; k<Naa; k++)   {
                 if ((!mask[k]) || (naa > 1))    {
                     double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
                     naa -= mask[k];
@@ -780,10 +810,14 @@ class SparseAAMutSelModel : public ProbModel    {
         os << "pi\t";
         os << "width\t";
         os << "epsilon\t";
-        os << "statent\t";
         os << "kappa\t";
-        os << "xi\t";
-        os << "gc\n";
+        if (ximode < 2) {
+            os << "xi\t";
+        }
+        if (gcmode < 2) {
+            os << "gc\t";
+        }
+        os << '\n';
     }
 
     //! write trace (one line summarizing current state) into trace file
@@ -798,7 +832,14 @@ class SparseAAMutSelModel : public ProbModel    {
         os << pi << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
-        os << kappa << '\t' << xi << '\t' << gc << '\n';
+        os << kappa << '\t';
+        if (ximode < 2) {
+            os << xi << '\t';
+        }
+        if (gcmode < 2) {
+            os << gc << '\t';
+        }
+        os << '\n';
     }
 
     double GetMeanSiteRate() const  {
@@ -833,8 +874,12 @@ class SparseAAMutSelModel : public ProbModel    {
             is >> *branchlength;
         }
         is >> kappa;
-        is >> xi;
-        is >> gc;
+        if (ximode < 2) {
+            is >> xi;
+        }
+        if (gcmode < 2) {
+            is >> gc;
+        }
         is >> *preprofile;
         if (maskmode < 2)   {
             is >> pi;
@@ -854,8 +899,12 @@ class SparseAAMutSelModel : public ProbModel    {
             os << *branchlength << '\t';
         }
         os << kappa << '\t';
-        os << xi << '\t';
-        os << gc << '\t';
+        if (ximode < 2) {
+            os << xi << '\t';
+        }
+        if (gcmode < 2) {
+            os << gc << '\t';
+        }
         os << *preprofile << '\t';
         if (maskmode < 2)   {
             os << pi << '\t';
@@ -896,7 +945,13 @@ class SparseAAMutSelModel : public ProbModel    {
             is >> lambda;
             is >> *branchlength;
         }
-        is >> kappa >> xi >> gc;
+        is >> kappa;
+        if (ximode < 2) {
+            is >> xi;
+        }
+        if (gcmode < 2) {
+            is >> gc;
+        }
         is >> *preprofile;
         if (maskmode < 2)   {
             is >> pi;
@@ -915,7 +970,13 @@ class SparseAAMutSelModel : public ProbModel    {
             os << lambda;
             os << *branchlength;
         }
-        os << kappa << xi << gc;
+        os << kappa;
+        if (ximode < 2) {
+            os << xi;
+        }
+        if (gcmode < 2) {
+            os << gc;
+        }
         os << *preprofile;
         if (maskmode < 2)   {
             os << pi;

@@ -80,6 +80,12 @@ class SparseAASubSelModel : public ProbModel    {
     int maskmode;
     int ratemode;
 
+    Chrono totchrono;
+    Chrono subchrono;
+    Chrono paramchrono;
+    Chrono profilechrono;
+    Chrono maskchrono;
+
     public:
 
     SparseAASubSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon) : rrsuffstat(Naa) {
@@ -483,8 +489,20 @@ class SparseAASubSelModel : public ProbModel    {
 
     //! \brief complete MCMC move schedule
 	double Move() override {
+        totchrono.Reset();
+        subchrono.Reset();
+        paramchrono.Reset();
+        profilechrono.Reset();
+        maskchrono.Reset();
+
+        totchrono.Start();
+        subchrono.Start();
         ResampleSub(1.0);
-        MoveParameters(3,10);
+        subchrono.Stop();
+        paramchrono.Start();
+        MoveParameters(3,1);
+        paramchrono.Stop();
+        totchrono.Stop();
         return 1.0;
 	}
 
@@ -501,18 +519,25 @@ class SparseAASubSelModel : public ProbModel    {
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
-                MovePreProfile();
-                CompMovePreProfile();
+
+                profilechrono.Start();
+                MovePreProfile(10);
+                CompMovePreProfile(3);
+                profilechrono.Stop();
+
+                maskchrono.Start();
                 if (maskmode < 3)   {
-                    MoveMasks();
+                    MoveMasks(20);
                 }
                 if (maskmode < 2)   {
                     MoveMaskHyperParameters();
                 }
                 if (maskepsilonmode < 2)    {
-                    MoveMaskEpsilon();
+                    MoveMaskEpsilon(10);
                 }
+                maskchrono.Stop();
             }
+
             if (rrmode < 2)    {
                 MoveRelRates();
                 RelRateLengthCompMoveSchedule(10);
@@ -620,8 +645,8 @@ class SparseAASubSelModel : public ProbModel    {
     }
 
     //! MH compensatory move schedule on parameters and hyper-parameters
-    void CompMovePreProfile()  {
-        CompMovePreProfile(1.0,10);
+    void CompMovePreProfile(int nrep)  {
+        CompMovePreProfile(1.0,nrep);
     }
 
     //! \brief MH compensatory move on parameters and hyper-parameters
@@ -639,7 +664,7 @@ class SparseAASubSelModel : public ProbModel    {
                 vector<double>& x = (*preprofile)[i];
                 const vector<int>& mask = (*sitemaskarray)[i];
 
-                double deltalogprob = 0;
+                double deltalogprob = - SiteSuffStatLogProb(i);
 
                 for (int a=0; a<Naa; a++)   {
                     if (mask[a])	{
@@ -668,6 +693,9 @@ class SparseAASubSelModel : public ProbModel    {
                     }
                 }
 
+                UpdateSite(i);
+                deltalogprob += SiteSuffStatLogProb(i);
+
                 deltalogprob += loghastings;
 
                 int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -679,6 +707,7 @@ class SparseAASubSelModel : public ProbModel    {
                             x[a] /= e;
                         }
                     }
+                    UpdateSite(i);
                 }
                 ntot++;
             }
@@ -687,18 +716,18 @@ class SparseAASubSelModel : public ProbModel    {
     }
 
     //! MH move schedule on baseline gamma parameters (for condition k=0)
-    void MovePreProfile() {
+    void MovePreProfile(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset of entries over the 20 amino-acids (2d parameter of call)
         if (maskmode == 3)  {
-            MovePreProfileAll(1.0, 1, 10);
-            MovePreProfileAll(1.0, 3, 10);
-            MovePreProfileAll(1.0, 20, 10);
-            MovePreProfileAll(0.3, 20, 10);
+            MovePreProfileAll(1.0, 1, nrep);
+            MovePreProfileAll(1.0, 3, nrep);
+            MovePreProfileAll(1.0, 20, nrep);
+            MovePreProfileAll(0.3, 20, nrep);
         }
         // if masks are activated, move all active entries
         else    {
-            MovePreProfile(1.0, 10);
-            MovePreProfile(0.3, 10);
+            MovePreProfile(1.0, nrep);
+            MovePreProfile(0.3, nrep);
         }
     }
 
@@ -780,13 +809,13 @@ class SparseAASubSelModel : public ProbModel    {
     }
 
     //! MH move schedule on background fitness (maskepsilon)
-    void MoveMaskEpsilon()  {
-        SlidingMove(maskepsilon,1.0,10,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
-        SlidingMove(maskepsilon,0.1,10,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
+    void MoveMaskEpsilon(int nrep)  {
+        SlidingMove(maskepsilon,1.0,nrep,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
+        SlidingMove(maskepsilon,0.1,nrep,0,1.0,&SparseAASubSelModel::MaskEpsilonLogProb,&SparseAASubSelModel::UpdateAll,this);
     }
 
     //! MH move on masks across sites
-    double MoveMasks()    {
+    double MoveMasks(int nrep)    {
 		double nacc = 0;
 		double ntot = 0;
         for (int i=0; i<Nsite; i++) {
@@ -795,7 +824,12 @@ class SparseAASubSelModel : public ProbModel    {
             for (int k=0; k<Naa; k++)   {
                 naa += mask[k];
             }
-            for (int k=0; k<Naa; k++)   {
+            for (int rep=0; rep<nrep; rep++)    {
+                int k = (int) (Naa * Random::Uniform());
+                if (nrep == 20) {
+                    k = rep;
+                }
+                // for (int k=0; k<Naa; k++)   {
                 if ((!mask[k]) || (naa > 1))    {
                     double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
                     naa -= mask[k];
@@ -913,7 +947,13 @@ class SparseAASubSelModel : public ProbModel    {
     }
 
     //! monitoring MCMC statistics
-    void Monitor(ostream&) const override {}
+    void Monitor(ostream& os) const override {
+        os << "tot   : " << totchrono.GetTime() << '\n';
+        os << "sub   : " << 100 * subchrono.GetTime() / totchrono.GetTime() << '\n';
+        os << "param : " << 100 * paramchrono.GetTime() / totchrono.GetTime() << '\n';
+        os << "prof  : " << 100 * profilechrono.GetTime() / totchrono.GetTime() << '\n';
+        os << "mask  : " << 100 * maskchrono.GetTime() / totchrono.GetTime() << '\n';
+    }
 
     //! get complete parameter configuration from stream
     void FromStream(istream& is) override {
