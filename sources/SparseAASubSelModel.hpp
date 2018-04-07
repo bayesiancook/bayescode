@@ -79,6 +79,7 @@ class SparseAASubSelModel : public ProbModel    {
     int maskepsilonmode;
     int maskmode;
     int ratemode;
+    int profilemode;
 
     Chrono totchrono;
     Chrono subchrono;
@@ -88,11 +89,12 @@ class SparseAASubSelModel : public ProbModel    {
 
     public:
 
-    SparseAASubSelModel(const string& datafile, const string& treefile, int inratemode, double inepsilon) : rrsuffstat(Naa) {
+    SparseAASubSelModel(const string& datafile, const string& treefile, int inratemode, int inprofilemode, double inepsilon) : rrsuffstat(Naa) {
 
         blmode = 0;
         rrmode = 0;
         ratemode = inratemode;
+        profilemode = 0;
 
         if (inepsilon == 1)   {
             maskepsilon = 1;
@@ -181,6 +183,9 @@ class SparseAASubSelModel : public ProbModel    {
         profileshape = 20.0;
         profilecenter.assign(Naa,1.0/Naa);
         preprofile = new IIDMultiGamma(Nsite,Naa,profileshape,profilecenter);
+        if (profilemode == 3)   {
+            preprofile->SetUniform();
+        }
 
         pi = 0.1;
         sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
@@ -203,6 +208,10 @@ class SparseAASubSelModel : public ProbModel    {
 
     void SetRelRateMode(int in) {
         rrmode = in;
+    }
+
+    void SetProfileMode(int in) {
+        profilemode = in;
     }
 
     void SetMaskMode(int in)    {
@@ -520,10 +529,12 @@ class SparseAASubSelModel : public ProbModel    {
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
 
-                profilechrono.Start();
-                MovePreProfile(10);
-                CompMovePreProfile(3);
-                profilechrono.Stop();
+                if (profilemode < 2)    {
+                    profilechrono.Start();
+                    MovePreProfile(10);
+                    CompMovePreProfile(3);
+                    profilechrono.Stop();
+                }
 
                 maskchrono.Start();
                 if (maskmode < 3)   {
@@ -880,7 +891,9 @@ class SparseAASubSelModel : public ProbModel    {
         os << "pi\t";
         os << "width\t";
         os << "epsilon\t";
-        os << "statent\t";
+        if (profilemode < 2)    {
+            os << "statent\t";
+        }
         os << "meanrr\t";
         os << "rrent\n";
     }
@@ -897,7 +910,9 @@ class SparseAASubSelModel : public ProbModel    {
         os << pi << '\t';
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
-        os << profile->GetMeanEntropy() << '\t';
+        if (profilemode < 2)    {
+            os << profile->GetMeanEntropy() << '\t';
+        }
         os << GetMeanRelRate() << '\t' << GetRelRateEntropy() << '\n';
     }
 
@@ -964,7 +979,9 @@ class SparseAASubSelModel : public ProbModel    {
         if (rrmode < 2)    {
             is >> relrate;
         }
-        is >> *preprofile;
+        if (profilemode < 2)    {
+            is >> *preprofile;
+        }
         if (maskmode < 2)   {
             is >> pi;
         }
@@ -985,7 +1002,9 @@ class SparseAASubSelModel : public ProbModel    {
         if (rrmode < 2)    {
             os << relrate << '\t';
         }
-        os << *preprofile << '\t';
+        if (profilemode < 2)    {
+            os << *preprofile << '\t';
+        }
         if (maskmode < 2)   {
             os << pi << '\t';
         }
@@ -1007,7 +1026,9 @@ class SparseAASubSelModel : public ProbModel    {
         if (rrmode < 2)    {
             size += relrate.size();
         }
-        size += preprofile->GetMPISize();
+        if (profilemode < 2)    {
+            size += preprofile->GetMPISize();
+        }
         if (maskmode < 2)   {
             size++;
         }
@@ -1029,7 +1050,9 @@ class SparseAASubSelModel : public ProbModel    {
         if (rrmode < 2)    {
             is >> relrate;
         }
-        is >> *preprofile;
+        if (profilemode < 2)    {
+            is >> *preprofile;
+        }
         if (maskmode < 2)   {
             is >> pi;
         }
@@ -1050,7 +1073,9 @@ class SparseAASubSelModel : public ProbModel    {
         if (rrmode < 2)    {
             os << relrate;
         }
-        os << *preprofile;
+        if (profilemode < 2)    {
+            os << *preprofile;
+        }
         if (maskmode < 2)   {
             os << pi;
         }
