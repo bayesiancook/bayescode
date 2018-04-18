@@ -27,7 +27,6 @@ class AnnotatedTree {
 
 class TreeParser {
   public:
-    // result guaranteed to be valid until next parse call
     virtual const AnnotatedTree& get_tree() const = 0;
     virtual ~TreeParser() = default;
 };
@@ -269,7 +268,5 @@ class NHXParser : public TreeParser {
         node_nothing(0, -1);
     }
 
-    const AnnotatedTree& get_tree() const final {
-        return tree;
-    }
+    const AnnotatedTree& get_tree() const final { return tree; }
 };
