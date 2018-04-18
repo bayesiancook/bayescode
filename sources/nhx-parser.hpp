@@ -28,7 +28,7 @@ class AnnotatedTree {
 class TreeParser {
   public:
     // result guaranteed to be valid until next parse call
-    virtual const AnnotatedTree& parse(std::istream&) = 0;
+    virtual const AnnotatedTree& get_tree() const = 0;
     virtual ~TreeParser() = default;
 };
 
@@ -105,7 +105,7 @@ class NHXParser : public TreeParser {
                                                   {Identifier, std::regex("[a-zA-Z0-9._-]+")}};
     using Token = std::pair<TokenType, std::string>;  // first: index of token, second: token value
 
-    // result to be returned
+    // input/output
     DoubleListAnnotatedTree tree;
 
     // state during parsing
@@ -261,12 +261,15 @@ class NHXParser : public TreeParser {
     }
 
   public:
-    const AnnotatedTree& parse(std::istream& is) final {
+    NHXParser(std::istream& is) {
         tree = DoubleListAnnotatedTree();
         tree.root_ = 0;
         input = std::string(std::istreambuf_iterator<char>(is), {});
         it = input.begin();
         node_nothing(0, -1);
+    }
+
+    const AnnotatedTree& get_tree() const final {
         return tree;
     }
 };

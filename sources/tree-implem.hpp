@@ -32,8 +32,6 @@ class DoubleVectorTree : public TreeTopology {
     bool is_leaf(NodeIndex i) const final { return children_.at(i).size() == 0; }
 };
 
-std::unique_ptr<TreeTopology> make_from_nhx_file(std::string filename) {
-    std::ifstream file(filename);
-    NHXParser parser{};
-    return std::unique_ptr<TreeTopology>(new DoubleVectorTree(parser.parse(file)));
+std::unique_ptr<TreeTopology> make_from_parser(NHXParser& parser) {
+    return std::unique_ptr<TreeTopology>(new DoubleVectorTree(parser.get_tree()));
 }
