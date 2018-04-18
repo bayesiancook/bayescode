@@ -14,5 +14,6 @@ class TreeTopology {
     virtual bool is_leaf(NodeIndex) const = 0;  // (for convenience)
     virtual bool is_root(NodeIndex) const = 0;  // (for convenience)
 
+    virtual ~TreeTopology() = default;
     // virtual const std::set<NodeIndex>& neighbors(NodeIndex) const = 0;  // for unrooted searches, non-negligible cost
 };

@@ -43,6 +43,9 @@ endif
 .PHONY: all clean
 all: $(PROGS)
 
+tree-test_bin: tree-test.cpp nhx-parser.hpp tree-interface.hpp tree-implem.hpp
+	$(CXX) $(CPPFLAGS) $< -o $@
+
 # Rules for generate the dependencies automatically
 
 %.d: %.cpp
