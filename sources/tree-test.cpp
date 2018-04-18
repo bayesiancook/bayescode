@@ -1,4 +1,5 @@
 #include "tree-implem.hpp"
+#include <fstream>
 
 int main() {
     std::ifstream file("../../nhx-parser/data/tree1.nhx");
