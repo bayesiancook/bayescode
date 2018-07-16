@@ -406,7 +406,22 @@ int main(int argc, char* argv[])	{
             }
         }
         catch(...)	{
-            cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper <hyperparamfile>] <chainname> \n";
+            cerr << '\n';
+            cerr << "mpirun -np <n> multigenecodonm8 -d <alignment_list> -t <tree> [-bl {shared|shrunken|ind} -nucrates {shared|shrunken|ind}] <chainname> \n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+            cerr << "\t-g: without gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+g: with gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+G: with gene- and site-specific output files\n";
+            cerr << "\tin all cases, complete information about chain state is saved in .chain and .param files\n";
+            cerr << "\t.chain: one line for each cycle\n";
+            cerr << "\t.param: state at the end of last cycle\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
             cerr << '\n';
             exit(1);
         }

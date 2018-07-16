@@ -355,7 +355,7 @@ void MultiGeneCodonM2aModel::MasterToStream(ostream& os) const  {
     os << *puromarray << '\t';
     os << *dposomarray << '\t';
     os << *purwarray << '\t';
-    os << *poswarray << '\t';
+    os << *poswarray << '\n';
 }
 
 //-------------------
