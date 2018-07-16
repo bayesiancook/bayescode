@@ -366,6 +366,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // selector, specifying which codon matrix should be used for each site
         sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray,sitealloc);
 
+        // create polyprocess
+
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitesubmatrixarray);
 		phyloprocess->Unfold();
 
@@ -667,13 +669,27 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
+    double PolySuffStatLogProb() const  {
+        // sum over all sites
+    }
+
+    double PolySuffStatLogProb(int site) const  {
+        // should have information about fixed states
+    }
+
+    double ComponentPolySuffStatLogProb(int k) const    {
+        // sum over all sites allocated to component k
+    }
+
     //! return log prob of the current substitution mapping, as a function of the current codon substitution process
 	double PathSuffStatLogProb() const {
+        // return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray) + PolySuffStatLogProb();
         return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 	}
 
     //! return log prob of the substitution mappings over sites allocated to component k of the mixture
     double PathSuffStatLogProb(int k) const {
+        // return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k)) + ComponentPolySuffStatLogProb(k);
         return componentpathsuffstatarray->GetVal(k).GetLogProb(componentcodonmatrixarray->GetVal(k));
     }
 

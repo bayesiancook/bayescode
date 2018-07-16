@@ -326,12 +326,17 @@ void PhyloProcess::Pruning(const Link *from, int site) const {
         if (from->isLeaf()) {
             int totcomp = 0;
             for (int k = 0; k < GetNstate(); k++) {
+                // if (polyprocess != nullptr) {
+                //    t[k] = polyprocess->GetLogProb(site,from->GetNode()->GetIndex(),k);
+                //}
+                //else    {
                 if (isDataCompatible(from->GetNode()->GetIndex(), site, k)) {
                     t[k] = 1;
                     totcomp++;
                 } else {
                     t[k] = 0;
                 }
+                //}
             }
             if (totcomp == 0) {
                 cerr << "error : no compatibility\n";
@@ -520,6 +525,7 @@ void PhyloProcess::ResampleState() {
 void PhyloProcess::ResampleState(int site) {
     Pruning(GetRoot(), site);
     PruningAncestral(GetRoot(), site);
+    // give information about fixed states at the tips to polyprocess
 }
 
 double PhyloProcess::Move(double fraction)	{

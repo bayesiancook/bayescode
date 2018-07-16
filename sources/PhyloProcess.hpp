@@ -166,6 +166,7 @@ public:
 	void ClampData() { clampdata = true; }
 	void UnclampData() { clampdata = false; }
 
+    // const int& GetFixedState(...)
 	int& GetState(const Node *node, int site) { return statemap[node][site]; }
 	const int& GetState(const Node *node, int site) const { return statemap[node][site]; }
 
@@ -271,6 +272,7 @@ public:
 
 	const Tree *tree;
 	const SequenceAlignment *data;
+    // const PolyProcess* polyprocess;
 	const BranchSelector<double>* branchlength;
 	const Selector<double>* siterate;
 	const BranchSiteSelector<SubMatrix>* submatrixarray; 
