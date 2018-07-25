@@ -4,21 +4,23 @@
 #include "DPOmegaModel.hpp"
 using namespace std;
 
-class DPOmegaChain : public Chain  {
-
+class DPOmegaChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
     int Ncat;
 
   public:
-    DPOmegaModel* GetModel() {
-        return static_cast<DPOmegaModel*>(model);
-    }
+    DPOmegaModel *GetModel() { return static_cast<DPOmegaModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    DPOmegaChain(string indatafile, string intreefile, int inNcat, int inevery, int inuntil, string inname, int force) : modeltype("DISCGAMMASITEOMEGA"), datafile(indatafile), treefile(intreefile), Ncat(inNcat) {
+    DPOmegaChain(string indatafile, string intreefile, int inNcat, int inevery, int inuntil,
+                 string inname, int force)
+        : modeltype("DISCGAMMASITEOMEGA"),
+          datafile(indatafile),
+          treefile(intreefile),
+          Ncat(inNcat) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -32,7 +34,7 @@ class DPOmegaChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new DPOmegaModel(datafile,treefile,Ncat);
+        model = new DPOmegaModel(datafile, treefile, Ncat);
         GetModel()->Allocate();
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;
@@ -59,7 +61,7 @@ class DPOmegaChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "DISCGAMMASITEOMEGA") {
-            model = new DPOmegaModel(datafile,treefile,Ncat);
+            model = new DPOmegaModel(datafile, treefile, Ncat);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -92,21 +94,21 @@ class DPOmegaChain : public Chain  {
     }
 };
 
-int main(int argc, char* argv[])	{
-
+int main(int argc, char *argv[]) {
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
-        DPOmegaChain* chain = new DPOmegaChain(name);
+        DPOmegaChain *chain = new DPOmegaChain(name);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 
     // new chain
-    else    {
+    else {
         string datafile = "";
         string treefile = "";
         int Ncat = -1;
@@ -115,64 +117,56 @@ int main(int argc, char* argv[])	{
         int every = 1;
         int until = -1;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if (s == "-ncat") {
+                } else if (s == "-ncat") {
                     i++;
                     Ncat = atoi(argv[i]);
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == ""))	{
+            if ((datafile == "") || (treefile == "") || (name == "")) {
                 throw(0);
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "discom -d <alignment> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        DPOmegaChain* chain = new DPOmegaChain(datafile,treefile,Ncat,every,until,name,force);
+        DPOmegaChain *chain = new DPOmegaChain(datafile, treefile, Ncat, every, until, name, force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 }
-
-

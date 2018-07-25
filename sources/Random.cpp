@@ -159,7 +159,7 @@ double Random::Gamma(double alpha, double beta) { return sGamma(alpha) / beta; }
 // ---------------------------------------------------------------------------------
 //		¥ DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
-int Random::DrawFromDiscreteDistribution(const std::vector<double>& prob)    {
+int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
     try {
         int nstate = prob.size();
         double total = 0;
@@ -190,7 +190,7 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double>& prob)    {
 // ---------------------------------------------------------------------------------
 //		¥ DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
-int Random::DrawFromDiscreteDistribution(const EVector& prob, int nstate) {
+int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
     try {
         double total = 0;
         for (int k = 0; k < nstate; k++) {
@@ -508,173 +508,169 @@ double Random::logMultivariateGamma(double a, int p) {
     return ret;
 }
 
-double Random::ProfileProposeMove(std::vector<double>& profile, int dim, double tuning, int n) {  // n==0dirichlet resampling, otherwise, vase communiquants
+double Random::ProfileProposeMove(
+    std::vector<double> &profile, int dim, double tuning,
+    int n) {  // n==0dirichlet resampling, otherwise, vase communiquants
 
     double ret = 0;
     if (n == 0) {  // dirichlet
-	double oldprofile[dim];
-	for (int i=0; i<dim; i++)	{
-		oldprofile[i] = profile[i];
-	}
-	double total = 0;
-	for (int i = 0; i < dim; i++) {
-	    profile[i] = Random::sGamma(tuning * oldprofile[i]);
-	    if (profile[i] == 0) {
-		std::cerr << "error in dirichlet resampling : 0 \n";
-		exit(1);
-	    }
-	    total += profile[i];
-	}
-	double logHastings = 0;
-	for (int i = 0; i < dim; i++) {
-	    profile[i] /= total;
-	    logHastings += -Random::logGamma(tuning * oldprofile[i]) +
-			   Random::logGamma(tuning * profile[i]) -
-			   (tuning * profile[i] - 1.0) * log(oldprofile[i]) +
-			   (tuning * oldprofile[i] - 1.0) * log(profile[i]);
-	}
-	return logHastings;
+        double oldprofile[dim];
+        for (int i = 0; i < dim; i++) {
+            oldprofile[i] = profile[i];
+        }
+        double total = 0;
+        for (int i = 0; i < dim; i++) {
+            profile[i] = Random::sGamma(tuning * oldprofile[i]);
+            if (profile[i] == 0) {
+                std::cerr << "error in dirichlet resampling : 0 \n";
+                exit(1);
+            }
+            total += profile[i];
+        }
+        double logHastings = 0;
+        for (int i = 0; i < dim; i++) {
+            profile[i] /= total;
+            logHastings += -Random::logGamma(tuning * oldprofile[i]) +
+                           Random::logGamma(tuning * profile[i]) -
+                           (tuning * profile[i] - 1.0) * log(oldprofile[i]) +
+                           (tuning * oldprofile[i] - 1.0) * log(profile[i]);
+        }
+        return logHastings;
     }
     if (2 * n > dim) {
-	n = dim / 2;
+        n = dim / 2;
     }
     auto indices = new int[2 * n];
     Random::DrawFromUrn(indices, 2 * n, dim);
     for (int i = 0; i < n; i++) {
-	int i1 = indices[2 * i];
-	int i2 = indices[2 * i + 1];
-	double tot = profile[i1] + profile[i2];
-	double x = profile[i1];
+        int i1 = indices[2 * i];
+        int i2 = indices[2 * i + 1];
+        double tot = profile[i1] + profile[i2];
+        double x = profile[i1];
 
-	double h = tot * tuning * (Random::Uniform() - 0.5);
-	x += h;
-	while ((x < 0) || (x > tot)) {
-	    if (x < 0) {
-		x = -x;
-	    }
-	    if (x > tot) {
-		x = 2 * tot - x;
-	    }
-	}
-	profile[i1] = x;
-	profile[i2] = tot - x;
-    if (!profile[i1])   {
-        profile[i1] = 1e-50;
-    }
-    if (!profile[i2])   {
-        profile[i2] = 1e-50;
-    }
+        double h = tot * tuning * (Random::Uniform() - 0.5);
+        x += h;
+        while ((x < 0) || (x > tot)) {
+            if (x < 0) {
+                x = -x;
+            }
+            if (x > tot) {
+                x = 2 * tot - x;
+            }
+        }
+        profile[i1] = x;
+        profile[i2] = tot - x;
+        if (!profile[i1]) {
+            profile[i1] = 1e-50;
+        }
+        if (!profile[i2]) {
+            profile[i2] = 1e-50;
+        }
     }
     delete[] indices;
 
     return ret;
 }
 
-double Random::RealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n)	{
-	auto indices = new int[n];
-	Random::DrawFromUrn(indices, n, dim);
-	for (int i=0; i<n; i++)	{
-		double u = tuning * (Random::Uniform() - 0.5);
-		x[indices[i]] += u;
-	}
+double Random::RealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n) {
+    auto indices = new int[n];
+    Random::DrawFromUrn(indices, n, dim);
+    for (int i = 0; i < n; i++) {
+        double u = tuning * (Random::Uniform() - 0.5);
+        x[indices[i]] += u;
+    }
     delete[] indices;
-	return 0;
+    return 0;
 }
 
-double Random::PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, int n)	{
+double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n) {
     double logh = 0;
-	auto indices = new int[n];
-	Random::DrawFromUrn(indices, n, dim);
-	for (int i=0; i<n; i++)	{
-		double u = tuning * (Random::Uniform() - 0.5);
-		x[indices[i]] *= exp(u);
+    auto indices = new int[n];
+    Random::DrawFromUrn(indices, n, dim);
+    for (int i = 0; i < n; i++) {
+        double u = tuning * (Random::Uniform() - 0.5);
+        x[indices[i]] *= exp(u);
         logh += u;
-	}
+    }
     delete[] indices;
-	return logh;
+    return logh;
 }
-	
-double Random::PosRealVectorProposeMove(std::vector<double>& x, int dim, double tuning, const vector<int>& toggle)	{
+
+double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning,
+                                        const vector<int> &toggle) {
     double logh = 0;
-	for (int i=0; i<dim; i++)	{
-        if (toggle[i])  {
+    for (int i = 0; i < dim; i++) {
+        if (toggle[i]) {
             double u = tuning * (Random::Uniform() - 0.5);
             x[i] *= exp(u);
             logh += u;
         }
-	}
-	return logh;
+    }
+    return logh;
 }
-	
 
-double Random::GetEntropy(const std::vector<double>& profile) {
+double Random::GetEntropy(const std::vector<double> &profile) {
     double tot = 0;
-    for (unsigned int i=0; i<profile.size(); i++)	{
-        tot -= (profile[i] < 1e-6) ? 0 : profile[i]*log(profile[i]);
+    for (unsigned int i = 0; i < profile.size(); i++) {
+        tot -= (profile[i] < 1e-6) ? 0 : profile[i] * log(profile[i]);
     }
     return tot;
 }
 
-double Random::BetaSample(double alpha, double beta)  {
-
+double Random::BetaSample(double alpha, double beta) {
     double a = Random::sGamma(alpha);
     double b = Random::sGamma(beta);
-    double ret = a / (a+b);
+    double ret = a / (a + b);
     return ret;
 }
 
-double Random::GammaSample(double alpha, double beta) {
+double Random::GammaSample(double alpha, double beta) { return Gamma(alpha, beta); }
 
-    return Gamma(alpha,beta);
-}
-
-void Random::DirichletSample(vector<double>& x, const vector<double>& center, double concentration) {
-
-    if (x.size() != center.size())  {
+void Random::DirichletSample(vector<double> &x, const vector<double> &center,
+                             double concentration) {
+    if (x.size() != center.size()) {
         cerr << "error in Random::DirichletSample: non matching vector size\n";
         exit(1);
     }
     double tot = 0;
-    for (unsigned int k=0; k<x.size(); k++)    {
+    for (unsigned int k = 0; k < x.size(); k++) {
         x[k] = Random::sGamma(concentration * center[k]);
         tot += x[k];
     }
     double tot2 = 0;
-    for (unsigned int k=0; k<x.size(); k++)    {
+    for (unsigned int k = 0; k < x.size(); k++) {
         x[k] /= tot;
-        if (! x[k]) {
+        if (!x[k]) {
             x[k] = 1e-50;
         }
         tot2 += x[k];
     }
-    for (unsigned int k=0; k<x.size(); k++)    {
+    for (unsigned int k = 0; k < x.size(); k++) {
         x[k] /= tot2;
     }
 }
 
 double Random::logBetaDensity(double x, double alpha, double beta) {
-
-    return logGamma(alpha + beta) - logGamma(alpha) - logGamma(beta) + (alpha-1)*log(x) + (beta-1)*log(1-x);
+    return logGamma(alpha + beta) - logGamma(alpha) - logGamma(beta) + (alpha - 1) * log(x) +
+           (beta - 1) * log(1 - x);
 }
 
-double Random::logGammaDensity(double x, double alpha, double beta)    {
-
-    return alpha*log(beta) - logGamma(alpha) + (alpha-1)*log(x) - beta*x;
+double Random::logGammaDensity(double x, double alpha, double beta) {
+    return alpha * log(beta) - logGamma(alpha) + (alpha - 1) * log(x) - beta * x;
 }
 
-double Random::logDirichletDensity(const vector<double>& x, const vector<double>& center, double concentration) {
-
-    if (x.size() != center.size())  {
+double Random::logDirichletDensity(const vector<double> &x, const vector<double> &center,
+                                   double concentration) {
+    if (x.size() != center.size()) {
         cerr << "error in Random::logDirichletDensity: non matching vector size\n";
         exit(1);
     }
     double tot = 0;
     double totcenter = 0;
-    for (unsigned int k=0; k<x.size(); k++)  {
-        tot += -logGamma(concentration*center[k]) + (concentration*center[k]-1)*log(x[k]);
+    for (unsigned int k = 0; k < x.size(); k++) {
+        tot += -logGamma(concentration * center[k]) + (concentration * center[k] - 1) * log(x[k]);
         totcenter += center[k];
     }
-    tot += logGamma(concentration*totcenter);
+    tot += logGamma(concentration * totcenter);
     return tot;
 }
-

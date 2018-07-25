@@ -227,4 +227,3 @@ int CodonStateSpace::GetDifferingPosition(int i, int j) const {
     }
     return 3;
 }
-

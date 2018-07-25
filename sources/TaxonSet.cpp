@@ -12,8 +12,7 @@ using namespace std;
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-TaxonSet::TaxonSet(const std::vector<string>& names) : Ntaxa(names.size()), taxlist(names)  {
-
+TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxlist(names) {
     for (int i = 0; i < Ntaxa; i++) {
         if (taxmap[names[i]] != 0) {
             cerr << "found several taxa with same name : " << names[i] << '\n';
@@ -23,7 +22,8 @@ TaxonSet::TaxonSet(const std::vector<string>& names) : Ntaxa(names.size()), taxl
     }
 }
 
-TaxonSet::TaxonSet(const TaxonSet& from) : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist)   {}
+TaxonSet::TaxonSet(const TaxonSet &from)
+    : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist) {}
 
 /*
 TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {

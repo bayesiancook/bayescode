@@ -7,17 +7,20 @@
 /**
  * \brief Generic interface for a state space (nucleotide, codons, etc)
  *
- * In practice, states are encoded as integers ranging from 0 to Nstate-1, where Nstate=4 for nucleotides, 61 for codons (universal code), etc.
- * This is true in particular for matrix calculation (SubMatrix), for sequence alignments (SequenceAlignment).
- * However, the StateSpace class provides the general interface for converting integer states into strings or conversely.
- * Specialized versions, such as DNAStateSpace or CodonStateSpace provide context-specific additional methods.
+ * In practice, states are encoded as integers ranging from 0 to Nstate-1, where
+ * Nstate=4 for nucleotides, 61 for codons (universal code), etc. This is true
+ * in particular for matrix calculation (SubMatrix), for sequence alignments
+ * (SequenceAlignment). However, the StateSpace class provides the general
+ * interface for converting integer states into strings or conversely.
+ * Specialized versions, such as DNAStateSpace or CodonStateSpace provide
+ * context-specific additional methods.
  */
 
 class StateSpace {
   public:
     virtual ~StateSpace() = default;
 
-    //! return size of state space 
+    //! return size of state space
     virtual int GetNstate() const = 0;
 
     //! return integer for a given string-formatted state
@@ -26,20 +29,23 @@ class StateSpace {
     //! return a formatted string output for given integer-encoded state
     virtual std::string GetState(int state) const = 0;
 
-    //! whether the two states are compatible (for the moment: just whether or not the two states are equal)
+    //! whether the two states are compatible (for the moment: just whether or not
+    //! the two states are equal)
     virtual bool isCompatible(int state1, int state2) const {
         return ((state1 == unknown) || (state2 == unknown) || (state1 == state2));
     }
 
-    //! return length of symbol used when printing state (normally, 1 for nucleotides or amino-acids, 3 for codons)
-    virtual int GetSymbolLength() const {return 1;}
+    //! return length of symbol used when printing state (normally, 1 for
+    //! nucleotides or amino-acids, 3 for codons)
+    virtual int GetSymbolLength() const { return 1; }
 };
 
 /**
  * \brief A StateSpace class built from an array of characters
  *
- * This class provides the implementation for all cases where states are canonically referred to using a one-letter code
- * (thus, nucleotides, amino-acids, RNA). This excludes the case of codons.
+ * This class provides the implementation for all cases where states are
+ * canonically referred to using a one-letter code (thus, nucleotides,
+ * amino-acids, RNA). This excludes the case of codons.
  */
 
 class SimpleStateSpace : public StateSpace {
@@ -80,8 +86,10 @@ class RNAStateSpace : public SimpleStateSpace {
 /**
  * \brief Amino-acid state space
  *
- * Amino-acids are in alphabetical order based on the one-letter code: ADEFGHIKLMNPQRSTVWY, Nstate=20.
- * Note that this is not necessarily standard (e.g. baseml or mrbayes use the alphabetical order for the three-letter code).
+ * Amino-acids are in alphabetical order based on the one-letter code:
+ * ADEFGHIKLMNPQRSTVWY, Nstate=20. Note that this is not necessarily standard
+ * (e.g. baseml or mrbayes use the alphabetical order for the three-letter
+ * code).
  */
 
 class ProteinStateSpace : public SimpleStateSpace {
@@ -103,12 +111,12 @@ class RYStateSpace : public SimpleStateSpace {
 };
 
 /**
- * \brief A generic state space, for abitrary sets of characters (one-letter code only)
+ * \brief A generic state space, for abitrary sets of characters (one-letter
+ * code only)
  */
 
 class GenericStateSpace : public SimpleStateSpace {
   public:
-
     GenericStateSpace(int inNstate, char *inAlphabet, int inNAlphabetSet, char *inAlphabetSet) {
         Nstate = inNstate;
         Alphabet = new char[Nstate];

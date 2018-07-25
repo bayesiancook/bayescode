@@ -5,67 +5,72 @@
  * Branch lengths and nucrates can be either:
  * - (2): shared across all genes
  * - (1): gene specific, with hyperparameters estimated across genes (shrinkage)
- * - (0): gene-specific, with fixed hyperparameters (no shrinkage); in that case, the hyperparameters are set up so as to implement vague priors
- * 
- * These three alternative modes can be tuned separately for branch lengths and nuc rates
- * by setting the variables blmode and nucmode to 0, 1 or 2.
- * By default, bl and nucrates are shared across genes.
+ * - (0): gene-specific, with fixed hyperparameters (no shrinkage); in that
+ * case, the hyperparameters are set up so as to implement vague priors
  *
- * For each gene, the 3-component mixture of omega's across sites has four parameters (see CodonM2aModel.hpp):
+ * These three alternative modes can be tuned separately for branch lengths and
+ * nuc rates by setting the variables blmode and nucmode to 0, 1 or 2. By
+ * default, bl and nucrates are shared across genes.
+ *
+ * For each gene, the 3-component mixture of omega's across sites has four
+ * parameters (see CodonM2aModel.hpp):
  * - 0 < purom < 1
  * - 0 < dposom < +infty
  * - 0 < purw < 1
  * - 0 <= posw < 1
  *
- * These 4 parameters are always gene-specific (they cannot be shared by all genes);
- * the priors over these parameters are as follows:
+ * These 4 parameters are always gene-specific (they cannot be shared by all
+ * genes); the priors over these parameters are as follows:
  * - purom ~ Beta(puromhypermean,puromhyperinvconc)
  * - dposom ~ Gamma(dposomhypermean,dposomhyperinvshape)
  * - purw ~ Beta purwhypermean,purwhyperinvconc)
- * - posw ~  mixture of point mass at 0 with prob 1-pi, and Beta(poswhypermean,poswhyperinvconc) with prob pi
+ * - posw ~  mixture of point mass at 0 with prob 1-pi, and
+ * Beta(poswhypermean,poswhyperinvconc) with prob pi
  *
  * In turn, the 9 hyperparameters of these priors can be either:
  * - (1) : estimated across genes
  * - (0): fixed (such as given by the user)
- * 
- * again, separately for each set of hyperparameters, by setting the following variables to 0 or 1: purommode, dposommode, purwmode, poswmode.
- * By default, the 9 mixture hyperparameters are estimated (shrunken) across genes (mode 1).
+ *
+ * again, separately for each set of hyperparameters, by setting the following
+ * variables to 0 or 1: purommode, dposommode, purwmode, poswmode. By default,
+ * the 9 mixture hyperparameters are estimated (shrunken) across genes (mode 1).
  * The hyperpriors over these parameters are then as follows:
  * - Uniform(0,1) for puromhypermean, purwhypermean and poswhypermean
- * - Exponential(1) for puromhyperinvconc, dposomhypermean, dposomhyperinvshape, purwhyperinvconc, poswhyperinvconc
+ * - Exponential(1) for puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
+ * purwhyperinvconc, poswhyperinvconc
  * - Beta(pihypermean=0.1,pihyperinvconc=0.2) for pi
- * 
- * Note that, when poswmode == 0, only poswhypermean and poswhyperinvconc are fixed, on the other hand, pi is free.
- * pi can be fixed by setting pihyperinvconc to 0 (in which case pi is set equal to pihypermean).
+ *
+ * Note that, when poswmode == 0, only poswhypermean and poswhyperinvconc are
+ * fixed, on the other hand, pi is free. pi can be fixed by setting
+ * pihyperinvconc to 0 (in which case pi is set equal to pihypermean).
  */
 
+#include "Chrono.hpp"
 #include "CodonM2aModel.hpp"
-#include "MultiGeneMPIModule.hpp"
-#include "Parallel.hpp"
 #include "IIDBernoulliBeta.hpp"
 #include "IIDBeta.hpp"
 #include "IIDDirichlet.hpp"
+#include "MultiGeneMPIModule.hpp"
 #include "MultiGeneProbModel.hpp"
-#include "Chrono.hpp"
+#include "Parallel.hpp"
 
-class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
-
-    public:
-
+class MultiGeneCodonM2aModel : public MultiGeneProbModel {
+  public:
     //-------------------
     // Constructors
     // ------------------
 
-    MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs);
+    MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean,
+                           double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
 
     //-------------------
     // Accessors
     // ------------------
 
-	CodonStateSpace* GetCodonStateSpace() const {
-		return (CodonStateSpace*) refcodondata->GetStateSpace();
-	}
+    CodonStateSpace *GetCodonStateSpace() const {
+        return (CodonStateSpace *)refcodondata->GetStateSpace();
+    }
 
     //-------------------
     // Setting and updating
@@ -75,11 +80,15 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     // mode == 2: global (only for branch lengths and nuc rates)
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode);
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode,
+                             int inpurwmode, int inposwmode);
 
-    void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
+    void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
+                                   double indposomhypermean, double indposomhyperinvshape,
+                                   double inpurwhypermean, double inpurwhyperinvconc,
+                                   double inposwhypermean, double inposwhyperinvconc);
 
-	void UpdateNucMatrix();
+    void UpdateNucMatrix();
     void SetMixtureArrays();
 
     void FastUpdate();
@@ -96,22 +105,22 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     // Traces and Monitors
     // ------------------
 
-    void TraceHeader(ostream& os) const;
-    void Trace(ostream& os) const;
+    void TraceHeader(ostream &os) const;
+    void Trace(ostream &os) const;
 
-    void TracePosWeight(ostream& os) const;
-    void TracePosOm(ostream& os) const;
+    void TracePosWeight(ostream &os) const;
+    void TracePosOm(ostream &os) const;
 
-    void MasterTraceSitesPostProb(ostream& os);
+    void MasterTraceSitesPostProb(ostream &os);
     void SlaveTraceSitesPostProb();
 
-	void Monitor(ostream& os) const {}
-	void MasterFromStream(istream& is) override;
-	void MasterToStream(ostream& os) const override;
+    void Monitor(ostream &os) const {}
+    void MasterFromStream(istream &is) override;
+    void MasterToStream(ostream &os) const override;
 
     // summary statistics for tracing MCMC
     int GetNpos() const;
-	double GetMeanTotalLength() const;
+    double GetMeanTotalLength() const;
     double GetMeanLength() const;
     double GetVarLength() const;
     double GetVarNucRelRate() const;
@@ -130,18 +139,14 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     // branch lengths
     // exponential of mean 10 for lambda
-    double LambdaHyperLogPrior() const {
-        return -lambda/10;
-    }
+    double LambdaHyperLogPrior() const { return -lambda / 10; }
 
     double GlobalBranchLengthsLogPrior() const {
         return LambdaHyperLogPrior() + branchlength->GetLogProb();
     }
 
     // exponential of mean 1 for blhyperinvshape
-    double BranchLengthsHyperInvShapeLogPrior() const {
-        return -blhyperinvshape;
-    }
+    double BranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
 
     double GeneBranchLengthsHyperLogPrior() const {
         return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
@@ -152,10 +157,11 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
         return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
     }
 
-    // exponential of mean 1 for nucrelrate and nucstat hyper inverse concentration
+    // exponential of mean 1 for nucrelrate and nucstat hyper inverse
+    // concentration
     double GeneNucRatesHyperLogPrior() const {
         double total = 0;
-        if (nucmode == 1)   {
+        if (nucmode == 1) {
             total -= nucrelratehyperinvconc;
             total -= nucstathyperinvconc;
         }
@@ -169,57 +175,58 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     // Log Likelihood
     // ------------------
 
-    double GetLogLikelihood() const {
-        return lnL;
-    }
+    double GetLogLikelihood() const { return lnL; }
 
     //-------------------
     // Suff Stat Log Probs
     // ------------------
 
     // suff stat for global branch lengths, as a function of lambda
-	double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0,lambda);
+    double LambdaHyperSuffStatLogProb() const {
+        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
     }
 
-    // suff stat for gene-specific branch lengths, as a function of bl hyperparameters
+    // suff stat for gene-specific branch lengths, as a function of bl
+    // hyperparameters
     double BranchLengthsHyperSuffStatLogProb() const {
-        return lengthhypersuffstatarray->GetLogProb(*branchlength,blhyperinvshape);
+        return lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
     }
 
     // suff stat for global nuc rates, as a function of nucleotide matrix
-    // (which itself depends on nucstat and nucrelrate)  
+    // (which itself depends on nucstat and nucrelrate)
     double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix,*GetCodonStateSpace());
+        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
     }
 
-    // suff stat for gene-specific nuc rates, as a function of nucrate hyperparameters
+    // suff stat for gene-specific nuc rates, as a function of nucrate
+    // hyperparameters
     double NucRatesHyperSuffStatLogProb() const {
         double total = 0;
-        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter,1.0/nucrelratehyperinvconc);
-        total += nucstatsuffstat.GetLogProb(nucstathypercenter,1.0/nucstathyperinvconc);
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
     }
 
-    // suff stat for gene-specific mixture parameters, as a function of mixture hyperparameters
+    // suff stat for gene-specific mixture parameters, as a function of mixture
+    // hyperparameters
     double MixtureHyperSuffStatLogProb() const {
         double total = 0;
 
         double puromalpha = puromhypermean / puromhyperinvconc;
-        double purombeta = (1-puromhypermean) / puromhyperinvconc;
-        total += puromsuffstat.GetLogProb(puromalpha,purombeta);
+        double purombeta = (1 - puromhypermean) / puromhyperinvconc;
+        total += puromsuffstat.GetLogProb(puromalpha, purombeta);
 
         double dposomalpha = 1.0 / dposomhyperinvshape;
         double dposombeta = dposomalpha / dposomhypermean;
-        total += dposomsuffstat.GetLogProb(dposomalpha,dposombeta);
+        total += dposomsuffstat.GetLogProb(dposomalpha, dposombeta);
 
         double purwalpha = purwhypermean / purwhyperinvconc;
-        double purwbeta = (1-purwhypermean) / purwhyperinvconc;
-        total += purwsuffstat.GetLogProb(purwalpha,purwbeta);
+        double purwbeta = (1 - purwhypermean) / purwhyperinvconc;
+        total += purwsuffstat.GetLogProb(purwalpha, purwbeta);
 
         double poswalpha = poswhypermean / poswhyperinvconc;
-        double poswbeta = (1-poswhypermean) / poswhyperinvconc;
-        total += poswsuffstat.GetLogProb(pi,poswalpha,poswbeta);
+        double poswbeta = (1 - poswhypermean) / poswhyperinvconc;
+        total += poswsuffstat.GetLogProb(pi, poswalpha, poswbeta);
         return total;
     }
 
@@ -248,10 +255,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     }
 
     // log prob for moving nuc rates
-    double NucRatesLogProb() const {
-        return GlobalNucRatesLogPrior()  + NucRatesSuffStatLogProb();
-    }
-    
+    double NucRatesLogProb() const { return GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb(); }
+
     //-------------------
     // Moves
     // ------------------
@@ -266,7 +271,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
 
     // moving global branch lengths and lambda hyperparam
     void ResampleBranchLengths();
-	void MoveLambda();
+    void MoveLambda();
 
     // moving hyperparams for gene-specific branch lengths
     void MoveBranchLengthsHyperParameters();
@@ -279,8 +284,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     void MoveNucRatesHyperParameters();
 
     // moving mixture hyper params
-    void MoveMixtureHyperParameters() ;
-    // special function for moving pi 
+    void MoveMixtureHyperParameters();
+    // special function for moving pi
     void ResamplePi();
 
     //-------------------
@@ -328,7 +333,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     // branch lengths
     void SlaveSendBranchLengthsSuffStat();
     void MasterReceiveBranchLengthsSuffStat();
-    
+
     void SlaveSendNucPathSuffStat();
     void MasterReceiveNucPathSuffStat();
 
@@ -344,92 +349,83 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     void MasterReceiveMixtureHyperSuffStat();
 
     // log likelihoods
-    
+
     void SlaveSendLogProbs();
     void MasterReceiveLogProbs();
 
-    double GetSlaveMoveTime() const {
-        return moveTime;
-    }
+    double GetSlaveMoveTime() const { return moveTime; }
 
-    double GetSlaveMapTime() const  {
-        return mapTime;
-    }
+    double GetSlaveMapTime() const { return mapTime; }
 
-    double GetMasterMoveTime() const {
-        return movechrono.GetTime();
-    }
+    double GetMasterMoveTime() const { return movechrono.GetTime(); }
 
-    void StartChrono()  {
-        totchrono.Start();
-    }
+    void StartChrono() { totchrono.Start(); }
 
     //-------------------
     // Data structures
     // ------------------
 
-    private:
-
-	Tree* tree;
-	CodonSequenceAlignment* refcodondata;
-	const TaxonSet* taxonset;
+  private:
+    Tree *tree;
+    CodonSequenceAlignment *refcodondata;
+    const TaxonSet *taxonset;
 
     string treefile;
 
-	int Ntaxa;
-	int Nbranch;
+    int Ntaxa;
+    int Nbranch;
 
-	double lambda;
-	BranchIIDGamma* branchlength;
-	GammaSuffStat hyperlengthsuffstat;
-	
+    double lambda;
+    BranchIIDGamma *branchlength;
+    GammaSuffStat hyperlengthsuffstat;
+
     double blhyperinvshape;
-    GammaWhiteNoiseArray* branchlengtharray;
-	PoissonSuffStatBranchArray* lengthpathsuffstatarray;
-    GammaSuffStatBranchArray* lengthhypersuffstatarray;
+    GammaWhiteNoiseArray *branchlengtharray;
+    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    GammaSuffStatBranchArray *lengthhypersuffstatarray;
 
     vector<double> mixhyperparam;
 
-    double& puromhypermean;
-	double& puromhyperinvconc;
-	IIDBeta* puromarray;
-	BetaSuffStat puromsuffstat;
+    double &puromhypermean;
+    double &puromhyperinvconc;
+    IIDBeta *puromarray;
+    BetaSuffStat puromsuffstat;
 
-    double& dposomhypermean;
-    double& dposomhyperinvshape;
-    IIDGamma* dposomarray;
+    double &dposomhypermean;
+    double &dposomhyperinvshape;
+    IIDGamma *dposomarray;
     GammaSuffStat dposomsuffstat;
 
-    double& purwhypermean;
-    double& purwhyperinvconc;
-    IIDBeta* purwarray;
+    double &purwhypermean;
+    double &purwhyperinvconc;
+    IIDBeta *purwarray;
     BetaSuffStat purwsuffstat;
 
-    double& poswhypermean;
-    double& poswhyperinvconc;
-    IIDBernoulliBeta* poswarray;
+    double &poswhypermean;
+    double &poswhyperinvconc;
+    IIDBernoulliBeta *poswarray;
     BernoulliBetaSuffStat poswsuffstat;
 
     double pihypermean;
     double pihyperinvconc;
-    double& pi;
+    double &pi;
 
     // shared nuc rates
-	GTRSubMatrix* nucmatrix;
+    GTRSubMatrix *nucmatrix;
     NucPathSuffStat nucpathsuffstat;
 
     // gene-specific nuc rates
     vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
-    IIDDirichlet* nucrelratearray;
+    IIDDirichlet *nucrelratearray;
     DirichletSuffStat nucrelratesuffstat;
 
     vector<double> nucstathypercenter;
     double nucstathyperinvconc;
-    IIDDirichlet* nucstatarray;
+    IIDDirichlet *nucstatarray;
     DirichletSuffStat nucstatsuffstat;
 
-    std::vector<CodonM2aModel*> geneprocess;
+    std::vector<CodonM2aModel *> geneprocess;
 
     double lnL;
     double GeneLogPrior;
@@ -457,4 +453,3 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel	{
     Chrono mapchrono;
     Chrono totchrono;
 };
-

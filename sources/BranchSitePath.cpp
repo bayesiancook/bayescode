@@ -3,10 +3,10 @@
 
 #include "BranchSitePath.hpp"
 
-#include "SuffStat.hpp"
-#include "PoissonSuffStat.hpp"
 #include "PathSuffStat.hpp"
+#include "PoissonSuffStat.hpp"
 #include "SubMatrix.hpp"
+#include "SuffStat.hpp"
 
 using namespace std;
 
@@ -20,14 +20,13 @@ BranchSitePath::BranchSitePath() {
     nsub = 0;
 }
 
-BranchSitePath::BranchSitePath(int state)	{
+BranchSitePath::BranchSitePath(int state) {
     init = last = new Plink;
     // bkinit = bklast = new Plink;
     nsub = 0;
     init->SetState(state);
     init->SetRelativeTime(0);
 }
-   
 
 BranchSitePath::~BranchSitePath() {
     Reset(0);
@@ -105,28 +104,29 @@ string BranchSitePath::ToString(bool redundant) {
 }
 */
 
-void BranchSitePath::AddPathSuffStat(PathSuffStat& suffstat, double factor) const {
-	const Plink* link = Init();
-	while (link)	{
-		int state = link->GetState();
-		suffstat.AddWaitingTime(state,GetRelativeTime(link) * factor);
-		if (link != last)	{
-			suffstat.IncrementPairCount(state,link->Next()->GetState());
-		}
-		link = link->Next();
-	}
+void BranchSitePath::AddPathSuffStat(PathSuffStat &suffstat, double factor) const {
+    const Plink *link = Init();
+    while (link) {
+        int state = link->GetState();
+        suffstat.AddWaitingTime(state, GetRelativeTime(link) * factor);
+        if (link != last) {
+            suffstat.IncrementPairCount(state, link->Next()->GetState());
+        }
+        link = link->Next();
+    }
 }
 
-void BranchSitePath::AddLengthSuffStat(PoissonSuffStat& suffstat, double factor, const SubMatrix& mat) const {
-	const Plink* link = Init();
-	while (link)	{
-		int state = link->GetState();
-		suffstat.AddBeta(-GetRelativeTime(link) * factor * mat(state,state));
-		if (link != last)	{
-			suffstat.IncrementCount();
-		}
-		link = link->Next();
-	}
+void BranchSitePath::AddLengthSuffStat(PoissonSuffStat &suffstat, double factor,
+                                       const SubMatrix &mat) const {
+    const Plink *link = Init();
+    while (link) {
+        int state = link->GetState();
+        suffstat.AddBeta(-GetRelativeTime(link) * factor * mat(state, state));
+        if (link != last) {
+            suffstat.IncrementCount();
+        }
+        link = link->Next();
+    }
 }
 
 /*
@@ -145,8 +145,8 @@ void BranchSitePath::AddCounts(int **paircounts, int *statecounts) {
 */
 
 /*
-void BranchSitePath::Prefix(BranchSitePath *p, BranchSitePath *root, double abstime) {
-    if ((init->GetState() != root->init->GetState()) ||
+void BranchSitePath::Prefix(BranchSitePath *p, BranchSitePath *root, double
+abstime) { if ((init->GetState() != root->init->GetState()) ||
         (p->init->GetState() != root->init->GetState())) {
         cerr << "error in prefix: no matching states at root\n";
     }
@@ -208,7 +208,8 @@ void BranchSitePath::Prefix(BranchSitePath *p, BranchSitePath *root, double abst
 
 void BranchSitePath::SetTimesRelativeToAbsolute() {
     if (fabs(CheckTotalTime() - 1) > 1e-6) {
-        cerr << "error in BranchSitePath: relative time does not sum to 1 : " << CheckTotalTime()
+        cerr << "error in BranchSitePath: relative time does not sum to 1 : " <<
+CheckTotalTime()
              << '\n';
         cerr << GetTotalTime() << '\n';
         exit(1);

@@ -2,64 +2,58 @@
 #ifndef MULTIPROBMODEL_H
 #define MULTIPROBMODEL_H
 
-#include "ProbModel.hpp"
 #include "MultiGeneMPIModule.hpp"
+#include "ProbModel.hpp"
 
 class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
-
-    public:
-
-    MultiGeneProbModel(int inmyid, int innprocs) : ProbModel(), MultiGeneMPIModule(inmyid, innprocs) {}
+  public:
+    MultiGeneProbModel(int inmyid, int innprocs)
+        : ProbModel(), MultiGeneMPIModule(inmyid, innprocs) {}
 
     virtual void Update() override {
-        if (! myid) {
+        if (!myid) {
             MasterUpdate();
-        }
-        else    {
+        } else {
             SlaveUpdate();
         }
     }
 
     virtual void PostPred(string name) override {
-        if (! myid) {
+        if (!myid) {
             MasterPostPred(name);
-        }
-        else    {
+        } else {
             SlavePostPred(name);
         }
     }
 
     virtual double Move() override {
-        if (! myid) {
+        if (!myid) {
             MasterMove();
-        }
-        else    {
+        } else {
             SlaveMove();
         }
         return 1;
     }
 
-	virtual void FromStream(istream& is) override {
-        if (! myid) {
+    virtual void FromStream(istream &is) override {
+        if (!myid) {
             MasterFromStream(is);
-        }
-        else    {
+        } else {
             SlaveFromStream();
         }
     }
 
-    virtual void ToStream(ostream& os) const override {
-        if (! myid) {
+    virtual void ToStream(ostream &os) const override {
+        if (!myid) {
             MasterToStream(os);
-        }
-        else    {
+        } else {
             SlaveToStream();
         }
     }
 
-    virtual void MasterToStream(ostream& os) const {}
+    virtual void MasterToStream(ostream &os) const {}
     virtual void SlaveToStream() const {}
-    virtual void MasterFromStream(istream& is) {}
+    virtual void MasterFromStream(istream &is) {}
     virtual void SlaveFromStream() {}
 
     virtual void MasterMove() {}
@@ -73,4 +67,3 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
 };
 
 #endif
-

@@ -1,35 +1,34 @@
 #include <cmath>
 #include <fstream>
-#include "DiffSelSparseModel.hpp"
 #include "Chain.hpp"
+#include "DiffSelSparseModel.hpp"
 using namespace std;
-
 
 /**
  * \brief Chain object for running an MCMC under the DiffSelSparseModel
  */
 
-class DiffSelSparseChain: public Chain {
+class DiffSelSparseChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel, codonmodel, fixhyper;
 
   public:
-    DiffSelSparseModel* GetModel() {
-        return static_cast<DiffSelSparseModel*>(model);
-    }
+    DiffSelSparseModel *GetModel() { return static_cast<DiffSelSparseModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel, int infixhyper,
-                                              int inevery, int inuntil, int insaveall, string inname, int force)
+    DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel,
+                       int infixhyper, int inevery, int inuntil, int insaveall, string inname,
+                       int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel), fixhyper(infixhyper)  {
+          codonmodel(incodonmodel),
+          fixhyper(infixhyper) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -73,8 +72,7 @@ class DiffSelSparseChain: public Chain {
         is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSELSPARSE") {
-            model = new DiffSelSparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel);
+            model = new DiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -100,26 +98,26 @@ class DiffSelSparseChain: public Chain {
         model->ToStream(param_os);
     }
 
-    void SavePoint() override   {
+    void SavePoint() override {
         Chain::SavePoint();
-        for (int k=0; k<ncond; k++) {
+        for (int k = 0; k < ncond; k++) {
             ostringstream s;
             s << name << "_" << k;
-            if (k)  {
+            if (k) {
                 ofstream tos((s.str() + ".shifttoggle").c_str(), ios_base::app);
-                GetModel()->TraceToggle(k,tos);
+                GetModel()->TraceToggle(k, tos);
             }
             ofstream fos((s.str() + ".fitness").c_str(), ios_base::app);
-            GetModel()->TraceFitness(k,fos);
+            GetModel()->TraceFitness(k, fos);
         }
     }
 
     void MakeFiles(int force) override {
         Chain::MakeFiles(force);
-        for (int k=0; k<ncond; k++) {
+        for (int k = 0; k < ncond; k++) {
             ostringstream s;
             s << name << "_" << k;
-            if (k)  {
+            if (k) {
                 ofstream tos((s.str() + ".shifttoggle").c_str());
             }
             ofstream fos((s.str() + ".fitness").c_str());
@@ -127,11 +125,9 @@ class DiffSelSparseChain: public Chain {
     }
 };
 
-
-int main(int argc, char* argv[]) {
-
+int main(int argc, char *argv[]) {
     string name = "";
-    DiffSelSparseChain* chain = 0;
+    DiffSelSparseChain *chain = 0;
 
     // this is an already existing chain on the disk; reopen and restart
     if (argc == 2 && argv[1][0] != '-') {
@@ -141,7 +137,6 @@ int main(int argc, char* argv[]) {
 
     // this is a new chain
     else {
-
         string datafile = "";
         string treefile = "";
         int ncond = 2;
@@ -156,70 +151,61 @@ int main(int argc, char* argv[]) {
         int saveall = 1;
         int force = 0;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if (s == "+s") {
+                } else if (s == "+s") {
                     saveall = 1;
-                }
-                else if (s == "-s") {
+                } else if (s == "-s") {
                     saveall = 0;
-                }
-                else if (s == "-ncond")	{
+                } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
-                }
-                else if (s == "-nlevel")    {
+                } else if (s == "-nlevel") {
                     i++;
                     nlevel = atoi(argv[i]);
-                }
-                else if (s == "-fixhyper")  {
+                } else if (s == "-fixhyper") {
                     fixhyper = 3;
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,fixhyper,every,until,saveall,name,force);
+        chain = new DiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel, fixhyper,
+                                       every, until, saveall, name, force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();
     cerr << "chain " << name << " stopped\n";
-    cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    cerr << chain->GetSize()
+         << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
     chain->GetModel()->Trace(cerr);
 }

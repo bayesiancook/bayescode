@@ -198,3 +198,6 @@ clean:
 	-rm -f *.o *.d *.d.*
 	-rm -f $(PROGS)
 
+.PHONY: format
+format:
+	clang-format -i *.hpp *.cpp

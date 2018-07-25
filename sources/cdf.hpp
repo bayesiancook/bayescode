@@ -1,7 +1,6 @@
 #ifndef INCBETA_H
 #define INCBETA_H
 
-
 // numerical recipe for beta function
 // taken from statweb.standford.edu/~serban/gxna/src/cdf.cpp
 // (Nacu et al, Bioinformatics 2007, 25:850)

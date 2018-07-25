@@ -11,27 +11,24 @@ using namespace std;
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-
 int Int(string s) { return atoi(s.c_str()); }
 
 double Double(string s) { return atof(s.c_str()); }
 
-
 vector<double> SequenceAlignment::GetEmpiricalFreq() const {
-
-    vector<double> in(GetNstate(),0);
+    vector<double> in(GetNstate(), 0);
     int n = 0;
-	for (int i=0; i<GetNtaxa(); i++)	{
-		for (int j=0; j<GetNsite(); j++)	{
-			if (GetState(i,j) != unknown)	{
-				in[GetState(i,j)]++;
-				n++;
-			}
-		}
-	}
-	for (int i=0; i<GetNstate(); i++)	{
-		in[i] /= n;
-	}
+    for (int i = 0; i < GetNtaxa(); i++) {
+        for (int j = 0; j < GetNsite(); j++) {
+            if (GetState(i, j) != unknown) {
+                in[GetState(i, j)]++;
+                n++;
+            }
+        }
+    }
+    for (int i = 0; i < GetNstate(); i++) {
+        in[i] /= n;
+    }
     return in;
 }
 
@@ -45,7 +42,6 @@ void SequenceAlignment::ToStream(ostream &os) const {
         os << '\n';
     }
 }
-
 
 void SequenceAlignment::ToFasta(ostream &os) const {
     for (int i = 0; i < Ntaxa; i++) {
@@ -101,9 +97,7 @@ void SequenceAlignment::ToStreamTriplet(ostream &os) const {
     os << '\n';
 }
 
-FileSequenceAlignment::FileSequenceAlignment(string filename)   {
-    ReadDataFromFile(filename, 0);
-}
+FileSequenceAlignment::FileSequenceAlignment(string filename) { ReadDataFromFile(filename, 0); }
 
 int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleaved) {
     string tmp;
@@ -123,11 +117,13 @@ int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleave
             ReadSpecial(filespec);
             return 1;
         } else {
-            // cerr << "-- [SequenceAlignment] Alignment file uses Phylip format" << endl;
+            // cerr << "-- [SequenceAlignment] Alignment file uses Phylip format" <<
+            // endl;
             if (forceinterleaved == 0) {
                 int returnvalue = TestPhylipSequential(filespec);
                 if (returnvalue != 0) {
-                    // cerr << "-- [SequenceAlignment] Alignment file is sequential" << endl;
+                    // cerr << "-- [SequenceAlignment] Alignment file is sequential" <<
+                    // endl;
                     ReadPhylipSequential(filespec);
                     return 1;
                 }
@@ -177,8 +173,8 @@ int FileSequenceAlignment::ReadNexus(string filespec) {
             exit(1);
         }
 
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         GoPastNextWord(theStream, "Matrix");
 
@@ -307,8 +303,8 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
         delete[] Alphabet;
         delete[] AlphabetSet;
 
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         int ntaxa = 0;
         string temp;
@@ -397,7 +393,7 @@ int FileSequenceAlignment::TestPhylipSequential(string filespec) {
         }
         Nsite = atoi(temp.c_str());
 
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         int AAcomp = 1;
         int DNAcomp = 1;
@@ -509,8 +505,8 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
         }
         Nsite = Int(temp);
 
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         int ntaxa = 0;
         while ((!theStream.eof()) && (ntaxa < Ntaxa)) {
@@ -578,7 +574,7 @@ int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
         }
         Nsite = Int(temp);
 
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         int AAcomp = 1;
         int DNAcomp = 1;
@@ -737,8 +733,8 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
         Nsite = Int(temp);
         // cerr << Ntaxa << '\t' << Nsite << '\n';
 
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
-        std::vector<std::string> SpeciesNames(Ntaxa,"");
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
+        std::vector<std::string> SpeciesNames(Ntaxa, "");
 
         int l = 0;
         int block = 0;
@@ -828,4 +824,3 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
         cerr << "error while reading data file\n";
     }
 }
-

@@ -24,7 +24,7 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
 
         // make my own arrays
         // make translation
-        Data.assign(Ntaxa,std::vector<int>(Nsite,0));
+        Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
         for (int i = 0; i < Ntaxa; i++) {
             for (int j = 0; j < Nsite; j++) {
                 try {
@@ -120,4 +120,3 @@ void CodonSequenceAlignment::ToStream(ostream &os, int pos) {
     }
     os << '\n';
 }
-

@@ -4,22 +4,20 @@
 #include "Chain.hpp"
 using namespace std;
 
-class AAMutSelM2aChain : public Chain  {
-
+class AAMutSelM2aChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
     double pi;
 
   public:
-    AAMutSelM2aModel* GetModel() {
-        return static_cast<AAMutSelM2aModel*>(model);
-    }
+    AAMutSelM2aModel *GetModel() { return static_cast<AAMutSelM2aModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    AAMutSelM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil, string inname, int force) : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
-        
+    AAMutSelM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil,
+                     string inname, int force)
+        : modeltype("AAMUTSELM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -33,7 +31,7 @@ class AAMutSelM2aChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new AAMutSelM2aModel(datafile,treefile,pi);
+        model = new AAMutSelM2aModel(datafile, treefile, pi);
         GetModel()->Allocate();
         GetModel()->Unfold();
         cerr << "-- Reset" << endl;
@@ -59,7 +57,7 @@ class AAMutSelM2aChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELM2A") {
-            model = new AAMutSelM2aModel(datafile,treefile,pi);
+            model = new AAMutSelM2aModel(datafile, treefile, pi);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -91,21 +89,21 @@ class AAMutSelM2aChain : public Chain  {
     }
 };
 
-int main(int argc, char* argv[])	{
-
+int main(int argc, char *argv[]) {
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
-        AAMutSelM2aChain* chain = new AAMutSelM2aChain(name);
+        AAMutSelM2aChain *chain = new AAMutSelM2aChain(name);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 
     // new chain
-    else    {
+    else {
         string datafile = "";
         string treefile = "";
         double pi = 0.1;
@@ -114,60 +112,54 @@ int main(int argc, char* argv[])	{
         int every = 1;
         int until = -1;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == ""))	{
+            if ((datafile == "") || (treefile == "") || (name == "")) {
                 throw(0);
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "aamutselm2a -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        AAMutSelM2aChain* chain = new AAMutSelM2aChain(datafile,treefile,pi,every,until,name,force);
+        AAMutSelM2aChain *chain =
+            new AAMutSelM2aChain(datafile, treefile, pi, every, until, name, force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 }
-
-

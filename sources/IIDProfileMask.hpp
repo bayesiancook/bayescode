@@ -8,58 +8,61 @@
 /**
  * \brief An array of IID 0/1 masks of a fixed dimension
  *
- * This class is used in AAMutSelSparseOmegaModel and DiffSelDoublySparseModel. In those two cases, the masks are over the 20 amino-acids, and the array if of size Nsite (i.e. the array implements site-specific masks over the alignment). The masks are meant to define a low/high fitness distribution over the 20 amino-acids.
+ * This class is used in AAMutSelSparseOmegaModel and DiffSelDoublySparseModel.
+ * In those two cases, the masks are over the 20 amino-acids, and the array if
+ * of size Nsite (i.e. the array implements site-specific masks over the
+ * alignment). The masks are meant to define a low/high fitness distribution
+ * over the 20 amino-acids.
  *
- * Each mask is made of dim iid Bernoulli(pi), conditional on at least one entry of the mask being equal to 1.
+ * Each mask is made of dim iid Bernoulli(pi), conditional on at least one entry
+ * of the mask being equal to 1.
  */
 
-class IIDProfileMask : public SimpleArray<vector<int> >     {
-
-    public:
-
-    //! constructor, parameterized by array size, mask dimension and Bernoulli probability parameter
-    IIDProfileMask(int size, int indim, double pi) : SimpleArray(size,vector<int>(indim,1)), dim(indim), pi(0.1) {}
+class IIDProfileMask : public SimpleArray<vector<int>> {
+  public:
+    //! constructor, parameterized by array size, mask dimension and Bernoulli
+    //! probability parameter
+    IIDProfileMask(int size, int indim, double pi)
+        : SimpleArray(size, vector<int>(indim, 1)), dim(indim), pi(0.1) {}
 
     //! return dimension of the masks
-    int GetDim() const  {
-        return dim;
-    }
+    int GetDim() const { return dim; }
 
     //! set probability parameter of the Bernoulli to a new value
-    void SetPi(double inpi) {
-        pi = inpi;
-    }
+    void SetPi(double inpi) { pi = inpi; }
 
     //! return total log probability over entire array
-    double GetLogProb() const   {
+    double GetLogProb() const {
         double total = 0;
-        for (int i=0; i<GetSize(); i++) {
+        for (int i = 0; i < GetSize(); i++) {
             total += GetLogProb(i);
         }
         return total;
     }
 
     //! return log probability for entry i
-    double GetLogProb(int i) const  {
+    double GetLogProb(int i) const {
         int naa = 0;
-        const vector<int>& x = GetVal(i);
-        for (int k=0; k<GetDim(); k++)  {
+        const vector<int> &x = GetVal(i);
+        for (int k = 0; k < GetDim(); k++) {
             naa += x[k];
         }
-        if (! naa)  {
+        if (!naa) {
             cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
         }
         // probability is conditional on at least one entry being 1
-        return naa*log(pi) + (GetDim()-naa)*log(1.0-pi) - log(1.0 - exp(GetDim()*log(1.0-pi)));
+        return naa * log(pi) + (GetDim() - naa) * log(1.0 - pi) -
+               log(1.0 - exp(GetDim() * log(1.0 - pi)));
     }
 
-    //! return mean width (i.e. mean number of entries equal to 1) across the array
+    //! return mean width (i.e. mean number of entries equal to 1) across the
+    //! array
     double GetMeanWidth() const {
         double mean = 0;
-        for (int i=0; i<GetSize(); i++) {
-            const vector<int>& x = GetVal(i);
-            for (int k=0; k<GetDim(); k++)  {
+        for (int i = 0; i < GetSize(); i++) {
+            const vector<int> &x = GetVal(i);
+            for (int k = 0; k < GetDim(); k++) {
                 mean += x[k];
             }
         }
@@ -67,63 +70,61 @@ class IIDProfileMask : public SimpleArray<vector<int> >     {
         return mean;
     }
 
-    private:
+  private:
     int dim;
     double pi;
 };
 
-class ProfileMask : public SimpleArray<vector<int> >     {
-
-    public:
-
-    //! constructor, parameterized by array size, mask dimension and Bernoulli probability parameter
-    ProfileMask(int size, const vector<double>& inpi) : SimpleArray(size,vector<int>(inpi.size(),1)), dim(inpi.size()), pi(inpi) {}
+class ProfileMask : public SimpleArray<vector<int>> {
+  public:
+    //! constructor, parameterized by array size, mask dimension and Bernoulli
+    //! probability parameter
+    ProfileMask(int size, const vector<double> &inpi)
+        : SimpleArray(size, vector<int>(inpi.size(), 1)), dim(inpi.size()), pi(inpi) {}
 
     //! return dimension of the masks
-    int GetDim() const  {
-        return dim;
-    }
+    int GetDim() const { return dim; }
 
     //! return total log probability over entire array
-    double GetLogProb() const   {
+    double GetLogProb() const {
         double total = 0;
-        for (int i=0; i<GetSize(); i++) {
+        for (int i = 0; i < GetSize(); i++) {
             total += GetLogProb(i);
         }
         return total;
     }
 
     //! return log probability for entry i
-    double GetLogProb(int i) const  {
+    double GetLogProb(int i) const {
         int naa = 0;
         double ret = 0;
         double z = 1.0;
-        const vector<int>& x = GetVal(i);
-        for (int k=0; k<GetDim(); k++)  {
-            if (x[k])   {
+        const vector<int> &x = GetVal(i);
+        for (int k = 0; k < GetDim(); k++) {
+            if (x[k]) {
                 ret += log(pi[k]);
-            }
-            else    {
+            } else {
                 ret += log(1 - pi[k]);
             }
             naa += x[k];
             z *= (1.0 - pi[k]);
         }
-        if (! naa)  {
+        if (!naa) {
             cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
         }
         // probability is conditional on at least one entry being 1
-        ret  -= log(1.0 - z);
+        ret -= log(1.0 - z);
         return ret;
     }
 
-    //! return mean width (i.e. mean number of entries equal to 1) across the array
+    //! return mean width (i.e. mean number of entries equal to 1) across the
+    //! array
     double GetMeanWidth() const {
         double mean = 0;
-        for (int i=0; i<GetSize(); i++) {
-            const vector<int>& x = GetVal(i);
-            for (int k=0; k<GetDim(); k++)  {
+        for (int i = 0; i < GetSize(); i++) {
+            const vector<int> &x = GetVal(i);
+            for (int k = 0; k < GetDim(); k++) {
                 mean += x[k];
             }
         }
@@ -131,10 +132,9 @@ class ProfileMask : public SimpleArray<vector<int> >     {
         return mean;
     }
 
-    private:
+  private:
     int dim;
-    const vector<double>& pi;
+    const vector<double> &pi;
 };
 
 #endif
-

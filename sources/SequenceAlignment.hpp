@@ -11,19 +11,31 @@
 
 class SequenceAlignment {
   public:
-
     //! default constructor
-    SequenceAlignment() : Ntaxa(0), Nsite(0), taxset(nullptr), statespace(nullptr), owntaxset(true), ownstatespace(true) {}
+    SequenceAlignment()
+        : Ntaxa(0),
+          Nsite(0),
+          taxset(nullptr),
+          statespace(nullptr),
+          owntaxset(true),
+          ownstatespace(true) {}
 
     //! copy constructor
-    SequenceAlignment(const SequenceAlignment& from) : Ntaxa(from.Ntaxa), Nsite(from.Nsite), taxset(from.taxset), statespace(from.statespace), owntaxset(false), ownstatespace(false), Data(from.Data) {}
+    SequenceAlignment(const SequenceAlignment &from)
+        : Ntaxa(from.Ntaxa),
+          Nsite(from.Nsite),
+          taxset(from.taxset),
+          statespace(from.statespace),
+          owntaxset(false),
+          ownstatespace(false),
+          Data(from.Data) {}
 
-    virtual ~SequenceAlignment()    {
-        if (owntaxset)  {
+    virtual ~SequenceAlignment() {
+        if (owntaxset) {
             delete taxset;
             taxset = nullptr;
         }
-        if (ownstatespace)  {
+        if (ownstatespace) {
             delete statespace;
             statespace = nullptr;
         }
@@ -41,7 +53,8 @@ class SequenceAlignment {
     //! return the number of aligned positions
     int GetNsite() const { return Nsite; }
 
-    //! return the number of aligned positions such as printed out (Nsite for nucleotide models, 3*Nsite for codon models)
+    //! return the number of aligned positions such as printed out (Nsite for
+    //! nucleotide models, 3*Nsite for codon models)
     int GetPrintNsite() const { return GetStateSpace()->GetSymbolLength() * Nsite; }
 
     //! return the number of taxa (number of aligned sequences)
@@ -56,14 +69,14 @@ class SequenceAlignment {
     //! Phylip-like formatted output to stream
     void ToStream(std::ostream &os) const;
 
-    //! set the state to a new value (note: should really re-consider this option, currently used by PhyloProcess to simulate new data)
+    //! set the state to a new value (note: should really re-consider this option,
+    //! currently used by PhyloProcess to simulate new data)
     void SetState(int taxon, int site, int state) { Data[taxon][site] = state; }
 
     //! return empirical frequencies into a vector
     std::vector<double> GetEmpiricalFreq() const;
 
   protected:
-
     bool AllMissingColumn(int site) const {
         bool ret = true;
         int tax = 0;
@@ -75,7 +88,6 @@ class SequenceAlignment {
     }
 
   private:
-
     // replace all entries by missing entries
     void Unclamp() {
         for (int i = 0; i < Ntaxa; i++) {
@@ -141,18 +153,18 @@ class SequenceAlignment {
     // data fields
 
   protected:
-
     int Ntaxa;
     int Nsite;
     const TaxonSet *taxset;
     const StateSpace *statespace;
     bool owntaxset;
     bool ownstatespace;
-    std::vector<std::vector<int> > Data;
+    std::vector<std::vector<int>> Data;
 };
 
 /**
- * \brief A sequence alignment created by reading from a file (Phylip-like or Nexus format)
+ * \brief A sequence alignment created by reading from a file (Phylip-like or
+ * Nexus format)
  */
 
 class FileSequenceAlignment : public SequenceAlignment {

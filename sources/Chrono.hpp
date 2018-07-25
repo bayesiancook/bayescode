@@ -10,14 +10,14 @@
 /**
  * \brief A chronometer
  *
- * Measures time in milliseconds; also implements a counter, allowing to both measure total time and count e.g. number of cycles (and then return mean time per cycle).
+ * Measures time in milliseconds; also implements a counter, allowing to both
+ * measure total time and count e.g. number of cycles (and then return mean time
+ * per cycle).
  */
 
 class Chrono {
   public:
-    Chrono() {
-        Reset();
-    }
+    Chrono() { Reset(); }
     //! reset chrono
     void Reset();
     //! start chrono
@@ -68,7 +68,7 @@ class MeasureTime : public std::stringstream {
             stop();
         }
         std::string left(2 * i, ' ');
-        std::cout << left << "* " << message << str() << "Time: " << duration.count() //  << "ms."
+        std::cout << left << "* " << message << str() << "Time: " << duration.count()  //  << "ms."
                   << std::endl;
         str("");
         start();

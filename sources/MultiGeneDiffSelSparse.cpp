@@ -1,18 +1,18 @@
 #include <cmath>
 #include <fstream>
+#include "Chrono.hpp"
 #include "MultiGeneChain.hpp"
 #include "MultiGeneDiffSelSparseModel.hpp"
-#include "Chrono.hpp"
 
 using namespace std;
 
 MPI_Datatype Propagate_arg;
 
 /**
- * \brief A MultiGeneChain object for running an MCMC under MultiGeneDiffSelSparseModel
+ * \brief A MultiGeneChain object for running an MCMC under
+ * MultiGeneDiffSelSparseModel
  */
-class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
-
+class MultiGeneDiffSelSparseChain : public MultiGeneChain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
@@ -22,8 +22,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     int writegenedata;
 
   public:
-    MultiGeneDiffSelSparseModel* GetModel() {
-        return static_cast<MultiGeneDiffSelSparseModel*>(model);
+    MultiGeneDiffSelSparseModel *GetModel() {
+        return static_cast<MultiGeneDiffSelSparseModel *>(model);
     }
 
     string GetModelType() override { return modeltype; }
@@ -31,18 +31,29 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     //! \brief constructor for a new MCMC
     //!
     //! \param indatafile: name of file contanining sequence alignment
-    //! \param intreefile: name of file contaning tree (with branch names giving the allocation of branches to the conditions)
-    //! \param inncond: number of conditions
-    //! \param innlevel: number of levels of the model
-    //! \param incodonmodel: type of codon substitution process (1: mutation-selection, 0: square-root)
-    //! \param inevery: thinning factor
-    //! \param inuntil: maximum MCMC sample size
-    //! \param insaveall: if 1, then, save all information about each configuration visited during MCMC (into .chain file)
-    //! \param inwritegenedata: if 1, then trace gene- and condition-specific shift probabilities in separate files; if 2, then also trace site-specific shift probabilities
-    //! \param name: base name for all files related to this MCMC run
-    //! \param force: overwrite existing files with same name
-    //! \param inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel, int incodonmodel, int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs), modeltype("MULTIGENEDIFFSELSPARSE"), datafile(indatafile), treefile(intreefile), ncond(inncond), nlevel(innlevel), codonmodel(incodonmodel) {
+    //! \param intreefile: name of file contaning tree (with branch names giving
+    //! the allocation of branches to the conditions) \param inncond: number of
+    //! conditions \param innlevel: number of levels of the model \param
+    //! incodonmodel: type of codon substitution process (1: mutation-selection,
+    //! 0: square-root) \param inevery: thinning factor \param inuntil: maximum
+    //! MCMC sample size \param insaveall: if 1, then, save all information about
+    //! each configuration visited during MCMC (into .chain file) \param
+    //! inwritegenedata: if 1, then trace gene- and condition-specific shift
+    //! probabilities in separate files; if 2, then also trace site-specific shift
+    //! probabilities \param name: base name for all files related to this MCMC
+    //! run \param force: overwrite existing files with same name \param inmyid,
+    //! int innprocs: process id and total number of MPI processes
+    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel,
+                                int incodonmodel, int inevery, int inuntil, int insaveall,
+                                int inwritegenedata, string inname, int force, int inmyid,
+                                int innprocs)
+        : MultiGeneChain(inmyid, innprocs),
+          modeltype("MULTIGENEDIFFSELSPARSE"),
+          datafile(indatafile),
+          treefile(intreefile),
+          ncond(inncond),
+          nlevel(innlevel),
+          codonmodel(incodonmodel) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -52,24 +63,26 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
     }
 
     //! \brief constructor for opening and restarting an already existing chain
-    MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs) : MultiGeneChain(inmyid,innprocs) {
+    MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs)
+        : MultiGeneChain(inmyid, innprocs) {
         name = filename;
         Open();
         Save();
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
-        if (! myid) {
+        model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel, myid,
+                                                nprocs);
+        if (!myid) {
             cerr << " -- master allocate\n";
         }
         GetModel()->Allocate();
-        if (! myid) {
+        if (!myid) {
             cerr << " -- master unfold\n";
         }
         GetModel()->Update();
         Reset(force);
-        if (! myid) {
+        if (!myid) {
             model->Trace(cerr);
         }
     }
@@ -92,7 +105,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
-            model = new MultiGeneDiffSelSparseModel(datafile,treefile,ncond,nlevel,codonmodel,myid,nprocs);
+            model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel,
+                                                    myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -101,34 +115,34 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();
-        if (! myid) {
+        if (!myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
             model->Trace(cerr);
         }
     }
 
     void Save() override {
-        if (!myid)   {
+        if (!myid) {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << 0 << '\n';
-            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t' << size << '\n';
+            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
+                     << size << '\n';
             GetModel()->MasterToStream(param_os);
-        }
-        else    {
+        } else {
             GetModel()->SlaveToStream();
         }
     }
 
-    void MakeFiles(int force) override  {
+    void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
-        if (writegenedata)  {
-            for (int k=0; k<ncond; k++) {
+        if (writegenedata) {
+            for (int k = 0; k < ncond; k++) {
                 ostringstream s;
                 s << name << "_" << k;
-                if (k)  {
+                if (k) {
                     ofstream pos((s.str() + ".geneshiftprob").c_str());
                     if (writegenedata == 2) {
                         ofstream tos((s.str() + ".shifttoggle").c_str());
@@ -141,52 +155,50 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain  {
         }
     }
 
-    void SavePoint() override   {
+    void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata)  {
-            if (! myid) {
-                GetModel()->MasterTraceSiteStats(name,writegenedata);
-            }
-            else    {
+        if (writegenedata) {
+            if (!myid) {
+                GetModel()->MasterTraceSiteStats(name, writegenedata);
+            } else {
                 GetModel()->SlaveTraceSiteStats(writegenedata);
             }
         }
     }
 };
 
-int main(int argc, char* argv[])	{
-
-	Chrono chrono;
+int main(int argc, char *argv[]) {
+    Chrono chrono;
     chrono.Start();
 
-	int myid  = 0;
-	int nprocs = 0;
+    int myid = 0;
+    int nprocs = 0;
 
-	MPI_Init(&argc,&argv);
-	MPI_Comm_rank(MPI_COMM_WORLD,&myid);
-	MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
-	int blockcounts[2] = {1,3};
-	MPI_Datatype types[2] = {MPI_DOUBLE,MPI_INT};
-	MPI_Aint dtex,displacements[2];
-	
-	displacements[0] = (MPI_Aint) 0;
-	MPI_Type_extent(MPI_DOUBLE,&dtex);
-	displacements[1] = dtex;
-	MPI_Type_struct(2,blockcounts,displacements,types,&Propagate_arg);
-	MPI_Type_commit(&Propagate_arg); 
+    int blockcounts[2] = {1, 3};
+    MPI_Datatype types[2] = {MPI_DOUBLE, MPI_INT};
+    MPI_Aint dtex, displacements[2];
+
+    displacements[0] = (MPI_Aint)0;
+    MPI_Type_extent(MPI_DOUBLE, &dtex);
+    displacements[1] = dtex;
+    MPI_Type_struct(2, blockcounts, displacements, types, &Propagate_arg);
+    MPI_Type_commit(&Propagate_arg);
 
     string name = "";
-    MultiGeneDiffSelSparseChain* chain = 0;
+    MultiGeneDiffSelSparseChain *chain = 0;
 
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
-        chain = new MultiGeneDiffSelSparseChain(name,myid,nprocs);
+        chain = new MultiGeneDiffSelSparseChain(name, myid, nprocs);
     }
 
     // new chain
-    else    {
+    else {
         string datafile = "";
         string treefile = "";
         int ncond = 1;
@@ -198,103 +210,92 @@ int main(int argc, char* argv[])	{
         int saveall = 1;
         int writegenedata = 1;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if (s == "-s") {
+                } else if (s == "-s") {
                     saveall = 0;
-                }
-                else if (s == "+s") {
+                } else if (s == "+s") {
                     saveall = 1;
-                }
-                else if (s == "-ncond")	{
+                } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
-                }
-                else if (s == "-nlevel")	{
+                } else if (s == "-nlevel") {
                     i++;
                     nlevel = atoi(argv[i]);
-                }
-                else if (s == "-g")  {
+                } else if (s == "-g") {
                     writegenedata = 0;
-                }
-                else if (s == "+g")  {
+                } else if (s == "+g") {
                     writegenedata = 1;
-                }
-                else if (s == "+G")  {
+                } else if (s == "+G") {
                     writegenedata = 2;
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == ""))	{
+            if ((datafile == "") || (treefile == "") || (name == "")) {
                 throw(0);
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "error in command\n";
             cerr << '\n';
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelSparseChain(datafile,treefile,ncond,nlevel,codonmodel,every,until,saveall,writegenedata,name,force,myid,nprocs);
+        chain = new MultiGeneDiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel,
+                                                every, until, saveall, writegenedata, name, force,
+                                                myid, nprocs);
     }
 
     chrono.Stop();
-    if (! myid) {
+    if (!myid) {
         cout << "total time to set things up: " << chrono.GetTime() << '\n';
     }
     chrono.Reset();
     chrono.Start();
-    if (! myid) {
+    if (!myid) {
         cerr << "chain " << name << " started\n";
     }
     chain->Start();
-    if (! myid) {
+    if (!myid) {
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
     chrono.Stop();
-    if (! myid) {
+    if (!myid) {
         cout << "total time in MCMC: " << chrono.GetTime() << '\n';
         cout << "total time in master moves: " << chain->GetModel()->GetMasterMoveTime() << '\n';
         cout << "mean total time in slave moves: " << chain->GetModel()->GetSlaveMoveTime() << '\n';
-        cout << "mean total time in substitution mapping: " << chain->GetModel()->GetSlaveMapTime() << '\n';
+        cout << "mean total time in substitution mapping: " << chain->GetModel()->GetSlaveMapTime()
+             << '\n';
     }
 
-	MPI_Finalize();
+    MPI_Finalize();
 }
-
-

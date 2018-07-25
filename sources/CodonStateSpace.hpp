@@ -9,30 +9,34 @@
  * \brief A codon state space
  *
  * CodonStateSpace implements the methods of the base class StateSpace
- * (conversion from int to string and conversely -- here, the strings are nucleotide triplets, e.g. "AAC").
- * By default, the list of codons considered by any method or algorithm excludes stop codons.
- * Thus, for instance, in the case of the universal genetic code, Nstate==61.
- * If a method takes or returns codons including stops, then, this is made explicit in the method's name
+ * (conversion from int to string and conversely -- here, the strings are
+ * nucleotide triplets, e.g. "AAC"). By default, the list of codons considered
+ * by any method or algorithm excludes stop codons. Thus, for instance, in the
+ * case of the universal genetic code, Nstate==61. If a method takes or returns
+ * codons including stops, then, this is made explicit in the method's name
  */
-
 
 class CodonStateSpace : public StateSpace {
   public:
     static const int Npos = 3;
 
-    //! constructor: should always specify the genetic code (en enum type: Universal, MtMam or MtInv, see BiologicalSequences.h)
+    //! constructor: should always specify the genetic code (en enum type:
+    //! Universal, MtMam or MtInv, see BiologicalSequences.h)
     CodonStateSpace(GeneticCodeType type);
     ~CodonStateSpace() throw() override;
 
     int GetNstate() const override { return Nstate; }
 
-    //! return length of symbol used when printing state (normally, 1 for nucleotides or amino-acids, 3 for codons)
-    virtual int GetSymbolLength() const {return 3;}
+    //! return length of symbol used when printing state (normally, 1 for
+    //! nucleotides or amino-acids, 3 for codons)
+    virtual int GetSymbolLength() const { return 3; }
 
-    //! given a 3-nucleotide string, returns codon index, in 0..Nstate-1 (if stop or unrecognized, exits with error message)
+    //! given a 3-nucleotide string, returns codon index, in 0..Nstate-1 (if stop
+    //! or unrecognized, exits with error message)
     int GetState(std::string word) const override;
 
-    //! given a codon index (stops excluded), returns the corresponding 3-nucleotide string
+    //! given a codon index (stops excluded), returns the corresponding
+    //! 3-nucleotide string
     std::string GetState(int codon) const override;
 
     // codon specific methods
@@ -43,21 +47,25 @@ class CodonStateSpace : public StateSpace {
     //! return the amino-acid state space (for translated sequences)
     const ProteinStateSpace *GetProteinStateSpace() const { return protstatespace; }
 
-    //! \brief return a codon based on three nucleotides encoded as integers (see DNAStateSpace)
+    //! \brief return a codon based on three nucleotides encoded as integers (see
+    //! DNAStateSpace)
     //!
     //! returns -1 (== unknown) if at least one of the positions is unknown;
     //! if stop, then exits with error message.
     int GetCodonFromDNA(int pos1, int pos2, int pos3) const;
 
-    //! \brief given 2 nearest-neighbor codons, returns at which position they differ
+    //! \brief given 2 nearest-neighbor codons, returns at which position they
+    //! differ
     //
     //! codons should not be stop codons;
     //! returns -1 if codons are identical;
     //! returns 3 if codons differ at more than one position;
-    //! otherwise, returns the position at which codons differ (i.e. returns 0,1 or 2 if the codons differ at position 1,2 or 3).
+    //! otherwise, returns the position at which codons differ (i.e. returns 0,1
+    //! or 2 if the codons differ at position 1,2 or 3).
     int GetDifferingPosition(int i, int j) const;
 
-    //! return the integer encoding for the nucleotide at requested position pos=0,1, or 2
+    //! return the integer encoding for the nucleotide at requested position
+    //! pos=0,1, or 2
     int GetCodonPosition(int pos, int codon) const {
         if ((pos < 0) || (pos >= Npos)) {
             std::cerr << "GetCodonPosition: pos out of bound\n";
@@ -79,32 +87,35 @@ class CodonStateSpace : public StateSpace {
     int Translation(int codon) const { return CodonCode[codon]; }
 
     //! whether the two codons are synonymous or not
-    bool Synonymous(int codon1, int codon2) const { return (CodonCode[codon1] == CodonCode[codon2]); }
+    bool Synonymous(int codon1, int codon2) const {
+        return (CodonCode[codon1] == CodonCode[codon2]);
+    }
 
-    //! check whether the combination of the three integer-encoded nucleotides make a stop codon or not
+    //! check whether the combination of the three integer-encoded nucleotides
+    //! make a stop codon or not
     bool CheckStop(int pos1, int pos2, int pos3) const;
 
     //! computes the sum of nuc stats over stop codons (S) and returns 1-S
-    double GetNormStat(const EVector& nucstat) const {
+    double GetNormStat(const EVector &nucstat) const {
         double stopstat = 0;
-        for (int i=0; i<Nstop; i++) {
+        for (int i = 0; i < Nstop; i++) {
             stopstat += nucstat[StopPos1[i]] * nucstat[StopPos2[i]] * nucstat[StopPos3[i]];
         }
         return 1.0 - stopstat;
     }
 
     //! computes the sum of nuc stats over stop codons (S) and returns 1-S
-    double GetNormStat(const double* nucstat) const {
+    double GetNormStat(const double *nucstat) const {
         double stopstat = 0;
-        for (int i=0; i<Nstop; i++) {
+        for (int i = 0; i < Nstop; i++) {
             stopstat += nucstat[StopPos1[i]] * nucstat[StopPos2[i]] * nucstat[StopPos3[i]];
         }
         return 1.0 - stopstat;
     }
 
   private:
-
-    // number of stop codons under this genetic code (typically 3 for the Universal code)
+    // number of stop codons under this genetic code (typically 3 for the
+    // Universal code)
     int GetNstop() const { return Nstop; }
 
     const int *GetStopPos1() const { return StopPos1; }
@@ -112,7 +123,6 @@ class CodonStateSpace : public StateSpace {
     const int *GetStopPos2() const { return StopPos2; }
 
     const int *GetStopPos3() const { return StopPos3; }
-
 
     GeneticCodeType code;
     const DNAStateSpace *nucstatespace;

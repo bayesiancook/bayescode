@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 
-
 static const std::string Path = "";
 
 enum DataType { DNA = 0, RNA = 1, Protein = 2, Other = 3 };
@@ -48,7 +47,7 @@ const int unknown = -1;
 
 const int Naa = 20;
 const int Nnuc = 4;
-const int Nrr = Nnuc * (Nnuc-1) / 2;
+const int Nrr = Nnuc * (Nnuc - 1) / 2;
 const int Ncodon = 64;
 const std::string Codons[] = {
     "TTT", "TTC", "TTA", "TTG", "TCT", "TCC", "TCA", "TCG", "TAT", "TAC", "TAA", "TAG", "TGT",

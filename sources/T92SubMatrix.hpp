@@ -6,11 +6,13 @@
 
 class T92SubMatrix : public virtual SubMatrix {
   public:
-    //! constructor parameterized by an array of relative rates (size Nstate*(Nstate-1)/2) and an array of equilibrium frequencies (size Nstate)
-    T92SubMatrix(double inkappa, double ingc, bool innormalise = false) : SubMatrix(4,innormalise), kappa(inkappa), gc(ingc) {}
+    //! constructor parameterized by an array of relative rates (size
+    //! Nstate*(Nstate-1)/2) and an array of equilibrium frequencies (size Nstate)
+    T92SubMatrix(double inkappa, double ingc, bool innormalise = false)
+        : SubMatrix(4, innormalise), kappa(inkappa), gc(ingc) {}
     ~T92SubMatrix() override = default;
 
-    void SetKappa(double inkappa)    {
+    void SetKappa(double inkappa) {
         kappa = inkappa;
         CorruptMatrix();
     }
@@ -21,7 +23,6 @@ class T92SubMatrix : public virtual SubMatrix {
     }
 
   protected:
-
     void ComputeArray(int i) const override;
     void ComputeStationary() const override;
 
@@ -30,4 +31,3 @@ class T92SubMatrix : public virtual SubMatrix {
 };
 
 #endif
-

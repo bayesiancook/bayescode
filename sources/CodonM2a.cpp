@@ -1,15 +1,14 @@
 #include <cmath>
 #include <fstream>
-#include "CodonM2aModel.hpp"
 #include "Chain.hpp"
+#include "CodonM2aModel.hpp"
 using namespace std;
 
 /**
  * \brief Chain object for running an MCMC under CodonM2aModel
  */
 
-class CodonM2aChain : public Chain  {
-
+class CodonM2aChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
@@ -17,21 +16,24 @@ class CodonM2aChain : public Chain  {
 
   public:
     //! return the model, with its derived type (unlike ProbModel::GetModel)
-    CodonM2aModel* GetModel() {
-        return static_cast<CodonM2aModel*>(model);
-    }
+    CodonM2aModel *GetModel() { return static_cast<CodonM2aModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    //! constructor for a new chain: datafile, treefile, pi (fraction of sites under positive selection) saving frequency, final chain size, chain name and overwrite flag -- calls New
-    CodonM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil, string inname, int force) : modeltype("CODONM2A"), datafile(indatafile), treefile(intreefile), pi(inpi)  {
+    //! constructor for a new chain: datafile, treefile, pi (fraction of sites
+    //! under positive selection) saving frequency, final chain size, chain name
+    //! and overwrite flag -- calls New
+    CodonM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil,
+                  string inname, int force)
+        : modeltype("CODONM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
         every = inevery;
         until = inuntil;
         name = inname;
         New(force);
     }
 
-    //! constructor for re-opening an already existing chain from file -- calls Open
+    //! constructor for re-opening an already existing chain from file -- calls
+    //! Open
     CodonM2aChain(string filename) {
         name = filename;
         Open();
@@ -39,7 +41,7 @@ class CodonM2aChain : public Chain  {
     }
 
     void New(int force) override {
-        model = new CodonM2aModel(datafile,treefile,pi);
+        model = new CodonM2aModel(datafile, treefile, pi);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -65,7 +67,7 @@ class CodonM2aChain : public Chain  {
         is >> every >> until >> size;
 
         if (modeltype == "CODONM2A") {
-            model = new CodonM2aModel(datafile,treefile,pi);
+            model = new CodonM2aModel(datafile, treefile, pi);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -87,7 +89,7 @@ class CodonM2aChain : public Chain  {
         model->ToStream(param_os);
     }
 
-    void SavePoint() override   {
+    void SavePoint() override {
         Chain::SavePoint();
         ofstream pos((name + ".sitepp").c_str(), ios_base::app);
         GetModel()->TracePostProb(pos);
@@ -99,21 +101,21 @@ class CodonM2aChain : public Chain  {
     }
 };
 
-int main(int argc, char* argv[])	{
-
+int main(int argc, char *argv[]) {
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
-        CodonM2aChain* chain = new CodonM2aChain(name);
+        CodonM2aChain *chain = new CodonM2aChain(name);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 
     // new chain
-    else    {
+    else {
         string datafile = "";
         string treefile = "";
         double pi = 0.1;
@@ -122,63 +124,56 @@ int main(int argc, char* argv[])	{
         int every = 1;
         int until = -1;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if (s == "-pi")    {
+                } else if (s == "-pi") {
                     i++;
                     pi = atof(argv[i]);
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == ""))	{
+            if ((datafile == "") || (treefile == "") || (name == "")) {
                 throw(0);
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "codonm2a -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        CodonM2aChain* chain = new CodonM2aChain(datafile,treefile,pi,every,until,name,force);
+        CodonM2aChain *chain = new CodonM2aChain(datafile, treefile, pi, every, until, name, force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+        cerr << chain->GetSize()
+             << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
 }
-

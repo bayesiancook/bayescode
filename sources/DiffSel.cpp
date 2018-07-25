@@ -1,31 +1,27 @@
 #include <cmath>
 #include <fstream>
-#include "DiffSelModel.hpp"
 #include "Chain.hpp"
+#include "DiffSelModel.hpp"
 using namespace std;
-
 
 /**
  * \brief Chain object for running an MCMC under the DiffSelModel
  */
 
-class DiffSelChain: public Chain {
+class DiffSelChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
     int codonmodel, category, level, fixglob, fixvar;
 
   public:
-    DiffSelModel* GetModel() {
-        return static_cast<DiffSelModel*>(model);
-    }
+    DiffSelModel *GetModel() { return static_cast<DiffSelModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelChain(string indata, string intree, int incategory,
-                                              int inlevel, int inevery, int inuntil, int infixglob,
-                                              int infixvar, int incodonmodel,
-                                              string inname, int force)
+    DiffSelChain(string indata, string intree, int incategory, int inlevel, int inevery,
+                 int inuntil, int infixglob, int infixvar, int incodonmodel, string inname,
+                 int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
           treefile(intree),
@@ -33,7 +29,7 @@ class DiffSelChain: public Chain {
           category(incategory),
           level(inlevel),
           fixglob(infixglob),
-          fixvar(infixvar)  {
+          fixvar(infixvar) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -74,7 +70,8 @@ class DiffSelChain: public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "DIFFSEL") {
-            model = new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+            model =
+                new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -99,13 +96,11 @@ class DiffSelChain: public Chain {
     }
 };
 
-
-int main(int argc, char* argv[]) {
-
+int main(int argc, char *argv[]) {
     cerr << "-- Parsing command line arguments\n";
 
     string name = "";
-    DiffSelChain* chain = 0;
+    DiffSelChain *chain = 0;
 
     // this is an already existing chain on the disk; reopen and restart
     if (argc == 2 && argv[1][0] != '-') {
@@ -116,7 +111,6 @@ int main(int argc, char* argv[]) {
 
     // this is a new chain
     else {
-
         string datafile = "";
         string treefile = "";
         int ncond = 2;
@@ -129,62 +123,56 @@ int main(int argc, char* argv[]) {
         int until = -1;
         int force = 0;
 
-        try	{
-
-            if (argc == 1)	{
+        try {
+            if (argc == 1) {
                 throw(0);
             }
 
             int i = 1;
-            while (i < argc)	{
+            while (i < argc) {
                 string s = argv[i];
 
-                if (s == "-d")	{
+                if (s == "-d") {
                     i++;
                     datafile = argv[i];
-                }
-                else if ((s == "-t") || (s == "-T"))	{
+                } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                }
-                else if (s == "-f")	{
+                } else if (s == "-f") {
                     force = 1;
-                }
-                else if (s == "-ncond")	{
+                } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
-                }
-                else if (s == "-nlevel")    {
+                } else if (s == "-nlevel") {
                     i++;
                     nlevel = atoi(argv[i]);
-                }
-                else if ( (s == "-x") || (s == "-extract") )	{
+                } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
                     every = atoi(argv[i]);
                     i++;
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
-                }
-                else	{
-                    if (i != (argc -1))	{
+                } else {
+                    if (i != (argc - 1)) {
                         throw(0);
                     }
                     name = argv[i];
                 }
                 i++;
             }
-        }
-        catch(...)	{
+        } catch (...) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelChain(datafile,treefile,ncond,nlevel,every,until,fixglob,fixvar,codonmodel,name,force);
+        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, fixglob, fixvar,
+                                 codonmodel, name, force);
     }
 
     cerr << "chain " << name << " started\n";
     chain->Start();
     cerr << "chain " << name << " stopped\n";
-    cerr << chain->GetSize() << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    cerr << chain->GetSize()
+         << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
     chain->GetModel()->Trace(cerr);
 }

@@ -1,14 +1,14 @@
 #include "Chain.hpp"
 #include <fstream>
 #include <iostream>
-#include "ProbModel.hpp"
 #include "Chrono.hpp"
+#include "ProbModel.hpp"
 using namespace std;
 
 // c++11
-#define nullptr 0 
+#define nullptr 0
 
-Chain::Chain()  {
+Chain::Chain() {
     every = 1;
     until = -1;
     saveall = 1;
@@ -23,7 +23,7 @@ void Chain::MakeFiles(int force) {
         exit(1);
     }
     ofstream param_os((name + ".param").c_str());
-    if (saveall)    {
+    if (saveall) {
         ofstream chain_os((name + ".chain").c_str());
     }
     ofstream mon_os((name + ".monitor").c_str());
@@ -40,7 +40,7 @@ void Chain::Monitor() {
 }
 
 void Chain::SavePoint() {
-    if (saveall)    {
+    if (saveall) {
         ofstream chain_os((name + ".chain").c_str(), ios_base::app);
         model->ToStream(chain_os);
     }
@@ -77,7 +77,6 @@ int Chain::GetRunningStatus() {
 }
 
 void Chain::Run() {
-
     while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
         Chrono chrono;
         chrono.Start();

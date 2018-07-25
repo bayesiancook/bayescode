@@ -1,37 +1,37 @@
 #include "MultiGeneChain.hpp"
 #include <fstream>
 #include <iostream>
-#include "MultiGeneProbModel.hpp"
 #include "Chrono.hpp"
+#include "MultiGeneProbModel.hpp"
 using namespace std;
 
 // c++11
-#define nullptr 0 
+#define nullptr 0
 
-MultiGeneChain::MultiGeneChain(int inmyid, int innprocs) : Chain(), myid(inmyid), nprocs(innprocs) {}
+MultiGeneChain::MultiGeneChain(int inmyid, int innprocs)
+    : Chain(), myid(inmyid), nprocs(innprocs) {}
 
 void MultiGeneChain::SavePoint() {
-    if (saveall)    {
-        if (! myid) {
+    if (saveall) {
+        if (!myid) {
             ofstream chain_os((name + ".chain").c_str(), ios_base::app);
             GetMultiGeneModel()->MasterToStream(chain_os);
-        }
-        else    {
+        } else {
             GetMultiGeneModel()->SlaveToStream();
         }
     }
     size++;
 }
 
-void MultiGeneChain::Reset(int force)   {
+void MultiGeneChain::Reset(int force) {
     size = 0;
-    if (! myid) {
+    if (!myid) {
         MakeFiles(force);
     }
     Save();
 }
 
-void MultiGeneChain::MakeFiles(int force)   {
+void MultiGeneChain::MakeFiles(int force) {
     Chain::MakeFiles(force);
     ofstream nameos((name + ".genelist").c_str());
     GetMultiGeneModel()->PrintGeneList(nameos);
@@ -39,19 +39,18 @@ void MultiGeneChain::MakeFiles(int force)   {
 }
 
 void MultiGeneChain::Move() {
-
     for (int i = 0; i < every; i++) {
         GetMultiGeneModel()->Move();
     }
     SavePoint();
     Save();
-    if (!myid)  {
+    if (!myid) {
         Monitor();
     }
 }
 
 void MultiGeneChain::Start() {
-    if (! myid) {
+    if (!myid) {
         ofstream run_os((name + ".run").c_str());
         run_os << 1 << '\n';
         run_os.close();
@@ -59,22 +58,19 @@ void MultiGeneChain::Start() {
     Run();
 }
 
-void MultiGeneChain::MasterSendRunningStatus(int status)  {
-    MPI_Bcast(&status,1,MPI_INT,0,MPI_COMM_WORLD);
+void MultiGeneChain::MasterSendRunningStatus(int status) {
+    MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
 }
 
 int MultiGeneChain::SlaveReceiveRunningStatus() {
     int status;
-    MPI_Bcast(&status,1,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
     return status;
 }
 
 void MultiGeneChain::Run() {
-
-    if (! myid) {
-
+    if (!myid) {
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
-
             MasterSendRunningStatus(1);
             Chrono chrono;
             chrono.Start();
@@ -87,9 +83,7 @@ void MultiGeneChain::Run() {
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());
         run_os << 0 << '\n';
-    }
-    else    {
-
+    } else {
         while (SlaveReceiveRunningStatus()) {
             Move();
         }
