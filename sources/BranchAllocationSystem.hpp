@@ -1,6 +1,7 @@
-
 #ifndef BRANCHALLOC_H
 #define BRANCHALLOC_H
+
+#include "Tree.hpp"
 
 /**
  * \brief An object that associates an integer (in 0..K-1) to each branch of a

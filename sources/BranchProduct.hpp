@@ -2,6 +2,8 @@
 #ifndef BRANCHPRODUCT_H
 #define BRANCHPRODUCT_H
 
+#include "Array.hpp"
+
 /**
  * \brief The product of a BranchSelector<double> and a double
  *

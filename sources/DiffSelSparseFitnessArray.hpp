@@ -2,6 +2,7 @@
 #ifndef DIFFSELSPARSEFIT_H
 #define DIFFSELSPARSEFIT_H
 
+#include "Array.hpp"
 #include "BidimArray.hpp"
 
 /**

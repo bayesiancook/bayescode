@@ -2,6 +2,7 @@
 #ifndef DIFFSELFIT_H
 #define DIFFSELFIT_H
 
+#include "Array.hpp"
 #include "BidimArray.hpp"
 
 /**
