@@ -170,7 +170,7 @@ class HomogeneousSelector : public Selector<T> {
     int GetSize() const override { return size; }
 
     //! return a reference to the same value (i.e. value) for any index
-    const T &GetVal(int index) const override { return value; }
+    const T &GetVal(int) const override { return value; }
 
   private:
     //! array (abstract) size
