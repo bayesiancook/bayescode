@@ -372,6 +372,7 @@ void MultiGeneCodonM2aModel::TraceHeader(ostream &os) const {
         os << "\tstdevstat\tcenter\thyperinvconc";
     }
     os << "\tgenelogprior\tbl\tnuc\tomega";
+    os << "\tblinvshape\tbllogprob";
     os << '\n';
 }
 
@@ -400,6 +401,7 @@ void MultiGeneCodonM2aModel::Trace(ostream &os) const {
     }
     os << '\t' << GeneLogPrior << '\t' << GeneBLLogPrior << '\t' << GeneNucRatesLogPrior << '\t'
        << GeneOmegaLogPrior;
+    os << '\t' << blhyperinvshape << '\t' << branchlength->GetLogProb();
     os << '\n';
     os.flush();
 }
@@ -819,14 +821,7 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
     }
 
     if (poswmode == 1) {
-        SlidingMove(poswhypermean, 1.0, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        ScalingMove(poswhyperinvconc, 1.0, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
+	MovePoswHyper();
     }
 
     if (purwmode == 1) {
@@ -846,6 +841,47 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
         }
     }
 }
+
+void MultiGeneCodonM2aModel::MovePoswHyper()	{
+
+        SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
+        SlidingMove(poswhypermean, 0.1, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
+        ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
+        ScalingMove(poswhyperinvconc, 0.1, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
+
+	for (int rep=0; rep<10; rep++)	{
+		PoswCompMove(1.0);
+		PoswCompMove(0.3);
+	}
+}
+
+int MultiGeneCodonM2aModel::PoswCompMove(double tuning)	{
+
+	double bkposwhypermean = poswhypermean;
+	double bkposwhyperinvconc = poswhyperinvconc;
+	double deltalogprob = - MixtureHyperLogProb();
+	double m = tuning * (Random::Uniform() - 0.5);
+	double e = exp(m);
+	if (poswhypermean * e > 1.0)	{
+		return 0;
+	}
+	poswhypermean *= e;
+	poswhyperinvconc *= e;
+	deltalogprob += MixtureHyperLogProb();
+	deltalogprob += 2*m;
+
+	int accepted = (log(Random::Uniform()) < deltalogprob);
+	if (!accepted) {
+		poswhypermean = bkposwhypermean;
+		poswhyperinvconc = bkposwhyperinvconc;
+	}
+	return accepted;
+}
+
 
 void MultiGeneCodonM2aModel::ResamplePi() {
     int n0 = poswsuffstat.GetN0();

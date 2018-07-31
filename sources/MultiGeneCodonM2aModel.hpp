@@ -285,6 +285,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
 
     // moving mixture hyper params
     void MoveMixtureHyperParameters();
+    void MovePoswHyper();
+    int PoswCompMove(double tuning);
     // special function for moving pi
     void ResamplePi();
 
