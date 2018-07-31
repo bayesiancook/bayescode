@@ -463,7 +463,7 @@ inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedo
         m++;
         fact *= mu * efflength / m;
         total += Power(m, stateup, statedown) * fact;
-        if ((total - Z) > 1e-8) {
+        if ((total - Z) > 1e-5) {
             std::cerr << "error in DrawUniformizedSubstitutionNumber: normalising "
                          "constant\n";
             std::cerr << total << '\t' << Z << '\n';
