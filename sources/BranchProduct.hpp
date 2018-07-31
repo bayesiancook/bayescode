@@ -3,6 +3,7 @@
 #define BRANCHPRODUCT_H
 
 #include "Array.hpp"
+#include "BranchArray.hpp"
 
 /**
  * \brief The product of a BranchSelector<double> and a double
