@@ -419,7 +419,7 @@ inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double *p, double 
         tot += p[k];
     }
     delete[] p1;
-    if (fabs(1 - tot) > 1e-5) {
+    if (fabs(1 - tot) > 1e-4) {
         std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot)
                   << '\n';
         std::cerr << "eff length : " << efflength << '\n';
