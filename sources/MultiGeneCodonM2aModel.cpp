@@ -844,9 +844,13 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
 
 void MultiGeneCodonM2aModel::MovePoswHyper()	{
 
+        SlidingMove(poswhypermean, 1.0, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
         SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
                     &MultiGeneCodonM2aModel::NoUpdate, this);
         SlidingMove(poswhypermean, 0.1, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                    &MultiGeneCodonM2aModel::NoUpdate, this);
+        ScalingMove(poswhyperinvconc, 1.0, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
                     &MultiGeneCodonM2aModel::NoUpdate, this);
         ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
                     &MultiGeneCodonM2aModel::NoUpdate, this);
@@ -856,6 +860,7 @@ void MultiGeneCodonM2aModel::MovePoswHyper()	{
 	for (int rep=0; rep<10; rep++)	{
 		PoswCompMove(1.0);
 		PoswCompMove(0.3);
+		PoswCompMove(0.1);
 	}
 }
 
