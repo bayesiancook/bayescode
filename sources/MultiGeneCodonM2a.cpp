@@ -377,6 +377,8 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (s == "-blint")   {
                     blsamplemode = 1;
+                } else if (s == "-blnoint") {
+                    blsamplemode = 0;
                 } else if (s == "-pi") {
                     i++;
                     pihypermean = atof(argv[i]);
