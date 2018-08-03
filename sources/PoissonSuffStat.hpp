@@ -314,4 +314,40 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
     }
 };
 
+class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
+
+  public:
+    //! constructor, parameterized by underlying tree and size (number of genes)
+    PoissonSuffStatTreeArray(const Tree &intree, int insize)
+        : tree(intree), size(insize), array(insize, (PoissonSuffStatBranchArray *)0) {
+        for (int i = 0; i < GetSize(); i++) {
+            array[i] = new PoissonSuffStatBranchArray(tree);
+        }
+    }
+
+    ~PoissonSuffStatTreeArray() {
+        for (int i = 0; i < GetSize(); i++) {
+            delete[] array[i];
+        }
+    }
+
+    int GetSize() const override { return size; }
+
+    const PoissonSuffStatBranchArray &GetVal(int i) const override { return *array[i]; }
+
+    PoissonSuffStatBranchArray &operator[](int i) override { return *array[i]; }
+
+    //! clear all suff stats
+    void Clear() {
+        for (int i = 0; i < GetSize(); i++) {
+            array[i]->Clear();
+        }
+    }
+
+  private:
+    const Tree &tree;
+    int size;
+    vector<PoissonSuffStatBranchArray *> array;
+};
+
 #endif
