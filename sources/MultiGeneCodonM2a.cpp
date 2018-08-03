@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
         int blmode = 1;
         int nucmode = 1;
 
-        int blsamplemode = 1;
+        int blsamplemode = 0;
 
         int writegenedata = 1;
 
