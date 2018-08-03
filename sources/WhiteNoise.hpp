@@ -64,6 +64,10 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
         for (int i = 0; i < GetNbranch(); i++) {
             if (suffstatarray.GetVal(i).GetBeta() == 0)  {
                 (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
+                if ((*this)[i] == 0)    {
+                    cerr << "null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape << '\t' << blmean.GetVal(i) << '\n';
+                    (*this)[i] = 0.001;
+                }
             }
         }
     }
