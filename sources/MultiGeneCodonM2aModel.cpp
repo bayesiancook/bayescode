@@ -621,7 +621,7 @@ void MultiGeneCodonM2aModel::MasterMove() {
                 MoveBranchLengthsHyperParametersIntegrated();
                 movechrono.Stop();
                 MasterSendBranchLengthsHyperParameters();
-                MasterReceiveGeneBranchLengths();
+                // MasterReceiveGeneBranchLengths();
             }
             else    {
                 MasterReceiveBranchLengthsHyperSuffStat();
@@ -689,7 +689,7 @@ void MultiGeneCodonM2aModel::SlaveMove() {
                 SlaveSendGeneBranchLengthsSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
                 ResampleGeneBranchLengths();
-                SlaveSendGeneBranchLengths();
+                // SlaveSendGeneBranchLengths();
             }
             else    {
                 SlaveSendBranchLengthsHyperSuffStat();
