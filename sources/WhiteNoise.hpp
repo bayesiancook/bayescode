@@ -59,6 +59,15 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
         }
     }
 
+    //! resample entries based on a BranchArray of PoissonSuffStat
+    void ResampleEmptyBranches(const PoissonSuffStatBranchArray &suffstatarray) {
+        for (int i = 0; i < GetNbranch(); i++) {
+            if (suffstatarray.GetVal(i).GetBeta() == 0)  {
+                (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
+            }
+        }
+    }
+
     //! return total log prob summed over all entries
     double GetLogProb() {
         double total = 0;

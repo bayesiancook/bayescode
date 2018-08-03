@@ -361,6 +361,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void SlaveSendBranchLengthsSuffStat();
     void MasterReceiveBranchLengthsSuffStat();
 
+    void CollectGeneBranchLengthsSuffStat();
     void SlaveSendGeneBranchLengthsSuffStat();
     void MasterReceiveGeneBranchLengthsSuffStat();
 

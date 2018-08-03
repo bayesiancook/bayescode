@@ -73,12 +73,15 @@ void MultiGeneCodonM2aModel::Allocate() {
 
         if (blsamplemode)   {
             lengthpathsuffstatarray = 0;
-            lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,Ngene);
+            lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,GetLocalNgene());
             lengthhypersuffstatarray = 0;
         }
         else    {
             lengthpathsuffstatarray = 0;
-            lengthpathsuffstattreearray = 0;
+            // lengthpathsuffstattreearray = 0;
+            if (myid)   {
+                lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,GetLocalNgene());
+            }
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
     }
@@ -784,7 +787,7 @@ double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb() const {
 
 double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int branch) const {
     double total = 0;
-    for (int gene=0; gene<Ngene; gene++)    {
+    for (int gene=0; gene<GetLocalNgene(); gene++)    {
         total += GeneBranchLengthsHyperSuffStatLogProb(gene,branch);
     }
     return total;
@@ -1141,13 +1144,17 @@ void MultiGeneCodonM2aModel::SlaveSendBranchLengthsSuffStat() {
     SlaveSendAdditive(*lengthpathsuffstatarray);
 }
 
-void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengthsSuffStat() {
+void MultiGeneCodonM2aModel::CollectGeneBranchLengthsSuffStat()    {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->CollectLengthSuffStat();
         // (*lengthpathsuffstattreearray)[gene].Clear();
         // (*lengthpathsuffstattreearray)[gene]->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         (*lengthpathsuffstattreearray)[gene].BranchArray<PoissonSuffStat>::Copy(*geneprocess[gene]->GetLengthPathSuffStatArray());
     }
+}
+
+void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengthsSuffStat() {
+    CollectGeneBranchLengthsSuffStat();
     SlaveSendGeneArray(*lengthpathsuffstattreearray);
 }
 
@@ -1162,8 +1169,9 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengthsSuffStat() {
 }
 
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat() {
+    CollectGeneBranchLengthsSuffStat();
     lengthhypersuffstatarray->Clear();
-    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
+    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray,*lengthpathsuffstattreearray);
     SlaveSendAdditive(*lengthhypersuffstatarray);
 }
 
