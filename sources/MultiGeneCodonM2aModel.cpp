@@ -621,6 +621,7 @@ void MultiGeneCodonM2aModel::MasterMove() {
                 MoveBranchLengthsHyperParametersIntegrated();
                 movechrono.Stop();
                 MasterSendBranchLengthsHyperParameters();
+                MasterReceiveGeneBranchLengths();
             }
             else    {
                 MasterReceiveBranchLengthsHyperSuffStat();
@@ -688,6 +689,7 @@ void MultiGeneCodonM2aModel::SlaveMove() {
                 SlaveSendGeneBranchLengthsSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
                 ResampleGeneBranchLengths();
+                SlaveSendGeneBranchLengths();
             }
             else    {
                 SlaveSendBranchLengthsHyperSuffStat();
@@ -794,8 +796,12 @@ double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int gene, i
     int count = suffstat.GetCount();
     double b = suffstat.GetBeta();
 
+    double alpha = 1.0 / blhyperinvshape;
+    double beta = alpha / branchlength->GetVal(branch);
+    /*
     double alpha = branchlengtharray->GetVal(gene).GetAlpha(branch);
     double beta = branchlengtharray->GetVal(gene).GetBeta(branch);
+    */
 
     return alpha * log(beta) - Random::logGamma(alpha) + Random::logGamma(alpha + count) - (alpha + count) * log(beta + b);
 }
