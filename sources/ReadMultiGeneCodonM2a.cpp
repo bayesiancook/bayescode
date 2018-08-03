@@ -10,7 +10,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
   private:
     string modeltype, datafile, treefile;
     int writegenedata;
-    int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
+    int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
     double puromhypermean, puromhyperinvconc;
     double dposomhypermean, dposomhyperinvshape;
@@ -49,11 +49,16 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
 
+        blsamplemode = 0;
         int check;
         is >> check;
         if (check) {
-            cerr << "Error when reading model\n";
-            exit(1);
+            is >> blsamplemode;
+            is >> check;
+            if (check)  {
+                cerr << "Error when reading model\n";
+                exit(1);
+            }
         }
         is >> chainevery >> chainuntil >> chainsize;
 
@@ -62,6 +67,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
+            GetModel()->SetBLSamplingMode(blsamplemode);
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);

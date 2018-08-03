@@ -21,7 +21,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int writegenedata;
-    int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
+    int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
     double puromhypermean, puromhyperinvconc;
     double dposomhypermean, dposomhyperinvshape;
@@ -44,7 +44,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     //! shift probabilities \param name: base name for all files related to this
     //! MCMC run \param force: overwrite existing files with same name \param
     //! inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int innucmode,
+    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode, int innucmode,
                            int inpurommode, int indposommode, int inpurwmode, int inposwmode,
                            double inpihypermean, double inpihyperinvconc, double inpuromhypermean,
                            double inpuromhyperinvconc, double indposomhypermean,
@@ -57,6 +57,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
           datafile(indatafile),
           treefile(intreefile) {
         blmode = inblmode;
+        blsamplemode = inblsamplemode;
         nucmode = innucmode;
         purommode = inpurommode;
         dposommode = indposommode;
@@ -92,6 +93,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc, myid,
                                            nprocs);
         GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode, poswmode);
+        GetModel()->SetBLSamplingMode(blsamplemode);
         GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
                                               dposomhyperinvshape, purwhypermean, purwhyperinvconc,
                                               poswhypermean, poswhyperinvconc);
@@ -126,11 +128,16 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
 
+        blsamplemode = 0;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "Error when reading model\n";
-            exit(1);
+            is >> blsamplemode;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "Error when reading model\n";
+                exit(1);
+            }
         }
         is >> every >> until >> size;
 
@@ -139,6 +146,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
+            GetModel()->SetBLSamplingMode(blsamplemode);
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
@@ -182,7 +190,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
             param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
             param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
-            ;
+            param_os << 1 << '\n';
+            param_os << blsamplemode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -281,6 +290,8 @@ int main(int argc, char *argv[]) {
         int blmode = 1;
         int nucmode = 1;
 
+        int blsamplemode = 1;
+
         int writegenedata = 1;
 
         int force = 1;
@@ -364,6 +375,8 @@ int main(int argc, char *argv[]) {
                         cerr << "error: does not recongnize command after -bl\n";
                         exit(1);
                     }
+                } else if (s == "-blint")   {
+                    blsamplemode = 1;
                 } else if (s == "-pi") {
                     i++;
                     pihypermean = atof(argv[i]);
@@ -422,7 +435,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneCodonM2aChain(
-            datafile, treefile, blmode, nucmode, purommode, dposommode, purwmode, poswmode,
+            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
             pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
             dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc,
             every, until, writegenedata, name, force, myid, nprocs);
