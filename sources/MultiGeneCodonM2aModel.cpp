@@ -771,10 +771,9 @@ void MultiGeneCodonM2aModel::MoveLambda() {
 }
 
 void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParametersIntegrated() {
-    for (int j = 0; j < Nbranch; j++) {
-        BranchLengthsHyperScalingMoveIntegrated(1.0, 10);
-        BranchLengthsHyperScalingMoveIntegrated(0.3, 10);
-    }
+
+    BranchLengthsHyperScalingMoveIntegrated(1.0, 10);
+    BranchLengthsHyperScalingMoveIntegrated(0.3, 10);
 
     ScalingMove(blhyperinvshape, 1.0, 10, &MultiGeneCodonM2aModel::BranchLengthsIntegratedHyperLogProb,
                 &MultiGeneCodonM2aModel::NoUpdate, this);
@@ -846,10 +845,9 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperScalingMoveIntegrated(double tu
 }
 
 void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParameters() {
-    for (int j = 0; j < Nbranch; j++) {
-        BranchLengthsHyperScalingMove(1.0, 10);
-        BranchLengthsHyperScalingMove(0.3, 10);
-    }
+
+    BranchLengthsHyperScalingMove(1.0, 10);
+    BranchLengthsHyperScalingMove(0.3, 10);
 
     ScalingMove(blhyperinvshape, 1.0, 10, &MultiGeneCodonM2aModel::BranchLengthsHyperLogProb,
                 &MultiGeneCodonM2aModel::NoUpdate, this);
