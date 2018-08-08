@@ -349,6 +349,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void MasterSendBranchLengthsHyperParameters();
     void SlaveReceiveBranchLengthsHyperParameters();
 
+    void GeneResampleEmptyBranches();
+
     void MasterSendNucRatesHyperParameters();
     void SlaveReceiveNucRatesHyperParameters();
 

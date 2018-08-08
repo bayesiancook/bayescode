@@ -132,6 +132,10 @@ class CodonM2aModel : public ProbModel {
     void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
                                          double inblinvshape);
 
+    void ResampleEmptyBranches()    {
+        branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
+    }
+
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate, const std::vector<double> &innucstat);

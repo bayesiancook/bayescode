@@ -128,7 +128,7 @@ void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double>
     blhypermean->Copy(inblmean);
     blhyperinvshape = inblinvshape;
     branchlength->SetShape(1.0 / blhyperinvshape);
-    branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
+    // branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
 }
 
 void CodonM2aModel::SetNucRates(const std::vector<double> &innucrelrate,

@@ -376,6 +376,8 @@ int main(int argc, char *argv[]) {
                         exit(1);
                     }
                 } else if (s == "-blint")   {
+                    blsamplemode = 2;
+                } else if (s == "-blskip")   {
                     blsamplemode = 1;
                 } else if (s == "-blnoint") {
                     blsamplemode = 0;
