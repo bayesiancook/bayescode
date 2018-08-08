@@ -631,11 +631,14 @@ void MultiGeneCodonM2aModel::MasterMove() {
                 // MasterReceiveGeneBranchLengths();
             }
             else    {
-                MasterReceiveBranchLengthsHyperSuffStat();
-                movechrono.Start();
-                MoveBranchLengthsHyperParameters();
-                movechrono.Stop();
-                MasterSendBranchLengthsHyperParameters();
+                int nblrep = 5;
+                for (int blrep=0; blrep<nblrep; blrep++)    {
+                    MasterReceiveBranchLengthsHyperSuffStat();
+                    movechrono.Start();
+                    MoveBranchLengthsHyperParameters();
+                    movechrono.Stop();
+                    MasterSendBranchLengthsHyperParameters();
+                }
             }
         }
 
@@ -699,11 +702,20 @@ void MultiGeneCodonM2aModel::SlaveMove() {
                 // SlaveSendGeneBranchLengths();
             }
             else    {
+                int nblrep = 5;
+                for (int blrep=0; blrep<nblrep; blrep++)    {
+                    SlaveSendBranchLengthsHyperSuffStat();
+                    SlaveReceiveBranchLengthsHyperParameters();
+                    ResampleGeneBranchLengths();
+                }
+
+                /*
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
                 if (blsamplemode == 1)  {
                     GeneResampleEmptyBranches();
                 }
+                */
             }
         }
 
