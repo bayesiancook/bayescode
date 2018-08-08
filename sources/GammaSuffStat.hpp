@@ -228,7 +228,7 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
         double total = 0;
         for (int i = 0; i < GetNbranch(); i++) {
             double shape = 1.0 / invshape;
-            double scale = 1.0 / blmean.GetVal(i);
+            double scale = shape / blmean.GetVal(i);
             total += GetVal(i).GetLogProb(shape, scale);
         }
         return total;
