@@ -417,10 +417,6 @@ void MultiGeneCodonM2aModel::Trace(ostream &os) const {
     }
     os << '\t' << GeneLogPrior << '\t' << GeneBLLogPrior << '\t' << GeneNucRatesLogPrior << '\t'
        << GeneOmegaLogPrior;
-    if (fabs(GeneBLLogPrior - branchlengtharray->GetLogProb()) > 1e-4)  {
-        cerr << "error in GeneBLLogPrior: " << GeneBLLogPrior << '\t' << branchlengtharray->GetLogProb() << '\n';
-        exit(1);
-    }
     os << '\t' << blhyperinvshape << '\t' << branchlength->GetLogProb();
     os << '\n';
     os.flush();
