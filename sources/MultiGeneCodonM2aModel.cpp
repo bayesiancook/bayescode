@@ -353,10 +353,10 @@ void MultiGeneCodonM2aModel::MasterToStream(ostream &os) const {
     os << nucstathyperinvconc << '\t';
     os << *nucrelratearray << '\t';
     os << *nucstatarray << '\t';
-    os << puromhypermean << puromhyperinvconc << '\t';
-    os << dposomhypermean << dposomhyperinvshape << '\t';
-    os << purwhypermean << purwhyperinvconc << '\t';
-    os << poswhypermean << poswhyperinvconc << '\t';
+    os << puromhypermean << '\t' << puromhyperinvconc << '\t';
+    os << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
+    os << purwhypermean << '\t' << purwhyperinvconc << '\t';
+    os << poswhypermean << '\t' << poswhyperinvconc << '\t';
     os << pi << '\t';
     os << *puromarray << '\t';
     os << *dposomarray << '\t';
