@@ -42,23 +42,18 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> writegenedata;
-        is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
+        is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
         is >> puromhypermean >> puromhyperinvconc;
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
 
-        blsamplemode = 0;
         int check;
         is >> check;
-        if (check) {
-            is >> blsamplemode;
-            is >> check;
-            if (check)  {
-                cerr << "Error when reading model\n";
-                exit(1);
-            }
+        if (check)  {
+            cerr << "Error when reading model\n";
+            exit(1);
         }
         is >> chainevery >> chainuntil >> chainsize;
 

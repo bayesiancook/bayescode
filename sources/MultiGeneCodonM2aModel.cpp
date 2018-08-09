@@ -71,7 +71,7 @@ void MultiGeneCodonM2aModel::Allocate() {
         branchlengtharray =
             new GammaWhiteNoiseArray(GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
 
-        if (blsamplemode == 2)   {
+        if (blsamplemode == 1)   {
             lengthpathsuffstatarray = 0;
             lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,GetLocalNgene());
             lengthhypersuffstatarray = 0;
@@ -622,7 +622,7 @@ void MultiGeneCodonM2aModel::MasterMove() {
             movechrono.Stop();
             MasterSendGlobalBranchLengths();
         } else if (blmode == 1) {
-            if (blsamplemode == 2)   {
+            if (blsamplemode == 1)   {
                 MasterReceiveGeneBranchLengthsSuffStat();
                 movechrono.Start();
                 MoveBranchLengthsHyperParametersIntegrated();
@@ -631,14 +631,11 @@ void MultiGeneCodonM2aModel::MasterMove() {
                 // MasterReceiveGeneBranchLengths();
             }
             else    {
-                int nblrep = 5;
-                for (int blrep=0; blrep<nblrep; blrep++)    {
-                    MasterReceiveBranchLengthsHyperSuffStat();
-                    movechrono.Start();
-                    MoveBranchLengthsHyperParameters();
-                    movechrono.Stop();
-                    MasterSendBranchLengthsHyperParameters();
-                }
+                MasterReceiveBranchLengthsHyperSuffStat();
+                movechrono.Start();
+                MoveBranchLengthsHyperParameters();
+                movechrono.Stop();
+                MasterSendBranchLengthsHyperParameters();
             }
         }
 
@@ -695,27 +692,17 @@ void MultiGeneCodonM2aModel::SlaveMove() {
             SlaveSendBranchLengthsSuffStat();
             SlaveReceiveGlobalBranchLengths();
         } else if (blmode == 1) {
-            if (blsamplemode == 2)   {
+            if (blsamplemode == 1)   {
+                // integrated move
                 SlaveSendGeneBranchLengthsSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
                 ResampleGeneBranchLengths();
-                // SlaveSendGeneBranchLengths();
             }
             else    {
-                int nblrep = 5;
-                for (int blrep=0; blrep<nblrep; blrep++)    {
-                    SlaveSendBranchLengthsHyperSuffStat();
-                    SlaveReceiveBranchLengthsHyperParameters();
-                    ResampleGeneBranchLengths();
-                }
-
-                /*
+                // conditional move
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
-                if (blsamplemode == 1)  {
-                    GeneResampleEmptyBranches();
-                }
-                */
+                GeneResampleEmptyBranches();
             }
         }
 
@@ -1201,11 +1188,8 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengthsSuffStat() {
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat() {
     CollectGeneBranchLengthsSuffStat();
     lengthhypersuffstatarray->Clear();
-    if (blsamplemode == 1)  {
-        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray,*lengthpathsuffstattreearray);
-    } else  {
-        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-    }
+    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray,*lengthpathsuffstattreearray);
+    // lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
     SlaveSendAdditive(*lengthhypersuffstatarray);
 }
 

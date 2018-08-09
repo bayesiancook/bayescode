@@ -121,23 +121,18 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> writegenedata;
-        is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
+        is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
         is >> puromhypermean >> puromhyperinvconc;
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
 
-        blsamplemode = 0;
         int tmp;
         is >> tmp;
         if (tmp) {
-            is >> blsamplemode;
-            is >> tmp;
-            if (tmp)    {
-                cerr << "Error when reading model\n";
-                exit(1);
-            }
+            cerr << "Error when reading model\n";
+            exit(1);
         }
         is >> every >> until >> size;
 
@@ -183,15 +178,13 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << writegenedata << '\n';
-            param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
+            param_os << blmode << '\t' << blsamplemode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
                      << poswmode << '\n';
             param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
             param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
             param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
             param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
-            param_os << 1 << '\n';
-            param_os << blsamplemode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -376,8 +369,6 @@ int main(int argc, char *argv[]) {
                         exit(1);
                     }
                 } else if (s == "-blint")   {
-                    blsamplemode = 2;
-                } else if (s == "-blskip")   {
                     blsamplemode = 1;
                 } else if (s == "-blnoint") {
                     blsamplemode = 0;
