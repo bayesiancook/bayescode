@@ -89,7 +89,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     Chrono movechrono;
     Chrono mapchrono;
 
-    int blmode, nucmode, basemode, omegamode, omegaprior;
+    int blmode, nucmode, basemode, omegamode, omegaprior, modalprior;
 
     Chrono totchrono;
     Chrono paramchrono;
@@ -106,7 +106,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     MultiGeneAAMutSelDSBDPOmegaModel(string datafile, string intreefile, int inNcat, int inbaseNcat,
                                      int inblmode, int innucmode, int inbasemode, int inomegamode,
-                                     int inomegaprior, double indposompihypermean,
+                                     int inomegaprior, int inmodalprior, double indposompihypermean,
                                      double indposompihyperinvconc, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
         AllocateAlignments(datafile);
@@ -132,6 +132,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         basemode = inbasemode;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
+        modalprior = inmodalprior;
         dposompihypermean = indposompihypermean;
         dposompihyperinvconc = indposompihyperinvconc;
 
@@ -701,7 +702,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             total += (pialpha - 1) * log(1.0 - dposompi) + (pibeta - 1) * log(dposompi);
             total -= dposomhypermean;
             total -= dposomhyperinvshape;
-            if (dposomhyperinvshape > 1.0)  {
+            if (modalprior && (dposomhyperinvshape > 1.0))  {
                 total += Random::INFPROB;
             }
         }
@@ -1257,17 +1258,19 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             ScalingMove(dposomhypermean, 0.3, 10,
                         &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
                         &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
-            ScalingMove(dposomhyperinvshape, 1.0, 10,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
-            ScalingMove(dposomhyperinvshape, 0.3, 10,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
-            /*
-            SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            */
+
+            if (modalprior) {
+                SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+                SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+                SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            } else  {
+                ScalingMove(dposomhyperinvshape, 1.0, 10,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+                ScalingMove(dposomhyperinvshape, 0.3, 10,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+            }
 
             if (burnin > 10) {
                 if (dposompihyperinvconc) {

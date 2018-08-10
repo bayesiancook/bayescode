@@ -15,7 +15,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
     int writegenedata;
     int Ncat;
     int baseNcat;
-    int blmode, nucmode, basemode, omegamode, omegaprior;
+    int blmode, nucmode, basemode, omegamode, omegaprior, modalprior;
     double pihypermean, pihyperinvconc;
 
   public:
@@ -27,7 +27,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
 
     MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat,
                                      int inbaseNcat, int inblmode, int innucmode, int inbasemode,
-                                     int inomegamode, int inomegaprior, double inpihypermean,
+                                     int inomegamode, int inomegaprior, int inmodalprior, double inpihypermean,
                                      double inpihyperinvconc, int inevery, int inuntil,
                                      int inwritegenedata, string inname, int force, int inmyid,
                                      int innprocs)
@@ -42,6 +42,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
           basemode(inbasemode),
           omegamode(inomegamode),
           omegaprior(inomegaprior),
+          modalprior(inmodalprior),
           pihypermean(inpihypermean),
           pihyperinvconc(inpihyperinvconc) {
         every = inevery;
@@ -60,7 +61,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
-                                                     nucmode, basemode, omegamode, omegaprior,
+                                                     nucmode, basemode, omegamode, omegaprior, modalprior,
                                                      pihypermean, pihyperinvconc, myid, nprocs);
         if (!myid) {
             cerr << " -- allocate\n";
@@ -86,7 +87,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
         is >> datafile >> treefile;
         is >> writegenedata;
         is >> Ncat >> baseNcat;
-        is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior;
+        is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior >> modalprior;
         is >> pihypermean >> pihyperinvconc;
         int tmp;
         is >> tmp;
@@ -98,7 +99,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
             model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
-                                                         nucmode, basemode, omegamode, omegaprior,
+                                                         nucmode, basemode, omegamode, omegaprior, modalprior,
                                                          pihypermean, pihyperinvconc, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
@@ -124,7 +125,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
             param_os << writegenedata << '\n';
             param_os << Ncat << '\t' << baseNcat << '\n';
             param_os << blmode << '\t' << nucmode << '\t' << basemode << '\t' << omegamode << '\t'
-                     << omegaprior << '\n';
+                     << omegaprior << '\t' << modalprior << '\n';
             param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
@@ -221,6 +222,7 @@ int main(int argc, char *argv[]) {
         int basemode = 0;
         int omegamode = 3;
         int omegaprior = 0;
+        int modalprior = 1;
 
         double pihypermean = 0.1;
         double pihyperinvconc = 0.2;
@@ -304,6 +306,10 @@ int main(int argc, char *argv[]) {
                     omegaprior = 0;
                 } else if (s == "-mixomega") {
                     omegaprior = 1;
+                } else if (s == "-modalprior")  {
+                    modalprior = 1;
+                } else if (s == "-unconsprior") {
+                    modalprior = 0;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -334,7 +340,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(
-            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior,
+            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior, modalprior,
             pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid, nprocs);
     }
 
