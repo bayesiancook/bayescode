@@ -16,6 +16,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
     double dposomhypermean, dposomhyperinvshape;
     double purwhypermean, purwhyperinvconc;
     double poswhypermean, poswhyperinvconc;
+    int modalprior;
 
   public:
     string GetModelType() { return modeltype; }
@@ -48,6 +49,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
+        is >> modalprior;
 
         int check;
         is >> check;
@@ -66,6 +68,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
+            GetModel()->SetModalMixturePrior(modalprior);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

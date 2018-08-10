@@ -29,6 +29,8 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
     // 1 : gathering suff stats across genes, then resampling hyperparams based on integrated bls
     blsamplemode = 0;
 
+    modalprior = 0;
+
     pihypermean = inpihypermean;
     pihyperinvconc = inpihyperinvconc;
     pi = pihypermean;
@@ -569,26 +571,30 @@ double MultiGeneCodonM2aModel::MixtureHyperLogPrior() const {
 
     // dposom:
     // distribution across genes should be modal
-    if (dposomhyperinvshape > 1.0) {
-        total += Random::INFPROB;
+    if (modalprior && (dposomhyperinvshape > 1.0)) {
+        total += log(0);
+        // total += Random::INFPROB;
     }
     // distribution mean should not be too close to 0 (hypermean>0.5)
     /*
     if (dposomhypermean < 0.5)  {
-        total += Random::INFPROB;
+        total += log(0);
+        // total += Random::INFPROB;
     }
     */
     // posw:
     // distribution across genes should be modal
     double alpha = poswhypermean / poswhyperinvconc;
     double beta = (1 - poswhypermean) / poswhyperinvconc;
-    if ((alpha < 1) || (beta < 1)) {
-        total += Random::INFPROB;
+    if (modalprior && ((alpha < 1) || (beta < 1))) {
+        total += log(0);
+        // total += Random::INFPROB;
     }
     // distribution mean should not be too close to 0 (hypermean>0.1)
     /*
     if (poswhypermean < 0.1)    {
-        total += Random::INFPROB;
+        total += log(0);
+        // total += Random::INFPROB;
     }
     */
     return total;

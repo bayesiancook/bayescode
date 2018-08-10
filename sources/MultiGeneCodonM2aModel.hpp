@@ -87,6 +87,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
         blsamplemode = inmode;
     }
 
+    void SetModalMixturePrior(int in)  {
+        modalprior = in;
+    }
+
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
                                    double indposomhypermean, double indposomhyperinvshape,
                                    double inpurwhypermean, double inpurwhyperinvconc,
@@ -482,6 +486,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     int dposommode;
     int purwmode;
     int poswmode;
+
+    int modalprior;
 
     int ncycle;
 

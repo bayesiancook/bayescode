@@ -27,6 +27,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     double dposomhypermean, dposomhyperinvshape;
     double purwhypermean, purwhyperinvconc;
     double poswhypermean, poswhyperinvconc;
+    int modalprior;
 
   public:
     MultiGeneCodonM2aModel *GetModel() { return static_cast<MultiGeneCodonM2aModel *>(model); }
@@ -50,7 +51,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                            double inpuromhyperinvconc, double indposomhypermean,
                            double indposomhyperinvshape, double inpurwhypermean,
                            double inpurwhyperinvconc, double inposwhypermean,
-                           double inposwhyperinvconc, int inevery, int inuntil, int inwritegenedata,
+                           double inposwhyperinvconc, int inmodalprior,
+                           int inevery, int inuntil, int inwritegenedata,
                            string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECODONM2A"),
@@ -73,6 +75,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         purwhyperinvconc = inpurwhyperinvconc;
         poswhypermean = inposwhypermean;
         poswhyperinvconc = inposwhyperinvconc;
+        modalprior = inmodalprior;
 
         every = inevery;
         until = inuntil;
@@ -97,6 +100,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
                                               dposomhyperinvshape, purwhypermean, purwhyperinvconc,
                                               poswhypermean, poswhyperinvconc);
+        GetModel()->SetModalMixturePrior(modalprior);
 
         if (!myid) {
             cerr << "allocate\n";
@@ -127,6 +131,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
+        is >> modalprior;
 
         int tmp;
         is >> tmp;
@@ -145,6 +150,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
+            GetModel()->SetModalMixturePrior(modalprior);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -185,6 +191,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
             param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
             param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
+            param_os << modalprior << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -280,6 +287,8 @@ int main(int argc, char *argv[]) {
         double dposomhyperinvshape = 0.5;
         int dposommode = 1;
 
+        int modalprior = 1;
+
         int blmode = 1;
         int nucmode = 1;
 
@@ -342,6 +351,10 @@ int main(int argc, char *argv[]) {
                         i++;
                         poswhyperinvconc = atof(argv[i]);
                     }
+                } else if (s == "-modalprior")  {
+                    modalprior = 1;
+                } else if (s == "-unconsprior")    {
+                    modalprior = 0;
                 } else if (s == "-nucrates") {
                     i++;
                     string tmp = argv[i];
@@ -432,7 +445,7 @@ int main(int argc, char *argv[]) {
         chain = new MultiGeneCodonM2aChain(
             datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
             pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
-            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc,
+            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc, modalprior,
             every, until, writegenedata, name, force, myid, nprocs);
     }
 
