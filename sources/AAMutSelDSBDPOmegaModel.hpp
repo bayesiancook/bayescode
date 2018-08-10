@@ -686,14 +686,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //-------------------
 
     double PolySuffStatLogProb() const {
+        return 0;
         // sum over all sites
     }
 
     double PolySuffStatLogProb(int site) const {
+        return 0;
         // should have information about fixed states
     }
 
     double ComponentPolySuffStatLogProb(int k) const {
+        return 0;
         // sum over all sites allocated to component k
     }
 
@@ -937,7 +940,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             tot += exp(logparray[i] - max);
             cumulprob[i] = tot;
         }
-        double logp1 = log(tot) + max;
+        double logp1 = log(tot/ntry) + max;
 
         // Multiple-Try Gibbs version
         /*

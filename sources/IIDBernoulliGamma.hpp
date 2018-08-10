@@ -9,97 +9,6 @@
 #include "Random.hpp"
 
 /**
- * \brief A sufficient statistic for a collection of random variables, from a
- * mixture of a point mass at 0 and a Gamma distribution (see IIDBernoulliGamma)
- */
-
-class BernoulliGammaSuffStat : public SuffStat {
-  public:
-    BernoulliGammaSuffStat() {}
-    ~BernoulliGammaSuffStat() {}
-
-    //! set suff stats to 0
-    void Clear() {
-        sum = 0;
-        sumlog = 0;
-        n0 = 0;
-        n1 = 0;
-    }
-
-    //! add the contribution of one beta variate equal to 0 to this suffstat
-    void AddNullSuffStat(int c = 1) { n0 += c; }
-
-    //! add the contribution of one beta variate > 0 to this suffstat
-    void AddPosSuffStat(double x, double logx, int c = 1) {
-        sum += x;
-        sumlog += logx;
-        n1 += c;
-    }
-
-    //! (*this) += from
-    void Add(const BernoulliGammaSuffStat &from) {
-        sum += from.sum;
-        sumlog += from.sumlog;
-        n0 += from.n0;
-        n1 += from.n1;
-    }
-
-    //! (*this) += from, operator version
-    BernoulliGammaSuffStat &operator+=(const BernoulliGammaSuffStat &from) {
-        Add(from);
-        return *this;
-    }
-
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return 4; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const { buffer << sum << sumlog << n0 << n1; }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) { buffer >> sum >> sumlog >> n0 >> n1; }
-
-    //! read a BernoulliGammaSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double temp;
-        buffer >> temp;
-        sum += temp;
-        buffer >> temp;
-        sumlog += temp;
-
-        int tmp;
-        buffer >> tmp;
-        n0 += tmp;
-        buffer >> tmp;
-        n1 += tmp;
-    }
-
-    //! return log prob of suff stats, as a function of parameters of the mixture
-    //! and the Gamma distribution
-    double GetLogProb(double pi, double alpha, double beta) const {
-        double logbern = n0 * log(1 - pi) + n1 * log(pi);
-        double loggamma =
-            n1 * (alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * sumlog - beta * sum);
-        return logbern + loggamma;
-    }
-
-    //! get number of contributing variables that are == 0
-    int GetN0() const { return n0; }
-    //! get number of contributing variables that are > 0
-    int GetN1() const { return n1; }
-    //! get total sum of x_i, for all x_i's that are > 0
-    double GetSum() const { return sum; }
-    //! get total sum of log(x_i), for all x_i's that are > 0
-    double GetSumLog() const { return sumlog; }
-
-  private:
-    double sum;
-    double sumlog;
-    int n0;
-    int n1;
-};
-
-/**
  * \brief An array of IID random variables, from a mixture of a point mass at 0
  * (weight 1-pi) and a Gamma distribution (weight pi)
  */
@@ -172,17 +81,6 @@ class IIDBernoulliGamma : public SimpleArray<double> {
         return ret;
     }
 
-    //! add all entries to sufficient statistic
-    void AddSuffStat(BernoulliGammaSuffStat &suffstat) {
-        for (int i = 0; i < GetSize(); i++) {
-            if (!GetVal(i)) {
-                suffstat.AddNullSuffStat(1);
-            } else {
-                suffstat.AddPosSuffStat(GetVal(i), log(GetVal(i)), 1);
-            }
-        }
-    }
-
     //! get number of positive entries
     int GetNpos() const {
         int n = 0;
@@ -215,6 +113,108 @@ class IIDBernoulliGamma : public SimpleArray<double> {
     double pi;
     double alpha;
     double beta;
+};
+
+/**
+ * \brief A sufficient statistic for a collection of random variables, from a
+ * mixture of a point mass at 0 and a Gamma distribution (see IIDBernoulliGamma)
+ */
+
+class BernoulliGammaSuffStat : public SuffStat {
+  public:
+    BernoulliGammaSuffStat() {}
+    ~BernoulliGammaSuffStat() {}
+
+    //! set suff stats to 0
+    void Clear() {
+        sum = 0;
+        sumlog = 0;
+        n0 = 0;
+        n1 = 0;
+    }
+
+    //! add the contribution of one beta variate equal to 0 to this suffstat
+    void AddNullSuffStat(int c = 1) { n0 += c; }
+
+    //! add the contribution of one beta variate > 0 to this suffstat
+    void AddPosSuffStat(double x, double logx, int c = 1) {
+        sum += x;
+        sumlog += logx;
+        n1 += c;
+    }
+
+    //! (*this) += from
+    void Add(const BernoulliGammaSuffStat &from) {
+        sum += from.sum;
+        sumlog += from.sumlog;
+        n0 += from.n0;
+        n1 += from.n1;
+    }
+
+    //! (*this) += from, operator version
+    BernoulliGammaSuffStat &operator+=(const BernoulliGammaSuffStat &from) {
+        Add(from);
+        return *this;
+    }
+
+    //! return object size, when put into an MPI buffer
+    unsigned int GetMPISize() const { return 4; }
+
+    //! put object into MPI buffer
+    void MPIPut(MPIBuffer &buffer) const { buffer << sum << sumlog << n0 << n1; }
+
+    //! read object from MPI buffer
+    void MPIGet(const MPIBuffer &buffer) { buffer >> sum >> sumlog >> n0 >> n1; }
+
+    //! read a BernoulliGammaSuffStat from MPI buffer and add it to this
+    void Add(const MPIBuffer &buffer) {
+        double temp;
+        buffer >> temp;
+        sum += temp;
+        buffer >> temp;
+        sumlog += temp;
+
+        int tmp;
+        buffer >> tmp;
+        n0 += tmp;
+        buffer >> tmp;
+        n1 += tmp;
+    }
+
+    //! add all entries to sufficient statistic
+    void AddSuffStat(const IIDBernoulliGamma& array)    {
+        for (int i = 0; i < array.GetSize(); i++) {
+            if (!array.GetVal(i)) {
+                AddNullSuffStat(1);
+            } else {
+                AddPosSuffStat(array.GetVal(i), log(array.GetVal(i)), 1);
+            }
+        }
+    }
+
+    //! return log prob of suff stats, as a function of parameters of the mixture
+    //! and the Gamma distribution
+    double GetLogProb(double pi, double alpha, double beta) const {
+        double logbern = n0 * log(1 - pi) + n1 * log(pi);
+        double loggamma =
+            n1 * (alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * sumlog - beta * sum);
+        return logbern + loggamma;
+    }
+
+    //! get number of contributing variables that are == 0
+    int GetN0() const { return n0; }
+    //! get number of contributing variables that are > 0
+    int GetN1() const { return n1; }
+    //! get total sum of x_i, for all x_i's that are > 0
+    double GetSum() const { return sum; }
+    //! get total sum of log(x_i), for all x_i's that are > 0
+    double GetSumLog() const { return sumlog; }
+
+  private:
+    double sum;
+    double sumlog;
+    int n0;
+    int n1;
 };
 
 #endif

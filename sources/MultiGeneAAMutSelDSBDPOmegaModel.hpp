@@ -701,11 +701,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             total += (pialpha - 1) * log(1.0 - dposompi) + (pibeta - 1) * log(dposompi);
             total -= dposomhypermean;
             total -= dposomhyperinvshape;
-            /*
             if (dposomhyperinvshape > 1.0)  {
                 total += Random::INFPROB;
             }
-            */
         }
         return total;
     }
@@ -713,7 +711,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double OmegaLogPrior() const {
         double ret = 0;
         if (omegaprior == 0) {
-            ret = omegaarray->GetLogProb();
+            ret += omegaarray->GetLogProb();
         } else {
             ret += dposomarray->GetLogProb();
         }
@@ -1251,9 +1249,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             omegaarray->SetScale(beta);
         } else {
             dposomhypersuffstat.Clear();
-            // should be the other way around
-            dposomarray->AddSuffStat(dposomhypersuffstat);
-            // dposomhypersuffstat.AddSuffStat(*dposomarray);
+            dposomhypersuffstat.AddSuffStat(*dposomarray);
 
             ScalingMove(dposomhypermean, 1.0, 10,
                         &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
