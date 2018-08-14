@@ -1470,6 +1470,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! return entropy of vector of equilibrium nucleotide composition
     double GetNucStatEntropy() const { return Random::GetEntropy(nucrelrate); }
 
+    double GetPredictedDNDS() const  {
+
+        double mean = 0;
+        for (int i=0; i<Ncat; i++) {
+            if (occupancy->GetVal(i))   {
+                mean += occupancy->GetVal(i) * (*componentcodonmatrixarray)[i].GetPredictedDNDS();
+            }
+        }
+        mean /= Nsite;
+        return mean;
+    }
+
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "omega\t";

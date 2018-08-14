@@ -159,6 +159,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
         }
         MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
+        ofstream dos((name + ".genednds").c_str());
         /*
         ofstream trace_os((name + ".basemix").c_str());
         ofstream logo_os((name + ".basemixlogo").c_str());
@@ -170,6 +171,8 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
         MultiGeneChain::SavePoint();
         if (writegenedata) {
             if (!myid) {
+                ofstream dos((name + ".genednds").c_str(), ios_base::app);
+                GetModel()->TracePredictedDNDS(dos);
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 GetModel()->TraceOmega(os);
             }
@@ -333,10 +336,6 @@ int main(int argc, char *argv[]) {
                     "<chainname> \n";
             cerr << '\n';
             exit(1);
-        }
-
-        if (omegamode == 3) {
-            writegenedata = 0;
         }
 
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(

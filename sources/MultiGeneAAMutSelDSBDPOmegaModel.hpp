@@ -46,6 +46,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double omegahyperinvshape;
     IIDGamma *omegaarray;
     GammaSuffStat omegahypersuffstat;
+    SimpleArray<double>* genednds;
 
     double dposompihypermean;
     double dposompihyperinvconc;
@@ -215,6 +216,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             cerr << "error: unrecognized omega prior\n";
             exit(1);
         }
+
+        genednds = new SimpleArray<double>(GetLocalNgene());
 
         lnL = 0;
         GeneLogPrior = 0;
@@ -395,6 +398,24 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
         }
+    }
+
+    void TracePredictedDNDS(ostream& os) const   {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << genednds->GetVal(gene) << '\t';
+        }
+        os << '\n';
+    }
+
+    void MasterReceivePredictedDNDS() {
+        MasterReceiveGeneArray(*genednds);
+    }
+
+    void SlaveSendPredictedDNDS() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            (*genednds)[gene] = geneprocess[gene]->GetPredictedDNDS();
+        }
+        SlaveSendGeneArray(*genednds);
     }
 
     CodonStateSpace *GetCodonStateSpace() const {
@@ -950,6 +971,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         MasterReceiveGeneNucRates();
         MasterReceiveOmega();
         MasterReceiveLogProbs();
+        MasterReceivePredictedDNDS();
+        
         totchrono.Stop();
 
         burnin++;
@@ -1024,6 +1047,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendGeneNucRates();
         SlaveSendOmega();
         SlaveSendLogProbs();
+        SlaveSendPredictedDNDS();
 
         burnin++;
     }

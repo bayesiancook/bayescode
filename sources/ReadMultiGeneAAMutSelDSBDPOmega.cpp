@@ -71,9 +71,24 @@ class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
         // points can be accessed to (only once) by repeated calls to GetNextPoint()
     }
 
-    void MasterRead() {}
+    /*
+    void MasterRead() {
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+        cerr << '\n';
+    }
 
-    void SlaveRead() {}
+    void SlaveRead() {
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            MPI_Barrier(MPI_COMM_WORLD);
+        }
+    }
+    */
 };
 
 int main(int argc, char *argv[]) {
