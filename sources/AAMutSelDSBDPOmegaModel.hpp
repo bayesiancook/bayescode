@@ -547,6 +547,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    void PostPred(string name) override {
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
+        baseweight->SetKappa(basekappa);
+        weight->SetKappa(kappa);
+        UpdateBaseOccupancies();
+        UpdateOccupancies();
+        UpdateMatrices();
+        phyloprocess->PostPredSample(name);
+    }
+
     //-------------------
     // Priors and likelihood
     //-------------------

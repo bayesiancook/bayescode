@@ -343,6 +343,60 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void MasterPostPred(string name) override {
+        FastUpdate();
+
+        if (nprocs > 1) {
+            if (blmode >= 2) {
+                MasterSendGlobalBranchLengths();
+            } else {
+                MasterSendBranchLengthsHyperParameters();
+                MasterSendGeneBranchLengths();
+            }
+
+            MasterSendNucRatesHyperParameters();
+            MasterSendGeneNucRates();
+
+            if (basemode >= 2) {
+                MasterSendBaseMixture();
+            }
+
+            if (omegamode == 1) {
+                MasterSendOmegaHyperParameters();
+                MasterSendOmega();
+            }
+            // MasterReceiveLogProbs();
+        }
+    }
+
+    void SlavePostPred(string name) override {
+        if (blmode >= 2) {
+            SlaveReceiveGlobalBranchLengths();
+        } else {
+            SlaveReceiveBranchLengthsHyperParameters();
+            SlaveReceiveGeneBranchLengths();
+        }
+
+        SlaveReceiveNucRatesHyperParameters();
+        SlaveReceiveGeneNucRates();
+
+        if (basemode >= 2) {
+            SlaveReceiveBaseMixture();
+        }
+        if (omegamode == 1) {
+            SlaveReceiveOmegaHyperParameters();
+            SlaveReceiveOmega();
+        }
+        GenePostPred(name);
+        // SlaveSendLogProbs();
+    }
+
+    void GenePostPred(string name) {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
+        }
+    }
+
     CodonStateSpace *GetCodonStateSpace() const {
         return (CodonStateSpace *)refcodondata->GetStateSpace();
     }
