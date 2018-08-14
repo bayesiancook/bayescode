@@ -417,6 +417,7 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
+	    if (! myid)	{
             cerr << '\n';
             cerr << "mpirun -np <n> multigenecodonm8 -d <alignment_list> -t <tree> "
                     "[-bl {shared|shrunken|ind} -nucrates {shared|shrunken|ind}] "
@@ -439,7 +440,9 @@ int main(int argc, char *argv[]) {
             cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for "
                     "nucleotide substitution rates\n";
             cerr << '\n';
-            exit(1);
+	    }
+	    MPI_Finalize();
+            exit(0);
         }
 
         chain = new MultiGeneCodonM2aChain(
