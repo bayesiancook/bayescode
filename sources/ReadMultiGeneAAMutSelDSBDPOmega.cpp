@@ -1,6 +1,6 @@
 #include <cmath>
 #include <fstream>
-#include "MultiGeneAAMutSelDSBDPOMegaModel.hpp"
+#include "MultiGeneAAMutSelDSBDPOmegaModel.hpp"
 #include "MultiGeneSample.hpp"
 using namespace std;
 
