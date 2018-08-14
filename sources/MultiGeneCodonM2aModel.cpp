@@ -241,7 +241,7 @@ void MultiGeneCodonM2aModel::SlavePostPred(string name) {
 
 void MultiGeneCodonM2aModel::GenePostPred(string name) {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
-        geneprocess[gene]->PostPred(GetLocalGeneName(gene) + name);
+        geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
     }
 }
 
