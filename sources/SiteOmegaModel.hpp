@@ -625,7 +625,7 @@ class SiteOmegaModel : public ProbModel {
     }
 
     void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\tlength\tlambda\t";
+        os << "#logprior\tlnL\tlength\t";
         os << "omegamean\tinvshape\t";
         os << "posfrac\t";
         os << "statent\t";
@@ -637,7 +637,6 @@ class SiteOmegaModel : public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-        os << lambda << '\t';
         os << omegamean << '\t';
         os << omegainvshape << '\t';
         os << GetEmpiricalPosFrac() << '\t';
