@@ -149,7 +149,7 @@ class SiteOmegaModel : public ProbModel {
         // Omega
 
         omegamean = 1.0;
-        omegainvshape = 1.0;
+        omegainvshape = 0.3;
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
         omegaarray = new IIDGamma(Nsite, alpha, beta);
