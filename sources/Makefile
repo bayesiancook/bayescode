@@ -170,10 +170,6 @@ siteom$(EXEEXT): $(PROGSDIR)/siteom$(EXEEXT)
 $(PROGSDIR)/siteom$(EXEEXT): SiteOmega.o $(OBJS)
 	$(CC) SiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-gammasiteom$(EXEEXT): $(PROGSDIR)/gammasiteom$(EXEEXT)
-$(PROGSDIR)/gammasiteom$(EXEEXT): GammaSiteOmega.o $(OBJS)
-	$(CC) GammaSiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
 readdiffseldsparse$(EXEEXT): $(PROGSDIR)/readdiffseldsparse$(EXEEXT)
 $(PROGSDIR)/readdiffseldsparse$(EXEEXT): ReadDiffSelDoublySparse.o $(OBJS)
 	$(CC) ReadDiffSelDoublySparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
