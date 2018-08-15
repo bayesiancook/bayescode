@@ -170,14 +170,15 @@ class SequenceAlignment {
 class FileSequenceAlignment : public SequenceAlignment {
   public:
     FileSequenceAlignment(std::string filename);
+    FileSequenceAlignment(std::istream &is);
 
   private:
-    FileSequenceAlignment(std::istream &is);
     int ReadDataFromFile(std::string filespec, int forceinterleaved = 0);
     int ReadNexus(std::string filespec);
     int ReadSpecial(std::string filename);
     int TestPhylipSequential(std::string filespec);
     void ReadPhylipSequential(std::string filespec);
+    void ReadPhylipSequentialFromStream(std::istream& is);
     int TestPhylip(std::string filespec, int repeattaxa);
     void ReadPhylip(std::string filespec, int repeattaxa);
 };
