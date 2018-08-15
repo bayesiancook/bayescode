@@ -307,6 +307,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! allocate the model (data structures)
     void Allocate() {
+
         // ----------
         // construction of the model
         // ----------
@@ -1686,6 +1687,15 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "gammanulls\n";
     }
 
+    double GetPredictedDNDS(int cond) const  {
+        double mean = 0;
+        for (int i=0; i<Nsite; i++) {
+            mean += (*condsubmatrixarray)(cond,i).GetPredictedDNDS();
+        }
+        mean /= Nsite;
+        return mean;
+    }
+
     //! write trace (one line summarizing current state) into trace file
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
@@ -1757,8 +1767,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             is >> maskepsilon;
         }
-        is >> shiftprob;
-        is >> *toggle;
+        if (Ncond > 1)  {
+            is >> shiftprob;
+            is >> *toggle;
+        }
     }
 
     //! write complete current parameter configuration to stream
@@ -1787,8 +1799,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             os << maskepsilon << '\t';
         }
-        os << shiftprob << '\t';
-        os << *toggle << '\t';
+        if (Ncond > 1)  {
+            os << shiftprob << '\t';
+            os << *toggle << '\t';
+        }
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context)
@@ -1818,8 +1832,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             size++;
         }
-        size += shiftprob.size();
-        size += toggle->GetMPISize();
+        if (Ncond > 1)  {
+            size += shiftprob.size();
+            size += toggle->GetMPISize();
+        }
         return size;
     }
 
@@ -1849,8 +1865,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             is >> maskepsilon;
         }
-        is >> shiftprob;
-        is >> *toggle;
+        if (Ncond > 1)  {
+            is >> shiftprob;
+            is >> *toggle;
+        }
     }
 
     //! write complete current parameter configuration into MPI buffer
@@ -1879,7 +1897,9 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             os << maskepsilon;
         }
-        os << shiftprob;
-        os << *toggle;
+        if (Ncond > 1)  {
+            os << shiftprob;
+            os << *toggle;
+        }
     }
 };

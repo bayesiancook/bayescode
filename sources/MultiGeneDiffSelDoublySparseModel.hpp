@@ -87,6 +87,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     double meanWidth;
     double meanEps;
 
+    SimpleArray<double>* genednds;
+
     double moveTime;
     double mapTime;
     Chrono movechrono;
@@ -172,6 +174,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         lnL = 0;
         GeneLogPrior = 0;
 
+        if (Ncond == 1) {
+            genednds = new SimpleArray<double>(GetLocalNgene());
+        }
+        else    {
+            genednds = 0;
+        }
+
         if (!GetMyid()) {
             geneprocess.assign(0, (DiffSelDoublySparseModel *)0);
         } else {
@@ -255,6 +264,24 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
     // Traces and Monitors
     //-------------------
+
+    void TracePredictedDNDS(ostream& os) const   {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << genednds->GetVal(gene) << '\t';
+        }
+        os << '\n';
+    }
+
+    void MasterReceivePredictedDNDS() {
+        MasterReceiveGeneArray(*genednds);
+    }
+
+    void SlaveSendPredictedDNDS() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            (*genednds)[gene] = geneprocess[gene]->GetPredictedDNDS(0);
+        }
+        SlaveSendGeneArray(*genednds);
+    }
 
     double GetMeanLength() const { return branchlengtharray->GetMeanLength(); }
 
@@ -558,6 +585,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         MasterReceiveGeneBranchLengths();
         MasterReceiveGeneNucRates();
         */
+        if (Ncond == 1) {
+            MasterReceivePredictedDNDS();
+        }
         MasterReceiveLogProbs();
     }
 
@@ -595,6 +625,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         SlaveSendGeneBranchLengths();
         SlaveSendGeneNucRates();
         */
+        if (Ncond == 1) {
+            SlaveSendPredictedDNDS();
+        }
         SlaveSendLogProbs();
     }
 

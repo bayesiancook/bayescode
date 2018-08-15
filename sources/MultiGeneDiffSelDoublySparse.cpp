@@ -169,18 +169,23 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
         if (writegenedata) {
-            for (int k = 0; k < ncond; k++) {
-                ostringstream s;
-                s << name << "_" << k;
-                if (k) {
-                    ofstream pos((s.str() + ".geneshiftprob").c_str());
+            if (ncond > 1)  {
+                for (int k = 0; k < ncond; k++) {
+                    ostringstream s;
+                    s << name << "_" << k;
+                    if (k) {
+                        ofstream pos((s.str() + ".geneshiftprob").c_str());
+                        if (writegenedata == 2) {
+                            ofstream tos((s.str() + ".shifttoggle").c_str());
+                        }
+                    }
                     if (writegenedata == 2) {
-                        ofstream tos((s.str() + ".shifttoggle").c_str());
+                        ofstream fos((s.str() + ".fitness").c_str());
                     }
                 }
-                if (writegenedata == 2) {
-                    ofstream fos((s.str() + ".fitness").c_str());
-                }
+            }
+            else    {
+                ofstream os((name + ".geneom").c_str());
             }
         }
     }
@@ -188,10 +193,18 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     void SavePoint() override {
         MultiGeneChain::SavePoint();
         if (writegenedata) {
-            if (!myid) {
-                GetModel()->MasterTraceSiteStats(name, writegenedata);
-            } else {
-                GetModel()->SlaveTraceSiteStats(writegenedata);
+            if (ncond > 1)  {
+                if (!myid) {
+                    GetModel()->MasterTraceSiteStats(name, writegenedata);
+                } else {
+                    GetModel()->SlaveTraceSiteStats(writegenedata);
+                }
+            }
+            else    {
+                if (! myid) {
+                    ofstream os((name + ".geneom").c_str(), ios_base::app);
+                    GetModel()->TracePredictedDNDS(os);
+                }
             }
         }
     }
