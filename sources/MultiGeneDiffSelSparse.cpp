@@ -151,6 +151,9 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
         } else {
             GetModel()->SlaveToStream();
         }
+        if (size == burnin) {
+            GetModel()->SetWithToggles(1);
+        }
     }
 
     void MakeFiles(int force) override {
