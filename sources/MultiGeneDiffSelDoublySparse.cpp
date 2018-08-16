@@ -171,6 +171,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
 
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
+        cerr << writegenedata << '\t' << ncond << '\n';
         if (writegenedata) {
             if (ncond > 1)  {
                 for (int k = 0; k < ncond; k++) {
@@ -341,9 +342,12 @@ int main(int argc, char *argv[]) {
                     writegenedata = 1;
                 } else if (s == "+G") {
                     writegenedata = 2;
+                // burnin de-activated
+                /*
                 } else if (s == "-b") {
                     i++;
                     burnin = atoi(argv[i]);
+                */
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
