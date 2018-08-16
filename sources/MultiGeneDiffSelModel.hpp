@@ -56,15 +56,22 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     Chrono movechrono;
     Chrono mapchrono;
 
+    int blmode;
+    int nucmode;
+
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
     MultiGeneDiffSelModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                int incodonmodel, int inmyid, int innprocs)
+                                int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+
         codonmodel = incodonmodel;
+        blmode = inblmode;
+        nucmode = innucmode;
+
         Ncond = inNcond;
         Nlevel = inNlevel;
 
@@ -125,8 +132,8 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
                 int fixvar = 1;
                 geneprocess[gene] = new DiffSelModel(GetLocalGeneName(gene), treefile, Ncond,
                                                            Nlevel, fixglob, fixvar, codonmodel);
-                geneprocess[gene]->SetBLMode(1);
-                geneprocess[gene]->SetNucMode(1);
+                geneprocess[gene]->SetBLMode(blmode);
+                geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -134,7 +141,9 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
 
     void FastUpdate() {
         branchlength->SetScale(lambda);
-        branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        if (blmode == 1) {
+            branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        }
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
     }
@@ -295,10 +304,13 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
-        double total = 0;
-        total += GeneBranchLengthsHyperLogPrior();
-        total += GeneNucRatesHyperLogPrior();
-        total += GeneLogPrior;
+        double total = GeneLogPrior;
+        if (blmode == 1) {
+            total += GeneBranchLengthsHyperLogPrior();
+        }
+        if (nucmode == 1) {
+            total += GeneNucRatesHyperLogPrior();
+        }
         if (std::isnan(total)) {
             cerr << "GetLogPrior is nan\n";
             exit(1);
@@ -385,19 +397,25 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            MasterReceiveBranchLengthsHyperSuffStat();
-            movechrono.Start();
-            MoveBranchLengthsHyperParameters();
-            movechrono.Stop();
-            MasterSendBranchLengthsHyperParameters();
+            if (blmode == 1) {
+                MasterReceiveBranchLengthsHyperSuffStat();
+                movechrono.Start();
+                MoveBranchLengthsHyperParameters();
+                movechrono.Stop();
+                MasterSendBranchLengthsHyperParameters();
+            }
 
-            MasterReceiveNucRatesHyperSuffStat();
-            movechrono.Start();
-            MoveNucRatesHyperParameters();
-            movechrono.Stop();
-            MasterSendNucRatesHyperParameters();
+            if (nucmode == 1) {
+                MasterReceiveNucRatesHyperSuffStat();
+                movechrono.Start();
+                MoveNucRatesHyperParameters();
+                movechrono.Stop();
+                MasterSendNucRatesHyperParameters();
+            }
         }
 
+        MasterReceiveGeneBranchLengths();
+        MasterReceiveGeneNucRates();
         MasterReceiveLogProbs();
     }
 
@@ -417,13 +435,19 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
             GeneMove();
             movechrono.Stop();
 
-            SlaveSendBranchLengthsHyperSuffStat();
-            SlaveReceiveBranchLengthsHyperParameters();
+            if (blmode == 1) {
+                SlaveSendBranchLengthsHyperSuffStat();
+                SlaveReceiveBranchLengthsHyperParameters();
+            }
 
-            SlaveSendNucRatesHyperSuffStat();
-            SlaveReceiveNucRatesHyperParameters();
+            if (nucmode == 1) {
+                SlaveSendNucRatesHyperSuffStat();
+                SlaveReceiveNucRatesHyperParameters();
+            }
         }
 
+        SlaveSendGeneBranchLengths();
+        SlaveSendGeneNucRates();
         SlaveSendLogProbs();
     }
 

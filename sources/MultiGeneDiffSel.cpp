@@ -19,6 +19,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     int ncond;
     int nlevel;
     int codonmodel;
+    int blmode, nucmode;
     int writegenedata;
 
   public:
@@ -44,7 +45,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelChain(string indatafile, string intreefile, int inncond, int innlevel,
-                                int incodonmodel, int inevery, int inuntil, int insaveall,
+                                int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil, int insaveall,
                                 int inwritegenedata, string inname, int force, int inmyid,
                                 int innprocs)
         : MultiGeneChain(inmyid, innprocs),
@@ -53,7 +54,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
           treefile(intreefile),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel) {
+          codonmodel(incodonmodel), blmode(inblmode), nucmode(innucmode) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -71,7 +72,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, myid,
+        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid,
                                                 nprocs);
         if (!myid) {
             cerr << " -- master allocate\n";
@@ -96,6 +97,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel >> codonmodel;
+        is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -105,7 +107,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSEL") {
-            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel,
+            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
                                                     myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
@@ -127,6 +129,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
+            param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
                      << size << '\n';
@@ -202,6 +205,8 @@ int main(int argc, char *argv[]) {
         int until = -1;
         int saveall = 1;
         int writegenedata = 1;
+        int blmode = 1;
+        int nucmode = 1;
 
         try {
             if (argc == 1) {
@@ -230,6 +235,28 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-nlevel") {
                     i++;
                     nlevel = atoi(argv[i]);
+                } else if (s == "-nucrates") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        nucmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        nucmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                } else if (s == "-bl") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        blmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        blmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
                 } else if (s == "-g") {
                     writegenedata = 0;
                 } else if (s == "+g") {
@@ -260,7 +287,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel,
+        chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
                                                 every, until, saveall, writegenedata, name, force,
                                                 myid, nprocs);
     }

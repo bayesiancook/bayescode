@@ -13,6 +13,7 @@ class DiffSelSparseChain : public Chain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel, codonmodel, fixhyper;
+    int burnin;
 
   public:
     DiffSelSparseModel *GetModel() { return static_cast<DiffSelSparseModel *>(model); }
@@ -20,7 +21,7 @@ class DiffSelSparseChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel,
-                       int infixhyper, int inevery, int inuntil, int insaveall, string inname,
+                       int infixhyper, int inburnin, int inevery, int inuntil, int insaveall, string inname,
                        int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
@@ -29,6 +30,7 @@ class DiffSelSparseChain : public Chain {
           nlevel(innlevel),
           codonmodel(incodonmodel),
           fixhyper(infixhyper) {
+        burnin = inburnin;
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -44,6 +46,11 @@ class DiffSelSparseChain : public Chain {
 
     void New(int force) override {
         model = new DiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel);
+        if (burnin) {
+            GetModel()->SetWithToggles(0);
+        } else {
+            GetModel()->SetWithToggles(1);
+        }
         GetModel()->SetFitnessHyperMode(fixhyper);
         GetModel()->Allocate();
         GetModel()->Update();
@@ -69,6 +76,7 @@ class DiffSelSparseChain : public Chain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
+        is >> burnin;
         is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSELSPARSE") {
@@ -87,12 +95,17 @@ class DiffSelSparseChain : public Chain {
     }
 
     void Save() override {
+        if (size == burnin) {
+            GetModel()->SetWithToggles(1);
+        }
+
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << codonmodel << '\n';
         param_os << fixhyper << '\n';
         param_os << 0 << '\n';
+        param_os << burnin << '\n';
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
@@ -146,6 +159,7 @@ int main(int argc, char *argv[]) {
         int fixhyper = 0;
 
         name = "";
+        int burnin = 0;
         int every = 1;
         int until = -1;
         int saveall = 1;
@@ -180,6 +194,9 @@ int main(int argc, char *argv[]) {
                     nlevel = atoi(argv[i]);
                 } else if (s == "-fixhyper") {
                     fixhyper = 3;
+                } else if (s == "-b") {
+                    i++;
+                    burnin = atoi(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -200,7 +217,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         chain = new DiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel, fixhyper,
-                                       every, until, saveall, name, force);
+                                       burnin, every, until, saveall, name, force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

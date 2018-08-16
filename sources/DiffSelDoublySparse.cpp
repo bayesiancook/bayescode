@@ -111,6 +111,10 @@ class DiffSelDoublySparseChain : public Chain {
     }
 
     void Save() override {
+        if (size == burnin) {
+            GetModel()->SetWithToggles(1);
+        }
+
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
@@ -123,10 +127,6 @@ class DiffSelDoublySparseChain : public Chain {
         param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
-
-        if (size == burnin) {
-            GetModel()->SetWithToggles(1);
-        }
     }
 
     void SavePoint() override {

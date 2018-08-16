@@ -21,6 +21,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     int Ncond;
     int Nlevel;
     int codonmodel;
+    int blmode;
+    int nucmode;
 
     // branch lengths
     double lambda;
@@ -67,15 +69,21 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     Chrono movechrono;
     Chrono mapchrono;
 
+    int withtoggle;
+
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
     MultiGeneDiffSelSparseModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                int incodonmodel, int inmyid, int innprocs)
+                                int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+
+        withtoggle = 0;
         codonmodel = incodonmodel;
+        blmode = inblmode;
+        nucmode = innucmode;
         Ncond = inNcond;
         Nlevel = inNlevel;
 
@@ -148,9 +156,10 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene] = new DiffSelSparseModel(GetLocalGeneName(gene), treefile, Ncond,
                                                            Nlevel, codonmodel);
-                geneprocess[gene]->SetBLMode(1);
-                geneprocess[gene]->SetNucMode(1);
+                geneprocess[gene]->SetBLMode(blmode);
+                geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetFitnessHyperMode(3);
+                geneprocess[gene]->SetWithToggles(withtoggle);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -158,7 +167,9 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     void FastUpdate() {
         branchlength->SetScale(lambda);
-        branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        if (blmode == 1) {
+            branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        }
 
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
@@ -184,6 +195,15 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         SlaveReceiveShiftProbHyperParameters();
         GeneUpdate();
         SlaveSendLogProbs();
+    }
+
+    void SetWithToggles(int in) {
+        withtoggle = in;
+        if (myid && geneprocess.size()) {
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene]->SetWithToggles(in);
+            }
+        }
     }
 
     void GeneUpdate() {
@@ -340,11 +360,14 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
-        double total = 0;
-        total += GeneBranchLengthsHyperLogPrior();
-        total += GeneNucRatesHyperLogPrior();
+        double total = GeneLogPrior;
+        if (blmode == 1) {
+            total += GeneBranchLengthsHyperLogPrior();
+        }
+        if (nucmode == 1) {
+            total += GeneNucRatesHyperLogPrior();
+        }
         total += ShiftProbHyperLogPrior();
-        total += GeneLogPrior;
         if (std::isnan(total)) {
             cerr << "GetLogPrior is nan\n";
             exit(1);
@@ -472,25 +495,34 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         // int nrep = 3;
 
         for (int rep = 0; rep < nrep; rep++) {
-            MasterReceiveShiftCounts();
-            movechrono.Start();
-            MoveShiftProbHyperParameters(3);
-            movechrono.Stop();
-            MasterSendShiftProbHyperParameters();
 
-            MasterReceiveBranchLengthsHyperSuffStat();
-            movechrono.Start();
-            MoveBranchLengthsHyperParameters();
-            movechrono.Stop();
-            MasterSendBranchLengthsHyperParameters();
+            if (withtoggle) {
+                MasterReceiveShiftCounts();
+                movechrono.Start();
+                MoveShiftProbHyperParameters(3);
+                movechrono.Stop();
+                MasterSendShiftProbHyperParameters();
+            }
 
-            MasterReceiveNucRatesHyperSuffStat();
-            movechrono.Start();
-            MoveNucRatesHyperParameters();
-            movechrono.Stop();
-            MasterSendNucRatesHyperParameters();
+            if (blmode == 1) {
+                MasterReceiveBranchLengthsHyperSuffStat();
+                movechrono.Start();
+                MoveBranchLengthsHyperParameters();
+                movechrono.Stop();
+                MasterSendBranchLengthsHyperParameters();
+            }
+
+            if (nucmode == 1) {
+                MasterReceiveNucRatesHyperSuffStat();
+                movechrono.Start();
+                MoveNucRatesHyperParameters();
+                movechrono.Stop();
+                MasterSendNucRatesHyperParameters();
+            }
         }
 
+        MasterReceiveGeneBranchLengths();
+        MasterReceiveGeneNucRates();
         MasterReceiveLogProbs();
     }
 
@@ -510,19 +542,27 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             GeneMove();
             movechrono.Stop();
 
-            SlaveSendShiftCounts();
-            SlaveReceiveShiftProbHyperParameters();
-            movechrono.Start();
-            GeneResampleShiftProbs();
-            movechrono.Stop();
+            if (withtoggle) {
+                SlaveSendShiftCounts();
+                SlaveReceiveShiftProbHyperParameters();
+                movechrono.Start();
+                GeneResampleShiftProbs();
+                movechrono.Stop();
+            }
 
-            SlaveSendBranchLengthsHyperSuffStat();
-            SlaveReceiveBranchLengthsHyperParameters();
+            if (blmode == 1) {
+                SlaveSendBranchLengthsHyperSuffStat();
+                SlaveReceiveBranchLengthsHyperParameters();
+            }
 
-            SlaveSendNucRatesHyperSuffStat();
-            SlaveReceiveNucRatesHyperParameters();
+            if (nucmode == 1) {
+                SlaveSendNucRatesHyperSuffStat();
+                SlaveReceiveNucRatesHyperParameters();
+            }
         }
 
+        SlaveSendGeneBranchLengths();
+        SlaveSendGeneNucRates();
         SlaveSendLogProbs();
     }
 

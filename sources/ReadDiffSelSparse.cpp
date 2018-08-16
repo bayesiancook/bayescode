@@ -17,6 +17,7 @@ class DiffSelSparseSample : public Sample {
     string datafile;
     string treefile;
     int ncond, nlevel, codonmodel, fixhyper;
+    int chainburnin;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -51,7 +52,13 @@ class DiffSelSparseSample : public Sample {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
+        is >> chainburnin;
         is >> chainevery >> chainuntil >> chainsaveall >> chainsize;
+
+        if (burnin < chainburnin) {
+            cerr << "error: sample burnin smaller than chain burnin\n";
+            exit(1);
+        }
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "DIFFSELSPARSE") {

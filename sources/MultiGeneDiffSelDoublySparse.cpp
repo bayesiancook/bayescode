@@ -50,8 +50,8 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond,
                                       int innlevel, int incodonmodel, double inepsilon,
-                                      double infitnessshape, int infitnesscentermode, int inblmode, int innucmode, int inburnin,
-                                      int inevery, int inuntil, int insaveall, int inwritegenedata,
+                                      double infitnessshape, int infitnesscentermode, int inblmode, int innucmode,
+                                      int inburnin, int inevery, int inuntil, int insaveall, int inwritegenedata,
                                       string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEDIFFSELSPARSE"),

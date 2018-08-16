@@ -107,6 +107,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                                       int incodonmodel, double inepsilon, double infitnessshape, int inblmode, int innucmode,
                                       int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+
         withtoggle = 0;
 
         blmode = inblmode;
@@ -437,17 +438,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     double GetLogPrior() const {
 
         double total = GeneLogPrior;
-
         if (blmode == 1) {
             total += GeneBranchLengthsHyperLogPrior();
         }
-
         if (nucmode == 1) {
             total += GeneNucRatesHyperLogPrior();
         }
-
         total += ShiftProbHyperLogPrior();
-
         if (std::isnan(total)) {
             cerr << "GetLogPrior is nan\n";
             exit(1);
@@ -574,6 +571,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
+
             if (withtoggle) {
                 MasterReceiveShiftCounts();
                 movechrono.Start();
