@@ -12,22 +12,22 @@ class DiffSelChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int codonmodel, category, level, fixglob, fixvar;
+    int codonmodel, ncond, nlevel, fixglob, fixvar;
 
   public:
     DiffSelModel *GetModel() { return static_cast<DiffSelModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelChain(string indata, string intree, int incategory, int inlevel, int inevery,
+    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery,
                  int inuntil, int infixglob, int infixvar, int incodonmodel, string inname,
                  int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
           treefile(intree),
           codonmodel(incodonmodel),
-          category(incategory),
-          level(inlevel),
+          ncond(inncond),
+          nlevel(innlevel),
           fixglob(infixglob),
           fixvar(infixvar) {
         every = inevery;
@@ -43,7 +43,7 @@ class DiffSelChain : public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+        model = new DiffSelModel(datafile, treefile, ncond, nlevel, fixglob, fixvar, codonmodel);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -59,7 +59,7 @@ class DiffSelChain : public Chain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> treefile >> category >> level;
+        is >> datafile >> treefile >> ncond >> nlevel;
         is >> fixglob >> fixvar >> codonmodel;
         int tmp;
         is >> tmp;
@@ -71,7 +71,7 @@ class DiffSelChain : public Chain {
 
         if (modeltype == "DIFFSEL") {
             model =
-                new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+                new DiffSelModel(datafile, treefile, ncond, nlevel, fixglob, fixvar, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -87,12 +87,34 @@ class DiffSelChain : public Chain {
     void Save() override {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\t' << category << '\t' << level << '\n';
+        param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << fixglob << '\t' << fixvar << '\t' << codonmodel << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
 
         model->ToStream(param_os);
+    }
+
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream os((name + ".baseline").c_str(), ios_base::app);
+        GetModel()->TraceBaseline(os);
+        for (int k = 1; k < ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            ofstream os((s.str() + ".delta").c_str(), ios_base::app);
+            GetModel()->TraceDelta(k, os);
+        }
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream os((name + ".baseline").c_str());
+        for (int k = 1; k < ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            ofstream os((s.str() + ".delta").c_str());
+        }
     }
 };
 

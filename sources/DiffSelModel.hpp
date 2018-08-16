@@ -878,6 +878,27 @@ class DiffSelModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
+    //! trace the current value of baselines, across all sites and all amino-acids
+    void TraceBaseline(ostream& os) const   {
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                os << baseline->GetVal(i)[a] << '\t';
+            }
+        }
+        os << '\n';
+    }
+
+    //! trace the current value of deltas, across all sites and all amino-acids,
+    //! under condition k (one single line in output stream)
+    void TraceDelta(int k, ostream &os) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                os << delta->GetVal(k - 1, i)[a] << '\t';
+            }
+        }
+        os << '\n';
+    }
+
     void Monitor(ostream &) const override {}
 
     void FromStream(istream &is) override {
