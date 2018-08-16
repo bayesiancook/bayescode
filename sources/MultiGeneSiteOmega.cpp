@@ -15,6 +15,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    int writegenedata;
     int blmode, nucmode;
 
   public:
@@ -33,7 +34,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
     //! \param name: base name for all files related to this MCMC run
     //! \param force: overwrite existing files with same name
     //! \param inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneSiteOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode, int inevery, int inuntil,
+    MultiGeneSiteOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode, int inevery, int inuntil, int inwritegenedata,
                               string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENESITEOMEGA"),
@@ -43,6 +44,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
         nucmode = innucmode;
         every = inevery;
         until = inuntil;
+        writegenedata = inwritegenedata;
         name = inname;
         New(force);
     }
@@ -80,6 +82,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> writegenedata;
         is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
@@ -117,6 +120,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
+            param_os << writegenedata << '\n';
             param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
@@ -132,14 +136,29 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
             exit(1);
         }
         MultiGeneChain::MakeFiles(force);
-        ofstream os((name + ".geneom").c_str());
+        if (writegenedata)  {
+            ofstream os((name + ".geneom").c_str());
+            if (writegenedata == 2) {
+                ofstream os((name + ".siteom").c_str());
+            }
+        }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (!myid) {
-            ofstream os((name + ".geneom").c_str(), ios_base::app);
-            GetModel()->TraceOmega(os);
+        if (writegenedata == 1)  {
+            if (!myid) {
+                ofstream os((name + ".geneom").c_str(), ios_base::app);
+                GetModel()->TraceOmega(os);
+            }
+        }
+        if (writegenedata == 2) {
+            if (!myid) {
+                ofstream os((name + ".siteom").c_str(), ios_base::app);
+                GetModel()->MasterTraceSiteOmega(os);
+            } else {
+                GetModel()->SlaveTraceSiteOmega();
+            }
         }
     }
 };
@@ -180,6 +199,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
         int blmode = 1;
         int nucmode = 1;
+        int writegenedata = 1;
 
         try {
             if (argc == 1) {
@@ -224,6 +244,12 @@ int main(int argc, char *argv[]) {
                         cerr << "error: does not recongnize command after -bl\n";
                         exit(1);
                     }
+                } else if (s == "-g") {
+                    writegenedata = 0;
+                } else if (s == "+g") {
+                    writegenedata = 1;
+                } else if (s == "+G") {
+                    writegenedata = 2;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -248,7 +274,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneSiteOmegaChain(datafile, treefile, blmode, nucmode, every, until, name, force, myid,
+        chain = new MultiGeneSiteOmegaChain(datafile, treefile, blmode, nucmode, every, until, writegenedata, name, force, myid,
                                               nprocs);
     }
 

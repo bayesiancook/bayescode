@@ -173,6 +173,8 @@ class SiteOmegaModel : public ProbModel {
         return (CodonStateSpace *)codondata->GetStateSpace();
     }
 
+    int GetNsite() const { return Nsite; }
+    
     //-------------------
     // Setting and updating
     // ------------------
@@ -624,6 +626,18 @@ class SiteOmegaModel : public ProbModel {
         return omegaarray->GetMean();
     }
 
+    void TraceOmega(ostream &os) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            os << omegaarray->GetVal(i) << '\t';
+        }
+        os << '\n';
+    }
+
+    void GetSiteOmega(double *array) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            array[i] = omegaarray->GetVal(i);
+        }
+    }
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "omegamean\tinvshape\t";
