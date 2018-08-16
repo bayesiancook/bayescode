@@ -29,6 +29,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     double epsilon;
     double fitnessshape;
     int fitnesscentermode;
+    int blmode;
+    int nucmode;
 
     const double minshiftprobhypermean = 0.01;
 
@@ -102,11 +104,13 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneDiffSelDoublySparseModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                      int incodonmodel, double inepsilon, double infitnessshape,
+                                      int incodonmodel, double inepsilon, double infitnessshape, int inblmode, int innucmode,
                                       int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
         withtoggle = 0;
 
+        blmode = inblmode;
+        nucmode = innucmode;
         epsilon = inepsilon;
         fitnessshape = infitnessshape;
         fitnesscentermode = 3;
@@ -190,8 +194,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 geneprocess[gene] =
                     new DiffSelDoublySparseModel(GetLocalGeneName(gene), treefile, Ncond, Nlevel,
                                                  codonmodel, epsilon, fitnessshape);
-                geneprocess[gene]->SetBLMode(1);
-                geneprocess[gene]->SetNucMode(1);
+                geneprocess[gene]->SetBLMode(blmode);
+                geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetFitnessCenterMode(fitnesscentermode);
                 geneprocess[gene]->SetWithToggles(withtoggle);
                 geneprocess[gene]->Allocate();
@@ -201,7 +205,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     void FastUpdate() {
         branchlength->SetScale(lambda);
-        branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        if (blmode == 1) {
+            branchlengtharray->SetShape(1.0 / blhyperinvshape);
+        }
 
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
@@ -429,11 +435,19 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
-        double total = 0;
-        total += GeneBranchLengthsHyperLogPrior();
-        total += GeneNucRatesHyperLogPrior();
+
+        double total = GeneLogPrior;
+
+        if (blmode == 1) {
+            total += GeneBranchLengthsHyperLogPrior();
+        }
+
+        if (nucmode == 1) {
+            total += GeneNucRatesHyperLogPrior();
+        }
+
         total += ShiftProbHyperLogPrior();
-        total += GeneLogPrior;
+
         if (std::isnan(total)) {
             cerr << "GetLogPrior is nan\n";
             exit(1);
@@ -568,23 +582,25 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 MasterSendShiftProbHyperParameters();
             }
 
-            MasterReceiveBranchLengthsHyperSuffStat();
-            movechrono.Start();
-            MoveBranchLengthsHyperParameters(100);
-            movechrono.Stop();
-            MasterSendBranchLengthsHyperParameters();
+            if (blmode == 1) {
+                MasterReceiveBranchLengthsHyperSuffStat();
+                movechrono.Start();
+                MoveBranchLengthsHyperParameters(10);
+                movechrono.Stop();
+                MasterSendBranchLengthsHyperParameters();
+            }
 
-            MasterReceiveNucRatesHyperSuffStat();
-            movechrono.Start();
-            MoveNucRatesHyperParameters(100);
-            movechrono.Stop();
-            MasterSendNucRatesHyperParameters();
+            if (nucmode == 1) {
+                MasterReceiveNucRatesHyperSuffStat();
+                movechrono.Start();
+                MoveNucRatesHyperParameters(10);
+                movechrono.Stop();
+                MasterSendNucRatesHyperParameters();
+            }
         }
 
-        /*
         MasterReceiveGeneBranchLengths();
         MasterReceiveGeneNucRates();
-        */
         if (Ncond == 1) {
             MasterReceivePredictedDNDS();
         }
@@ -614,17 +630,19 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 movechrono.Stop();
             }
 
-            SlaveSendBranchLengthsHyperSuffStat();
-            SlaveReceiveBranchLengthsHyperParameters();
+            if (blmode == 1) {
+                SlaveSendBranchLengthsHyperSuffStat();
+                SlaveReceiveBranchLengthsHyperParameters();
+            }
 
-            SlaveSendNucRatesHyperSuffStat();
-            SlaveReceiveNucRatesHyperParameters();
+            if (nucmode == 1) {
+                SlaveSendNucRatesHyperSuffStat();
+                SlaveReceiveNucRatesHyperParameters();
+            }
         }
 
-        /*
         SlaveSendGeneBranchLengths();
         SlaveSendGeneNucRates();
-        */
         if (Ncond == 1) {
             SlaveSendPredictedDNDS();
         }

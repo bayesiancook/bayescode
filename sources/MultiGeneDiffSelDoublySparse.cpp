@@ -22,6 +22,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     double epsilon;
     double fitnessshape;
     int fitnesscentermode;
+    int blmode, nucmode;
     int burnin;
     int writegenedata;
 
@@ -49,7 +50,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond,
                                       int innlevel, int incodonmodel, double inepsilon,
-                                      double infitnessshape, int infitnesscentermode, int inburnin,
+                                      double infitnessshape, int infitnesscentermode, int inblmode, int innucmode, int inburnin,
                                       int inevery, int inuntil, int insaveall, int inwritegenedata,
                                       string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
@@ -61,7 +62,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
           codonmodel(incodonmodel),
           epsilon(inepsilon),
           fitnessshape(infitnessshape),
-          fitnesscentermode(infitnesscentermode) {
+          fitnesscentermode(infitnesscentermode), blmode(inblmode), nucmode(innucmode) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -81,7 +82,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneDiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                      epsilon, fitnessshape, myid, nprocs);
+                                                      epsilon, fitnessshape, blmode, nucmode, myid, nprocs);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
@@ -113,6 +114,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         is >> ncond >> nlevel >> codonmodel;
         is >> epsilon >> fitnessshape;
         is >> fitnesscentermode;
+        is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -124,7 +126,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
             model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, myid, nprocs);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -153,6 +155,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << epsilon << '\t' << fitnessshape << '\n';
             param_os << fitnesscentermode << '\n';
+            param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << burnin << '\t';
             param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
@@ -256,6 +259,8 @@ int main(int argc, char *argv[]) {
         double fitnessshape = 20;
         double epsilon = -1;
         int fitnesscentermode = 3;
+        int blmode = 1;
+        int nucmode = 1;
 
         try {
             if (argc == 1) {
@@ -308,6 +313,28 @@ int main(int argc, char *argv[]) {
                     } else {
                         epsilon = atof(argv[i]);
                     }
+                } else if (s == "-nucrates") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        nucmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        nucmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                } else if (s == "-bl") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        blmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        blmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
                 } else if (s == "-g") {
                     writegenedata = 0;
                 } else if (s == "+g") {
@@ -342,7 +369,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneDiffSelDoublySparseChain(
-            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, fitnesscentermode,
+            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, fitnesscentermode, blmode, nucmode,
             burnin, every, until, saveall, writegenedata, name, force, myid, nprocs);
     }
 
