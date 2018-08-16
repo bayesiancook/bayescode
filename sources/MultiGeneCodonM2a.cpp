@@ -203,31 +203,31 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
 
-        if (writegenedata) {
+        if (writegenedata == 1) {
             ofstream pos((name + ".posw").c_str());
             ofstream omos((name + ".posom").c_str());
-            if (writegenedata == 2) {
-                ofstream siteos((name + ".sitepp").c_str());
-            }
+        }
+        if (writegenedata == 2) {
+            ofstream siteos((name + ".sitepp").c_str());
         }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata) {
+        if (writegenedata == 1) {
             if (!myid) {
                 ofstream posw_os((name + ".posw").c_str(), ios_base::app);
                 GetModel()->TracePosWeight(posw_os);
                 ofstream posom_os((name + ".posom").c_str(), ios_base::app);
                 GetModel()->TracePosOm(posom_os);
-                if (writegenedata == 2) {
-                    ofstream pp_os((name + ".sitepp").c_str(), ios_base::app);
-                    GetModel()->MasterTraceSitesPostProb(pp_os);
-                }
+            }
+        }
+        if (writegenedata == 2) {
+            if (!myid) {
+                ofstream pp_os((name + ".sitepp").c_str(), ios_base::app);
+                GetModel()->MasterTraceSitesPostProb(pp_os);
             } else {
-                if (writegenedata == 2) {
-                    GetModel()->SlaveTraceSitesPostProb();
-                }
+                GetModel()->SlaveTraceSitesPostProb();
             }
         }
     }
