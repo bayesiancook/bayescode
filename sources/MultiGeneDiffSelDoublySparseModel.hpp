@@ -33,6 +33,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     int nucmode;
 
     const double minshiftprobhypermean = 0.01;
+    const double maxshiftprobhypermean = 0.3;
+    const double maxshiftprobhyperinvconc = 0.2;
 
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
@@ -165,8 +167,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         nucstatarray =
             new IIDDirichlet(GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
 
-        shiftprobhypermean.assign(Ncond - 1, 0.5);
-        shiftprobhyperinvconc.assign(Ncond - 1, 0.5);
+        shiftprobhypermean.assign(Ncond - 1, 0.1);
+        shiftprobhyperinvconc.assign(Ncond - 1, 0.1);
         pihypermean = 0.1;
         pihyperinvconc = 0.1;
         pi.assign(Ncond - 1, 0.1);
@@ -487,18 +489,26 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     double GetShiftProbHyperMeanLogPrior(int k) const {
         if (shiftprobhypermean[k - 1] < minshiftprobhypermean) {
-            return Random::INFPROB;
+            return log(0);
+            // return Random::INFPROB;
         }
         return 0;
     }
 
     double GetShiftProbHyperInvConcLogPrior(int k) const {
+        if (shiftprobhyperinvconc[k-1] > maxshiftprobhyperinvconc)   {
+            return log(0);
+        }
+        return 0;
+        /*
         double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
         double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
         if ((alpha < 1.0) || (beta < 1.0)) {
+            return log(0);
             return Random::INFPROB;
         }
-        return -shiftprobhyperinvconc[k - 1];
+        return -10*shiftprobhyperinvconc[k - 1];
+        */
     }
 
     double GetCountLogProb(int k) const { return shiftcountarray->GetMarginalLogProb(k - 1); }
@@ -822,12 +832,12 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 double m = tuning * (Random::Uniform() - 0.5);
                 double bk = shiftprobhypermean[k - 1];
                 shiftprobhypermean[k - 1] += m;
-                while ((shiftprobhypermean[k - 1] < 0) || (shiftprobhypermean[k - 1] > 1)) {
-                    if (shiftprobhypermean[k - 1] < 0) {
-                        shiftprobhypermean[k - 1] = -shiftprobhypermean[k - 1];
+                while ((shiftprobhypermean[k - 1] < minshiftprobhypermean) || (shiftprobhypermean[k - 1] > maxshiftprobhypermean)) {
+                    if (shiftprobhypermean[k - 1] < minshiftprobhypermean) {
+                        shiftprobhypermean[k - 1] = 2*minshiftprobhypermean-shiftprobhypermean[k - 1];
                     }
-                    if (shiftprobhypermean[k - 1] > 1) {
-                        shiftprobhypermean[k - 1] = 2 - shiftprobhypermean[k - 1];
+                    if (shiftprobhypermean[k - 1] > maxshiftprobhypermean) {
+                        shiftprobhypermean[k - 1] = 2*maxshiftprobhypermean - shiftprobhypermean[k - 1];
                     }
                 }
                 deltalogprob += GetShiftProbHyperMeanLogPrior(k) + GetCountLogProb(k);
