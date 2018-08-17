@@ -35,6 +35,8 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     const double minshiftprobhypermean = 0.01;
     const double maxshiftprobhypermean = 0.3;
     const double maxshiftprobhyperinvconc = 0.2;
+    const double minpi = 0.01;
+    const double maxpi = 0.50;
 
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
@@ -482,6 +484,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     double GetPiLogPrior(int k) const {
+        if ((pi[k-1] < minpi) || (pi[k-1] > maxpi)) {
+            return log(0);
+        }
         double alpha = pihypermean / pihyperinvconc;
         double beta = (1 - pihypermean) / pihyperinvconc;
         return Random::logBetaDensity(pi[k - 1], alpha, beta);
@@ -801,12 +806,12 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 double m = tuning * (Random::Uniform() - 0.5);
                 double bk = pi[k - 1];
                 pi[k - 1] += m;
-                while ((pi[k - 1] < 0) || (pi[k - 1] > 1)) {
-                    if (pi[k - 1] < 0) {
-                        pi[k - 1] = -pi[k - 1];
+                while ((pi[k - 1] < minpi) || (pi[k - 1] > maxpi)) {
+                    if (pi[k - 1] < minpi) {
+                        pi[k - 1] = 2*minpi - pi[k - 1];
                     }
-                    if (pi[k - 1] > 1) {
-                        pi[k - 1] = 2 - pi[k - 1];
+                    if (pi[k - 1] > maxpi) {
+                        pi[k - 1] = 2*maxpi - pi[k - 1];
                     }
                 }
                 deltalogprob += GetPiLogPrior(k) + GetCountLogProb(k);
