@@ -686,7 +686,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     // across all genes allocated to that slave
 
     void MasterMove() override {
-        int nrep = 30;
+        int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
 
@@ -721,7 +721,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         if (nucmode != 2) {
             MasterReceiveGeneNucRates();
         }
-	MasterReceiveOmega();
+        MasterReceiveOmega();
         MasterReceiveLogProbs();
     }
 
@@ -729,7 +729,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     void SlaveMove() override {
         GeneResampleSub(1.0);
 
-        int nrep = 30;
+        int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
 
