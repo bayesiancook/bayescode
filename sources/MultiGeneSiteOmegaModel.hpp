@@ -794,7 +794,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
 
             if (omegamode == 1) {
-                MasterReceiveOmega();
+                MasterReceiveOmegaParameters();
                 MoveOmegaHyperParameters();
                 MasterSendOmegaHyperParameters();
             }
@@ -845,7 +845,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
             MoveGeneParameters(1.0);
 
             if (omegamode == 1) {
-                SlaveSendOmega();
+                SlaveSendOmegaParameters();
                 SlaveReceiveOmegaHyperParameters();
             }
 
