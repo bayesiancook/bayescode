@@ -54,7 +54,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
                                       int inburnin, int inevery, int inuntil, int insaveall, int inwritegenedata,
                                       string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
-          modeltype("MULTIGENEDIFFSELSPARSE"),
+          modeltype("MULTIGENEDIFFSELDSPARSE"),
           datafile(indatafile),
           treefile(intreefile),
           ncond(inncond),
@@ -124,7 +124,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         is >> burnin;
         is >> every >> until >> saveall >> writegenedata >> size;
 
-        if (modeltype == "MULTIGENEDIFFSELSPARSE") {
+        if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
             model = new MultiGeneDiffSelDoublySparseModel(
                 datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, myid, nprocs);
         } else {
@@ -158,8 +158,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
             param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << burnin << '\t';
-            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
-                     << size << '\n';
+            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
         } else {
             GetModel()->SlaveToStream();

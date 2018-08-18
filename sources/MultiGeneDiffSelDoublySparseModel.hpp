@@ -240,6 +240,38 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         SlaveSendLogProbs();
     }
 
+    void GeneUpdate() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->Update();
+        }
+    }
+
+    void MasterPostPred(string name) override {
+        FastUpdate();
+        if (nprocs > 1) {
+            MasterSendBranchLengthsHyperParameters();
+            MasterSendGeneBranchLengths();
+            MasterSendNucRatesHyperParameters();
+            MasterSendGeneNucRates();
+            MasterSendShiftProbHyperParameters();
+        }
+    }
+
+    void SlavePostPred(string name) override {
+        SlaveReceiveBranchLengthsHyperParameters();
+        SlaveReceiveGeneBranchLengths();
+        SlaveReceiveNucRatesHyperParameters();
+        SlaveReceiveGeneNucRates();
+        SlaveReceiveShiftProbHyperParameters();
+        GenePostPred(name);
+    }
+
+    void GenePostPred(string name) {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
+        }
+    }
+
     void SetWithToggles(int in) {
         withtoggle = in;
         if (myid && geneprocess.size()) {
@@ -257,12 +289,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetFitnessCenterMode(int in) { fitnesscentermode = in; }
-
-    void GeneUpdate() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->Update();
-        }
-    }
 
     CodonStateSpace *GetCodonStateSpace() const {
         return (CodonStateSpace *)refcodondata->GetStateSpace();

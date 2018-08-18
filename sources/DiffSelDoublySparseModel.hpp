@@ -565,6 +565,16 @@ class DiffSelDoublySparseModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    void PostPred(string name) override {
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
+        UpdateMask();
+        fitness->SetShape(fitnessshape);
+        UpdateAll();
+        phyloprocess->PostPredSample(name);
+    }
+
     //! update mask array
     void UpdateMask() { sitemaskarray->SetPi(maskprob); }
 
