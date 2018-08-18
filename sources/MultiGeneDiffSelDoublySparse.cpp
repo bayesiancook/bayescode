@@ -178,6 +178,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
                     s << name << "_" << k;
                     if (k) {
                         ofstream pos((s.str() + ".geneshiftprob").c_str());
+                        ofstream cos((s.str() + ".geneshiftcounts").c_str());
                         if (writegenedata == 2) {
                             ofstream tos((s.str() + ".shifttoggle").c_str());
                         }
@@ -186,6 +187,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
                         ofstream fos((s.str() + ".fitness").c_str());
                     }
                 }
+                ofstream os((name + ".genemaskcounts").c_str());
             }
             else    {
                 ofstream os((name + ".geneom").c_str());

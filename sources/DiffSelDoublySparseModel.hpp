@@ -528,7 +528,11 @@ class DiffSelDoublySparseModel : public ProbModel {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
             for (int a = 0; a < Naa; a++) {
-                array[j++] = fitness->GetVal(k, i)[a];
+                double tmp = sitemaskarray->GetVal(i)[a] * fitness->GetVal(k, i)[a];
+                if (k)  {
+                    tmp *= toggle->GetVal(k-1,i)[a];
+                }
+                array[j++] = tmp;
             }
         }
     }
@@ -538,8 +542,17 @@ class DiffSelDoublySparseModel : public ProbModel {
     void GetShiftToggleArray(int k, int *array) const {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
+            int m = 0;
             for (int a = 0; a < Naa; a++) {
-                array[j++] = toggle->GetVal(k - 1, i)[a];
+                m += sitemaskarray->GetVal(i)[a];
+            }
+            for (int a = 0; a < Naa; a++) {
+                if (m > 1)  {
+                    array[j++] = sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a];
+                }
+                else    {
+                    array[j++] = 0;
+                }
             }
         }
     }
@@ -1730,8 +1743,19 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! under condition k (one single line in output stream)
     void TraceToggle(int k, ostream &os) const {
         for (int i = 0; i < GetNsite(); i++) {
+            int m = 0;
             for (int a = 0; a < Naa; a++) {
-                os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a] << '\t';
+                m += sitemaskarray->GetVal(i)[a];
+            }
+            if (m > 1)  {
+                for (int a = 0; a < Naa; a++) {
+                    os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a] << '\t';
+                }
+            }
+            else    {
+                for (int a = 0; a < Naa; a++) {
+                    os << 0 << '\t';
+                }
             }
         }
         os << '\n';

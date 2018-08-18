@@ -1087,6 +1087,22 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             os << '\n';
         }
 
+        MasterReceiveShiftCounts();
+        for (int k = 1; k < Ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k << ".geneshiftcounts";
+            ofstream os(s.str().c_str(), ios_base::app);
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                os << shiftcountarray->GetVal(gene)[k - 1] << '/' << totcount->GetVal(gene) << '\t';
+            }
+            os << '\n';
+        }
+        ofstream os((name + ".genemaskcounts").c_str(), ios_base::app);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            os << totcount->GetVal(gene) << '\t';
+        }
+        os << '\n';
+
         if (mode == 2) {
             for (int k = 0; k < Ncond; k++) {
                 ostringstream s;
@@ -1163,6 +1179,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             (*shiftprobarray)[gene] = geneprocess[gene]->GetShiftProbVector();
         }
         SlaveSendGeneArray(*shiftprobarray);
+        SlaveSendShiftCounts();
 
         if (mode == 2) {
             for (int k = 0; k < Ncond; k++) {
