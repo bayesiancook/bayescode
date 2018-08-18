@@ -39,6 +39,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
 
     int blmode;
     int nucmode;
+    int omegamode;
 
     // Branch lengths
 
@@ -77,6 +78,14 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     // summed over all genes
     double GeneLogPrior;
 
+    double omegameanhypermean, omegameanhyperinvshape;
+    IIDGamma *omegameanarray;
+    GammaSuffStat omegameanhypersuffstat;
+
+    double omegainvshapehypermean, omegainvshapehyperinvshape;
+    IIDGamma *omegainvshapearray;
+    GammaSuffStat omegainvshapehypersuffstat;
+
     SimpleArray<double>* omegaarray;
 
   public:
@@ -91,6 +100,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
 
         blmode = 1;
         nucmode = 1;
+        omegamode = 1;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -158,7 +168,10 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         lnL = 0;
         GeneLogPrior = 0;
 
-	omegaarray = new SimpleArray<double>(GetLocalNgene());
+        omegameanarray = new IIDGamma(GetLocalNgene(), omegameanhypermean, omegameanhyperinvshape);
+        omegainvshapearray = new IIDGamma(GetLocalNgene(), omegainvshapehypermean, omegainvshapehyperinvshape);
+
+        omegaarray = new SimpleArray<double>(GetLocalNgene());
 
         if (!GetMyid()) {
             geneprocess.assign(0, (SiteOmegaModel *)0);
@@ -177,9 +190,17 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     // mode == 2: global 
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode)   {
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode)   {
         blmode = inblmode;
         nucmode = innucmode;
+        omegamode = inomegamode;
+    }
+
+    void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape, double inomegainvshapehypermean, double inomegainvshapehyperinvshape)    {
+        omegameanhypermean = inomegameanhypermean;
+        omegameanhyperinvshape = inomegameanhyperinvshape;
+        omegainvshapehypermean = inomegainvshapehypermean;
+        omegainvshapehyperinvshape = inomegainvshapehyperinvshape;
     }
 
     void FastUpdate() {
@@ -191,6 +212,15 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 
+        double meanalpha = 1.0 / omegameanhyperinvshape;
+        double meanbeta = meanalpha / omegameanhypermean;
+        omegameanarray->SetShape(meanalpha);
+        omegameanarray->SetScale(meanbeta);
+
+        double invshapealpha = 1.0 / omegainvshapehyperinvshape;
+        double invshapebeta = invshapealpha / omegainvshapehypermean;
+        omegainvshapearray->SetShape(invshapealpha);
+        omegainvshapearray->SetScale(invshapebeta);
     }
 
     void MasterUpdate() override {
@@ -213,6 +243,9 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
                 MasterSendGeneNucRates();
             }
 
+            MasterSendOmegaHyperParameters();
+            MasterSendOmegaParameters();
+
             MasterReceiveLogProbs();
         }
     }
@@ -232,6 +265,9 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         } else {
             SlaveReceiveGeneNucRates();
         }
+
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmegaParameters();
 
         GeneUpdate();
         SlaveSendLogProbs();
@@ -260,6 +296,9 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
             } else {
                 MasterSendGeneNucRates();
             }
+
+            MasterSendOmegaHyperParameters();
+            MasterSendOmegaParameters();
         }
     }
 
@@ -277,6 +316,10 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         } else {
             SlaveReceiveGeneNucRates();
         }
+
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmegaParameters();
+
         GenePostPred(name);
     }
 
@@ -302,6 +345,8 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
             os << "\tmeanlength\tstdev";
         }
         os << "\tmeanom\tvarom";
+        os << "\tmeanhypermean\tmeanhyperinvshape";
+        os << "\tinvshapehypermean\tinvshapehyperinvshape";
         os << "\tstatent";
         os << "\trrent";
         if (nucmode != 2) {
@@ -323,6 +368,8 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         }
 
         os << '\t' << GetMeanOmega() << '\t' << GetVarOmega();
+        os << '\t' << omegameanhypermean << '\t' << omegameanhyperinvshape;
+        os << '\t' << omegainvshapehypermean << '\t' << omegainvshapehyperinvshape;
 
         os << '\t' << nucstatarray->GetMeanEntropy();
         os << '\t' << nucrelratearray->GetMeanEntropy();
@@ -456,6 +503,11 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         is >> nucstathyperinvconc;
         is >> *nucrelratearray;
         is >> *nucstatarray;
+
+        is >> omegameanhypermean >> omegameanhyperinvshape;
+        is >> *omegameanarray;
+        is >> omegainvshapehypermean >> omegainvshapehyperinvshape;
+        is >> *omegainvshapearray;
     }
 
     void MasterToStream(ostream &os) const {
@@ -476,6 +528,11 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         os << nucstathyperinvconc << '\t';
         os << *nucrelratearray << '\t';
         os << *nucstatarray << '\t';
+
+        os << omegameanhypermean << '\t' << omegameanhyperinvshape << '\t';
+        os << *omegameanarray << '\t';
+        os << omegainvshapehypermean << '\t' << omegainvshapehyperinvshape << '\t';
+        os << *omegainvshapearray << '\t';
     }
 
     void TraceOmega(ostream &os) const {
@@ -577,6 +634,13 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         } else {
             // nothing: everything accounted for by gene component
         }
+
+        if (omegamode == 1) {
+            total += OmegaHyperLogPrior();
+        }
+        // already accounted for in GeneLogPrior
+        // total += OmegaLogPrior();
+
         return total;
     }
 
@@ -609,6 +673,24 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
             total -= nucrelratehyperinvconc;
             total -= nucstathyperinvconc;
         }
+        return total;
+    }
+
+    // omega
+    
+    double OmegaHyperLogPrior() const   {
+        double total = 0;
+        total -= omegameanhypermean;
+        total -= omegameanhyperinvshape;
+        total -= omegainvshapehypermean;
+        total -= omegainvshapehyperinvshape;
+        return total;
+    }
+
+    double OmegaLogPrior() const    {
+        double total = 0;
+        total += omegameanarray->GetLogProb();
+        total += omegainvshapearray->GetLogProb();
         return total;
     }
 
@@ -648,6 +730,22 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         return total;
     }
 
+    // omega
+
+    double OmegaHyperSuffStatLogProb() const {
+        double total = 0;
+
+        double meanalpha = 1.0 / omegameanhyperinvshape;
+        double meanbeta = meanalpha / omegameanhypermean;
+        total += omegameanhypersuffstat.GetLogProb(meanalpha, meanbeta);
+
+        double invshapealpha = 1.0 / omegainvshapehyperinvshape;
+        double invshapebeta = invshapealpha / omegainvshapehypermean;
+        total += omegainvshapehypersuffstat.GetLogProb(invshapealpha, invshapebeta);
+
+        return total;
+    }
+
     //-------------------
     // Log Probs for MH moves
     //-------------------
@@ -674,6 +772,11 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     // log prob for moving nuc rates
     double NucRatesLogProb() const { return GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb(); }
 
+    // Omega
+
+    // log prob for moving omega hyperparameters
+    double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
+
     //-------------------
     // Moves
     //-------------------
@@ -689,6 +792,12 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
+
+            if (omegamode == 1) {
+                MasterReceiveOmega();
+                MoveOmegaHyperParameters();
+                MasterSendOmegaHyperParameters();
+            }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
@@ -735,6 +844,11 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
 
             MoveGeneParameters(1.0);
 
+            if (omegamode == 1) {
+                SlaveSendOmega();
+                SlaveReceiveOmegaHyperParameters();
+            }
+
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
                 SlaveSendBranchLengthsSuffStat();
@@ -776,6 +890,9 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->MoveParameters(nrep);
 
             (*omegaarray)[gene] = geneprocess[gene]->GetMeanOmega();
+            (*omegameanarray)[gene] = geneprocess[gene]->GetOmegaMean();
+            (*omegainvshapearray)[gene] = geneprocess[gene]->GetOmegaInvShape();
+
             if (blmode != 2) {
                 geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
             }
@@ -898,6 +1015,44 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
                     &MultiGeneSiteOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 10, &MultiGeneSiteOmegaModel::NucRatesLogProb,
                     &MultiGeneSiteOmegaModel::UpdateNucMatrix, this);
+    }
+
+    // Omega
+
+    void MoveOmegaHyperParameters() {
+        omegameanhypersuffstat.Clear();
+        omegameanhypersuffstat.AddSuffStat(*omegameanarray);
+
+        omegainvshapehypersuffstat.Clear();
+        omegainvshapehypersuffstat.AddSuffStat(*omegainvshapearray);
+
+        ScalingMove(omegameanhypermean, 1.0, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegameanhypermean, 0.3, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegameanhyperinvshape, 1.0, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegameanhyperinvshape, 0.3, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+
+        ScalingMove(omegainvshapehypermean, 1.0, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegainvshapehypermean, 0.3, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegainvshapehyperinvshape, 1.0, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegainvshapehyperinvshape, 0.3, 10, &MultiGeneSiteOmegaModel::OmegaHyperLogProb,
+                    &MultiGeneSiteOmegaModel::NoUpdate, this);
+
+        double meanalpha = 1.0 / omegameanhyperinvshape;
+        double meanbeta = meanalpha / omegameanhypermean;
+        omegameanarray->SetShape(meanalpha);
+        omegameanarray->SetScale(meanbeta);
+
+        double invshapealpha = 1.0 / omegainvshapehyperinvshape;
+        double invshapebeta = invshapealpha / omegainvshapehypermean;
+        omegainvshapearray->SetShape(invshapealpha);
+        omegainvshapearray->SetScale(invshapebeta);
     }
 
     //-------------------
@@ -1058,9 +1213,51 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
 
     // omega (and hyperparameters)
 
-    void SlaveSendOmega() { SlaveSendGeneArray(*omegaarray); }
+    void SlaveSendOmega() { 
+        SlaveSendGeneArray(*omegaarray); 
+    }
 
-    void MasterReceiveOmega() { MasterReceiveGeneArray(*omegaarray); }
+    void MasterReceiveOmega() {
+        MasterReceiveGeneArray(*omegaarray); 
+    }
+
+    void SlaveSendOmegaParameters() {
+        SlaveSendGeneArray(*omegameanarray); 
+        SlaveSendGeneArray(*omegainvshapearray); 
+    }
+
+    void MasterReceiveOmegaParameters() {
+        MasterReceiveGeneArray(*omegameanarray); 
+        MasterReceiveGeneArray(*omegainvshapearray); 
+    }
+
+    void MasterSendOmegaParameters() { 
+        MasterSendGeneArray(*omegameanarray); 
+        MasterSendGeneArray(*omegainvshapearray); 
+    }
+
+    void SlaveReceiveOmegaParameters() {
+        SlaveReceiveGeneArray(*omegameanarray);
+        SlaveReceiveGeneArray(*omegainvshapearray);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetOmegaParameters((*omegameanarray)[gene], (*omegainvshapearray)[gene]);
+        }
+    }
+
+    // omega hyperparameters
+
+    void MasterSendOmegaHyperParameters() { 
+        MasterSendGlobal(omegameanhypermean, omegameanhyperinvshape); 
+        MasterSendGlobal(omegainvshapehypermean, omegainvshapehyperinvshape); 
+    }
+
+    void SlaveReceiveOmegaHyperParameters() {
+        SlaveReceiveGlobal(omegameanhypermean, omegameanhyperinvshape);
+        SlaveReceiveGlobal(omegainvshapehypermean, omegainvshapehyperinvshape);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetOmegaHyperParameters(omegameanhypermean, omegameanhyperinvshape, omegainvshapehypermean, omegainvshapehyperinvshape);
+        }
+    }
 
     // log probs
 

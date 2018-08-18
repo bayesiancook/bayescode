@@ -60,6 +60,11 @@ class SiteOmegaModel : public ProbModel {
 
     // Omega
 
+    double omegameanhypermean;
+    double omegameanhyperinvshape;
+    double omegainvshapehypermean;
+    double omegainvshapehyperinvshape;
+
     // omega across sites: Gamma distribution
     // of mean omegamean and inverse shape parameter omegainvshape
     double omegamean;
@@ -258,6 +263,13 @@ class SiteOmegaModel : public ProbModel {
         omegaarray->SetScale(beta);
     }
 
+    void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape, double inomegainvshapehypermean, double inomegainvshapehyperinvshape)    {
+        omegameanhypermean = inomegameanhypermean;
+        omegameanhyperinvshape = inomegameanhyperinvshape;
+        omegainvshapehypermean = inomegainvshapehypermean;
+        omegainvshapehyperinvshape = inomegainvshapehyperinvshape;
+    }
+
     //! \brief tell the nucleotide matrix that its parameters have changed and
     //! that it should be updated
     //!
@@ -381,8 +393,15 @@ class SiteOmegaModel : public ProbModel {
 
     double OmegaHyperLogPrior() const {
         double total = 0;
-        total -= omegamean;
-        total -= omegainvshape;
+
+        double meanalpha = 1.0 / omegameanhyperinvshape;
+        double meanbeta = meanalpha / omegameanhypermean;
+        total += Random::logGammaDensity(omegamean, meanalpha, meanbeta);
+
+        double invshapealpha = 1.0 / omegainvshapehyperinvshape;
+        double invshapebeta = invshapealpha / omegainvshapehypermean;
+        total += Random::logGammaDensity(omegainvshape, invshapealpha, invshapebeta);
+
         return total;
     }
 
@@ -624,6 +643,14 @@ class SiteOmegaModel : public ProbModel {
 
     double GetMeanOmega() const {
         return omegaarray->GetMean();
+    }
+
+    double GetOmegaMean() const {
+        return omegamean;
+    }
+
+    double GetOmegaInvShape() const {
+        return omegainvshape;
     }
 
     void TraceOmega(ostream &os) const {
