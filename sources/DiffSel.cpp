@@ -20,7 +20,7 @@ class DiffSelChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery,
-                 int inuntil, int infixglob, int infixvar, int incodonmodel, string inname,
+                 int inuntil, int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
                  int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
@@ -32,6 +32,7 @@ class DiffSelChain : public Chain {
           fixvar(infixvar) {
         every = inevery;
         until = inuntil;
+        saveall = insaveall;
         name = inname;
         New(force);
     }
@@ -67,7 +68,7 @@ class DiffSelChain : public Chain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> every >> until >> size;
+        is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSEL") {
             model =
@@ -90,7 +91,7 @@ class DiffSelChain : public Chain {
         param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << fixglob << '\t' << fixvar << '\t' << codonmodel << '\n';
         param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
+        param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
     }
@@ -143,6 +144,7 @@ int main(int argc, char *argv[]) {
 
         int every = 1;
         int until = -1;
+        int saveall = 1;
         int force = 0;
 
         try {
@@ -162,6 +164,10 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "+s") {
+                    saveall = 1;
+                } else if (s == "-s") {
+                    saveall = 0;
                 } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
@@ -187,7 +193,7 @@ int main(int argc, char *argv[]) {
             cerr << "error in command\n";
             exit(1);
         }
-        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, fixglob, fixvar,
+        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob, fixvar,
                                  codonmodel, name, force);
     }
 
