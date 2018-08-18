@@ -39,6 +39,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     int blmode;
     int nucmode;
+    int omegamode;
 
     // Branch lengths
 
@@ -102,6 +103,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
         blmode = 1;
         nucmode = 1;
+        omegamode = 1;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -166,9 +168,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
         // Omega
 
+        /*
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
-        omegaarray = new IIDGamma(GetLocalNgene(), 1.0, 1.0);
+        */
+        omegaarray = new IIDGamma(GetLocalNgene(), omegahypermean, omegahyperinvshape);
 
         // Gene processes 
 
@@ -192,9 +196,15 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // mode == 2: global 
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode)   {
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode)   {
         blmode = inblmode;
         nucmode = innucmode;
+        omegamode = inomegamode;
+    }
+
+    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)  {
+        omegahypermean = inomegahypermean;
+        omegahyperinvshape = inomegahyperinvshape;
     }
 
     void FastUpdate() {
@@ -543,8 +553,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
             // nothing: everything accounted for by gene component
         }
 
-        total += OmegaHyperLogPrior();
-        total += OmegaLogPrior();
+        if (omegamode == 1) {
+            total += OmegaHyperLogPrior();
+        }
+        // already accounted for in GeneLogPrior
+        // total += OmegaLogPrior();
         return total;
     }
 
@@ -682,9 +695,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            MasterReceiveOmega();
-            MoveOmegaHyperParameters();
-            MasterSendOmegaHyperParameters();
+            if (omegamode == 1) {
+                MasterReceiveOmega();
+                MoveOmegaHyperParameters();
+                MasterSendOmegaHyperParameters();
+            }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
@@ -731,8 +746,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
             MoveGeneParameters(1.0);
 
-            SlaveSendOmega();
-            SlaveReceiveOmegaHyperParameters();
+            if (omegamode == 1) {
+                SlaveSendOmega();
+                SlaveReceiveOmegaHyperParameters();
+            }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {

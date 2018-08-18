@@ -15,7 +15,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int blmode, nucmode;
+    int blmode, nucmode, omegamode;
+    double omegahypermean, omegahyperinvshape;
 
   public:
     MultiGeneSingleOmegaModel *GetModel() {
@@ -33,7 +34,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
     //! \param name: base name for all files related to this MCMC run
     //! \param force: overwrite existing files with same name
     //! \param inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneSingleOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode, int inevery, int inuntil,
+    MultiGeneSingleOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode, int inomegamode, 
+                              double inomegahypermean, double inomegahyperinvshape,
+                              int inevery, int inuntil,
                               string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENESINGLEOMEGA"),
@@ -41,6 +44,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
           treefile(intreefile) {
         blmode = inblmode;
         nucmode = innucmode;
+        omegamode = inomegamode;
+        omegahypermean = inomegahypermean;
+        omegahyperinvshape = inomegahyperinvshape;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -57,7 +63,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
-        GetModel()->SetAcrossGenesModes(blmode,nucmode);
+        GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
+        GetModel()->SetOmegaHyperParameters(omegahypermean,omegahyperinvshape);
         if (!myid) {
             cerr << "allocate\n";
         }
@@ -80,7 +87,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> blmode >> nucmode;
+        is >> blmode >> nucmode >> omegamode;
+        is >> omegahypermean >> omegahyperinvshape;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -91,7 +99,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENESINGLEOMEGA") {
             model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
-            GetModel()->SetAcrossGenesModes(blmode,nucmode);
+            GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
+            GetModel()->SetOmegaHyperParameters(omegahypermean,omegahyperinvshape);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -117,7 +126,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
-            param_os << blmode << '\t' << nucmode << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << omegamode << '\n';
+            param_os << omegahypermean << '\t' << omegahyperinvshape << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -180,6 +190,9 @@ int main(int argc, char *argv[]) {
         int until = -1;
         int blmode = 1;
         int nucmode = 1;
+        int omegamode = 1;
+        double omegahypermean = 1.0;
+        double omegahyperinvshape = 1.0;
 
         try {
             if (argc == 1) {
@@ -198,6 +211,15 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "-omega") {
+                    omegamode = 0;
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp != "uninf") {
+                        omegahypermean = atof(argv[i]);
+                        i++;
+                        omegahyperinvshape = atof(argv[i]);
+                    }
                 } else if (s == "-nucrates") {
                     i++;
                     string tmp = argv[i];
@@ -248,7 +270,8 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode, every, until, name, force, myid,
+        chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode, omegamode, omegahypermean, omegahyperinvshape,
+                                              every, until, name, force, myid,
                                               nprocs);
     }
 

@@ -11,7 +11,8 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
     string modeltype;
     string datafile;
     string treefile;
-    int blmode, nucmode;
+    int blmode, nucmode, omegamode;
+    double omegahypermean, omegahyperinvshape;
 
   public:
     string GetModelType() { return modeltype; }
@@ -38,7 +39,8 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> blmode >> nucmode;
+        is >> blmode >> nucmode >> omegamode;
+        is >> omegahypermean >> omegahyperinvshape;
         int check;
         is >> check;
         if (check) {
@@ -50,7 +52,8 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // make a new model depending on the type obtained from the file
         if (modeltype == "MULTIGENESINGLEOMEGA") {
             model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
-            GetModel()->SetAcrossGenesModes(blmode,nucmode);
+            GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
+            GetModel()->SetOmegaHyperParameters(omegahypermean,omegahyperinvshape);
         } else {
             cerr << "error when opening file " << name << '\n';
             cerr << modeltype << '\n';
