@@ -64,7 +64,7 @@ void Sample::PostPred() {
         cerr << '.';
         GetNextPoint();
         ostringstream s;
-        s << name << "_" << i << ".ali";
+        s << "ppred" << name << "_" << i << ".ali";
         model->PostPred(s.str());
     }
     cerr << '\n';
