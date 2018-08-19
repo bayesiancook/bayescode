@@ -20,6 +20,9 @@ class DiffSelDoublySparseSample : public Sample {
     double fitnessshape;
     int fitnesscentermode;
     double epsilon;
+    double pihypermean;
+    double shiftprobmean;
+    double shiftprobinvconc;
     int chainburnin;
 
   public:
@@ -51,6 +54,7 @@ class DiffSelDoublySparseSample : public Sample {
         is >> fitnessshape;
         is >> fitnesscentermode;
         is >> epsilon;
+        is >> pihypermean >> shiftprobmean >> shiftprobinvconc;
         int check;
         is >> check;
         if (check) {
@@ -67,8 +71,8 @@ class DiffSelDoublySparseSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "DIFFSELSPARSE") {
-            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                 epsilon, fitnessshape);
+            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape,
+                                                 pihypermean, shiftprobmean, shiftprobinvconc);
             GetModel()->SetFitnessCenterMode(fitnesscentermode);
         } else {
             cerr << "error when opening file " << name << '\n';

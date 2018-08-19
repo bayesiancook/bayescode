@@ -171,6 +171,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     // either Beta(shiftprobhypermean,shiftprobhyperinvconc), estimated across
     // genes or mixture 1-pi * 0 + pi * Beta: and this, for each condition
     // separately
+    double pihypermean;
+    double shiftprobmean;
+    double shiftprobinvconc;
     vector<double> pi;
     vector<double> shiftprobhypermean;
     vector<double> shiftprobhyperinvconc;
@@ -225,12 +228,16 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
-                             int inNlevel, int incodonmodel, double inepsilon, double inshape)
+                             int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean, double inshiftprobmean, double inshiftprobinvconc)
         : hyperfitnesssuffstat(Naa) {
         withtoggle = 0;
         fitnesscentermode = 3;
         fitnessshapemode = 3;
         fitnessshape = 20.0;
+
+        pihypermean = inpihypermean;
+        shiftprobmean = inshiftprobmean;
+        shiftprobinvconc = inshiftprobinvconc;
 
         codonmodel = incodonmodel;
 
@@ -354,10 +361,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         //     - with probability 1-pi[k-1], shiftprob[k-1] = 0
         //     - with probability pi[k-1]  , shiftprob[k-1] ~
         //     Beta(shiftprobhypermean, shiftprobhyperinvconc)
-        pi.assign(Ncond - 1, 0.1);
-        shiftprobhypermean.assign(Ncond - 1, 0.1);
-        shiftprobhyperinvconc.assign(Ncond - 1, 0.5);
-        shiftprob.assign(Ncond - 1, 0.1);
+        pi.assign(Ncond - 1, pihypermean);
+        shiftprobhypermean.assign(Ncond - 1, shiftprobmean);
+        shiftprobhyperinvconc.assign(Ncond - 1, shiftprobinvconc);
+        shiftprob.assign(Ncond - 1, shiftprobmean);
 
         // toggles specifying the sites and amino-acids displaying fitness
         // modulations across conditions for each k=1..Ncond; all toggles across all
@@ -730,16 +737,18 @@ class DiffSelDoublySparseModel : public ProbModel {
     double ToggleHyperLogPrior() const {
         double total = 0;
         for (int k = 1; k < Ncond; k++) {
-            double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
-            double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
-            if (shiftprob[k - 1] != 0) {
-                total += log(pi[k - 1]) + Random::logBetaDensity(shiftprob[k - 1], alpha, beta);
-            } else {
-                if (pi[k - 1] == 1.0) {
-                    cerr << "error in ToggleHyperLogPrior: inf\n";
-                    exit(1);
+            if (shiftprobhyperinvconc[k-1]) {
+                double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
+                double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
+                if (shiftprob[k - 1] != 0) {
+                    total += log(pi[k - 1]) + Random::logBetaDensity(shiftprob[k - 1], alpha, beta);
+                } else {
+                    if (pi[k - 1] == 1.0) {
+                        cerr << "error in ToggleHyperLogPrior: inf\n";
+                        exit(1);
+                    }
+                    total += log(1 - pi[k - 1]);
                 }
-                total += log(1 - pi[k - 1]);
             }
         }
         return total;
@@ -1202,6 +1211,10 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! Move schedule for Gibbs resampling of shifting probabilities
     void ResampleShiftProb() {
+        if (! shiftprobinvconc) {
+            cerr << "error: in resample shift prob\n";
+            exit(1);
+        }
         for (int k = 1; k < Ncond; k++) {
             ResampleShiftProb(k);
         }
@@ -1530,19 +1543,30 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! helper function: returns the marginal log prob of distribution of toggles
     //! for a condition, given number of toggles in active state and given
     //! hyperparameters
-    double ToggleMarginalLogPrior(int nmask, int nshift, double pi, double alpha,
-                                  double beta) const {
-        double logp1 = log(pi) + Random::logGamma(alpha + beta) - Random::logGamma(alpha) -
-                       Random::logGamma(beta) + Random::logGamma(alpha + nshift) +
-                       Random::logGamma(beta + nmask - nshift) -
-                       Random::logGamma(alpha + beta + nmask);
-        if (nshift || (pi == 1.0)) {
-            return logp1;
+    double ToggleMarginalLogPrior(int nmask, int nshift, int k) const   {
+
+        double ret = 0;
+        if (shiftprobhyperinvconc[k-1]) {
+            // pre-calculate parameters of the Beta distribution for non-zero case
+            double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
+            double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
+            double pp = pi[k - 1];
+
+            double logp1 = log(pp) + Random::logGamma(alpha + beta) - Random::logGamma(alpha) -
+                           Random::logGamma(beta) + Random::logGamma(alpha + nshift) +
+                           Random::logGamma(beta + nmask - nshift) -
+                           Random::logGamma(alpha + beta + nmask);
+            if (nshift || (pp == 1.0)) {
+                return logp1;
+            }
+            double logp0 = log(1 - pp);
+            double max = (logp0 > logp1) ? logp0 : logp1;
+            double tot = exp(logp0 - max) + exp(logp1 - max);
+            ret = log(tot) + max;
         }
-        double logp0 = log(1 - pi);
-        double max = (logp0 > logp1) ? logp0 : logp1;
-        double tot = exp(logp0 - max) + exp(logp1 - max);
-        double ret = log(tot) + max;
+        else    {
+            ret = nshift * log(shiftprob[k-1]) + (nmask - nshift) * (1 - shiftprob[k-1]);
+        }
         return ret;
     }
 
@@ -1573,11 +1597,6 @@ class DiffSelDoublySparseModel : public ProbModel {
                 nshift += ns;
             }
         }
-
-        // pre-calculate parameters of the Beta distribution for non-zero case
-        double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
-        double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
-        double pp = pi[k - 1];
 
         double ntot = 0;
         double nacc = 0;
@@ -1620,7 +1639,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                     // 0 -> 1 case
                     if (!(*toggle)(k - 1, i)[a]) {
                         double deltalogprob =
-                            -ToggleMarginalLogPrior(nmask, nshift, pp, alpha, beta) -
+                            -ToggleMarginalLogPrior(nmask, nshift, k) -
                             SiteSuffStatLogProb(i);
                         (*toggle)(k - 1, i)[a] = 1;
                         // redraw fitness parameter
@@ -1630,7 +1649,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                             (*fitness)(k, i)[a] = 1e-8;
                         }
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift + 1, pp, alpha, beta) +
+                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift + 1, k) + 
                                         SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -1647,11 +1666,11 @@ class DiffSelDoublySparseModel : public ProbModel {
                     // 1 -> 0 case
                     else {
                         double deltalogprob =
-                            -ToggleMarginalLogPrior(nmask, nshift, pp, alpha, beta) -
+                            -ToggleMarginalLogPrior(nmask, nshift, k) -
                             SiteSuffStatLogProb(i);
                         (*toggle)(k - 1, i)[a] = 0;
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift - 1, pp, alpha, beta) +
+                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift - 1, k) + 
                                         SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
@@ -1667,7 +1686,9 @@ class DiffSelDoublySparseModel : public ProbModel {
                 }
             }
         }
-        ResampleShiftProb(k);
+        if (shiftprobinvconc)   {
+            ResampleShiftProb(k);
+        }
         return nacc / ntot;
     }
 

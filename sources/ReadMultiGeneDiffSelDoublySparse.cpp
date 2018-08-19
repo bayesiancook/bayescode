@@ -15,7 +15,9 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
     double epsilon;
     double fitnessshape;
     int fitnesscentermode;
-    int blmode, nucmode;
+    int blmode, nucmode, shiftmode;
+    double pihypermean, pihyperinvconc;
+    double shiftprobmean, shiftprobinvconc;
     int burnin;
     int writegenedata;
 
@@ -45,7 +47,9 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
         is >> ncond >> nlevel >> codonmodel;
         is >> epsilon >> fitnessshape;
         is >> fitnesscentermode;
-        is >> blmode >> nucmode;
+        is >> blmode >> nucmode >> shiftmode;
+        is >> pihypermean >> pihyperinvconc;
+        is >> shiftprobmean >> shiftprobinvconc;
 
         int tmp;
         is >> tmp;
@@ -58,7 +62,8 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
 
         if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
             model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, myid, nprocs);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, shiftmode,
+                pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
