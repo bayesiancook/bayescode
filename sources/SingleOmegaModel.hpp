@@ -103,6 +103,10 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
     SingleOmegaModel(string datafile, string treefile) : datafile(datafile), treefile(treefile) {
+        init();
+    }
+
+    void init() {
         blmode = 0;
         nucmode = 0;
 
@@ -122,9 +126,9 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
+        Allocate();
     }
 
-    void start() override { Allocate(); }
     void move(int it) override { Move(); }
 
     //! model allocation
@@ -631,6 +635,23 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         }
         is >> datafile;
         is >> treefile;
+        is >> omega;
+        is >> nucstat;
+        is >> nucrelrate;
+        is >> lambda;
+        is >> *branchlength;
+    }
+
+    SingleOmegaModel(istream &is) {
+        std::string model_name;
+        is >> model_name;
+        if(model_name != "SingleOmega") {
+            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+            exit(1);
+        }
+        is >> datafile;
+        is >> treefile;
+        init();
         is >> omega;
         is >> nucstat;
         is >> nucrelrate;

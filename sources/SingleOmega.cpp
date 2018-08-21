@@ -94,7 +94,7 @@ class SingleOmegaChain : public Chain {
 
 class SingleOmegaArgParse : public BaseArgParse {
   public:
-    SingleOmegaArgParse(CmdLine &cmd) : BaseArgParse(cmd) {}
+    SingleOmegaArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
     ValueArg<string> alignment{"a",      "alignment", "Alignment file (PHYLIP)", true, "",
                                "string", cmd};
     ValueArg<string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
@@ -104,8 +104,6 @@ class SingleOmegaArgParse : public BaseArgParse {
                         false, -1,      "int",
                         cmd};
     SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
-    UnlabeledValueArg<string> chain_name{
-        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
 class ConsoleLogger : public ChainComponent {
@@ -115,19 +113,6 @@ class ConsoleLogger : public ChainComponent {
     void savepoint(int i) override { cout << "Savepoint " << i << "\n"; }
     void end() override { cout << "Ended\n"; }
 };
-
-// template <class T>
-// class ChainCheckpoint : public ChainComponent {
-//     std::string filename;
-// public:
-//     ChainCheckpoint(std::string filename, ChainDriver& cd, T& model) : filename(filename) {}
-
-//     void savepoint() override {
-//         std::ofstream os{filename};
-//         cd.serialize(os);
-//         model.toStream(os);
-//     }
-// };
 
 class ChainCheckpoint : public ChainComponent {
     std::string filename;
@@ -149,88 +134,32 @@ class ChainCheckpoint : public ChainComponent {
     }
 };
 
+template<class T, class... Args>
+unique_ptr<T> make_unique(Args&&... args) { return unique_ptr<T>(new T(std::forward<Args>(args)...)); }
 
 int main(int argc, char *argv[]) {
-    CmdLine cmd{"SingleOmega", ' ', "0.1"};
-    SingleOmegaArgParse args(cmd);
-    cmd.parse(argc, argv);
-    ChainDriver chain_driver{args.chain_name.getValue(), args.every.getValue(),
-                             args.until.getValue()};
-    SingleOmegaModel model{args.alignment.getValue(), args.treefile.getValue()};
-    ConsoleLogger console_logger;
-    ChainCheckpoint chain_checkpoint(args.chain_name.getValue() + ".param", chain_driver, model);
-    chain_driver.add(model);
-    chain_driver.add(console_logger);
-    chain_driver.add(chain_checkpoint);
-    chain_driver.go();
-    exit(0);
+    ChainCmdLine cmd{argc, argv, "SingleOmega", ' ', "0.1"};
 
-    string name = "";
-    SingleOmegaChain *chain = 0;
+    unique_ptr<ChainDriver> chain_driver = nullptr;
+    unique_ptr<SingleOmegaModel> model = nullptr;
 
-    // starting a chain from existing files
-    if (argc == 2 && argv[1][0] != '-') {
-        name = argv[1];
-        chain = new SingleOmegaChain(name);
+    if(cmd.resume_from_checkpoint()) {
+        std::ifstream is = cmd.checkpoint_file();
+        chain_driver = make_unique<ChainDriver>(is);
+        model = make_unique<SingleOmegaModel>(is);
     }
-
-    // new chain
     else {
-        string datafile = "";
-        string treefile = "";
-        name = "";
-        int force = 1;
-        int every = 1;
-        int until = -1;
-
-        try {
-            if (argc == 1) {
-                throw(0);
-            }
-
-            int i = 1;
-            while (i < argc) {
-                string s = argv[i];
-
-                if (s == "-d") {
-                    i++;
-                    datafile = argv[i];
-                } else if ((s == "-t") || (s == "-T")) {
-                    i++;
-                    treefile = argv[i];
-                } else if (s == "-f") {
-                    force = 1;
-                } else if ((s == "-x") || (s == "-extract")) {
-                    i++;
-                    if (i == argc) throw(0);
-                    every = atoi(argv[i]);
-                    i++;
-                    if (i == argc) throw(0);
-                    until = atoi(argv[i]);
-                } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
-                    name = argv[i];
-                }
-                i++;
-            }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
-        } catch (...) {
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
-            cerr << '\n';
-            exit(1);
-        }
-
-        chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+        SingleOmegaArgParse args(cmd);
+        cmd.parse();
+        chain_driver = make_unique<ChainDriver>(cmd.chain_name(), args.every.getValue(),
+                                                args.until.getValue());
+        model = make_unique<SingleOmegaModel>(args.alignment.getValue(), args.treefile.getValue());
     }
 
-    cerr << "chain " << name << " started\n";
-    chain->Start();
-    cerr << "chain " << name << " stopped\n";
-    cerr << chain->GetSize()
-         << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-    chain->GetModel()->Trace(cerr);
+    ConsoleLogger console_logger;
+    ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
+    chain_driver->add(*model);
+    chain_driver->add(console_logger);
+    chain_driver->add(chain_checkpoint);
+    chain_driver->go();
 }
