@@ -108,6 +108,22 @@ class SingleOmegaArgParse : public BaseArgParse {
         "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
+class ConsoleLogger : public ChainComponent {
+public:
+    void start() override {
+        cout << "Started\n" ;
+    }
+    void move(int i) override {
+        cout << "Move " << i << "\n" ;
+    }
+    void savepoint(int i) override {
+        cout << "Savepoint " << i << "\n" ;
+    }
+    void end() override {
+        cout << "Ended\n" ;
+    }
+};
+
 int main(int argc, char *argv[]) {
     CmdLine cmd{"SingleOmega", ' ', "0.1"};
     SingleOmegaArgParse args(cmd);
@@ -115,7 +131,9 @@ int main(int argc, char *argv[]) {
     ChainDriver chain_driver{args.chain_name.getValue(), args.every.getValue(),
                              args.until.getValue()};
     SingleOmegaModel model{args.alignment.getValue(), args.treefile.getValue()};
+    ConsoleLogger console_logger;
     chain_driver.add(model);
+    chain_driver.add(console_logger);
     chain_driver.go();
     exit(0);
 
