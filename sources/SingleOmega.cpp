@@ -109,20 +109,46 @@ class SingleOmegaArgParse : public BaseArgParse {
 };
 
 class ConsoleLogger : public ChainComponent {
-public:
-    void start() override {
-        cout << "Started\n" ;
-    }
-    void move(int i) override {
-        cout << "Move " << i << "\n" ;
-    }
-    void savepoint(int i) override {
-        cout << "Savepoint " << i << "\n" ;
-    }
-    void end() override {
-        cout << "Ended\n" ;
+  public:
+    void start() override { cout << "Started\n"; }
+    void move(int i) override { cout << "Move " << i << "\n"; }
+    void savepoint(int i) override { cout << "Savepoint " << i << "\n"; }
+    void end() override { cout << "Ended\n"; }
+};
+
+// template <class T>
+// class ChainCheckpoint : public ChainComponent {
+//     std::string filename;
+// public:
+//     ChainCheckpoint(std::string filename, ChainDriver& cd, T& model) : filename(filename) {}
+
+//     void savepoint() override {
+//         std::ofstream os{filename};
+//         cd.serialize(os);
+//         model.toStream(os);
+//     }
+// };
+
+class ChainCheckpoint : public ChainComponent {
+    std::string filename;
+    std::function<void(std::ostream &)> serialize_model;
+    ChainDriver &cd;
+
+  public:
+    template <class T>
+    ChainCheckpoint(std::string filename, ChainDriver &cd, T &model)
+        : filename(filename),
+          serialize_model([&model](std::ostream &os) { model.ToStream(os); }),
+          cd(cd) {}
+
+    void savepoint(int) override {
+        std::ofstream os{filename};
+        cd.serialize(os);
+        os << "\n";
+        serialize_model(os);
     }
 };
+
 
 int main(int argc, char *argv[]) {
     CmdLine cmd{"SingleOmega", ' ', "0.1"};
@@ -132,8 +158,10 @@ int main(int argc, char *argv[]) {
                              args.until.getValue()};
     SingleOmegaModel model{args.alignment.getValue(), args.treefile.getValue()};
     ConsoleLogger console_logger;
+    ChainCheckpoint chain_checkpoint(args.chain_name.getValue() + ".param", chain_driver, model);
     chain_driver.add(model);
     chain_driver.add(console_logger);
+    chain_driver.add(chain_checkpoint);
     chain_driver.go();
     exit(0);
 

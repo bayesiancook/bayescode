@@ -28,6 +28,7 @@
 
 class SingleOmegaModel : public ProbModel, public ChainComponent {
     // tree and data
+    std::string datafile, treefile;
     Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
@@ -101,7 +102,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, string treefile) {
+    SingleOmegaModel(string datafile, string treefile) : datafile(datafile), treefile(treefile) {
         blmode = 0;
         nucmode = 0;
 
@@ -611,6 +612,9 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     void Monitor(ostream &os) const {}
 
     void ToStream(ostream &os) const {
+        os << "SingleOmega" << '\t';
+        os << datafile << '\t';
+        os << treefile << '\t';
         os << omega << '\t';
         os << nucstat << '\t';
         os << nucrelrate << '\t';
@@ -619,6 +623,14 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     }
 
     void FromStream(istream &is) {
+        std::string model_name;
+        is >> model_name;
+        if (model_name != "SingleOmega") {
+            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+            exit(1);
+        }
+        is >> datafile;
+        is >> treefile;
         is >> omega;
         is >> nucstat;
         is >> nucrelrate;

@@ -5,6 +5,12 @@
 #include "RunToggle.hpp"
 
 class ChainDriver {
+    static std::string get_first_token(std::istream& is) {
+        std::string result;
+        is >> result;
+        return result;
+    }
+
   public:
     ChainDriver(std::string name, int every, int until, int size = 0)
         : name(name), toggle(name + ".run"), every(every), until(until), size(size) {}
@@ -21,6 +27,16 @@ class ChainDriver {
     }
 
     void add(ChainComponent& component) { components.push_back(&component); }
+
+    void serialize(std::ostream& os) const {
+        os << name << "\t" << every << "\t" << until << "\t" << size;
+    }
+
+    ChainDriver(std::istream& is) : name(get_first_token(is)), toggle(name) {
+        is >> every;
+        is >> until;
+        is >> size;
+    }
 
   private:
     std::string name;
