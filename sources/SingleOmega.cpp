@@ -1,6 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include "Chain.hpp"
+#include "ChainDriver.hpp"
 #include "SingleOmegaModel.hpp"
 using namespace std;
 

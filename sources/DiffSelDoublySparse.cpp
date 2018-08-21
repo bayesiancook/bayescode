@@ -30,8 +30,8 @@ class DiffSelDoublySparseChain : public Chain {
 
     DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel,
                              int incodonmodel, double infitnessshape, int infitnesscentermode,
-                             double inepsilon, double inpihypermean, double inshiftprobmean, double inshiftprobinvconc, 
-                             int inburnin, int inevery, int inuntil,
+                             double inepsilon, double inpihypermean, double inshiftprobmean,
+                             double inshiftprobinvconc, int inburnin, int inevery, int inuntil,
                              int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
@@ -42,7 +42,9 @@ class DiffSelDoublySparseChain : public Chain {
           fitnessshape(infitnessshape),
           fitnesscentermode(infitnesscentermode),
           epsilon(inepsilon),
-          pihypermean(inpihypermean), shiftprobmean(inshiftprobmean), shiftprobinvconc(inshiftprobinvconc) {
+          pihypermean(inpihypermean),
+          shiftprobmean(inshiftprobmean),
+          shiftprobinvconc(inshiftprobinvconc) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -58,8 +60,9 @@ class DiffSelDoublySparseChain : public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape,
-                                             pihypermean, shiftprobmean, shiftprobinvconc);
+        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon,
+                                             fitnessshape, pihypermean, shiftprobmean,
+                                             shiftprobinvconc);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
@@ -97,7 +100,8 @@ class DiffSelDoublySparseChain : public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                 epsilon, fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
+                                                 epsilon, fitnessshape, pihypermean, shiftprobmean,
+                                                 shiftprobinvconc);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -298,10 +302,10 @@ int main(int argc, char *argv[]) {
                     } else {
                         epsilon = atof(argv[i]);
                     }
-                } else if (s == "-pi")  {
+                } else if (s == "-pi") {
                     i++;
                     pihypermean = atof(argv[i]);
-                } else if (s == "-shiftprob")   {
+                } else if (s == "-shiftprob") {
                     i++;
                     shiftprobmean = atof(argv[i]);
                     i++;
@@ -329,9 +333,9 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         chain = new DiffSelDoublySparseChain(datafile, treefile, ncond, nlevel, codonmodel,
-                                             fitnessshape, fitnesscentermode, epsilon,
-                                             pihypermean, shiftprobmean, shiftprobinvconc,
-                                             burnin, every, until, saveall, name, force);
+                                             fitnessshape, fitnesscentermode, epsilon, pihypermean,
+                                             shiftprobmean, shiftprobinvconc, burnin, every, until,
+                                             saveall, name, force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

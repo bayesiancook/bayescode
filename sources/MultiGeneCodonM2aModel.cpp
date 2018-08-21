@@ -25,7 +25,8 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
       nucstatsuffstat(Nnuc) {
     burnin = 0;
 
-    // 0 : gathering branch lengths across genes and then using gamma suff stats to resample hyperparams
+    // 0 : gathering branch lengths across genes and then using gamma suff stats to resample
+    // hyperparams
     // 1 : gathering suff stats across genes, then resampling hyperparams based on integrated bls
     blsamplemode = 0;
 
@@ -73,16 +74,15 @@ void MultiGeneCodonM2aModel::Allocate() {
         branchlengtharray =
             new GammaWhiteNoiseArray(GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
 
-        if (blsamplemode == 1)   {
+        if (blsamplemode == 1) {
             lengthpathsuffstatarray = 0;
-            lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,GetLocalNgene());
+            lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree, GetLocalNgene());
             lengthhypersuffstatarray = 0;
-        }
-        else    {
+        } else {
             lengthpathsuffstatarray = 0;
             // lengthpathsuffstattreearray = 0;
-            if (myid)   {
-                lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree,GetLocalNgene());
+            if (myid) {
+                lengthpathsuffstattreearray = new PoissonSuffStatTreeArray(*tree, GetLocalNgene());
             }
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -624,15 +624,14 @@ void MultiGeneCodonM2aModel::MasterMove() {
             movechrono.Stop();
             MasterSendGlobalBranchLengths();
         } else if (blmode == 1) {
-            if (blsamplemode == 1)   {
+            if (blsamplemode == 1) {
                 MasterReceiveGeneBranchLengthsSuffStat();
                 movechrono.Start();
                 MoveBranchLengthsHyperParametersIntegrated();
                 movechrono.Stop();
                 MasterSendBranchLengthsHyperParameters();
                 // MasterReceiveGeneBranchLengths();
-            }
-            else    {
+            } else {
                 MasterReceiveBranchLengthsHyperSuffStat();
                 movechrono.Start();
                 MoveBranchLengthsHyperParameters();
@@ -694,13 +693,12 @@ void MultiGeneCodonM2aModel::SlaveMove() {
             SlaveSendBranchLengthsSuffStat();
             SlaveReceiveGlobalBranchLengths();
         } else if (blmode == 1) {
-            if (blsamplemode == 1)   {
+            if (blsamplemode == 1) {
                 // integrated move
                 SlaveSendGeneBranchLengthsSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
                 ResampleGeneBranchLengths();
-            }
-            else    {
+            } else {
                 // conditional move
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
@@ -754,7 +752,7 @@ void MultiGeneCodonM2aModel::ResampleBranchLengths() {
     branchlength->GibbsResample(*lengthpathsuffstatarray);
 }
 
-void MultiGeneCodonM2aModel::ResampleGeneBranchLengths()   {
+void MultiGeneCodonM2aModel::ResampleGeneBranchLengths() {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->ResampleBranchLengths();
         geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
@@ -772,13 +770,14 @@ void MultiGeneCodonM2aModel::MoveLambda() {
 }
 
 void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParametersIntegrated() {
-
     BranchLengthsHyperScalingMoveIntegrated(1.0, 10);
     BranchLengthsHyperScalingMoveIntegrated(0.3, 10);
 
-    ScalingMove(blhyperinvshape, 1.0, 10, &MultiGeneCodonM2aModel::BranchLengthsIntegratedHyperLogProb,
+    ScalingMove(blhyperinvshape, 1.0, 10,
+                &MultiGeneCodonM2aModel::BranchLengthsIntegratedHyperLogProb,
                 &MultiGeneCodonM2aModel::NoUpdate, this);
-    ScalingMove(blhyperinvshape, 0.3, 10, &MultiGeneCodonM2aModel::BranchLengthsIntegratedHyperLogProb,
+    ScalingMove(blhyperinvshape, 0.3, 10,
+                &MultiGeneCodonM2aModel::BranchLengthsIntegratedHyperLogProb,
                 &MultiGeneCodonM2aModel::NoUpdate, this);
 
     branchlengtharray->SetShape(1.0 / blhyperinvshape);
@@ -787,7 +786,7 @@ void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParametersIntegrated() {
 
 double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb() const {
     double total = 0;
-    for (int j=0; j<Nbranch; j++)   {
+    for (int j = 0; j < Nbranch; j++) {
         total += GeneBranchLengthsHyperSuffStatLogProb(j);
     }
     return total;
@@ -795,14 +794,13 @@ double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb() const {
 
 double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int branch) const {
     double total = 0;
-    for (int gene=0; gene<GetLocalNgene(); gene++)    {
-        total += GeneBranchLengthsHyperSuffStatLogProb(gene,branch);
+    for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        total += GeneBranchLengthsHyperSuffStatLogProb(gene, branch);
     }
     return total;
 }
 
-double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int gene, int branch)  const {
-
+double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int gene, int branch) const {
     const PoissonSuffStat &suffstat = lengthpathsuffstattreearray->GetVal(gene).GetVal(branch);
     int count = suffstat.GetCount();
     double b = suffstat.GetBeta();
@@ -814,7 +812,8 @@ double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int gene, i
     double beta = branchlengtharray->GetVal(gene).GetBeta(branch);
     */
 
-    return alpha * log(beta) - Random::logGamma(alpha) + Random::logGamma(alpha + count) - (alpha + count) * log(beta + b);
+    return alpha * log(beta) - Random::logGamma(alpha) + Random::logGamma(alpha + count) -
+           (alpha + count) * log(beta + b);
 }
 
 
@@ -824,14 +823,11 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperScalingMoveIntegrated(double tu
     for (int rep = 0; rep < nrep; rep++) {
         for (int j = 0; j < Nbranch; j++) {
             double deltalogprob =
-                -branchlength->GetLogProb(j) - 
-                GeneBranchLengthsHyperSuffStatLogProb(j);
+                -branchlength->GetLogProb(j) - GeneBranchLengthsHyperSuffStatLogProb(j);
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
             (*branchlength)[j] *= e;
-            deltalogprob +=
-                branchlength->GetLogProb(j) +
-                GeneBranchLengthsHyperSuffStatLogProb(j);
+            deltalogprob += branchlength->GetLogProb(j) + GeneBranchLengthsHyperSuffStatLogProb(j);
             deltalogprob += m;
             int accepted = (log(Random::Uniform()) < deltalogprob);
             if (accepted) {
@@ -846,7 +842,6 @@ double MultiGeneCodonM2aModel::BranchLengthsHyperScalingMoveIntegrated(double tu
 }
 
 void MultiGeneCodonM2aModel::MoveBranchLengthsHyperParameters() {
-
     BranchLengthsHyperScalingMove(1.0, 10);
     BranchLengthsHyperScalingMove(0.3, 10);
 
@@ -959,7 +954,7 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
     }
 
     if (poswmode == 1) {
-	MovePoswHyper();
+        MovePoswHyper();
     }
 
     if (purwmode == 1) {
@@ -980,49 +975,47 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
     }
 }
 
-void MultiGeneCodonM2aModel::MovePoswHyper()	{
+void MultiGeneCodonM2aModel::MovePoswHyper() {
+    SlidingMove(poswhypermean, 1.0, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
+    SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
+    SlidingMove(poswhypermean, 0.1, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
+    ScalingMove(poswhyperinvconc, 1.0, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
+    ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
+    ScalingMove(poswhyperinvconc, 0.1, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
+                &MultiGeneCodonM2aModel::NoUpdate, this);
 
-        SlidingMove(poswhypermean, 1.0, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        SlidingMove(poswhypermean, 0.1, 10, 0, 1, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        ScalingMove(poswhyperinvconc, 1.0, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-        ScalingMove(poswhyperinvconc, 0.1, 10, &MultiGeneCodonM2aModel::MixtureHyperLogProb,
-                    &MultiGeneCodonM2aModel::NoUpdate, this);
-
-	for (int rep=0; rep<10; rep++)	{
-		PoswCompMove(1.0);
-		PoswCompMove(0.3);
-		PoswCompMove(0.1);
-	}
+    for (int rep = 0; rep < 10; rep++) {
+        PoswCompMove(1.0);
+        PoswCompMove(0.3);
+        PoswCompMove(0.1);
+    }
 }
 
-int MultiGeneCodonM2aModel::PoswCompMove(double tuning)	{
+int MultiGeneCodonM2aModel::PoswCompMove(double tuning) {
+    double bkposwhypermean = poswhypermean;
+    double bkposwhyperinvconc = poswhyperinvconc;
+    double deltalogprob = -MixtureHyperLogProb();
+    double m = tuning * (Random::Uniform() - 0.5);
+    double e = exp(m);
+    if (poswhypermean * e > 1.0) {
+        return 0;
+    }
+    poswhypermean *= e;
+    poswhyperinvconc *= e;
+    deltalogprob += MixtureHyperLogProb();
+    deltalogprob += 2 * m;
 
-	double bkposwhypermean = poswhypermean;
-	double bkposwhyperinvconc = poswhyperinvconc;
-	double deltalogprob = - MixtureHyperLogProb();
-	double m = tuning * (Random::Uniform() - 0.5);
-	double e = exp(m);
-	if (poswhypermean * e > 1.0)	{
-		return 0;
-	}
-	poswhypermean *= e;
-	poswhyperinvconc *= e;
-	deltalogprob += MixtureHyperLogProb();
-	deltalogprob += 2*m;
-
-	int accepted = (log(Random::Uniform()) < deltalogprob);
-	if (!accepted) {
-		poswhypermean = bkposwhypermean;
-		poswhyperinvconc = bkposwhyperinvconc;
-	}
-	return accepted;
+    int accepted = (log(Random::Uniform()) < deltalogprob);
+    if (!accepted) {
+        poswhypermean = bkposwhypermean;
+        poswhyperinvconc = bkposwhyperinvconc;
+    }
+    return accepted;
 }
 
 
@@ -1066,7 +1059,7 @@ void MultiGeneCodonM2aModel::SlaveReceiveBranchLengthsHyperParameters() {
     }
 }
 
-void MultiGeneCodonM2aModel::GeneResampleEmptyBranches()   {
+void MultiGeneCodonM2aModel::GeneResampleEmptyBranches() {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->ResampleEmptyBranches();
         geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
@@ -1087,7 +1080,7 @@ void MultiGeneCodonM2aModel::SlaveReceiveGeneBranchLengths() {
 void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths() {
     // in principle, redundant..
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+        geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
     }
     SlaveSendGeneArray(*branchlengtharray);
 }
@@ -1105,13 +1098,14 @@ void MultiGeneCodonM2aModel::SlaveSendBranchLengthsSuffStat() {
     SlaveSendAdditive(*lengthpathsuffstatarray);
 }
 
-void MultiGeneCodonM2aModel::CollectGeneBranchLengthsSuffStat()    {
+void MultiGeneCodonM2aModel::CollectGeneBranchLengthsSuffStat() {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         // geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         geneprocess[gene]->CollectLengthSuffStat();
         // (*lengthpathsuffstattreearray)[gene].Clear();
         // (*lengthpathsuffstattreearray)[gene]->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
-        (*lengthpathsuffstattreearray)[gene].BranchArray<PoissonSuffStat>::Copy(*geneprocess[gene]->GetLengthPathSuffStatArray());
+        (*lengthpathsuffstattreearray)[gene].BranchArray<PoissonSuffStat>::Copy(
+            *geneprocess[gene]->GetLengthPathSuffStatArray());
     }
 }
 
@@ -1133,7 +1127,7 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneBranchLengthsSuffStat() {
 void MultiGeneCodonM2aModel::SlaveSendBranchLengthsHyperSuffStat() {
     CollectGeneBranchLengthsSuffStat();
     lengthhypersuffstatarray->Clear();
-    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray,*lengthpathsuffstattreearray);
+    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray, *lengthpathsuffstattreearray);
     // lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
     SlaveSendAdditive(*lengthhypersuffstatarray);
 }

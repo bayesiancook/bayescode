@@ -14,7 +14,6 @@
  */
 
 class SiteOmegaModel : public ProbModel {
-
     // tree and data
     Tree *tree;
     FileSequenceAlignment *data;
@@ -91,7 +90,6 @@ class SiteOmegaModel : public ProbModel {
     GammaSuffStat omegahypersuffstat;
 
   public:
-
     //-------------------
     // Construction and allocation
     // ------------------
@@ -101,7 +99,6 @@ class SiteOmegaModel : public ProbModel {
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
     SiteOmegaModel(string datafile, string treefile) {
-
         blmode = 0;
         nucmode = 0;
 
@@ -125,7 +122,6 @@ class SiteOmegaModel : public ProbModel {
 
     //! model allocation
     void Allocate() {
-
         // Branch lengths
 
         lambda = 10.0;
@@ -179,7 +175,7 @@ class SiteOmegaModel : public ProbModel {
     }
 
     int GetNsite() const { return Nsite; }
-    
+
     //-------------------
     // Setting and updating
     // ------------------
@@ -213,7 +209,7 @@ class SiteOmegaModel : public ProbModel {
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
     void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                                        double inblinvshape) {
+                                         double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -228,24 +224,23 @@ class SiteOmegaModel : public ProbModel {
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate,
-                                    const std::vector<double> &innucstat) {
+                     const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
     }
 
     //! get a copy of nucleotide rates into arrays given as arguments
-    void GetNucRates(std::vector<double> &innucrelrate,
-                                    std::vector<double> &innucstat) const {
+    void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
         innucrelrate = nucrelrate;
         innucstat = nucstat;
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                                   double innucrelratehyperinvconc,
-                                                   const std::vector<double> &innucstathypercenter,
-                                                   double innucstathyperinvconc) {
+                                    double innucrelratehyperinvconc,
+                                    const std::vector<double> &innucstathypercenter,
+                                    double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -263,7 +258,9 @@ class SiteOmegaModel : public ProbModel {
         omegaarray->SetScale(beta);
     }
 
-    void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape, double inomegainvshapehypermean, double inomegainvshapehyperinvshape)    {
+    void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape,
+                                 double inomegainvshapehypermean,
+                                 double inomegainvshapehyperinvshape) {
         omegameanhypermean = inomegameanhypermean;
         omegameanhyperinvshape = inomegameanhyperinvshape;
         omegainvshapehypermean = inomegainvshapehypermean;
@@ -287,9 +284,7 @@ class SiteOmegaModel : public ProbModel {
     //! The matrix is not directly updated at that step. Instead, corruption is
     //! notified, such that the matrix knows that it will have to recalculate
     //! whichever component is requested later on upon demand.
-    void TouchCodonMatrices() {
-        codonmatrixarray->UpdateCodonMatrices();
-    }
+    void TouchCodonMatrices() { codonmatrixarray->UpdateCodonMatrices(); }
 
     //! \brief tell the nucleotide and the codon matrices that their parameters
     //! have changed and that they should be updated
@@ -313,7 +308,7 @@ class SiteOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
-        SetOmegaParameters(omegamean,omegainvshape);
+        SetOmegaParameters(omegamean, omegainvshape);
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -328,7 +323,7 @@ class SiteOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
-        SetOmegaParameters(omegamean,omegainvshape);
+        SetOmegaParameters(omegamean, omegainvshape);
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -385,7 +380,8 @@ class SiteOmegaModel : public ProbModel {
         double total = 0;
         total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
                                              1.0 / nucrelratehyperinvconc);
-        total += Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
+        total +=
+            Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
     }
 
@@ -468,7 +464,7 @@ class SiteOmegaModel : public ProbModel {
     }
 
     // Omega
-    
+
     double OmegaHyperSuffStatLogProb() const {
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
@@ -476,7 +472,7 @@ class SiteOmegaModel : public ProbModel {
     }
 
 
-    // Paths 
+    // Paths
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
@@ -641,17 +637,11 @@ class SiteOmegaModel : public ProbModel {
         return tot / Nsite;
     }
 
-    double GetMeanOmega() const {
-        return omegaarray->GetMean();
-    }
+    double GetMeanOmega() const { return omegaarray->GetMean(); }
 
-    double GetOmegaMean() const {
-        return omegamean;
-    }
+    double GetOmegaMean() const { return omegamean; }
 
-    double GetOmegaInvShape() const {
-        return omegainvshape;
-    }
+    double GetOmegaInvShape() const { return omegainvshape; }
 
     void TraceOmega(ostream &os) const {
         for (int i = 0; i < GetNsite(); i++) {

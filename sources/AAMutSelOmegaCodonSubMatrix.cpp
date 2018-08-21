@@ -73,14 +73,12 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
 }
 
 double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
-
-	// UpdateMatrix();
+    // UpdateMatrix();
     double totom = 0;
     double totweight = 0;
     for (int i = 0; i < Nstate; i++) {
-
-		double weight = 0;
-		double om = 0;
+        double weight = 0;
+        double om = 0;
 
         for (int j = 0; j < Nstate; j++) {
             if (i != j) {
@@ -92,7 +90,8 @@ double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
 
                         double nucrate = (*NucMatrix)(a, b);
 
-                        double deltaS = log(GetFitness(GetCodonStateSpace()->Translation(j))) - log(GetFitness(GetCodonStateSpace()->Translation(i)));
+                        double deltaS = log(GetFitness(GetCodonStateSpace()->Translation(j))) -
+                                        log(GetFitness(GetCodonStateSpace()->Translation(i)));
                         double pfix = 1.0;
                         if ((fabs(deltaS)) < 1e-30) {
                             pfix = 1 + deltaS / 2;
@@ -104,16 +103,15 @@ double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
                             pfix = deltaS / (1.0 - exp(-deltaS));
                         }
 
-						om += nucrate*pfix;
-						weight += nucrate;
+                        om += nucrate * pfix;
+                        weight += nucrate;
                     }
                 }
             }
         }
 
-		totom += mStationary[i] * om;
-		totweight += mStationary[i] * weight;
+        totom += mStationary[i] * om;
+        totweight += mStationary[i] * weight;
     }
     return totom / totweight;
 }
-

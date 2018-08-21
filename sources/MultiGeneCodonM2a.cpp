@@ -45,15 +45,15 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     //! shift probabilities \param name: base name for all files related to this
     //! MCMC run \param force: overwrite existing files with same name \param
     //! inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode, int innucmode,
-                           int inpurommode, int indposommode, int inpurwmode, int inposwmode,
-                           double inpihypermean, double inpihyperinvconc, double inpuromhypermean,
-                           double inpuromhyperinvconc, double indposomhypermean,
-                           double indposomhyperinvshape, double inpurwhypermean,
-                           double inpurwhyperinvconc, double inposwhypermean,
-                           double inposwhyperinvconc, int inmodalprior,
-                           int inevery, int inuntil, int inwritegenedata,
-                           string inname, int force, int inmyid, int innprocs)
+    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode,
+                           int innucmode, int inpurommode, int indposommode, int inpurwmode,
+                           int inposwmode, double inpihypermean, double inpihyperinvconc,
+                           double inpuromhypermean, double inpuromhyperinvconc,
+                           double indposomhypermean, double indposomhyperinvshape,
+                           double inpurwhypermean, double inpurwhyperinvconc,
+                           double inposwhypermean, double inposwhyperinvconc, int inmodalprior,
+                           int inevery, int inuntil, int inwritegenedata, string inname, int force,
+                           int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECODONM2A"),
           datafile(indatafile),
@@ -184,8 +184,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << writegenedata << '\n';
-            param_os << blmode << '\t' << blsamplemode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
-                     << poswmode << '\n';
+            param_os << blmode << '\t' << blsamplemode << '\t' << nucmode << '\t' << dposommode
+                     << '\t' << purwmode << '\t' << poswmode << '\n';
             param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
             param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
@@ -408,9 +408,9 @@ int main(int argc, char *argv[]) {
                         i++;
                         poswhyperinvconc = atof(argv[i]);
                     }
-                } else if (s == "-modalprior")  {
+                } else if (s == "-modalprior") {
                     modalprior = 1;
-                } else if (s == "-unconsprior")    {
+                } else if (s == "-unconsprior") {
                     modalprior = 0;
                 } else if (s == "-nucrates") {
                     i++;
@@ -438,7 +438,7 @@ int main(int argc, char *argv[]) {
                         cerr << "error: does not recongnize command after -bl\n";
                         exit(1);
                     }
-                } else if (s == "-blint")   {
+                } else if (s == "-blint") {
                     blsamplemode = 1;
                 } else if (s == "-blnoint") {
                     blsamplemode = 0;
@@ -482,10 +482,10 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneCodonM2aChain(
-            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
-            pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
-            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc, modalprior,
-            every, until, writegenedata, name, force, myid, nprocs);
+            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode,
+            poswmode, pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc,
+            dposomhypermean, dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean,
+            poswhyperinvconc, modalprior, every, until, writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();

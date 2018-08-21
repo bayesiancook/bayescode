@@ -27,10 +27,10 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
 
     MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat,
                                      int inbaseNcat, int inblmode, int innucmode, int inbasemode,
-                                     int inomegamode, int inomegaprior, int inmodalprior, double inpihypermean,
-                                     double inpihyperinvconc, int inevery, int inuntil,
-                                     int inwritegenedata, string inname, int force, int inmyid,
-                                     int innprocs)
+                                     int inomegamode, int inomegaprior, int inmodalprior,
+                                     double inpihypermean, double inpihyperinvconc, int inevery,
+                                     int inuntil, int inwritegenedata, string inname, int force,
+                                     int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
@@ -60,9 +60,9 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
-                                                     nucmode, basemode, omegamode, omegaprior, modalprior,
-                                                     pihypermean, pihyperinvconc, myid, nprocs);
+        model = new MultiGeneAAMutSelDSBDPOmegaModel(
+            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior,
+            modalprior, pihypermean, pihyperinvconc, myid, nprocs);
         if (!myid) {
             cerr << " -- allocate\n";
         }
@@ -98,9 +98,9 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
-                                                         nucmode, basemode, omegamode, omegaprior, modalprior,
-                                                         pihypermean, pihyperinvconc, myid, nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(
+                datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode,
+                omegaprior, modalprior, pihypermean, pihyperinvconc, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -168,8 +168,7 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 if (omegamode == 3) {
                     GetModel()->TracePredictedDNDS(os);
-                }
-                else    {
+                } else {
                     GetModel()->TraceOmega(os);
                 }
             }
@@ -306,7 +305,7 @@ int main(int argc, char *argv[]) {
                     omegaprior = 0;
                 } else if (s == "-mixomega") {
                     omegaprior = 1;
-                } else if (s == "-modalprior")  {
+                } else if (s == "-modalprior") {
                     modalprior = 1;
                 } else if (s == "-unconsprior") {
                     modalprior = 0;
@@ -336,8 +335,9 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(
-            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior, modalprior,
-            pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid, nprocs);
+            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior,
+            modalprior, pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid,
+            nprocs);
     }
 
     chrono.Stop();

@@ -3,8 +3,8 @@
 #define GAMMASUFFSTAT_H
 
 #include "IIDGamma.hpp"
-#include "WhiteNoise.hpp"
 #include "PoissonSuffStat.hpp"
+#include "WhiteNoise.hpp"
 
 /**
  * \brief A sufficient statistic for a collection of gamma variates, as a
@@ -170,9 +170,10 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
     }
 
     //! get suff stats from a GammaWhiteNoise
-    void AddSuffStat(const GammaWhiteNoise &array, const PoissonSuffStatBranchArray& suffstatarray) {
+    void AddSuffStat(const GammaWhiteNoise &array,
+                     const PoissonSuffStatBranchArray &suffstatarray) {
         for (int i = 0; i < array.GetNbranch(); i++) {
-            if (suffstatarray.GetVal(i).GetBeta() > 0)  {
+            if (suffstatarray.GetVal(i).GetBeta() > 0) {
                 (*this)[i].AddSuffStat(array.GetVal(i), log(array.GetVal(i)));
             }
         }
@@ -185,10 +186,12 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
         }
     }
 
-    //! get suff stats from a GammaWhiteNoiseArray, skipping branch lengths for which suff stats are empty
-    void AddSuffStat(GammaWhiteNoiseArray &array, const Selector<PoissonSuffStatBranchArray>& suffstatarray) {
+    //! get suff stats from a GammaWhiteNoiseArray, skipping branch lengths for which suff stats are
+    //! empty
+    void AddSuffStat(GammaWhiteNoiseArray &array,
+                     const Selector<PoissonSuffStatBranchArray> &suffstatarray) {
         for (int gene = 0; gene < array.GetNgene(); gene++) {
-            AddSuffStat(array.GetVal(gene),suffstatarray.GetVal(gene));
+            AddSuffStat(array.GetVal(gene), suffstatarray.GetVal(gene));
         }
     }
 

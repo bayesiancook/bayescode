@@ -77,9 +77,9 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneDiffSelSparseModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
+                                int incodonmodel, int inblmode, int innucmode, int inmyid,
+                                int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
-
         withtoggle = 0;
         codonmodel = incodonmodel;
         blmode = inblmode;
@@ -495,7 +495,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         // int nrep = 3;
 
         for (int rep = 0; rep < nrep; rep++) {
-
             if (withtoggle) {
                 MasterReceiveShiftCounts();
                 movechrono.Start();

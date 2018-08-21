@@ -21,8 +21,8 @@ class DiffSelSparseChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     DiffSelSparseChain(string indata, string intree, int inncond, int innlevel, int incodonmodel,
-                       int infixhyper, int inburnin, int inevery, int inuntil, int insaveall, string inname,
-                       int force)
+                       int infixhyper, int inburnin, int inevery, int inuntil, int insaveall,
+                       string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),

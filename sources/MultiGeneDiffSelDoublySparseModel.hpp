@@ -96,7 +96,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     double meanWidth;
     double meanEps;
 
-    SimpleArray<double>* genednds;
+    SimpleArray<double> *genednds;
 
     double moveTime;
     double mapTime;
@@ -111,11 +111,12 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneDiffSelDoublySparseModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                      int incodonmodel, double inepsilon, double infitnessshape, int inblmode, int innucmode, int inshiftmode,
-                                      double inpihypermean, double inpihyperinvconc, double inshiftprobmean, double inshiftprobinvconc,
-                                      int inmyid, int innprocs)
+                                      int incodonmodel, double inepsilon, double infitnessshape,
+                                      int inblmode, int innucmode, int inshiftmode,
+                                      double inpihypermean, double inpihyperinvconc,
+                                      double inshiftprobmean, double inshiftprobinvconc, int inmyid,
+                                      int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
-
         withtoggle = 0;
 
         blmode = inblmode;
@@ -193,8 +194,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
         if (Ncond == 1) {
             genednds = new SimpleArray<double>(GetLocalNgene());
-        }
-        else    {
+        } else {
             genednds = 0;
         }
 
@@ -204,9 +204,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             geneprocess.assign(GetLocalNgene(), (DiffSelDoublySparseModel *)0);
 
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] =
-                    new DiffSelDoublySparseModel(GetLocalGeneName(gene), treefile, Ncond, Nlevel,
-                                                 codonmodel, epsilon, fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
+                geneprocess[gene] = new DiffSelDoublySparseModel(
+                    GetLocalGeneName(gene), treefile, Ncond, Nlevel, codonmodel, epsilon,
+                    fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetFitnessCenterMode(fitnesscentermode);
@@ -310,16 +310,14 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     // Traces and Monitors
     //-------------------
 
-    void TracePredictedDNDS(ostream& os) const   {
+    void TracePredictedDNDS(ostream &os) const {
         for (int gene = 0; gene < Ngene; gene++) {
             os << genednds->GetVal(gene) << '\t';
         }
         os << '\n';
     }
 
-    void MasterReceivePredictedDNDS() {
-        MasterReceiveGeneArray(*genednds);
-    }
+    void MasterReceivePredictedDNDS() { MasterReceiveGeneArray(*genednds); }
 
     void SlaveSendPredictedDNDS() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
@@ -474,7 +472,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     //-------------------
 
     double GetLogPrior() const {
-
         double total = GeneLogPrior;
         if (blmode == 1) {
             total += GeneBranchLengthsHyperLogPrior();
@@ -514,7 +511,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 total += GetPiLogPrior(k);
             }
         }
-        if (shiftmode)  {
+        if (shiftmode) {
             for (int k = 1; k < Ncond; k++) {
                 total += GetShiftProbHyperMeanLogPrior(k);
                 total += GetShiftProbHyperInvConcLogPrior(k);
@@ -524,7 +521,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     double GetPiLogPrior(int k) const {
-        if ((pi[k-1] < minpi) || (pi[k-1] > maxpi)) {
+        if ((pi[k - 1] < minpi) || (pi[k - 1] > maxpi)) {
             return log(0);
         }
         double alpha = pihypermean / pihyperinvconc;
@@ -541,7 +538,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     double GetShiftProbHyperInvConcLogPrior(int k) const {
-        if (shiftprobhyperinvconc[k-1] > maxshiftprobhyperinvconc)   {
+        if (shiftprobhyperinvconc[k - 1] > maxshiftprobhyperinvconc) {
             return log(0);
         }
         return 0;
@@ -626,7 +623,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
-
             if (withtoggle) {
                 MasterReceiveShiftCounts();
                 movechrono.Start();
@@ -678,7 +674,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
             if (withtoggle) {
                 SlaveSendShiftCounts();
                 SlaveReceiveShiftProbHyperParameters();
-                if (shiftprobinvconc)   {
+                if (shiftprobinvconc) {
                     movechrono.Start();
                     GeneResampleShiftProbs();
                     movechrono.Stop();
@@ -837,7 +833,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         if (pihyperinvconc) {
             MovePi(0.3, nrep);
         }
-        if (shiftmode)  {
+        if (shiftmode) {
             MoveShiftProbHyperMean(0.3, nrep);
             MoveShiftProbHyperInvConc(0.3, nrep);
         }
@@ -854,10 +850,10 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 pi[k - 1] += m;
                 while ((pi[k - 1] < minpi) || (pi[k - 1] > maxpi)) {
                     if (pi[k - 1] < minpi) {
-                        pi[k - 1] = 2*minpi - pi[k - 1];
+                        pi[k - 1] = 2 * minpi - pi[k - 1];
                     }
                     if (pi[k - 1] > maxpi) {
-                        pi[k - 1] = 2*maxpi - pi[k - 1];
+                        pi[k - 1] = 2 * maxpi - pi[k - 1];
                     }
                 }
                 deltalogprob += GetPiLogPrior(k) + GetCountLogProb(k);
@@ -883,12 +879,15 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
                 double m = tuning * (Random::Uniform() - 0.5);
                 double bk = shiftprobhypermean[k - 1];
                 shiftprobhypermean[k - 1] += m;
-                while ((shiftprobhypermean[k - 1] < minshiftprobhypermean) || (shiftprobhypermean[k - 1] > maxshiftprobhypermean)) {
+                while ((shiftprobhypermean[k - 1] < minshiftprobhypermean) ||
+                       (shiftprobhypermean[k - 1] > maxshiftprobhypermean)) {
                     if (shiftprobhypermean[k - 1] < minshiftprobhypermean) {
-                        shiftprobhypermean[k - 1] = 2*minshiftprobhypermean-shiftprobhypermean[k - 1];
+                        shiftprobhypermean[k - 1] =
+                            2 * minshiftprobhypermean - shiftprobhypermean[k - 1];
                     }
                     if (shiftprobhypermean[k - 1] > maxshiftprobhypermean) {
-                        shiftprobhypermean[k - 1] = 2*maxshiftprobhypermean - shiftprobhypermean[k - 1];
+                        shiftprobhypermean[k - 1] =
+                            2 * maxshiftprobhypermean - shiftprobhypermean[k - 1];
                     }
                 }
                 deltalogprob += GetShiftProbHyperMeanLogPrior(k) + GetCountLogProb(k);

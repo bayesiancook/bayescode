@@ -23,9 +23,7 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     int writegenedata;
 
   public:
-    MultiGeneDiffSelModel *GetModel() {
-        return static_cast<MultiGeneDiffSelModel *>(model);
-    }
+    MultiGeneDiffSelModel *GetModel() { return static_cast<MultiGeneDiffSelModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
@@ -45,16 +43,18 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelChain(string indatafile, string intreefile, int inncond, int innlevel,
-                                int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil, int insaveall,
-                                int inwritegenedata, string inname, int force, int inmyid,
-                                int innprocs)
+                          int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil,
+                          int insaveall, int inwritegenedata, string inname, int force, int inmyid,
+                          int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEDIFFSEL"),
           datafile(indatafile),
           treefile(intreefile),
           ncond(inncond),
           nlevel(innlevel),
-          codonmodel(incodonmodel), blmode(inblmode), nucmode(innucmode) {
+          codonmodel(incodonmodel),
+          blmode(inblmode),
+          nucmode(innucmode) {
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -72,8 +72,8 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid,
-                                                nprocs);
+        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode,
+                                          nucmode, myid, nprocs);
         if (!myid) {
             cerr << " -- master allocate\n";
         }
@@ -107,8 +107,8 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSEL") {
-            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
-                                                    myid, nprocs);
+            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode,
+                                              nucmode, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -311,9 +311,9 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
-                                                every, until, saveall, writegenedata, name, force,
-                                                myid, nprocs);
+        chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel, blmode,
+                                          nucmode, every, until, saveall, writegenedata, name,
+                                          force, myid, nprocs);
     }
 
     chrono.Stop();

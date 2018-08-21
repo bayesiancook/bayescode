@@ -228,7 +228,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
-                             int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean, double inshiftprobmean, double inshiftprobinvconc)
+                             int inNlevel, int incodonmodel, double inepsilon, double inshape,
+                             double inpihypermean, double inshiftprobmean,
+                             double inshiftprobinvconc)
         : hyperfitnesssuffstat(Naa) {
         withtoggle = 0;
         fitnesscentermode = 3;
@@ -314,7 +316,6 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! allocate the model (data structures)
     void Allocate() {
-
         // ----------
         // construction of the model
         // ----------
@@ -536,8 +537,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         for (int i = 0; i < GetNsite(); i++) {
             for (int a = 0; a < Naa; a++) {
                 double tmp = sitemaskarray->GetVal(i)[a] * fitness->GetVal(k, i)[a];
-                if (k)  {
-                    tmp *= toggle->GetVal(k-1,i)[a];
+                if (k) {
+                    tmp *= toggle->GetVal(k - 1, i)[a];
                 }
                 array[j++] = tmp;
             }
@@ -554,10 +555,9 @@ class DiffSelDoublySparseModel : public ProbModel {
                 m += sitemaskarray->GetVal(i)[a];
             }
             for (int a = 0; a < Naa; a++) {
-                if (m > 1)  {
+                if (m > 1) {
                     array[j++] = sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a];
-                }
-                else    {
+                } else {
                     array[j++] = 0;
                 }
             }
@@ -737,7 +737,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     double ToggleHyperLogPrior() const {
         double total = 0;
         for (int k = 1; k < Ncond; k++) {
-            if (shiftprobhyperinvconc[k-1]) {
+            if (shiftprobhyperinvconc[k - 1]) {
                 double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
                 double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
                 if (shiftprob[k - 1] != 0) {
@@ -1211,7 +1211,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! Move schedule for Gibbs resampling of shifting probabilities
     void ResampleShiftProb() {
-        if (! shiftprobinvconc) {
+        if (!shiftprobinvconc) {
             cerr << "error: in resample shift prob\n";
             exit(1);
         }
@@ -1543,10 +1543,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! helper function: returns the marginal log prob of distribution of toggles
     //! for a condition, given number of toggles in active state and given
     //! hyperparameters
-    double ToggleMarginalLogPrior(int nmask, int nshift, int k) const   {
-
+    double ToggleMarginalLogPrior(int nmask, int nshift, int k) const {
         double ret = 0;
-        if (shiftprobhyperinvconc[k-1]) {
+        if (shiftprobhyperinvconc[k - 1]) {
             // pre-calculate parameters of the Beta distribution for non-zero case
             double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
             double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
@@ -1563,9 +1562,8 @@ class DiffSelDoublySparseModel : public ProbModel {
             double max = (logp0 > logp1) ? logp0 : logp1;
             double tot = exp(logp0 - max) + exp(logp1 - max);
             ret = log(tot) + max;
-        }
-        else    {
-            ret = nshift * log(shiftprob[k-1]) + (nmask - nshift) * (1 - shiftprob[k-1]);
+        } else {
+            ret = nshift * log(shiftprob[k - 1]) + (nmask - nshift) * (1 - shiftprob[k - 1]);
         }
         return ret;
     }
@@ -1639,8 +1637,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                     // 0 -> 1 case
                     if (!(*toggle)(k - 1, i)[a]) {
                         double deltalogprob =
-                            -ToggleMarginalLogPrior(nmask, nshift, k) -
-                            SiteSuffStatLogProb(i);
+                            -ToggleMarginalLogPrior(nmask, nshift, k) - SiteSuffStatLogProb(i);
                         (*toggle)(k - 1, i)[a] = 1;
                         // redraw fitness parameter
                         (*fitness)(k, i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
@@ -1649,8 +1646,8 @@ class DiffSelDoublySparseModel : public ProbModel {
                             (*fitness)(k, i)[a] = 1e-8;
                         }
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift + 1, k) + 
-                                        SiteSuffStatLogProb(i);
+                        deltalogprob +=
+                            ToggleMarginalLogPrior(nmask, nshift + 1, k) + SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
@@ -1666,12 +1663,11 @@ class DiffSelDoublySparseModel : public ProbModel {
                     // 1 -> 0 case
                     else {
                         double deltalogprob =
-                            -ToggleMarginalLogPrior(nmask, nshift, k) -
-                            SiteSuffStatLogProb(i);
+                            -ToggleMarginalLogPrior(nmask, nshift, k) - SiteSuffStatLogProb(i);
                         (*toggle)(k - 1, i)[a] = 0;
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(nmask, nshift - 1, k) + 
-                                        SiteSuffStatLogProb(i);
+                        deltalogprob +=
+                            ToggleMarginalLogPrior(nmask, nshift - 1, k) + SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
@@ -1686,7 +1682,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                 }
             }
         }
-        if (shiftprobinvconc)   {
+        if (shiftprobinvconc) {
             ResampleShiftProb(k);
         }
         return nacc / ntot;
@@ -1730,10 +1726,10 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "gammanulls\n";
     }
 
-    double GetPredictedDNDS(int cond) const  {
+    double GetPredictedDNDS(int cond) const {
         double mean = 0;
-        for (int i=0; i<Nsite; i++) {
-            mean += (*condsubmatrixarray)(cond,i).GetPredictedDNDS();
+        for (int i = 0; i < Nsite; i++) {
+            mean += (*condsubmatrixarray)(cond, i).GetPredictedDNDS();
         }
         mean /= Nsite;
         return mean;
@@ -1766,12 +1762,11 @@ class DiffSelDoublySparseModel : public ProbModel {
             for (int a = 0; a < Naa; a++) {
                 m += sitemaskarray->GetVal(i)[a];
             }
-            if (m > 1)  {
+            if (m > 1) {
                 for (int a = 0; a < Naa; a++) {
                     os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a] << '\t';
                 }
-            }
-            else    {
+            } else {
                 for (int a = 0; a < Naa; a++) {
                     os << 0 << '\t';
                 }
@@ -1820,7 +1815,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             is >> maskepsilon;
         }
-        if (Ncond > 1)  {
+        if (Ncond > 1) {
             is >> shiftprob;
             is >> *toggle;
         }
@@ -1852,7 +1847,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             os << maskepsilon << '\t';
         }
-        if (Ncond > 1)  {
+        if (Ncond > 1) {
             os << shiftprob << '\t';
             os << *toggle << '\t';
         }
@@ -1885,7 +1880,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             size++;
         }
-        if (Ncond > 1)  {
+        if (Ncond > 1) {
             size += shiftprob.size();
             size += toggle->GetMPISize();
         }
@@ -1918,7 +1913,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             is >> maskepsilon;
         }
-        if (Ncond > 1)  {
+        if (Ncond > 1) {
             is >> shiftprob;
             is >> *toggle;
         }
@@ -1950,7 +1945,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (maskepsilonmode < 2) {
             os << maskepsilon;
         }
-        if (Ncond > 1)  {
+        if (Ncond > 1) {
             os << shiftprob;
             os << *toggle;
         }

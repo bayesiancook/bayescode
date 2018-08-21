@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
     DiffSelSparseSample *sample = new DiffSelSparseSample(name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
-    } else  {
+    } else {
         sample->ReadPP(cutoff, siteoffset);
     }
 }

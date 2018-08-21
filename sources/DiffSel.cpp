@@ -19,8 +19,8 @@ class DiffSelChain : public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery,
-                 int inuntil, int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
+    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery, int inuntil,
+                 int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
                  int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
@@ -202,8 +202,8 @@ int main(int argc, char *argv[]) {
             cerr << "error in command\n";
             exit(0);
         }
-        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob, fixvar,
-                                 codonmodel, name, force);
+        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob,
+                                 fixvar, codonmodel, name, force);
     }
 
     cerr << "chain " << name << " started\n";

@@ -101,7 +101,6 @@ class SingleOmegaModel : public ProbModel {
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
     SingleOmegaModel(string datafile, string treefile) {
-
         blmode = 0;
         nucmode = 0;
 
@@ -125,7 +124,6 @@ class SingleOmegaModel : public ProbModel {
 
     //! model allocation
     void Allocate() {
-
         // Branch lengths
 
         lambda = 10.0;
@@ -207,7 +205,7 @@ class SingleOmegaModel : public ProbModel {
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
     void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                                        double inblinvshape) {
+                                         double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -222,24 +220,23 @@ class SingleOmegaModel : public ProbModel {
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate,
-                                    const std::vector<double> &innucstat) {
+                     const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
     }
 
     //! get a copy of nucleotide rates into arrays given as arguments
-    void GetNucRates(std::vector<double> &innucrelrate,
-                                    std::vector<double> &innucstat) const {
+    void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
         innucrelrate = nucrelrate;
         innucstat = nucstat;
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                                   double innucrelratehyperinvconc,
-                                                   const std::vector<double> &innucstathypercenter,
-                                                   double innucstathyperinvconc) {
+                                    double innucrelratehyperinvconc,
+                                    const std::vector<double> &innucstathypercenter,
+                                    double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -378,7 +375,8 @@ class SingleOmegaModel : public ProbModel {
         double total = 0;
         total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
                                              1.0 / nucrelratehyperinvconc);
-        total += Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
+        total +=
+            Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
     }
 
@@ -543,10 +541,10 @@ class SingleOmegaModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb, &SingleOmegaModel::NoUpdate,
-                    this);
-        ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb, &SingleOmegaModel::NoUpdate,
-                    this);
+        ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                    &SingleOmegaModel::NoUpdate, this);
+        ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                    &SingleOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 

@@ -1,7 +1,7 @@
 #pragma once
 
 class ChainComponent {
-public:
+  public:
     virtual void start() {}
     virtual void move(int) {}
     virtual void after_move(int) {}

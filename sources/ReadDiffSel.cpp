@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
     DiffSelSample *sample = new DiffSelSample(name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
-    } else  {
+    } else {
         sample->ReadPP(cutoff, siteoffset);
     }
 }

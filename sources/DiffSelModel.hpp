@@ -196,7 +196,6 @@ class DiffSelModel : public ProbModel {
     //! 2017)
     DiffSelModel(const std::string &datafile, const std::string &treefile, int inNcond,
                  int inNlevel, int infixglob, int infixvar, int incodonmodel) {
-
         blmode = 0;
         nucmode = 0;
 
@@ -833,7 +832,7 @@ class DiffSelModel : public ProbModel {
     }
 
     //! get a copy of baseline array
-    void GetBaselineArray(double* array) const  {
+    void GetBaselineArray(double *array) const {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
             for (int a = 0; a < Naa; a++) {
@@ -843,11 +842,11 @@ class DiffSelModel : public ProbModel {
     }
 
     //! get a copy of delta array for condition k
-    void GetDeltaArray(int k, double* array) const  {
+    void GetDeltaArray(int k, double *array) const {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
             for (int a = 0; a < Naa; a++) {
-                array[j++] = delta->GetVal(k-1,i)[a];
+                array[j++] = delta->GetVal(k - 1, i)[a];
             }
         }
     }
@@ -879,7 +878,7 @@ class DiffSelModel : public ProbModel {
     }
 
     //! trace the current value of baselines, across all sites and all amino-acids
-    void TraceBaseline(ostream& os) const   {
+    void TraceBaseline(ostream &os) const {
         for (int i = 0; i < GetNsite(); i++) {
             for (int a = 0; a < Naa; a++) {
                 os << baseline->GetVal(i)[a] << '\t';

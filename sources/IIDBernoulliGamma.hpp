@@ -182,7 +182,7 @@ class BernoulliGammaSuffStat : public SuffStat {
     }
 
     //! add all entries to sufficient statistic
-    void AddSuffStat(const IIDBernoulliGamma& array)    {
+    void AddSuffStat(const IIDBernoulliGamma &array) {
         for (int i = 0; i < array.GetSize(); i++) {
             if (!array.GetVal(i)) {
                 AddNullSuffStat(1);

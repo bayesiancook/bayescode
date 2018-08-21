@@ -8,13 +8,13 @@ class ChainDriver {
   public:
     ChainDriver(std::string name) : name(name), toggle(name + ".run") {}
     void go() {
-        for(auto c: components) c->start();
-        while(toggle.check() and (until == -1 or size < until)) {
-            for(auto c: components) c->move(size);
-            for(auto c: components) c->after_move(size);
+        for (auto c : components) c->start();
+        while (toggle.check() and (until == -1 or size < until)) {
+            for (auto c : components) c->move(size);
+            for (auto c : components) c->after_move(size);
             size++;
         }
-        for(auto c: components) c->end();
+        for (auto c : components) c->end();
     }
 
   private:

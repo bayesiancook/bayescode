@@ -1,11 +1,11 @@
 #pragma once
-#include <string>
 #include <fstream>
+#include <string>
 
 class RunToggle {
     std::string filename;
 
-public:
+  public:
     RunToggle(std::string filename) : filename(filename) {
         std::ofstream fs;
         fs.open(filename, std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
