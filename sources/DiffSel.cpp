@@ -120,15 +120,24 @@ class DiffSelChain : public Chain {
 };
 
 int main(int argc, char *argv[]) {
-    cerr << "-- Parsing command line arguments\n";
 
     string name = "";
     DiffSelChain *chain = 0;
 
+    if (argc == 1)  {
+        cerr << "command: diffsel -d <alignment> -t <treefile> <chainname>\n";
+        cerr << '\n';
+        cerr << "program options:\n";
+        cerr << "\t-f: force overwrite of already existing chain\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-ncond <ncond>:  specify number of conditions\n";
+        cerr << '\n';
+        exit(0);
+    }
+
     // this is an already existing chain on the disk; reopen and restart
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
-        cerr << "-- Trying to reopen existing chain named " << name << " on disk\n";
         chain = new DiffSelChain(name);
     }
 
@@ -191,7 +200,7 @@ int main(int argc, char *argv[]) {
             }
         } catch (...) {
             cerr << "error in command\n";
-            exit(1);
+            exit(0);
         }
         chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob, fixvar,
                                  codonmodel, name, force);

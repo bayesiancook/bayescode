@@ -187,6 +187,30 @@ int main(int argc, char *argv[]) {
     string name = "";
     MultiGeneDiffSelChain *chain = 0;
 
+    if (argc == 1)  {
+        if (! myid)	{
+            cerr << '\n';
+            cerr << "The multi-gene version of the non-sparse differential selection model.\n";
+            cerr << "see diffsel for the single-gene version.\n";
+            cerr << '\n';
+            cerr << "command: mpirun -np <n> multigenediffsel -d <alignment_list> -t <tree> -ncond <ncond> <chainname>\n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time "
+                    "(default: every = 1, until = -1)\n";
+            cerr << "\t+G: with site-specific output files\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-ncond <ncond>:  specify number of conditions\n";
+            cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << '\n';
+        }
+        MPI_Finalize();
+        exit(0);
+    }
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
@@ -204,7 +228,7 @@ int main(int argc, char *argv[]) {
         int every = 1;
         int until = -1;
         int saveall = 1;
-        int writegenedata = 1;
+        int writegenedata = 0;
         int blmode = 1;
         int nucmode = 1;
 
