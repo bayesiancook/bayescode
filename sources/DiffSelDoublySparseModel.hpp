@@ -1455,7 +1455,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
-                            (*toggle)(k - 1, i)[a] = (Random::Uniform() < pi[k - 1]);
+                            (*toggle)(k - 1, i)[a] = (Random::Uniform() < shiftprob[k - 1]);
                             if ((*toggle)(k - 1, i)[a]) {
                                 (*fitness)(k, i)[a] =
                                     Random::sGamma(fitnessshape * fitnesscenter[a]);
@@ -1496,7 +1496,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
-                            (*toggle)(k - 1, i)[b] = (Random::Uniform() < pi[k - 1]);
+                            (*toggle)(k - 1, i)[b] = (Random::Uniform() < shiftprob[k - 1]);
                             if ((*toggle)(k - 1, i)[b]) {
                                 (*fitness)(k, i)[b] =
                                     Random::sGamma(fitnessshape * fitnesscenter[b]);
@@ -1723,7 +1723,6 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << "center\t";
         for (int k = 1; k < Ncond; k++) {
             os << "prob" << k << '\t';
-            os << "probnull" << k << '\t';
             os << "nshift" << k << '\t';
         }
         os << "statent\t";
@@ -1752,7 +1751,6 @@ class DiffSelDoublySparseModel : public ProbModel {
         os << Random::GetEntropy(fitnesscenter) << '\t';
         for (int k = 1; k < Ncond; k++) {
             os << shiftprob[k - 1] << '\t';
-            os << GetProbNull(k) << '\t';
             os << GetPropShift(k) << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
