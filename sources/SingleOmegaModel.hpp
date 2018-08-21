@@ -1,3 +1,4 @@
+#include "ChainComponent.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrix.hpp"
 #include "CodonSuffStat.hpp"
@@ -25,7 +26,7 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel {
+class SingleOmegaModel : public ProbModel, public ChainComponent {
     // tree and data
     Tree *tree;
     FileSequenceAlignment *data;
@@ -121,6 +122,9 @@ class SingleOmegaModel : public ProbModel {
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
     }
+
+    void start() override { Allocate(); }
+    void move(int it) override { Move(); }
 
     //! model allocation
     void Allocate() {

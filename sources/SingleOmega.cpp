@@ -95,7 +95,8 @@ class SingleOmegaChain : public Chain {
 class SingleOmegaArgParse : public BaseArgParse {
   public:
     SingleOmegaArgParse(CmdLine &cmd) : BaseArgParse(cmd) {}
-    ValueArg<string> datafile{"a", "alignment", "Alignment file (PHYLIP)", true, "", "string", cmd};
+    ValueArg<string> alignment{"a",      "alignment", "Alignment file (PHYLIP)", true, "",
+                               "string", cmd};
     ValueArg<string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
     ValueArg<int> every{"e",   "every", "Number of iterations between two traces", false, 1,
                         "int", cmd};
@@ -111,6 +112,11 @@ int main(int argc, char *argv[]) {
     CmdLine cmd{"SingleOmega", ' ', "0.1"};
     SingleOmegaArgParse args(cmd);
     cmd.parse(argc, argv);
+    ChainDriver chain_driver{args.chain_name.getValue(), args.every.getValue(),
+                             args.until.getValue()};
+    SingleOmegaModel model{args.alignment.getValue(), args.treefile.getValue()};
+    chain_driver.add(model);
+    chain_driver.go();
     exit(0);
 
     string name = "";
