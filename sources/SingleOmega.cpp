@@ -95,7 +95,16 @@ class SingleOmegaChain : public Chain {
 class SingleOmegaArgParse : public BaseArgParse {
   public:
     SingleOmegaArgParse(CmdLine &cmd) : BaseArgParse(cmd) {}
+    ValueArg<string> datafile{"a", "alignment", "Alignment file (PHYLIP)", true, "", "string", cmd};
     ValueArg<string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
+    ValueArg<int> every{"e",   "every", "Number of iterations between two traces", false, 1,
+                        "int", cmd};
+    ValueArg<int> until{"u",   "until", "Maximum number of (saved) iterations (-1 means unlimited)",
+                        false, -1,      "int",
+                        cmd};
+    SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
+    UnlabeledValueArg<string> chain_name{
+        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
