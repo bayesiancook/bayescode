@@ -53,7 +53,7 @@ all: $(PROGS)
 
 # Rules to create .o files from .cpp files
 %.o: %.cpp %.d
-	$(CC) -c $(CPPFLAGS) $*.cpp
+	$(CC) -I. -c $(CPPFLAGS) $*.cpp
 
 # Include the dependencies unless the request was to clean eveything up
 ifneq ($(MAKECMDGOALS),clean)

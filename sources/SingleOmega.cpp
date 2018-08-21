@@ -1,5 +1,6 @@
 #include <cmath>
 #include <fstream>
+#include "BaseArgParse.hpp"
 #include "Chain.hpp"
 #include "ChainDriver.hpp"
 #include "SingleOmegaModel.hpp"
@@ -91,7 +92,18 @@ class SingleOmegaChain : public Chain {
     string GetModelType() override { return modeltype; }
 };
 
+class SingleOmegaArgParse : public BaseArgParse {
+  public:
+    SingleOmegaArgParse(CmdLine &cmd) : BaseArgParse(cmd) {}
+    ValueArg<string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
+};
+
 int main(int argc, char *argv[]) {
+    CmdLine cmd{"SingleOmega", ' ', "0.1"};
+    SingleOmegaArgParse args(cmd);
+    cmd.parse(argc, argv);
+    exit(0);
+
     string name = "";
     SingleOmegaChain *chain = 0;
 
