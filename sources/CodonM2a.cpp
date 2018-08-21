@@ -102,6 +102,51 @@ class CodonM2aChain : public Chain {
 };
 
 int main(int argc, char *argv[]) {
+
+    if (argc == 1)  {
+
+        cerr << "\n";
+        cerr << "the M2a model of codeml (Muse and Gaut version)\n";
+        cerr << "the omega_i's across sites are a mixture with 3 components\n";
+        cerr << " - omega0 < 1, with weight w0\n";
+        cerr << " - omega1 = 1, with weight w1\n";
+        cerr << " - omega2 > 1, with weight w2\n";
+        cerr << '\n';
+        cerr << "Here, the model is parameterized as follows:\n";
+        cerr << " - omega0 = purom,\n";
+        cerr << " - omega1 = 1,\n";
+        cerr << " - omega2 = 1 + dposom,\n";
+        cerr << "where 0 < purom < 1 and dposom > 0;\n";
+        cerr << "purom has a beta prior (hyperparams: puromhypermean and puromhyperinvconc);\n";
+        cerr << "dposom has a gamma prior (hyperparams: dposomhypermean and dposomhyperinvshape).\n";
+        cerr << '\n';
+        cerr << "The weights of the mixture are parameterized as follows:\n";
+        cerr << " - w0 = purw * (1 - posw)\n";
+        cerr << " - w1 = (1-purw) * (1-posw)\n";
+        cerr << " - w2 = posw\n";
+        cerr << "where 0<purw<1 and 0<=posw<1;\n";
+        cerr << "purw has a beta prior (hyperparams: purwhypermean and purwhyperinvconc);\n";
+        cerr << "the prior on posw is a mixture:\n";
+        cerr << " - with probability 1-pi, posw = 0\n";
+        cerr << " - with probability pi, 0 < posw < 1, in which case is it from a beta prior\n";
+        cerr << " (hyperparams: poswhypermean and poswhyperinvconc). Thus, setting pi = 0 imposes a model without positive selection.\n";
+        cerr << '\n';
+        cerr << "In total, the 9 hyperparameters of the mixture of omegas are as follows:\n";
+        cerr << "puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,\n";
+        cerr << "purwhypermean, purwhyperinvconc, pi, poswhypermean, poswhyperinvconc.\n";
+        cerr << "In a single-gene context, these hyperparameters are fixed;\n";
+        cerr << "in a multigene context, they can be either fixed or estimated across genes (see multigenecodonm2a).\n";
+        cerr << '\n';
+        cerr << "command: codonm2a -d <alignment_list> -t <tree> <chainname>\n";
+        cerr << '\n';
+        cerr << "program options:\n";
+        cerr << "\t-f: force overwrite of already existing chain\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-pi <pi>: specify value for pi (default pi = 0.1)\n";
+        cerr << '\n';
+        exit(0);
+    }
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         string name = argv[1];
@@ -163,9 +208,9 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            cerr << "codonm2a -d <alignment> -t <tree> <chainname> \n";
+            cerr << "error in command\n";
             cerr << '\n';
-            exit(1);
+            exit(0);
         }
 
         CodonM2aChain *chain = new CodonM2aChain(datafile, treefile, pi, every, until, name, force);

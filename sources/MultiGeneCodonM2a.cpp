@@ -257,6 +257,63 @@ int main(int argc, char *argv[]) {
     MultiGeneCodonM2aChain *chain = 0;
     string name = "";
 
+    if (argc == 1)  {
+        if (! myid)	{
+            cerr << '\n';
+            cerr << "The multigene version of the M2a model of codeml (Muse and Gaut version)\n";
+            cerr << '\n';
+            cerr << "for each gene, the omega mixture is:\n";
+            cerr << " - omega0 = purom,\n";
+            cerr << " - omega1 = 1,\n";
+            cerr << " - omega2 = 1 + dposom,\n";
+            cerr << "where 0 < purom < 1 and dposom > 0; the corresponding mixture weights are:\n";
+            cerr << " - w0 = purw * (1 - posw)\n";
+            cerr << " - w1 = (1-purw) * (1-posw)\n";
+            cerr << " - w2 = posw\n";
+            cerr << "where 0<purw<1 and 0<=posw<1;\n";
+            cerr << '\n';
+            cerr << "purom, dposom, purw, posw are gene-specific, and are iid from the following distributions:\n";
+            cerr << "- purom ~ Beta(puromhypermean, puromhyperinvconc)\n";
+            cerr << "- purw ~ Beta(purwhypermean, purwhyperinvshape)\n";
+            cerr << "- dposom ~ Gamma(dposomhypermean, dposomhyperinvshape)\n";
+            cerr << "- posw ~ (1-pi) * delta_0 + pi * Beta(poswhypermean, poswhyperinvshape)\n";
+            cerr << "(i.e. with probability 1-pi, posw = 0, and with probability pi, posw is drawn from a Beta)\n";
+            cerr << '\n';
+            cerr << "The parameters pi, puromhyper*, dposomhyper*, purwhyper* and poswhyper* of these distributions across genes can be either fixed or estimated across genes (by default, estimated across genes).\n";
+            cerr << "Branch lengths and nucleotide rates can be either shared across genes or gene-specific; if gene-specific, then the parameters of their distribution across genes can either be fixed or estimated (by default).\n";
+            cerr << '\n';
+            cerr << "command: mpirun -np <n> multigenecodonm2a -d <alignment_list> -t <tree> <chainname>\n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time "
+                    "(default: every = 1, until = -1)\n";
+            cerr << "\t-g: without gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+g: with gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+G: with gene- and site-specific output files\n";
+            // cerr << "\tin all cases, complete information about chain state is saved "
+            //         "in .chain and .param files\n";
+            // cerr << "\t.chain: one line for each cycle\n";
+            // cerr << "\t.param: state at the end of last cycle\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi (default: hypermean = 0.1, hyperinvconc = 0.2)\n";
+            cerr << "\t-purom <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purom\n";
+            cerr << "\t-purom uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
+            cerr << "\t-purw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purw\n";
+            cerr << "\t-purw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
+            cerr << "\t-dposom <hypermean> <hyperinvshape>: set parameters of gamma hyperprior for dposom\n";
+            cerr << "\t-dposom uninf: set parameters to hypermean = 1.0 and hyperinvshape = 0.5\n";
+            cerr << "\t-posw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for posw\n";
+            cerr << "\t-posw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 1.0\n";
+            cerr << '\n';
+        }
+        MPI_Finalize();
+        exit(0);
+    }
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
@@ -417,31 +474,10 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-	    if (! myid)	{
-            cerr << '\n';
-            cerr << "mpirun -np <n> multigenecodonm8 -d <alignment_list> -t <tree> "
-                    "[-bl {shared|shrunken|ind} -nucrates {shared|shrunken|ind}] "
-                    "<chainname> \n";
-            cerr << '\n';
-            cerr << "chain options:\n";
-            cerr << "\t-f: force overwrite of already existing chain\n";
-            cerr << "\t-x <every> <until>: saving frequency and stopping time "
-                    "(default: every = 1, until = -1)\n";
-            cerr << "\t-g: without gene-specific output files (.posw and .posom)\n";
-            cerr << "\t+g: with gene-specific output files (.posw and .posom)\n";
-            cerr << "\t+G: with gene- and site-specific output files\n";
-            cerr << "\tin all cases, complete information about chain state is saved "
-                    "in .chain and .param files\n";
-            cerr << "\t.chain: one line for each cycle\n";
-            cerr << "\t.param: state at the end of last cycle\n";
-            cerr << '\n';
-            cerr << "model options:\n";
-            cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
-            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for "
-                    "nucleotide substitution rates\n";
-            cerr << '\n';
-	    }
-	    MPI_Finalize();
+            if (! myid) {
+                cerr << "error in command\n";
+            }
+            MPI_Finalize();
             exit(0);
         }
 
