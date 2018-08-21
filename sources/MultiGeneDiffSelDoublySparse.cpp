@@ -281,6 +281,7 @@ int main(int argc, char *argv[]) {
             // cerr << "\t.param: state at the end of last cycle\n";
             cerr << '\n';
             cerr << "model options:\n";
+            cerr << "\t-ncond <ncond>:  specify number of conditions\n";
             cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
             cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
             cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi_k for all k=1..K-1\n";
@@ -318,7 +319,7 @@ int main(int argc, char *argv[]) {
         int fitnesscentermode = 3;
         int blmode = 1;
         int nucmode = 1;
-        int shiftmode = 0;
+        int shiftmode = 1;
         double pihypermean = 0.1;
         double pihyperinvconc = 0.1;
         double shiftprobmean = 0.1;
