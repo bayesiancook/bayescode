@@ -6,6 +6,7 @@
 #include "ChainDriver.hpp"
 #include "ConsoleLogger.hpp"
 #include "SingleOmegaModel.hpp"
+
 using namespace std;
 
 class SingleOmegaArgParse : public BaseArgParse {
@@ -20,6 +21,22 @@ class SingleOmegaArgParse : public BaseArgParse {
                         false, -1,      "int",
                         cmd};
     SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
+};
+
+class SingleOmegaTrace : public ChainComponent {
+    Tracer t;
+    std::string filename;
+
+public:
+    SingleOmegaTrace(SingleOmegaModel& m, std::string filename) : t(m), filename(filename) {}
+    void start() {
+        std::ofstream os{filename, std::ios_base::trunc};
+        t.write_header(os);
+    }
+    void savepoint(int) {
+        std::ofstream os{filename, std::ios_base::app};
+        t.write_line(os);
+    }
 };
 
 int main(int argc, char *argv[]) {
@@ -42,9 +59,11 @@ int main(int argc, char *argv[]) {
 
     ConsoleLogger console_logger;
     ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
+    SingleOmegaTrace trace(*model, cmd.chain_name() + ".trace");
     chain_driver->add(*model);
     chain_driver->add(console_logger);
     chain_driver->add(chain_checkpoint);
+    chain_driver->add(trace);
     chain_driver->go();
 
     delete chain_driver;

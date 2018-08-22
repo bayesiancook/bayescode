@@ -8,6 +8,7 @@
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "Tree.hpp"
+#include "Tracer.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -133,6 +134,14 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     }
 
     void move(int it) override { Move(); }
+
+    void declare_trace(Tracer& t) {
+        t.add("omega", omega);
+        t.add("nucstat", nucstat);
+        t.add("nucrelrate", nucrelrate);
+        t.add("lambda", lambda);
+        t.add("branchlength", *branchlength);
+    }
 
     //! model allocation
     void Allocate() {
