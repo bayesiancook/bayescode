@@ -136,6 +136,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     void move(int it) override { Move(); }
 
     void declare_trace(Tracer& t) {
+        t.add("LL", this, &SingleOmegaModel::GetLogLikelihood);
         t.add("omega", omega);
         t.add("nucstat", nucstat);
         t.add("nucrelrate", nucrelrate);

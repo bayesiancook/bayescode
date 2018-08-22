@@ -42,7 +42,6 @@ public:
         data_to_stream.push_back([&d](std::ostream& os) {
                 os << d;
             });
-        
     }
 
     void add(std::string name, std::vector<double>& v) {
@@ -63,7 +62,6 @@ public:
                         os << "\t" << v.at(i);
                 }
             });
-        
     }
 
     template<class T>
@@ -85,6 +83,16 @@ public:
                         os << "\t" << v.GetVal(i);
                 }
             });
-        
+    }
+
+    template<class T>
+    void add(std::string name, T* o, double(T::*f)() const) {
+        names.push_back(name);
+        header_to_stream.push_back([name](std::ostream& os) {
+                os << name;
+            });
+        data_to_stream.push_back([o, f](std::ostream& os) {
+                os << (o ->* f)();
+            });
     }
 };
