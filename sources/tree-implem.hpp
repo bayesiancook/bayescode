@@ -59,3 +59,33 @@ std::vector<Element> branch_container_from_parser(TreeParser& parser,
     }
     return result;
 }
+
+std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<std::string>& taxa) {
+    using NodeIndex = AnnotatedTree::NodeIndex;
+    auto& tree = parser.get_tree();
+    std::map<std::string, int> mapping; // node name -> node index mapping
+    for (NodeIndex i = 0; i < NodeIndex(tree.nb_nodes()); i++) {
+        auto node_name = tree.tag(i, "name");
+        if (node_name != "") {
+            mapping[node_name] = i;
+        }
+    }
+    std::vector<int> result(taxa.size(), -1);
+    for (size_t i=0; i<taxa.size(); i++) {
+        result.at(i) = mapping.at(taxa.at(i));
+    }
+    return result;
+}
+
+template <class Element>
+class TreeElementVector {
+    std::vector<Element> v_;
+    std::vector<int> index_;
+
+  public:
+    using NodeIndex = AnnotatedTree::NodeIndex;
+
+    std::vector<Element>& vector() { return v_; }
+    const std::vector<Element>& vector() const { return v_; }
+    NodeIndex topology_index(int vector_index) const { return index_.at(vector_index); }
+};
