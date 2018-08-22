@@ -16,7 +16,7 @@ class ChainDriver {
         : name(name), toggle(name + ".run"), every(every), until(until), size(size) {}
 
     void go() {
-        for (auto c : components) c->start();
+        if(size == 0) for (auto c : components) c->start();
         while (toggle.check() and (until == -1 or size < until)) {
             for (int i = 0; i < every; i++)
                 for (auto c : components) c->move(size * every + i);
@@ -29,10 +29,10 @@ class ChainDriver {
     void add(ChainComponent& component) { components.push_back(&component); }
 
     void serialize(std::ostream& os) const {
-        os << name << "\t" << every << "\t" << until << "\t" << size;
+        os << name << "\t" << every << "\t" << until << "\t" << (size + 1);
     }
 
-    ChainDriver(std::istream& is) : name(get_first_token(is)), toggle(name) {
+    ChainDriver(std::istream& is) : name(get_first_token(is)), toggle(name + ".run") {
         is >> every;
         is >> until;
         is >> size;
