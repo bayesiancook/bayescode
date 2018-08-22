@@ -1,4 +1,3 @@
-
 #ifndef BRANCHSITEARRAY_H
 #define BRANCHSITEARRAY_H
 

@@ -104,7 +104,10 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! It only reads the data and tree file and register them together.
     SingleOmegaModel(string datafile, string treefile) : datafile(datafile), treefile(treefile) {
         init();
+        Update();
     }
+
+    virtual ~SingleOmegaModel() = default;
 
     void init() {
         blmode = 0;
@@ -645,7 +648,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     SingleOmegaModel(istream &is) {
         std::string model_name;
         is >> model_name;
-        if(model_name != "SingleOmega") {
+        if (model_name != "SingleOmega") {
             std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
             exit(1);
         }
@@ -657,5 +660,6 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         is >> nucrelrate;
         is >> lambda;
         is >> *branchlength;
+        Update();
     }
 };

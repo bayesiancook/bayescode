@@ -1,4 +1,3 @@
-
 #ifndef PATHSUFFSTAT_H
 #define PATHSUFFSTAT_H
 

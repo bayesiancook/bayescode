@@ -134,26 +134,27 @@ class ChainCheckpoint : public ChainComponent {
     }
 };
 
-template<class T, class... Args>
-unique_ptr<T> make_unique(Args&&... args) { return unique_ptr<T>(new T(std::forward<Args>(args)...)); }
+template <class T, class... Args>
+unique_ptr<T> make_unique(Args &&... args) {
+    return unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
 
 int main(int argc, char *argv[]) {
     ChainCmdLine cmd{argc, argv, "SingleOmega", ' ', "0.1"};
 
-    unique_ptr<ChainDriver> chain_driver = nullptr;
-    unique_ptr<SingleOmegaModel> model = nullptr;
+    ChainDriver *chain_driver = nullptr;
+    SingleOmegaModel *model = nullptr;
 
-    if(cmd.resume_from_checkpoint()) {
+    if (cmd.resume_from_checkpoint()) {
         std::ifstream is = cmd.checkpoint_file();
-        chain_driver = make_unique<ChainDriver>(is);
-        model = make_unique<SingleOmegaModel>(is);
-    }
-    else {
+        chain_driver = new ChainDriver(is);
+        model = new SingleOmegaModel(is);
+    } else {
         SingleOmegaArgParse args(cmd);
         cmd.parse();
-        chain_driver = make_unique<ChainDriver>(cmd.chain_name(), args.every.getValue(),
-                                                args.until.getValue());
-        model = make_unique<SingleOmegaModel>(args.alignment.getValue(), args.treefile.getValue());
+        chain_driver =
+            new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
+        model = new SingleOmegaModel(args.alignment.getValue(), args.treefile.getValue());
     }
 
     ConsoleLogger console_logger;
@@ -162,4 +163,7 @@ int main(int argc, char *argv[]) {
     chain_driver->add(console_logger);
     chain_driver->add(chain_checkpoint);
     chain_driver->go();
+
+    delete chain_driver;
+    delete model;
 }

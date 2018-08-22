@@ -1,4 +1,3 @@
-
 #ifndef CODONSUFFSTAT_H
 #define CODONSUFFSTAT_H
 
