@@ -99,9 +99,13 @@ void SequenceAlignment::ToStreamTriplet(ostream &os) const {
 
 FileSequenceAlignment::FileSequenceAlignment(string filename) { ReadDataFromFile(filename, 0); }
 
+FileSequenceAlignment::FileSequenceAlignment(std::istream& is)  {
+    
+}
+
 int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleaved) {
     string tmp;
-    ifstream is((Path + filespec).c_str());
+    ifstream is(filespec.c_str());
     if (!is) {
         cerr << "error : cannot find data file " << filespec << '\n';
         cerr << "\n";
@@ -148,7 +152,7 @@ int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleave
 }
 
 int FileSequenceAlignment::ReadNexus(string filespec) {
-    ifstream theStream((Path + filespec).c_str());
+    ifstream theStream(filespec.c_str());
     try {
         GoPastNextWord(theStream, "dimensions");
         GoPastNext(theStream, '=');
@@ -365,7 +369,7 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
 // ---------------------------------------------------------------------------
 
 int FileSequenceAlignment::TestPhylipSequential(string filespec) {
-    ifstream theStream((Path + filespec).c_str());
+    ifstream theStream(filespec.c_str());
     try {
         string temp;
         theStream >> temp;
@@ -477,7 +481,11 @@ int FileSequenceAlignment::TestPhylipSequential(string filespec) {
 }
 
 void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
-    ifstream theStream((Path + filespec).c_str());
+    ifstream theStream(filespec.c_str());
+    ReadPhylipSequentialFromStream(theStream);
+}
+
+void FileSequenceAlignment::ReadPhylipSequentialFromStream(istream& theStream) {
     try {
         string temp;
         theStream >> temp;
@@ -546,7 +554,7 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
 }
 
 int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
-    ifstream theStream((Path + filespec).c_str());
+    ifstream theStream(filespec.c_str());
     try {
         string temp;
         theStream >> temp;
@@ -704,7 +712,7 @@ int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
 }
 
 void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
-    ifstream theStream((Path + filespec).c_str());
+    ifstream theStream(filespec.c_str());
     try {
         string temp;
         theStream >> temp;

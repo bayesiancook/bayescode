@@ -12,26 +12,27 @@ class DiffSelChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
-    int codonmodel, category, level, fixglob, fixvar;
+    int codonmodel, ncond, nlevel, fixglob, fixvar;
 
   public:
     DiffSelModel *GetModel() { return static_cast<DiffSelModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelChain(string indata, string intree, int incategory, int inlevel, int inevery,
-                 int inuntil, int infixglob, int infixvar, int incodonmodel, string inname,
+    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery,
+                 int inuntil, int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
                  int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
           treefile(intree),
           codonmodel(incodonmodel),
-          category(incategory),
-          level(inlevel),
+          ncond(inncond),
+          nlevel(innlevel),
           fixglob(infixglob),
           fixvar(infixvar) {
         every = inevery;
         until = inuntil;
+        saveall = insaveall;
         name = inname;
         New(force);
     }
@@ -43,7 +44,7 @@ class DiffSelChain : public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+        model = new DiffSelModel(datafile, treefile, ncond, nlevel, fixglob, fixvar, codonmodel);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -59,7 +60,7 @@ class DiffSelChain : public Chain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> treefile >> category >> level;
+        is >> datafile >> treefile >> ncond >> nlevel;
         is >> fixglob >> fixvar >> codonmodel;
         int tmp;
         is >> tmp;
@@ -67,11 +68,11 @@ class DiffSelChain : public Chain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> every >> until >> size;
+        is >> every >> until >> saveall >> size;
 
         if (modeltype == "DIFFSEL") {
             model =
-                new DiffSelModel(datafile, treefile, category, level, fixglob, fixvar, codonmodel);
+                new DiffSelModel(datafile, treefile, ncond, nlevel, fixglob, fixvar, codonmodel);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -87,25 +88,56 @@ class DiffSelChain : public Chain {
     void Save() override {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << treefile << '\t' << category << '\t' << level << '\n';
+        param_os << datafile << '\t' << treefile << '\t' << ncond << '\t' << nlevel << '\n';
         param_os << fixglob << '\t' << fixvar << '\t' << codonmodel << '\n';
         param_os << 0 << '\n';
-        param_os << every << '\t' << until << '\t' << size << '\n';
+        param_os << every << '\t' << until << '\t' << saveall << '\t' << size << '\n';
 
         model->ToStream(param_os);
+    }
+
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream os((name + ".baseline").c_str(), ios_base::app);
+        GetModel()->TraceBaseline(os);
+        for (int k = 1; k < ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            ofstream os((s.str() + ".delta").c_str(), ios_base::app);
+            GetModel()->TraceDelta(k, os);
+        }
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream os((name + ".baseline").c_str());
+        for (int k = 1; k < ncond; k++) {
+            ostringstream s;
+            s << name << "_" << k;
+            ofstream os((s.str() + ".delta").c_str());
+        }
     }
 };
 
 int main(int argc, char *argv[]) {
-    cerr << "-- Parsing command line arguments\n";
 
     string name = "";
     DiffSelChain *chain = 0;
 
+    if (argc == 1)  {
+        cerr << "command: diffsel -d <alignment> -t <treefile> <chainname>\n";
+        cerr << '\n';
+        cerr << "program options:\n";
+        cerr << "\t-f: force overwrite of already existing chain\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-ncond <ncond>:  specify number of conditions\n";
+        cerr << '\n';
+        exit(0);
+    }
+
     // this is an already existing chain on the disk; reopen and restart
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
-        cerr << "-- Trying to reopen existing chain named " << name << " on disk\n";
         chain = new DiffSelChain(name);
     }
 
@@ -121,6 +153,7 @@ int main(int argc, char *argv[]) {
 
         int every = 1;
         int until = -1;
+        int saveall = 1;
         int force = 0;
 
         try {
@@ -140,6 +173,10 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "+s") {
+                    saveall = 1;
+                } else if (s == "-s") {
+                    saveall = 0;
                 } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
@@ -163,9 +200,9 @@ int main(int argc, char *argv[]) {
             }
         } catch (...) {
             cerr << "error in command\n";
-            exit(1);
+            exit(0);
         }
-        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, fixglob, fixvar,
+        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob, fixvar,
                                  codonmodel, name, force);
     }
 

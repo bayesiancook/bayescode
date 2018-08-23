@@ -4,7 +4,7 @@
 #include "CodonStateSpace.hpp"
 #include "SubMatrix.hpp"
 
-const double omegamin = 1e-10;
+const double omegamin = 1e-5;
 
 /**
  * \brief A general class representing all codon matrices

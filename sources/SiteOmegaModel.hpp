@@ -9,23 +9,12 @@
 #include "Tree.hpp"
 
 /**
- * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
- * model
+ * \brief A Muse and Gaut codon model with site-specific omega's
  *
- * The model has the following structure:
- * - branch lengths iid Exponential of rate lambda
- * - nucleotide relative exchangeabilities and stationaries are uniform
- * Dirichlet
- * - there is one single omega=dN/dS for all sites and across all branches
- * - prior over omega ~ Gamma(omegahypermean,omegahyperinvshape).
- *
- * The 2 hyperparameters omegahypermean and hyperinvshape are fixed when this
- * model is used in isolation. On the other hand, this model can be used in a
- * multigene context (see MultiGeneSingeOmegaModel), in which case
- * omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel {
+class SiteOmegaModel : public ProbModel {
+
     // tree and data
     Tree *tree;
     FileSequenceAlignment *data;
@@ -71,27 +60,38 @@ class SingleOmegaModel : public ProbModel {
 
     // Omega
 
-    double omegahypermean;
-    double omegahyperinvshape;
-    double omega;
+    double omegameanhypermean;
+    double omegameanhyperinvshape;
+    double omegainvshapehypermean;
+    double omegainvshapehyperinvshape;
 
-    // a codon matrix (parameterized by nucmatrix and omega)
-    MGOmegaCodonSubMatrix *codonmatrix;
+    // omega across sites: Gamma distribution
+    // of mean omegamean and inverse shape parameter omegainvshape
+    double omegamean;
+    double omegainvshape;
+
+    IIDGamma *omegaarray;
+
+    // a codon matrix array (parameterized by nucmatrix and omega)
+    MGOmegaCodonSubMatrixArray *codonmatrixarray;
 
     // PhyloProcess
 
     PhyloProcess *phyloprocess;
 
-    // suff stats for substitution paths
-    // summed over all branches and over all sites
-    PathSuffStat pathsuffstat;
+    // generic suff stats for substitution paths
+    PathSuffStatArray *pathsuffstatarray;
 
     // or, alternatively, collected as a simple Poisson suff stat, as a function
     // of omega
-    OmegaPathSuffStat omegapathsuffstat;
+    OmegaPathSuffStatArray *omegapathsuffstatarray;
 
+    // suffstat for resampling mean and invshape of distribution of omega's across
+    // sites
+    GammaSuffStat omegahypersuffstat;
 
   public:
+
     //-------------------
     // Construction and allocation
     // ------------------
@@ -100,7 +100,7 @@ class SingleOmegaModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, string treefile) {
+    SiteOmegaModel(string datafile, string treefile) {
 
         blmode = 0;
         nucmode = 0;
@@ -153,12 +153,19 @@ class SingleOmegaModel : public ProbModel {
 
         // Omega
 
-        omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
-        omega = 1.0;
-        codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
+        omegamean = 1.0;
+        omegainvshape = 0.3;
+        double alpha = 1.0 / omegainvshape;
+        double beta = alpha / omegamean;
+        omegaarray = new IIDGamma(Nsite, alpha, beta);
+        omegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
 
-        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrix);
+        codonmatrixarray =
+            new MGOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, omegaarray);
+
+        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray);
+        pathsuffstatarray = new PathSuffStatArray(Nsite);
+
         phyloprocess->Unfold();
     }
 
@@ -171,9 +178,8 @@ class SingleOmegaModel : public ProbModel {
         return (CodonStateSpace *)codondata->GetStateSpace();
     }
 
-    //! return current value of omega
-    double GetOmega() const { return omega; }
-
+    int GetNsite() const { return Nsite; }
+    
     //-------------------
     // Setting and updating
     // ------------------
@@ -248,21 +254,20 @@ class SingleOmegaModel : public ProbModel {
 
     // Omega
 
-    //! \brief set omega to a new value
-    //!
-    //! Used in a multigene context.
-    //! Notifies corruption to the codon matrix.
-    void SetOmega(double inomega) {
-        omega = inomega;
-        TouchCodonMatrix();
+    void SetOmegaParameters(double inomegamean, double inomegainvshape) {
+        omegamean = inomegamean;
+        omegainvshape = inomegainvshape;
+        double alpha = 1.0 / omegainvshape;
+        double beta = alpha / omegamean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
     }
 
-    //! \brief set the hyperparameters of the gamma prior over omega
-    //!
-    //! Used in a multigene context.
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
+    void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape, double inomegainvshapehypermean, double inomegainvshapehyperinvshape)    {
+        omegameanhypermean = inomegameanhypermean;
+        omegameanhyperinvshape = inomegameanhyperinvshape;
+        omegainvshapehypermean = inomegainvshapehypermean;
+        omegainvshapehyperinvshape = inomegainvshapehyperinvshape;
     }
 
     //! \brief tell the nucleotide matrix that its parameters have changed and
@@ -282,9 +287,8 @@ class SingleOmegaModel : public ProbModel {
     //! The matrix is not directly updated at that step. Instead, corruption is
     //! notified, such that the matrix knows that it will have to recalculate
     //! whichever component is requested later on upon demand.
-    void TouchCodonMatrix() {
-        codonmatrix->SetOmega(omega);
-        codonmatrix->CorruptMatrix();
+    void TouchCodonMatrices() {
+        codonmatrixarray->UpdateCodonMatrices();
     }
 
     //! \brief tell the nucleotide and the codon matrices that their parameters
@@ -293,7 +297,7 @@ class SingleOmegaModel : public ProbModel {
     //! Just successive calls to TouchNucMatrix() and then TouchCodonMatrix();
     void TouchMatrices() {
         TouchNucMatrix();
-        TouchCodonMatrix();
+        TouchCodonMatrices();
     }
 
     //! \brief dummy function that does not do anything.
@@ -309,6 +313,7 @@ class SingleOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
+        SetOmegaParameters(omegamean,omegainvshape);
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -323,6 +328,7 @@ class SingleOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
+        SetOmegaParameters(omegamean,omegainvshape);
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -343,6 +349,7 @@ class SingleOmegaModel : public ProbModel {
         if (!FixedNucRates()) {
             total += NucRatesLogPrior();
         }
+        total += OmegaHyperLogPrior();
         total += OmegaLogPrior();
         return total;
     }
@@ -384,13 +391,21 @@ class SingleOmegaModel : public ProbModel {
 
     // Omega
 
-    //! log prior over omega (gamma of mean omegahypermean and shape
-    //! 1/omegahyperinvshape)
-    double OmegaLogPrior() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        return Random::logGammaDensity(omega, alpha, beta);
+    double OmegaHyperLogPrior() const {
+        double total = 0;
+
+        double meanalpha = 1.0 / omegameanhyperinvshape;
+        double meanbeta = meanalpha / omegameanhypermean;
+        total += Random::logGammaDensity(omegamean, meanalpha, meanbeta);
+
+        double invshapealpha = 1.0 / omegainvshapehyperinvshape;
+        double invshapebeta = invshapealpha / omegainvshapehypermean;
+        total += Random::logGammaDensity(omegainvshape, invshapealpha, invshapebeta);
+
+        return total;
     }
+
+    double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
 
     //-------------------
     // Suff Stat and suffstatlogprobs
@@ -406,13 +421,6 @@ class SingleOmegaModel : public ProbModel {
         return lengthpathsuffstatarray;
     }
 
-    //! collect sufficient statistics for moving branch lengths (directly from the
-    //! substitution mappings)
-    void CollectLengthSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
-    }
-
     //! \brief return log prob of current substitution mapping, as a function of
     //! branch lengths
     //!
@@ -424,6 +432,13 @@ class SingleOmegaModel : public ProbModel {
         return hyperlengthsuffstat.GetLogProb(1.0, lambda);
     }
 
+    //! collect sufficient statistics for moving branch lengths (directly from the
+    //! substitution mappings)
+    void CollectLengthSuffStat() {
+        lengthpathsuffstatarray->Clear();
+        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
+    }
+
     // Nucleotide rates
 
     //! \brief const acess to nuc-pathsuffstat
@@ -432,14 +447,6 @@ class SingleOmegaModel : public ProbModel {
     //! and equilibrium frequencies (nucstat) conditional on the current
     //! substitution mapping.
     const NucPathSuffStat &GetNucPathSuffStat() const { return nucpathsuffstat; }
-
-    //! collect sufficient statistics for moving nucleotide rates (based on
-    //! generic sufficient statistics stored in pathsuffstat)
-    void CollectNucPathSuffStat() {
-        TouchMatrices();
-        nucpathsuffstat.Clear();
-        nucpathsuffstat.AddSuffStat(*codonmatrix, pathsuffstat);
-    }
 
     //! \brief return log prob of current substitution mapping, as a function of
     //! nucleotide parameters (nucrelrate and nucstat)
@@ -452,12 +459,29 @@ class SingleOmegaModel : public ProbModel {
         return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
     }
 
-    // Paths
+    //! collect sufficient statistics for moving nucleotide rates (based on
+    //! generic sufficient statistics stored in pathsuffstat)
+    void CollectNucPathSuffStat() {
+        TouchMatrices();
+        nucpathsuffstat.Clear();
+        nucpathsuffstat.AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
+    }
+
+    // Omega
+    
+    double OmegaHyperSuffStatLogProb() const {
+        double alpha = 1.0 / omegainvshape;
+        double beta = alpha / omegamean;
+        return omegahypersuffstat.GetLogProb(alpha, beta);
+    }
+
+
+    // Paths 
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
-        pathsuffstat.Clear();
-        pathsuffstat.AddSuffStat(*phyloprocess);
+        pathsuffstatarray->Clear();
+        pathsuffstatarray->AddSuffStat(*phyloprocess);
     }
 
     //! \brief return log prob of the current substitution mapping, as a function
@@ -466,7 +490,7 @@ class SingleOmegaModel : public ProbModel {
     //! Calculated using pathsuffstat (which summarizes all information about the
     //! substitution mapping) and the codonmatrix. Both pathsuffstat and
     //! codonmatrix are assumed to be updated.
-    double PathSuffStatLogProb() const { return pathsuffstat.GetLogProb(*codonmatrix); }
+    double PathSuffStatLogProb() const { return pathsuffstatarray->GetLogProb(*codonmatrixarray); }
 
     //-------------------
     //  Log probs for MH moves
@@ -485,6 +509,9 @@ class SingleOmegaModel : public ProbModel {
     //! \brief log prob factor to be recomputed when moving nucleotide mutation
     //! rate parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const { return NucRatesLogPrior() + NucRatesSuffStatLogProb(); }
+
+    // for moving omegamean and omegainvshape
+    double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
     //-------------------
     //  Moves
@@ -512,7 +539,9 @@ class SingleOmegaModel : public ProbModel {
             }
 
             CollectPathSuffStat();
+
             MoveOmega();
+            MoveOmegaHyperParameters();
 
             if (!FixedNucRates()) {
                 TouchMatrices();
@@ -543,9 +572,9 @@ class SingleOmegaModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb, &SingleOmegaModel::NoUpdate,
+        ScalingMove(lambda, 1.0, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate,
                     this);
-        ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb, &SingleOmegaModel::NoUpdate,
+        ScalingMove(lambda, 0.3, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate,
                     this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
@@ -557,42 +586,90 @@ class SingleOmegaModel : public ProbModel {
     void MoveNucRates() {
         CollectNucPathSuffStat();
 
-        ProfileMove(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.1, 1, 3, &SiteOmegaModel::NucRatesLogProb,
+                    &SiteOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.03, 3, 3, &SiteOmegaModel::NucRatesLogProb,
+                    &SiteOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.01, 3, 3, &SiteOmegaModel::NucRatesLogProb,
+                    &SiteOmegaModel::TouchNucMatrix, this);
 
-        ProfileMove(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucstat, 0.1, 1, 3, &SiteOmegaModel::NucRatesLogProb,
+                    &SiteOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucstat, 0.01, 1, 3, &SiteOmegaModel::NucRatesLogProb,
+                    &SiteOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }
 
     // Omega
 
-    //! Gibbs resample omega (based on sufficient statistics of current
-    //! substitution mapping)
     void MoveOmega() {
-        omegapathsuffstat.Clear();
-        omegapathsuffstat.AddSuffStat(*codonmatrix, pathsuffstat);
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
-                                    beta + omegapathsuffstat.GetBeta());
-        TouchCodonMatrix();
+        omegapathsuffstatarray->Clear();
+        omegapathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
+        omegaarray->GibbsResample(*omegapathsuffstatarray);
+        TouchCodonMatrices();
+    }
+
+    void MoveOmegaHyperParameters() {
+        omegahypersuffstat.Clear();
+        omegahypersuffstat.AddSuffStat(*omegaarray);
+        ScalingMove(omegamean, 1.0, 10, &SiteOmegaModel::OmegaHyperLogProb,
+                    &SiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegamean, 0.3, 10, &SiteOmegaModel::OmegaHyperLogProb,
+                    &SiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegainvshape, 1.0, 10, &SiteOmegaModel::OmegaHyperLogProb,
+                    &SiteOmegaModel::NoUpdate, this);
+        ScalingMove(omegainvshape, 0.3, 10, &SiteOmegaModel::OmegaHyperLogProb,
+                    &SiteOmegaModel::NoUpdate, this);
+        double alpha = 1.0 / omegainvshape;
+        double beta = alpha / omegamean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
     }
 
     //-------------------
     // Traces and Monitors
     // ------------------
 
+    double GetEmpiricalPosFrac() const {
+        double tot = 0;
+        for (int i = 0; i < Nsite; i++) {
+            if ((*omegaarray)[i] > 1.0) {
+                tot++;
+            }
+        }
+        return tot / Nsite;
+    }
+
+    double GetMeanOmega() const {
+        return omegaarray->GetMean();
+    }
+
+    double GetOmegaMean() const {
+        return omegamean;
+    }
+
+    double GetOmegaInvShape() const {
+        return omegainvshape;
+    }
+
+    void TraceOmega(ostream &os) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            os << omegaarray->GetVal(i) << '\t';
+        }
+        os << '\n';
+    }
+
+    void GetSiteOmega(double *array) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            array[i] = omegaarray->GetVal(i);
+        }
+    }
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
-        os << "omega\t";
+        os << "omegamean\tinvshape\t";
+        os << "posfrac\t";
+        os << "statent\t";
         os << "statent\t";
         os << "rrent\n";
     }
@@ -601,7 +678,9 @@ class SingleOmegaModel : public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-        os << omega << '\t';
+        os << omegamean << '\t';
+        os << omegainvshape << '\t';
+        os << GetEmpiricalPosFrac() << '\t';
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
@@ -609,7 +688,8 @@ class SingleOmegaModel : public ProbModel {
     void Monitor(ostream &os) const {}
 
     void ToStream(ostream &os) const {
-        os << omega << '\t';
+        os << omegamean << '\t' << omegainvshape << '\n';
+        os << *omegaarray << '\n';
         os << nucstat << '\t';
         os << nucrelrate << '\t';
         os << lambda << '\t';
@@ -617,7 +697,8 @@ class SingleOmegaModel : public ProbModel {
     }
 
     void FromStream(istream &is) {
-        is >> omega;
+        is >> omegamean >> omegainvshape;
+        is >> *omegaarray;
         is >> nucstat;
         is >> nucrelrate;
         is >> lambda;

@@ -1,27 +1,28 @@
 #include <cmath>
 #include <fstream>
+#include "MultiGeneAAMutSelDSBDPOmegaModel.hpp"
 #include "MultiGeneSample.hpp"
-#include "MultiGeneSingleOmegaModel.hpp"
 using namespace std;
 
 MPI_Datatype Propagate_arg;
 
-class MultiGeneSingleOmegaSample : public MultiGeneSample {
+class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
   private:
-    string modeltype;
-    string datafile;
-    string treefile;
-    int blmode, nucmode, omegamode;
-    double omegahypermean, omegahyperinvshape;
+    string modeltype, datafile, treefile;
+    int writegenedata;
+    int Ncat;
+    int baseNcat;
+    int blmode, nucmode, basemode, omegamode, omegaprior, modalprior;
+    double pihypermean, pihyperinvconc;
 
   public:
     string GetModelType() { return modeltype; }
 
-    const MultiGeneSingleOmegaModel *GetModel() const { return (MultiGeneSingleOmegaModel *)model; }
-    MultiGeneSingleOmegaModel *GetModel() { return (MultiGeneSingleOmegaModel *)model; }
+    const MultiGeneAAMutSelDSBDPOmegaModel *GetModel() const { return (MultiGeneAAMutSelDSBDPOmegaModel *)model; }
+    MultiGeneAAMutSelDSBDPOmegaModel *GetModel() { return (MultiGeneAAMutSelDSBDPOmegaModel *)model; }
 
-    MultiGeneSingleOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid,
-                               int nprocs)
+    MultiGeneAAMutSelDSBDPOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid,
+                            int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
         Open();
     }
@@ -36,33 +37,33 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             exit(1);
         }
 
-        // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> blmode >> nucmode >> omegamode;
-        is >> omegahypermean >> omegahyperinvshape;
-        int check;
-        is >> check;
-        if (check) {
+        is >> writegenedata;
+        is >> Ncat >> baseNcat;
+        is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior >> modalprior;
+        is >> pihypermean >> pihyperinvconc;
+        int tmp;
+        is >> tmp;
+        if (tmp) {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
         is >> chainevery >> chainuntil >> chainsize;
 
-        // make a new model depending on the type obtained from the file
-        if (modeltype == "MULTIGENESINGLEOMEGA") {
-            model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
-            GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
-            GetModel()->SetOmegaHyperParameters(omegahypermean,omegahyperinvshape);
+        if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
+                                                         nucmode, basemode, omegamode, omegaprior, modalprior,
+                                                         pihypermean, pihyperinvconc, myid, nprocs);
         } else {
-            cerr << "error when opening file " << name << '\n';
-            cerr << modeltype << '\n';
+            cerr << "Error when opening file " << name
+                 << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
 
         GetModel()->Allocate();
-        // read model (i.e. chain's last point) from <name>.param
-        model->FromStream(is);
+        GetModel()->FromStream(is);
+
         // open <name>.chain, and prepare stream and stream iterator
         OpenChainFile();
         // now, size is defined (it is the total number of points with which this
@@ -70,40 +71,24 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // points can be accessed to (only once) by repeated calls to GetNextPoint()
     }
 
+    /*
     void MasterRead() {
         cerr << size << " points to read\n";
-
-        vector<double> meanom(GetNgene(), 0);
-        vector<double> varom(GetNgene(), 0);
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
-            const vector<double> &om = GetModel()->GetOmegaArray();
-            for (int gene = 0; gene < GetNgene(); gene++) {
-                meanom[gene] += om[gene];
-                varom[gene] += om[gene] * om[gene];
-            }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
         cerr << '\n';
-        for (int gene = 0; gene < GetNgene(); gene++) {
-            meanom[gene] /= size;
-            varom[gene] /= size;
-            varom[gene] -= meanom[gene] * meanom[gene];
-        }
-
-        ofstream os((name + ".postmeanomega").c_str());
-        for (int gene = 0; gene < GetNgene(); gene++) {
-            os << GetModel()->GetLocalGeneName(gene) << '\t' << meanom[gene] << '\t'
-               << sqrt(varom[gene]) << '\n';
-        }
-        cerr << "posterior mean omega per gene in " << name << ".postmeanomega\n";
     }
 
     void SlaveRead() {
         for (int i = 0; i < size; i++) {
             GetNextPoint();
+            MPI_Barrier(MPI_COMM_WORLD);
         }
     }
+    */
 };
 
 int main(int argc, char *argv[]) {
@@ -181,8 +166,8 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    MultiGeneSingleOmegaSample *sample =
-        new MultiGeneSingleOmegaSample(name, burnin, every, until, myid, nprocs);
+    MultiGeneAAMutSelDSBDPOmegaSample *sample =
+        new MultiGeneAAMutSelDSBDPOmegaSample(name, burnin, every, until, myid, nprocs);
 
     if (ppred) {
         if (!myid) {
@@ -191,11 +176,15 @@ int main(int argc, char *argv[]) {
             sample->SlavePostPred();
         }
     } else {
-        if (!myid) {
+        cerr << "default read function not yet implemented\n";
+        /*
+        if (! myid) {
             sample->MasterRead();
-        } else {
+        }
+        else    {
             sample->SlaveRead();
         }
+        */
     }
 
     MPI_Finalize();

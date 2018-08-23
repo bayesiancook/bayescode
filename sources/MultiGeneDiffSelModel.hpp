@@ -1,11 +1,11 @@
 
 #include "Chrono.hpp"
-#include "DiffSelSparseModel.hpp"
+#include "DiffSelModel.hpp"
 #include "IIDMultiBernBeta.hpp"
 #include "MultiGeneProbModel.hpp"
 #include "Parallel.hpp"
 
-class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
+class MultiGeneDiffSelModel : public MultiGeneProbModel {
   private:
     const double minshiftprobhypermean = 0.01;
 
@@ -21,8 +21,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     int Ncond;
     int Nlevel;
     int codonmodel;
-    int blmode;
-    int nucmode;
 
     // branch lengths
     double lambda;
@@ -44,19 +42,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     IIDDirichlet *nucstatarray;
     DirichletSuffStat nucstatsuffstat;
 
-    // shiftprob arrays across genes
-    vector<double> shiftprobhypermean;
-    vector<double> shiftprobhyperinvconc;
-    vector<double> pi;
-    double pihypermean;
-    double pihyperinvconc;
-
-    IIDMultiBernBeta *shiftprobarray;
-    vector<int> totcount;
-    IIDMultiCount *shiftcountarray;
-
-    // each gene defines its own DiffSelSparseModel
-    std::vector<DiffSelSparseModel *> geneprocess;
+    // each gene defines its own DiffSelModel
+    std::vector<DiffSelModel *> geneprocess;
 
     // total log likelihood (summed across all genes)
     double lnL;
@@ -69,21 +56,22 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     Chrono movechrono;
     Chrono mapchrono;
 
-    int withtoggle;
+    int blmode;
+    int nucmode;
 
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
-    MultiGeneDiffSelSparseModel(string datafile, string intreefile, int inNcond, int inNlevel,
+    MultiGeneDiffSelModel(string datafile, string intreefile, int inNcond, int inNlevel,
                                 int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
-        withtoggle = 0;
         codonmodel = incodonmodel;
         blmode = inblmode;
         nucmode = innucmode;
+
         Ncond = inNcond;
         Nlevel = inNlevel;
 
@@ -131,35 +119,21 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         nucstatarray =
             new IIDDirichlet(GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
 
-        shiftprobhypermean.assign(Ncond - 1, 0.5);
-        shiftprobhyperinvconc.assign(Ncond - 1, 0.5);
-        pihypermean = 0.1;
-        pihyperinvconc = 0.1;
-        pi.assign(Ncond - 1, 0.1);
-        shiftprobarray =
-            new IIDMultiBernBeta(GetLocalNgene(), pi, shiftprobhypermean, shiftprobhyperinvconc);
-        totcount.assign(GetLocalNgene(), 0);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            totcount[gene] = GetLocalGeneNsite(gene) * Naa;
-        }
-        shiftcountarray =
-            new IIDMultiCount(totcount, pi, shiftprobhypermean, shiftprobhyperinvconc);
-
         lnL = 0;
         GeneLogPrior = 0;
 
         if (!GetMyid()) {
-            geneprocess.assign(0, (DiffSelSparseModel *)0);
+            geneprocess.assign(0, (DiffSelModel *)0);
         } else {
-            geneprocess.assign(GetLocalNgene(), (DiffSelSparseModel *)0);
+            geneprocess.assign(GetLocalNgene(), (DiffSelModel *)0);
 
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] = new DiffSelSparseModel(GetLocalGeneName(gene), treefile, Ncond,
-                                                           Nlevel, codonmodel);
+                int fixglob = 1;
+                int fixvar = 1;
+                geneprocess[gene] = new DiffSelModel(GetLocalGeneName(gene), treefile, Ncond,
+                                                           Nlevel, fixglob, fixvar, codonmodel);
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
-                geneprocess[gene]->SetFitnessHyperMode(3);
-                geneprocess[gene]->SetWithToggles(withtoggle);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -170,7 +144,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         if (blmode == 1) {
             branchlengtharray->SetShape(1.0 / blhyperinvshape);
         }
-
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
     }
@@ -182,7 +155,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             MasterSendGeneBranchLengths();
             MasterSendNucRatesHyperParameters();
             MasterSendGeneNucRates();
-            MasterSendShiftProbHyperParameters();
             MasterReceiveLogProbs();
         }
     }
@@ -192,18 +164,8 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         SlaveReceiveGeneBranchLengths();
         SlaveReceiveNucRatesHyperParameters();
         SlaveReceiveGeneNucRates();
-        SlaveReceiveShiftProbHyperParameters();
         GeneUpdate();
         SlaveSendLogProbs();
-    }
-
-    void SetWithToggles(int in) {
-        withtoggle = in;
-        if (myid && geneprocess.size()) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->SetWithToggles(in);
-            }
-        }
     }
 
     void GeneUpdate() {
@@ -231,11 +193,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     void TraceHeader(ostream &os) const {
         os << "#logprior\tlnL\tlength\t";
         os << "stdev\t";
-        for (int k = 1; k < Ncond; k++) {
-            os << "pi" << k << '\t';
-            os << "mean\t";
-            os << "invconc\t";
-        }
         os << '\n';
     }
 
@@ -243,11 +200,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << GetMeanLength() << '\t' << GetVarLength() << '\t';
-        for (int k = 1; k < Ncond; k++) {
-            os << pi[k - 1] << '\t';
-            os << shiftprobhypermean[k - 1] << '\t';
-            os << shiftprobhyperinvconc[k - 1] << '\t';
-        }
         os << '\n';
         os.flush();
     }
@@ -266,10 +218,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         os << nucstathyperinvconc << '\t';
         os << *nucrelratearray << '\t';
         os << *nucstatarray << '\t';
-
-        os << shiftprobhypermean << '\t';
-        os << shiftprobhyperinvconc << '\t';
-        os << pi << '\t';
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             MPI_Status stat;
@@ -308,10 +256,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         is >> nucstathyperinvconc;
         is >> *nucrelratearray;
         is >> *nucstatarray;
-
-        is >> shiftprobhypermean;
-        is >> shiftprobhyperinvconc;
-        is >> pi;
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             int size;
@@ -367,7 +311,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         if (nucmode == 1) {
             total += GeneNucRatesHyperLogPrior();
         }
-        total += ShiftProbHyperLogPrior();
         if (std::isnan(total)) {
             cerr << "GetLogPrior is nan\n";
             exit(1);
@@ -389,48 +332,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         double total = 0;
         total -= nucrelratehyperinvconc;
         total -= nucstathyperinvconc;
-        return total;
-    }
-
-    double ShiftProbHyperLogPrior() const {
-        double total = 0;
-        for (int k = 1; k < Ncond; k++) {
-            total += GetPiLogPrior(k);
-            total += GetShiftProbHyperMeanLogPrior(k);
-            total += GetShiftProbHyperInvConcLogPrior(k);
-        }
-        return total;
-    }
-
-    double GetPiLogPrior(int k) const {
-        double alpha = pihypermean / pihyperinvconc;
-        double beta = (1 - pihypermean) / pihyperinvconc;
-        return Random::logBetaDensity(pi[k - 1], alpha, beta);
-    }
-
-    double GetShiftProbHyperMeanLogPrior(int k) const {
-        if (shiftprobhypermean[k - 1] < minshiftprobhypermean) {
-            return Random::INFPROB;
-        }
-        return 0;
-    }
-
-    double GetShiftProbHyperInvConcLogPrior(int k) const {
-        double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
-        double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
-        if ((alpha < 1.0) || (beta < 1.0)) {
-            return Random::INFPROB;
-        }
-        return -shiftprobhyperinvconc[k - 1];
-    }
-
-    double GetCountLogProb(int k) const { return shiftcountarray->GetMarginalLogProb(k - 1); }
-
-    double GetCountLogProb() const {
-        double total = 0;
-        for (int k = 1; k < Ncond; k++) {
-            total += GetCountLogProb(k);
-        }
         return total;
     }
 
@@ -496,14 +397,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            if (withtoggle) {
-                MasterReceiveShiftCounts();
-                movechrono.Start();
-                MoveShiftProbHyperParameters(3);
-                movechrono.Stop();
-                MasterSendShiftProbHyperParameters();
-            }
-
             if (blmode == 1) {
                 MasterReceiveBranchLengthsHyperSuffStat();
                 movechrono.Start();
@@ -542,14 +435,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
             GeneMove();
             movechrono.Stop();
 
-            if (withtoggle) {
-                SlaveSendShiftCounts();
-                SlaveReceiveShiftProbHyperParameters();
-                movechrono.Start();
-                GeneResampleShiftProbs();
-                movechrono.Stop();
-            }
-
             if (blmode == 1) {
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
@@ -564,20 +449,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         SlaveSendGeneBranchLengths();
         SlaveSendGeneNucRates();
         SlaveSendLogProbs();
-    }
-
-    void GeneCollectShiftCounts() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            for (int k = 1; k < Ncond; k++) {
-                (*shiftcountarray)[gene][k - 1] = geneprocess[gene]->GetNshift(k);
-            }
-        }
-    }
-
-    void GeneResampleShiftProbs() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleShiftProb();
-        }
     }
 
     void GeneMove() {
@@ -596,10 +467,10 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &MultiGeneDiffSelSparseModel::LambdaHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &MultiGeneDiffSelSparseModel::LambdaHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+        ScalingMove(lambda, 1.0, 10, &MultiGeneDiffSelModel::LambdaHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
+        ScalingMove(lambda, 0.3, 10, &MultiGeneDiffSelModel::LambdaHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
 
@@ -610,11 +481,11 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         }
 
         ScalingMove(blhyperinvshape, 1.0, 10,
-                    &MultiGeneDiffSelSparseModel::BranchLengthsHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(blhyperinvshape, 0.3, 10,
-                    &MultiGeneDiffSelSparseModel::BranchLengthsHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
 
         branchlengtharray->SetShape(1.0 / blhyperinvshape);
         MoveLambda();
@@ -651,138 +522,45 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
 
     void MoveNucRatesHyperParameters() {
         ProfileMove(nucrelratehypercenter, 1.0, 1, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ProfileMove(nucrelratehypercenter, 0.3, 1, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ProfileMove(nucrelratehypercenter, 0.1, 3, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucrelratehyperinvconc, 1.0, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucrelratehyperinvconc, 0.3, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucrelratehyperinvconc, 0.03, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
 
         ProfileMove(nucstathypercenter, 1.0, 1, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ProfileMove(nucstathypercenter, 0.3, 1, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ProfileMove(nucstathypercenter, 0.1, 2, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucstathyperinvconc, 1.0, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucstathyperinvconc, 0.3, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
         ScalingMove(nucstathyperinvconc, 0.03, 10,
-                    &MultiGeneDiffSelSparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelSparseModel::NoUpdate, this);
+                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+                    &MultiGeneDiffSelModel::NoUpdate, this);
 
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-    }
-
-    void MoveShiftProbHyperParameters(int nrep) {
-        MovePi(0.3, nrep);
-        MoveShiftProbHyperMean(0.3, nrep);
-        MoveShiftProbHyperInvConc(0.3, nrep);
-    }
-
-    double MovePi(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int k = 1; k < Ncond; k++) {
-            for (int rep = 0; rep < nrep; rep++) {
-                double deltalogprob = -GetPiLogPrior(k) - GetCountLogProb(k);
-                double m = tuning * (Random::Uniform() - 0.5);
-                double bk = pi[k - 1];
-                pi[k - 1] += m;
-                while ((pi[k - 1] < 0) || (pi[k - 1] > 1)) {
-                    if (pi[k - 1] < 0) {
-                        pi[k - 1] = -pi[k - 1];
-                    }
-                    if (pi[k - 1] > 1) {
-                        pi[k - 1] = 2 - pi[k - 1];
-                    }
-                }
-                deltalogprob += GetPiLogPrior(k) + GetCountLogProb(k);
-
-                int acc = (log(Random::Uniform()) < deltalogprob);
-                if (acc) {
-                    nacc++;
-                } else {
-                    pi[k - 1] = bk;
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
-    }
-
-    double MoveShiftProbHyperMean(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int k = 1; k < Ncond; k++) {
-            for (int rep = 0; rep < nrep; rep++) {
-                double deltalogprob = -GetShiftProbHyperMeanLogPrior(k) - GetCountLogProb(k);
-                double m = tuning * (Random::Uniform() - 0.5);
-                double bk = shiftprobhypermean[k - 1];
-                shiftprobhypermean[k - 1] += m;
-                while ((shiftprobhypermean[k - 1] < 0) || (shiftprobhypermean[k - 1] > 1)) {
-                    if (shiftprobhypermean[k - 1] < 0) {
-                        shiftprobhypermean[k - 1] = -shiftprobhypermean[k - 1];
-                    }
-                    if (shiftprobhypermean[k - 1] > 1) {
-                        shiftprobhypermean[k - 1] = 2 - shiftprobhypermean[k - 1];
-                    }
-                }
-                deltalogprob += GetShiftProbHyperMeanLogPrior(k) + GetCountLogProb(k);
-
-                int acc = (log(Random::Uniform()) < deltalogprob);
-                if (acc) {
-                    nacc++;
-                } else {
-                    shiftprobhypermean[k - 1] = bk;
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
-    }
-
-    double MoveShiftProbHyperInvConc(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int k = 1; k < Ncond; k++) {
-            for (int rep = 0; rep < nrep; rep++) {
-                double deltalogprob = -GetShiftProbHyperInvConcLogPrior(k) - GetCountLogProb(k);
-                double m = tuning * (Random::Uniform() - 0.5);
-                double e = exp(m);
-                double bk = shiftprobhyperinvconc[k - 1];
-                shiftprobhyperinvconc[k - 1] *= e;
-                deltalogprob += GetShiftProbHyperInvConcLogPrior(k) + GetCountLogProb(k);
-                deltalogprob += m;
-
-                int acc = (log(Random::Uniform()) < deltalogprob);
-                if (acc) {
-                    nacc++;
-                } else {
-                    shiftprobhyperinvconc[k - 1] = bk;
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
     }
 
     //-------------------
@@ -883,27 +661,6 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
         mapTime /= (GetNprocs() - 1);
     }
 
-    void MasterReceiveShiftCounts() { MasterReceiveGeneArray(*shiftcountarray); }
-
-    void SlaveSendShiftCounts() {
-        GeneCollectShiftCounts();
-        SlaveSendGeneArray(*shiftcountarray);
-    }
-
-    void MasterSendShiftProbHyperParameters() {
-        MasterSendGlobal(shiftprobhypermean, shiftprobhyperinvconc);
-        MasterSendGlobal(pi);
-    }
-
-    void SlaveReceiveShiftProbHyperParameters() {
-        SlaveReceiveGlobal(shiftprobhypermean, shiftprobhyperinvconc);
-        SlaveReceiveGlobal(pi);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetShiftProbHyperParameters(pi, shiftprobhypermean,
-                                                           shiftprobhyperinvconc);
-        }
-    }
-
     void SlaveSendBranchLengthsHyperSuffStat() {
         lengthhypersuffstatarray->Clear();
         lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
@@ -934,131 +691,69 @@ class MultiGeneDiffSelSparseModel : public MultiGeneProbModel {
     }
 
     void MasterTraceSiteStats(string name, int mode) {
-        MasterReceiveGeneArray(*shiftprobarray);
-        for (int k = 1; k < Ncond; k++) {
+        for (int k = 0; k < Ncond; k++) {
             ostringstream s;
-            s << name << "_" << k << ".geneshiftprob";
+            if (! k)    {
+                s << name << ".fitness";
+            }
+            else    {
+                s << name << "_" << k << ".delta";
+            }
             ofstream os(s.str().c_str(), ios_base::app);
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                os << shiftprobarray->GetVal(gene)[k - 1] << '\t';
+            for (int proc = 1; proc < GetNprocs(); proc++) {
+                int totnsite = GetSlaveTotNsite(proc);
+                double *array = new double[totnsite * Naa];
+                MPI_Status stat;
+                MPI_Recv(array, totnsite * Naa, MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD, &stat);
+
+                int i = 0;
+                for (int gene = 0; gene < Ngene; gene++) {
+                    if (GeneAlloc[gene] == proc) {
+                        os << GeneName[gene] << '\t';
+                        int nsite = GeneNsite[gene];
+                        for (int j = 0; j < nsite; j++) {
+                            for (int a = 0; a < Naa; a++) {
+                                os << array[i++] << '\t';
+                            }
+                        }
+                    }
+                }
+                if (i != totnsite * Naa) {
+                    cerr << "error in "
+                            "MultiGeneDiffSelModel::MasterTraceSiteStats: non "
+                            "matching number of sites\n";
+                    exit(1);
+                }
+                delete[] array;
             }
             os << '\n';
-        }
-
-        if (mode == 2) {
-            for (int k = 0; k < Ncond; k++) {
-                ostringstream s;
-                s << name << "_" << k << ".fitness";
-                ofstream os(s.str().c_str(), ios_base::app);
-                for (int proc = 1; proc < GetNprocs(); proc++) {
-                    int totnsite = GetSlaveTotNsite(proc);
-                    double *array = new double[totnsite * Naa];
-                    MPI_Status stat;
-                    MPI_Recv(array, totnsite * Naa, MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD, &stat);
-
-                    int i = 0;
-                    for (int gene = 0; gene < Ngene; gene++) {
-                        if (GeneAlloc[gene] == proc) {
-                            os << GeneName[gene] << '\t';
-                            int nsite = GeneNsite[gene];
-                            for (int j = 0; j < nsite; j++) {
-                                for (int a = 0; a < Naa; a++) {
-                                    os << array[i++] << '\t';
-                                }
-                            }
-                        }
-                    }
-                    if (i != totnsite * Naa) {
-                        cerr << "error in "
-                                "MultiGeneDiffSelSparseModel::MasterTraceSiteStats: non "
-                                "matching number of sites\n";
-                        exit(1);
-                    }
-                    delete[] array;
-                }
-                os << '\n';
-                os.flush();
-            }
-
-            for (int k = 1; k < Ncond; k++) {
-                ostringstream s;
-                s << name << "_" << k << ".shifttoggle";
-                ofstream os(s.str().c_str(), ios_base::app);
-                for (int proc = 1; proc < GetNprocs(); proc++) {
-                    int totnsite = GetSlaveTotNsite(proc);
-                    int *array = new int[totnsite * Naa];
-                    MPI_Status stat;
-                    MPI_Recv(array, totnsite * Naa, MPI_INT, proc, TAG1, MPI_COMM_WORLD, &stat);
-
-                    int i = 0;
-                    for (int gene = 0; gene < Ngene; gene++) {
-                        if (GeneAlloc[gene] == proc) {
-                            os << GeneName[gene] << '\t';
-                            int nsite = GeneNsite[gene];
-                            for (int j = 0; j < nsite; j++) {
-                                for (int a = 0; a < Naa; a++) {
-                                    os << array[i++] << '\t';
-                                }
-                            }
-                        }
-                    }
-                    if (i != totnsite * Naa) {
-                        cerr << "error in "
-                                "MultiGeneDiffSelSparseModel::MasterTraceSiteStats: non "
-                                "matching number of sites\n";
-                        exit(1);
-                    }
-                    delete[] array;
-                }
-                os << '\n';
-                os.flush();
-            }
+            os.flush();
         }
     }
 
     void SlaveTraceSiteStats(int mode) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            (*shiftprobarray)[gene] = geneprocess[gene]->GetShiftProbVector();
-        }
-        SlaveSendGeneArray(*shiftprobarray);
-
-        if (mode == 2) {
-            for (int k = 0; k < Ncond; k++) {
-                int ngene = GetLocalNgene();
-                int totnsite = GetLocalTotNsite();
-                double *array = new double[totnsite * Naa];
-                int i = 0;
-                for (int gene = 0; gene < ngene; gene++) {
-                    geneprocess[gene]->GetFitnessArray(k, array + i);
-                    i += GetLocalGeneNsite(gene) * Naa;
+        for (int k = 0; k < Ncond; k++) {
+            int ngene = GetLocalNgene();
+            int totnsite = GetLocalTotNsite();
+            double *array = new double[totnsite * Naa];
+            int i = 0;
+            for (int gene = 0; gene < ngene; gene++) {
+                if (! k)    {
+                    geneprocess[gene]->GetBaselineArray(array + i);
                 }
-                if (i != totnsite * Naa) {
-                    cerr << "error in MultiGeneDiffSelSparseModel::SlaveTraceSiteStats: "
-                            "non matching number of sites\n";
-                    exit(1);
+                else    {
+                    geneprocess[gene]->GetDeltaArray(k, array + i);
                 }
-
-                MPI_Send(array, totnsite * Naa, MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
-                delete[] array;
+                i += GetLocalGeneNsite(gene) * Naa;
             }
-            for (int k = 1; k < Ncond; k++) {
-                int ngene = GetLocalNgene();
-                int totnsite = GetLocalTotNsite();
-                int *array = new int[totnsite * Naa];
-                int i = 0;
-                for (int gene = 0; gene < ngene; gene++) {
-                    geneprocess[gene]->GetShiftToggleArray(k, array + i);
-                    i += GetLocalGeneNsite(gene) * Naa;
-                }
-                if (i != totnsite * Naa) {
-                    cerr << "error in MultiGeneCodonM2aModel::SlaveTraceSitesPostProb: "
-                            "non matching number of sites\n";
-                    exit(1);
-                }
-
-                MPI_Send(array, totnsite * Naa, MPI_INT, 0, TAG1, MPI_COMM_WORLD);
-                delete[] array;
+            if (i != totnsite * Naa) {
+                cerr << "error in MultiGeneDiffSelModel::SlaveTraceSiteStats: "
+                        "non matching number of sites\n";
+                exit(1);
             }
+
+            MPI_Send(array, totnsite * Naa, MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
+            delete[] array;
         }
     }
 };

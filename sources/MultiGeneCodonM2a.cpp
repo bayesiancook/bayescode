@@ -21,12 +21,13 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int writegenedata;
-    int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
+    int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
     double puromhypermean, puromhyperinvconc;
     double dposomhypermean, dposomhyperinvshape;
     double purwhypermean, purwhyperinvconc;
     double poswhypermean, poswhyperinvconc;
+    int modalprior;
 
   public:
     MultiGeneCodonM2aModel *GetModel() { return static_cast<MultiGeneCodonM2aModel *>(model); }
@@ -44,19 +45,21 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     //! shift probabilities \param name: base name for all files related to this
     //! MCMC run \param force: overwrite existing files with same name \param
     //! inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int innucmode,
+    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode, int innucmode,
                            int inpurommode, int indposommode, int inpurwmode, int inposwmode,
                            double inpihypermean, double inpihyperinvconc, double inpuromhypermean,
                            double inpuromhyperinvconc, double indposomhypermean,
                            double indposomhyperinvshape, double inpurwhypermean,
                            double inpurwhyperinvconc, double inposwhypermean,
-                           double inposwhyperinvconc, int inevery, int inuntil, int inwritegenedata,
+                           double inposwhyperinvconc, int inmodalprior,
+                           int inevery, int inuntil, int inwritegenedata,
                            string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECODONM2A"),
           datafile(indatafile),
           treefile(intreefile) {
         blmode = inblmode;
+        blsamplemode = inblsamplemode;
         nucmode = innucmode;
         purommode = inpurommode;
         dposommode = indposommode;
@@ -72,6 +75,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         purwhyperinvconc = inpurwhyperinvconc;
         poswhypermean = inposwhypermean;
         poswhyperinvconc = inposwhyperinvconc;
+        modalprior = inmodalprior;
 
         every = inevery;
         until = inuntil;
@@ -92,9 +96,11 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc, myid,
                                            nprocs);
         GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode, poswmode);
+        GetModel()->SetBLSamplingMode(blsamplemode);
         GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
                                               dposomhyperinvshape, purwhypermean, purwhyperinvconc,
                                               poswhypermean, poswhyperinvconc);
+        GetModel()->SetModalMixturePrior(modalprior);
 
         if (!myid) {
             cerr << "allocate\n";
@@ -119,12 +125,13 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> writegenedata;
-        is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
+        is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
         is >> puromhypermean >> puromhyperinvconc;
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
+        is >> modalprior;
 
         int tmp;
         is >> tmp;
@@ -139,9 +146,11 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
+            GetModel()->SetBLSamplingMode(blsamplemode);
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
+            GetModel()->SetModalMixturePrior(modalprior);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -175,14 +184,14 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << writegenedata << '\n';
-            param_os << blmode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
+            param_os << blmode << '\t' << blsamplemode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
                      << poswmode << '\n';
             param_os << pihypermean << '\t' << pihyperinvconc << '\n';
             param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
             param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
             param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
             param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
-            ;
+            param_os << modalprior << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -194,31 +203,31 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
 
-        if (writegenedata) {
+        if (writegenedata == 1) {
             ofstream pos((name + ".posw").c_str());
             ofstream omos((name + ".posom").c_str());
-            if (writegenedata == 2) {
-                ofstream siteos((name + ".sitepp").c_str());
-            }
+        }
+        if (writegenedata == 2) {
+            ofstream siteos((name + ".sitepp").c_str());
         }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata) {
+        if (writegenedata == 1) {
             if (!myid) {
                 ofstream posw_os((name + ".posw").c_str(), ios_base::app);
                 GetModel()->TracePosWeight(posw_os);
                 ofstream posom_os((name + ".posom").c_str(), ios_base::app);
                 GetModel()->TracePosOm(posom_os);
-                if (writegenedata == 2) {
-                    ofstream pp_os((name + ".sitepp").c_str(), ios_base::app);
-                    GetModel()->MasterTraceSitesPostProb(pp_os);
-                }
+            }
+        }
+        if (writegenedata == 2) {
+            if (!myid) {
+                ofstream pp_os((name + ".sitepp").c_str(), ios_base::app);
+                GetModel()->MasterTraceSitesPostProb(pp_os);
             } else {
-                if (writegenedata == 2) {
-                    GetModel()->SlaveTraceSitesPostProb();
-                }
+                GetModel()->SlaveTraceSitesPostProb();
             }
         }
     }
@@ -247,6 +256,63 @@ int main(int argc, char *argv[]) {
 
     MultiGeneCodonM2aChain *chain = 0;
     string name = "";
+
+    if (argc == 1)  {
+        if (! myid)	{
+            cerr << '\n';
+            cerr << "The multigene version of the M2a model of codeml (Muse and Gaut version)\n";
+            cerr << '\n';
+            cerr << "for each gene, the omega mixture is:\n";
+            cerr << " - omega0 = purom,\n";
+            cerr << " - omega1 = 1,\n";
+            cerr << " - omega2 = 1 + dposom,\n";
+            cerr << "where 0 < purom < 1 and dposom > 0; the corresponding mixture weights are:\n";
+            cerr << " - w0 = purw * (1 - posw)\n";
+            cerr << " - w1 = (1-purw) * (1-posw)\n";
+            cerr << " - w2 = posw\n";
+            cerr << "where 0<purw<1 and 0<=posw<1;\n";
+            cerr << '\n';
+            cerr << "purom, dposom, purw, posw are gene-specific, and are iid from the following distributions:\n";
+            cerr << "- purom ~ Beta(puromhypermean, puromhyperinvconc)\n";
+            cerr << "- purw ~ Beta(purwhypermean, purwhyperinvshape)\n";
+            cerr << "- dposom ~ Gamma(dposomhypermean, dposomhyperinvshape)\n";
+            cerr << "- posw ~ (1-pi) * delta_0 + pi * Beta(poswhypermean, poswhyperinvshape)\n";
+            cerr << "(i.e. with probability 1-pi, posw = 0, and with probability pi, posw is drawn from a Beta)\n";
+            cerr << '\n';
+            cerr << "The parameters pi, puromhyper*, dposomhyper*, purwhyper* and poswhyper* of these distributions across genes can be either fixed or estimated across genes (by default, estimated across genes).\n";
+            cerr << "Branch lengths and nucleotide rates can be either shared across genes or gene-specific; if gene-specific, then the parameters of their distribution across genes can either be fixed or estimated (by default).\n";
+            cerr << '\n';
+            cerr << "command: mpirun -np <n> multigenecodonm2a -d <alignment_list> -t <tree> <chainname>\n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time "
+                    "(default: every = 1, until = -1)\n";
+            cerr << "\t-g: without gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+g: with gene-specific output files (.posw and .posom)\n";
+            cerr << "\t+G: with gene- and site-specific output files\n";
+            // cerr << "\tin all cases, complete information about chain state is saved "
+            //         "in .chain and .param files\n";
+            // cerr << "\t.chain: one line for each cycle\n";
+            // cerr << "\t.param: state at the end of last cycle\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi (default: hypermean = 0.1, hyperinvconc = 0.2)\n";
+            cerr << "\t-purom <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purom\n";
+            cerr << "\t-purom uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
+            cerr << "\t-purw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purw\n";
+            cerr << "\t-purw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
+            cerr << "\t-dposom <hypermean> <hyperinvshape>: set parameters of gamma hyperprior for dposom\n";
+            cerr << "\t-dposom uninf: set parameters to hypermean = 1.0 and hyperinvshape = 0.5\n";
+            cerr << "\t-posw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for posw\n";
+            cerr << "\t-posw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 1.0\n";
+            cerr << '\n';
+        }
+        MPI_Finalize();
+        exit(0);
+    }
 
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
@@ -278,8 +344,12 @@ int main(int argc, char *argv[]) {
         double dposomhyperinvshape = 0.5;
         int dposommode = 1;
 
+        int modalprior = 1;
+
         int blmode = 1;
         int nucmode = 1;
+
+        int blsamplemode = 0;
 
         int writegenedata = 1;
 
@@ -338,6 +408,10 @@ int main(int argc, char *argv[]) {
                         i++;
                         poswhyperinvconc = atof(argv[i]);
                     }
+                } else if (s == "-modalprior")  {
+                    modalprior = 1;
+                } else if (s == "-unconsprior")    {
+                    modalprior = 0;
                 } else if (s == "-nucrates") {
                     i++;
                     string tmp = argv[i];
@@ -364,6 +438,10 @@ int main(int argc, char *argv[]) {
                         cerr << "error: does not recongnize command after -bl\n";
                         exit(1);
                     }
+                } else if (s == "-blint")   {
+                    blsamplemode = 1;
+                } else if (s == "-blnoint") {
+                    blsamplemode = 0;
                 } else if (s == "-pi") {
                     i++;
                     pihypermean = atof(argv[i]);
@@ -396,35 +474,17 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            cerr << '\n';
-            cerr << "mpirun -np <n> multigenecodonm8 -d <alignment_list> -t <tree> "
-                    "[-bl {shared|shrunken|ind} -nucrates {shared|shrunken|ind}] "
-                    "<chainname> \n";
-            cerr << '\n';
-            cerr << "chain options:\n";
-            cerr << "\t-f: force overwrite of already existing chain\n";
-            cerr << "\t-x <every> <until>: saving frequency and stopping time "
-                    "(default: every = 1, until = -1)\n";
-            cerr << "\t-g: without gene-specific output files (.posw and .posom)\n";
-            cerr << "\t+g: with gene-specific output files (.posw and .posom)\n";
-            cerr << "\t+G: with gene- and site-specific output files\n";
-            cerr << "\tin all cases, complete information about chain state is saved "
-                    "in .chain and .param files\n";
-            cerr << "\t.chain: one line for each cycle\n";
-            cerr << "\t.param: state at the end of last cycle\n";
-            cerr << '\n';
-            cerr << "model options:\n";
-            cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
-            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for "
-                    "nucleotide substitution rates\n";
-            cerr << '\n';
-            exit(1);
+            if (! myid) {
+                cerr << "error in command\n";
+            }
+            MPI_Finalize();
+            exit(0);
         }
 
         chain = new MultiGeneCodonM2aChain(
-            datafile, treefile, blmode, nucmode, purommode, dposommode, purwmode, poswmode,
+            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
             pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
-            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc,
+            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc, modalprior,
             every, until, writegenedata, name, force, myid, nprocs);
     }
 

@@ -2,7 +2,7 @@
 #include <fstream>
 #include "Chrono.hpp"
 #include "MultiGeneChain.hpp"
-#include "MultiGeneDiffSelSparseModel.hpp"
+#include "MultiGeneDiffSelModel.hpp"
 
 using namespace std;
 
@@ -10,9 +10,9 @@ MPI_Datatype Propagate_arg;
 
 /**
  * \brief A MultiGeneChain object for running an MCMC under
- * MultiGeneDiffSelSparseModel
+ * MultiGeneDiffSelModel
  */
-class MultiGeneDiffSelSparseChain : public MultiGeneChain {
+class MultiGeneDiffSelChain : public MultiGeneChain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
@@ -20,12 +20,11 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     int nlevel;
     int codonmodel;
     int blmode, nucmode;
-    int burnin;
     int writegenedata;
 
   public:
-    MultiGeneDiffSelSparseModel *GetModel() {
-        return static_cast<MultiGeneDiffSelSparseModel *>(model);
+    MultiGeneDiffSelModel *GetModel() {
+        return static_cast<MultiGeneDiffSelModel *>(model);
     }
 
     string GetModelType() override { return modeltype; }
@@ -45,18 +44,17 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     //! probabilities \param name: base name for all files related to this MCMC
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
-    MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel,
-                                int incodonmodel, int inblmode, int innucmode, int inburnin, int inevery, int inuntil, int insaveall,
+    MultiGeneDiffSelChain(string indatafile, string intreefile, int inncond, int innlevel,
+                                int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil, int insaveall,
                                 int inwritegenedata, string inname, int force, int inmyid,
                                 int innprocs)
         : MultiGeneChain(inmyid, innprocs),
-          modeltype("MULTIGENEDIFFSELSPARSE"),
+          modeltype("MULTIGENEDIFFSEL"),
           datafile(indatafile),
           treefile(intreefile),
           ncond(inncond),
           nlevel(innlevel),
           codonmodel(incodonmodel), blmode(inblmode), nucmode(innucmode) {
-        burnin = inburnin;
         every = inevery;
         until = inuntil;
         saveall = insaveall;
@@ -66,7 +64,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     }
 
     //! \brief constructor for opening and restarting an already existing chain
-    MultiGeneDiffSelSparseChain(string filename, int inmyid, int innprocs)
+    MultiGeneDiffSelChain(string filename, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs) {
         name = filename;
         Open();
@@ -74,13 +72,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel, 
-                                                blmode, nucmode, myid, nprocs);
-        if (burnin) {
-            GetModel()->SetWithToggles(0);
-        } else {
-            GetModel()->SetWithToggles(1);
-        }
+        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid,
+                                                nprocs);
         if (!myid) {
             cerr << " -- master allocate\n";
         }
@@ -111,21 +104,15 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> burnin;
         is >> every >> until >> saveall >> writegenedata >> size;
 
-        if (modeltype == "MULTIGENEDIFFSELSPARSE") {
-            model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                    blmode, nucmode, myid, nprocs);
+        if (modeltype == "MULTIGENEDIFFSEL") {
+            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
+                                                    myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
-        }
-        if (size < burnin) {
-            GetModel()->SetWithToggles(0);
-        } else {
-            GetModel()->SetWithToggles(1);
         }
         GetModel()->Allocate();
         GetModel()->FromStream(is);
@@ -144,40 +131,29 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
-            param_os << burnin << '\n';
             param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
                      << size << '\n';
             GetModel()->MasterToStream(param_os);
         } else {
             GetModel()->SlaveToStream();
         }
-        if (size == burnin) {
-            GetModel()->SetWithToggles(1);
-        }
     }
 
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
-        if (writegenedata) {
-            for (int k = 0; k < ncond; k++) {
+        if (writegenedata == 2) {
+            ofstream os((name + ".fitness").c_str());
+            for (int k = 1; k < ncond; k++) {
                 ostringstream s;
                 s << name << "_" << k;
-                if (k) {
-                    ofstream pos((s.str() + ".geneshiftprob").c_str());
-                    if (writegenedata == 2) {
-                        ofstream tos((s.str() + ".shifttoggle").c_str());
-                    }
-                }
-                if (writegenedata == 2) {
-                    ofstream fos((s.str() + ".fitness").c_str());
-                }
+                ofstream os((s.str() + ".delta").c_str());
             }
         }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata) {
+        if (writegenedata == 2) {
             if (!myid) {
                 GetModel()->MasterTraceSiteStats(name, writegenedata);
             } else {
@@ -209,12 +185,36 @@ int main(int argc, char *argv[]) {
     MPI_Type_commit(&Propagate_arg);
 
     string name = "";
-    MultiGeneDiffSelSparseChain *chain = 0;
+    MultiGeneDiffSelChain *chain = 0;
+
+    if (argc == 1)  {
+        if (! myid)	{
+            cerr << '\n';
+            cerr << "The multi-gene version of the non-sparse differential selection model.\n";
+            cerr << "see diffsel for the single-gene version.\n";
+            cerr << '\n';
+            cerr << "command: mpirun -np <n> multigenediffsel -d <alignment_list> -t <tree> -ncond <ncond> <chainname>\n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time "
+                    "(default: every = 1, until = -1)\n";
+            cerr << "\t+G: with site-specific output files\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-ncond <ncond>:  specify number of conditions\n";
+            cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << '\n';
+        }
+        MPI_Finalize();
+        exit(0);
+    }
 
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
-        chain = new MultiGeneDiffSelSparseChain(name, myid, nprocs);
+        chain = new MultiGeneDiffSelChain(name, myid, nprocs);
     }
 
     // new chain
@@ -225,11 +225,10 @@ int main(int argc, char *argv[]) {
         int nlevel = 1;
         int codonmodel = 1;
         int force = 1;
-        int burnin = 0;
         int every = 1;
         int until = -1;
         int saveall = 1;
-        int writegenedata = 1;
+        int writegenedata = 0;
         int blmode = 1;
         int nucmode = 1;
 
@@ -288,9 +287,6 @@ int main(int argc, char *argv[]) {
                     writegenedata = 1;
                 } else if (s == "+G") {
                     writegenedata = 2;
-                } else if (s == "-b") {
-                    i++;
-                    burnin = atoi(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -315,8 +311,8 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
-                                                burnin, every, until, saveall, writegenedata, name, force,
+        chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode,
+                                                every, until, saveall, writegenedata, name, force,
                                                 myid, nprocs);
     }
 

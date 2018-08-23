@@ -22,6 +22,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     double epsilon;
     double fitnessshape;
     int fitnesscentermode;
+    int blmode, nucmode, shiftmode;
+    double pihypermean, pihyperinvconc;
+    double shiftprobmean, shiftprobinvconc;
     int burnin;
     int writegenedata;
 
@@ -49,11 +52,12 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond,
                                       int innlevel, int incodonmodel, double inepsilon,
-                                      double infitnessshape, int infitnesscentermode, int inburnin,
-                                      int inevery, int inuntil, int insaveall, int inwritegenedata,
+                                      double infitnessshape, int infitnesscentermode, int inblmode, int innucmode, int inshiftmode,
+                                      double inpihypermean, double inpihyperinvconc, double inshiftprobmean, double inshiftprobinvconc,
+                                      int inburnin, int inevery, int inuntil, int insaveall, int inwritegenedata,
                                       string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
-          modeltype("MULTIGENEDIFFSELSPARSE"),
+          modeltype("MULTIGENEDIFFSELDSPARSE"),
           datafile(indatafile),
           treefile(intreefile),
           ncond(inncond),
@@ -61,7 +65,8 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
           codonmodel(incodonmodel),
           epsilon(inepsilon),
           fitnessshape(infitnessshape),
-          fitnesscentermode(infitnesscentermode) {
+          fitnesscentermode(infitnesscentermode), blmode(inblmode), nucmode(innucmode),
+          shiftmode(inshiftmode), pihypermean(inpihypermean), pihyperinvconc(inpihyperinvconc), shiftprobmean(inshiftprobmean), shiftprobinvconc(inshiftprobinvconc) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -81,7 +86,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneDiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                      epsilon, fitnessshape, myid, nprocs);
+                                                      epsilon, fitnessshape, blmode, nucmode, shiftmode,
+                                                      pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc,
+                                                      myid, nprocs);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
@@ -113,6 +120,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         is >> ncond >> nlevel >> codonmodel;
         is >> epsilon >> fitnessshape;
         is >> fitnesscentermode;
+        is >> blmode >> nucmode >> shiftmode;
+        is >> pihypermean >> pihyperinvconc;
+        is >> shiftprobmean >> shiftprobinvconc;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -122,9 +132,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         is >> burnin;
         is >> every >> until >> saveall >> writegenedata >> size;
 
-        if (modeltype == "MULTIGENEDIFFSELSPARSE") {
+        if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
             model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, myid, nprocs);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, shiftmode, pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -153,10 +163,11 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
             param_os << ncond << '\t' << nlevel << '\t' << codonmodel << '\n';
             param_os << epsilon << '\t' << fitnessshape << '\n';
             param_os << fitnesscentermode << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << shiftmode << '\n';
+            param_os << pihypermean << '\t' << pihyperinvconc << '\t' << shiftprobmean << '\t' << shiftprobinvconc << '\n';
             param_os << 0 << '\n';
             param_os << burnin << '\t';
-            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t'
-                     << size << '\n';
+            param_os << every << '\t' << until << '\t' << saveall << '\t' << writegenedata << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
         } else {
             GetModel()->SlaveToStream();
@@ -168,19 +179,27 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
 
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
+        cerr << writegenedata << '\t' << ncond << '\n';
         if (writegenedata) {
-            for (int k = 0; k < ncond; k++) {
-                ostringstream s;
-                s << name << "_" << k;
-                if (k) {
-                    ofstream pos((s.str() + ".geneshiftprob").c_str());
+            if (ncond > 1)  {
+                for (int k = 0; k < ncond; k++) {
+                    ostringstream s;
+                    s << name << "_" << k;
+                    if (k) {
+                        ofstream pos((s.str() + ".geneshiftprob").c_str());
+                        ofstream cos((s.str() + ".geneshiftcounts").c_str());
+                        if (writegenedata == 2) {
+                            ofstream tos((s.str() + ".shifttoggle").c_str());
+                        }
+                    }
                     if (writegenedata == 2) {
-                        ofstream tos((s.str() + ".shifttoggle").c_str());
+                        ofstream fos((s.str() + ".fitness").c_str());
                     }
                 }
-                if (writegenedata == 2) {
-                    ofstream fos((s.str() + ".fitness").c_str());
-                }
+                ofstream os((name + ".genemaskcounts").c_str());
+            }
+            else    {
+                ofstream os((name + ".geneom").c_str());
             }
         }
     }
@@ -188,10 +207,18 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     void SavePoint() override {
         MultiGeneChain::SavePoint();
         if (writegenedata) {
-            if (!myid) {
-                GetModel()->MasterTraceSiteStats(name, writegenedata);
-            } else {
-                GetModel()->SlaveTraceSiteStats(writegenedata);
+            if (ncond > 1)  {
+                if (!myid) {
+                    GetModel()->MasterTraceSiteStats(name, writegenedata);
+                } else {
+                    GetModel()->SlaveTraceSiteStats(writegenedata);
+                }
+            }
+            else    {
+                if (! myid) {
+                    ofstream os((name + ".geneom").c_str(), ios_base::app);
+                    GetModel()->TracePredictedDNDS(os);
+                }
             }
         }
     }
@@ -221,8 +248,55 @@ int main(int argc, char *argv[]) {
     string name = "";
     MultiGeneDiffSelDoublySparseChain *chain = 0;
 
+    // command syntax
+    if (argc == 1)  {
+        if (! myid)	{
+            cerr << '\n';
+            cerr << "The multi-gene version of the doubly-sparse differential selection model.\n";
+            cerr << "see diffseldsparse for a more detailed description of the single-gene version.\n";
+            cerr << "\n";
+            cerr << "the key gene-specific parameters, for which shrinkage across genes is implemented, are:\n";
+            cerr << " - branch lengths\n";
+            cerr << " - nucleotide mutation rates\n";
+            cerr << " - shiftprob_gk, for gene g, condition k=1..K-1 (specifying the probability that an amino-acid at any site in gene g undergoes a shift in condition k)\n";
+            cerr << "concerning shiftprob_gk, the prior distribution is:\n";
+            cerr << " - with prob (1-pi_k), shiftprob_gk = 0 (i.e. the gene does not have any site showing differential effect in condition k)\n";
+            cerr << " - with prob pi_k, shiftprob_gk ~ Beta(shiftprobhypermean_k, shiftprobhyperinvconc_k)\n";
+            cerr << "thus, the probability that a gene is under differential selection is given by the post prob that shiftprob_k > 0\n";
+            cerr << "by default, the hyperparameters pi_k, shiftprobhypermean_k, shiftprobhyperinvconc_k are estimated across genes\n";
+            cerr << "they can also be fixed a priori\n";
+            cerr << '\n';
+            cerr << "command: mpirun -np <n> multigenediffseldsparse -d <alignment_list> -t <tree> -ncond <ncond> <chainname>\n";
+            cerr << '\n';
+            cerr << "chain options:\n";
+            cerr << "\t-f: force overwrite of already existing chain\n";
+            cerr << "\t-x <every> <until>: saving frequency and stopping time "
+                    "(default: every = 1, until = -1)\n";
+            cerr << "\t-g: without gene-specific output files (.geneshiftprob and geneshiftcounts)\n";
+            cerr << "\t+g: with gene-specific output files\n";
+            cerr << "\t+G: with gene- and site-specific output files\n";
+            // cerr << "\tin all cases, complete information about chain state is saved "
+            //         "in .chain and .param files\n";
+            // cerr << "\t.chain: one line for each cycle\n";
+            // cerr << "\t.param: state at the end of last cycle\n";
+            cerr << '\n';
+            cerr << "model options:\n";
+            cerr << "\t-ncond <ncond>:  specify number of conditions\n";
+            cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
+            cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi_k for all k=1..K-1\n";
+            cerr << "\t                                (default: hypermean = 0.1, hyperinvconc = 0.1)\n";
+            cerr << "\t-shiftprob <hypermean> <hyperinvconc>: set values of shiftprobhypermean_k and shiftprobhyperinvconc_k for all k=1..K-1\n";
+            cerr << "\t                                       (default: hypermean = 0.1, hyperinvconc = 0.1)\n";
+            cerr << "\t                                       (if hyperinvconc == 0, then shiftprob_gk is fixed to hypermean for all genes and conditions)\n";
+            cerr << '\n';
+        }
+        MPI_Finalize();
+        exit(0);
+    }
+
     // starting a chain from existing files
-    if (argc == 2 && argv[1][0] != '-') {
+    else if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
         chain = new MultiGeneDiffSelDoublySparseChain(name, myid, nprocs);
     }
@@ -243,6 +317,13 @@ int main(int argc, char *argv[]) {
         double fitnessshape = 20;
         double epsilon = -1;
         int fitnesscentermode = 3;
+        int blmode = 1;
+        int nucmode = 1;
+        int shiftmode = 1;
+        double pihypermean = 0.1;
+        double pihyperinvconc = 0.1;
+        double shiftprobmean = 0.1;
+        double shiftprobinvconc = 0.1;
 
         try {
             if (argc == 1) {
@@ -295,15 +376,58 @@ int main(int argc, char *argv[]) {
                     } else {
                         epsilon = atof(argv[i]);
                     }
+                } else if (s == "-pi")    {
+                    i++;
+                    pihypermean = atof(argv[i]);
+                    i++;
+                    pihyperinvconc = atof(argv[i]);
+                } else if (s == "-shiftprob")   {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        shiftmode = 1;
+                    } else  {
+                        shiftmode = 0;
+                        if (tmp != "uninf")  {
+                            shiftprobmean = atof(argv[i]);
+                            i++;
+                            shiftprobinvconc = atof(argv[i]);
+                        }
+                    }
+                } else if (s == "-nucrates") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        nucmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        nucmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                } else if (s == "-bl") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shrunken") {
+                        blmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        blmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
                 } else if (s == "-g") {
                     writegenedata = 0;
                 } else if (s == "+g") {
                     writegenedata = 1;
                 } else if (s == "+G") {
                     writegenedata = 2;
+                // burnin de-activated
+                /*
                 } else if (s == "-b") {
                     i++;
                     burnin = atoi(argv[i]);
+                */
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -323,13 +447,17 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            cerr << "error in command\n";
-            cerr << '\n';
-            exit(1);
+            if (! myid) {
+                cerr << "error in command\n";
+                cerr << '\n';
+            }
+            MPI_Finalize();
+            exit(0);
         }
 
         chain = new MultiGeneDiffSelDoublySparseChain(
-            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, fitnesscentermode,
+            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, fitnesscentermode, blmode, nucmode, shiftmode,
+            pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc,
             burnin, every, until, saveall, writegenedata, name, force, myid, nprocs);
     }
 

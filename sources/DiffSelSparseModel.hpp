@@ -93,6 +93,7 @@ class DiffSelSparseModel : public ProbModel {
     int blmode;
     int nucmode;
     int fitnesshypermode;
+    int withtoggle;
 
     // -----
     // external parameters
@@ -203,6 +204,7 @@ class DiffSelSparseModel : public ProbModel {
         : hyperfitnesssuffstat(Naa) {
         codonmodel = incodonmodel;
 
+        withtoggle = 0;
         blmode = 0;
         nucmode = 0;
         fitnesshypermode = 3;
@@ -292,6 +294,9 @@ class DiffSelSparseModel : public ProbModel {
         shiftprob.assign(Ncond - 1, 0.1);
 
         toggle = new BidimIIDMultiBernoulli(Ncond - 1, Nsite, Naa, shiftprob);
+        if (!withtoggle) {
+            toggle->Reset();
+        }
 
         fitnessprofile = new DiffSelSparseFitnessArray(*fitness, *toggle, Nlevel);
 
@@ -336,6 +341,9 @@ class DiffSelSparseModel : public ProbModel {
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetFitnessHyperMode(int in) { fitnesshypermode = in; }
+
+    //! \brief set toggle status: 0: toggles all fixed to 0, 1:random toggles,i
+    void SetWithToggles(int in) { withtoggle = in; }
 
     // ------------------
     // Update system
@@ -674,8 +682,10 @@ class DiffSelSparseModel : public ProbModel {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness();
                 CompMoveFitness();
-                MoveFitnessShifts();
-                MoveShiftToggles();
+                if (withtoggle) {
+                    MoveFitnessShifts();
+                    MoveShiftToggles();
+                }
                 if (fitnesshypermode < 2) {
                     MoveFitnessHyperParameters();
                 }

@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= sparseaamutsel sparseaasubsel sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigenecodonm2a multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
+ALL= multigenesiteom siteom readmultigenediffseldsparse readmultigeneaamutselddp multigenecodonm2a sparseaamutsel sparseaasubsel sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel multigenediffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -126,6 +126,14 @@ dpom$(EXEEXT): $(PROGSDIR)/dpom$(EXEEXT)
 $(PROGSDIR)/dpom$(EXEEXT): DPOmega.o $(OBJS)
 	$(CC) DPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
+readmultigenediffseldsparse$(EXEEXT): $(PROGSDIR)/readmultigenediffseldsparse$(EXEEXT)
+$(PROGSDIR)/readmultigenediffseldsparse$(EXEEXT): ReadMultiGeneDiffSelDoublySparse.o $(OBJS)
+	$(CC) ReadMultiGeneDiffSelDoublySparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readmultigeneaamutselddp$(EXEEXT): $(PROGSDIR)/readmultigeneaamutselddp$(EXEEXT)
+$(PROGSDIR)/readmultigeneaamutselddp$(EXEEXT): ReadMultiGeneAAMutSelDSBDPOmega.o $(OBJS)
+	$(CC) ReadMultiGeneAAMutSelDSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
 readmultigeneglobom$(EXEEXT): $(PROGSDIR)/readmultigeneglobom$(EXEEXT)
 $(PROGSDIR)/readmultigeneglobom$(EXEEXT): ReadMultiGeneSingleOmega.o $(OBJS)
 	$(CC) ReadMultiGeneSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
@@ -158,9 +166,13 @@ readglobom$(EXEEXT): $(PROGSDIR)/readglobom$(EXEEXT)
 $(PROGSDIR)/readglobom$(EXEEXT): ReadSingleOmega.o $(OBJS)
 	$(CC) ReadSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-gammasiteom$(EXEEXT): $(PROGSDIR)/gammasiteom$(EXEEXT)
-$(PROGSDIR)/gammasiteom$(EXEEXT): GammaSiteOmega.o $(OBJS)
-	$(CC) GammaSiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+multigenesiteom$(EXEEXT): $(PROGSDIR)/multigenesiteom$(EXEEXT)
+$(PROGSDIR)/multigenesiteom$(EXEEXT): MultiGeneSiteOmega.o $(OBJS)
+	$(CC) MultiGeneSiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+siteom$(EXEEXT): $(PROGSDIR)/siteom$(EXEEXT)
+$(PROGSDIR)/siteom$(EXEEXT): SiteOmega.o $(OBJS)
+	$(CC) SiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readdiffseldsparse$(EXEEXT): $(PROGSDIR)/readdiffseldsparse$(EXEEXT)
 $(PROGSDIR)/readdiffseldsparse$(EXEEXT): ReadDiffSelDoublySparse.o $(OBJS)
@@ -185,6 +197,10 @@ $(PROGSDIR)/diffselsparse$(EXEEXT): DiffSelSparse.o $(OBJS)
 multigenediffselsparse$(EXEEXT): $(PROGSDIR)/multigenediffselsparse$(EXEEXT)
 $(PROGSDIR)/multigenediffselsparse$(EXEEXT): MultiGeneDiffSelSparse.o $(OBJS)
 	$(CC) MultiGeneDiffSelSparse.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigenediffsel$(EXEEXT): $(PROGSDIR)/multigenediffsel$(EXEEXT)
+$(PROGSDIR)/multigenediffsel$(EXEEXT): MultiGeneDiffSel.o $(OBJS)
+	$(CC) MultiGeneDiffSel.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigenediffseldsparse$(EXEEXT): $(PROGSDIR)/multigenediffseldsparse$(EXEEXT)
 $(PROGSDIR)/multigenediffseldsparse$(EXEEXT): MultiGeneDiffSelDoublySparse.o $(OBJS)

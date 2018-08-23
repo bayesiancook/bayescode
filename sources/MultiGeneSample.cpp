@@ -60,7 +60,7 @@ void MultiGeneSample::MasterPostPred() {
         cerr << '.';
         GetNextPoint();
         ostringstream s;
-        s << name << "_" << i << ".ali";
+        s << "ppred" << name << "_" << i << "_";
         model->PostPred(s.str());
         MPI_Barrier(MPI_COMM_WORLD);
     }
@@ -71,7 +71,7 @@ void MultiGeneSample::SlavePostPred() {
     for (int i = 0; i < size; i++) {
         GetNextPoint();
         ostringstream s;
-        s << name << "_" << i << ".ali";
+        s << "ppred" << name << "_" << i << "_";
         model->PostPred(s.str());
         MPI_Barrier(MPI_COMM_WORLD);
     }

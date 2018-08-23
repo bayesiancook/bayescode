@@ -83,6 +83,14 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode,
                              int inpurwmode, int inposwmode);
 
+    void SetBLSamplingMode(int inmode)  {
+        blsamplemode = inmode;
+    }
+
+    void SetModalMixturePrior(int in)  {
+        modalprior = in;
+    }
+
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
                                    double indposomhypermean, double indposomhyperinvshape,
                                    double inpurwhypermean, double inpurwhyperinvconc,
@@ -244,6 +252,20 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
         return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
+    // logprob for moving branch-length hyperparameters, integrated over gene-specific branchlengths
+    double BranchLengthsIntegratedHyperLogProb() const {
+        return BranchLengthsHyperInvShapeLogPrior() + GeneBranchLengthsHyperSuffStatLogProb();
+    }
+
+    // log prob of substitution mappings across genes and branches analytically integrated over branch lengths
+    double GeneBranchLengthsHyperSuffStatLogProb() const;
+
+    // log prob of substitution mappings across genes for a given branch analytically integrated over branch length
+    double GeneBranchLengthsHyperSuffStatLogProb(int branch) const;
+
+    // log prob of substitution mapping for a given gene and over a given branch analytically integrated over branch length
+    double GeneBranchLengthsHyperSuffStatLogProb(int gene, int branch) const;
+
     // log prob for moving mixture hyper params
     double MixtureHyperLogProb() const {
         return MixtureHyperLogPrior() + MixtureHyperSuffStatLogProb();
@@ -273,9 +295,16 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void ResampleBranchLengths();
     void MoveLambda();
 
+    // resampling gene-specific branch lengths
+    void ResampleGeneBranchLengths();
+
     // moving hyperparams for gene-specific branch lengths
     void MoveBranchLengthsHyperParameters();
     double BranchLengthsHyperScalingMove(double tuning, int nrep);
+
+    // moving hyperparams for gene-specific branch lengths, integrated version
+    void MoveBranchLengthsHyperParametersIntegrated();
+    double BranchLengthsHyperScalingMoveIntegrated(double tuning, int nrep);
 
     // moving global nuc rates
     void MoveNucRates();
@@ -324,6 +353,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void MasterSendBranchLengthsHyperParameters();
     void SlaveReceiveBranchLengthsHyperParameters();
 
+    void GeneResampleEmptyBranches();
+
     void MasterSendNucRatesHyperParameters();
     void SlaveReceiveNucRatesHyperParameters();
 
@@ -335,6 +366,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // branch lengths
     void SlaveSendBranchLengthsSuffStat();
     void MasterReceiveBranchLengthsSuffStat();
+
+    void CollectGeneBranchLengthsSuffStat();
+    void SlaveSendGeneBranchLengthsSuffStat();
+    void MasterReceiveGeneBranchLengthsSuffStat();
 
     void SlaveSendNucPathSuffStat();
     void MasterReceiveNucPathSuffStat();
@@ -385,6 +420,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     GammaWhiteNoiseArray *branchlengtharray;
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
     GammaSuffStatBranchArray *lengthhypersuffstatarray;
+
+    PoissonSuffStatTreeArray* lengthpathsuffstattreearray;
 
     vector<double> mixhyperparam;
 
@@ -443,11 +480,14 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // 1: free and shrinkage (free hyper parameters)
     // 2: shared across genes
     int blmode;
+    int blsamplemode;
     int nucmode;
     int purommode;
     int dposommode;
     int purwmode;
     int poswmode;
+
+    int modalprior;
 
     int ncycle;
 

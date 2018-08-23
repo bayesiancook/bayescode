@@ -547,6 +547,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    void PostPred(string name) override {
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
+        baseweight->SetKappa(basekappa);
+        weight->SetKappa(kappa);
+        UpdateBaseOccupancies();
+        UpdateOccupancies();
+        UpdateMatrices();
+        phyloprocess->PostPredSample(name);
+    }
+
     //-------------------
     // Priors and likelihood
     //-------------------
@@ -686,14 +698,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //-------------------
 
     double PolySuffStatLogProb() const {
+        return 0;
         // sum over all sites
     }
 
     double PolySuffStatLogProb(int site) const {
+        return 0;
         // should have information about fixed states
     }
 
     double ComponentPolySuffStatLogProb(int k) const {
+        return 0;
         // sum over all sites allocated to component k
     }
 
@@ -937,7 +952,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             tot += exp(logparray[i] - max);
             cumulprob[i] = tot;
         }
-        double logp1 = log(tot) + max;
+        double logp1 = log(tot/ntry) + max;
 
         // Multiple-Try Gibbs version
         /*
@@ -1454,6 +1469,18 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     //! return entropy of vector of equilibrium nucleotide composition
     double GetNucStatEntropy() const { return Random::GetEntropy(nucrelrate); }
+
+    double GetPredictedDNDS() const  {
+
+        double mean = 0;
+        for (int i=0; i<Ncat; i++) {
+            if (occupancy->GetVal(i))   {
+                mean += occupancy->GetVal(i) * (*componentcodonmatrixarray)[i].GetPredictedDNDS();
+            }
+        }
+        mean /= Nsite;
+        return mean;
+    }
 
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";

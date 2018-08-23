@@ -1,38 +1,43 @@
 #include <cmath>
 #include <fstream>
 #include "Chain.hpp"
-#include "GammaSiteOmegaModel.hpp"
+#include "SiteOmegaModel.hpp"
 using namespace std;
 
-class GammaSiteOmegaChain : public Chain {
+/**
+ * \brief Chain object for running an MCMC under SiteOmegaModel
+ */
+
+class SiteOmegaChain : public Chain {
   private:
     // Chain parameters
-    string modeltype, datafile, treefile;
+    string modeltype;
+    string datafile, treefile;
 
   public:
-    GammaSiteOmegaModel *GetModel() { return static_cast<GammaSiteOmegaModel *>(model); }
-
-    string GetModelType() override { return modeltype; }
-
-    GammaSiteOmegaChain(string indatafile, string intreefile, int inevery, int inuntil,
-                        string inname, int force)
-        : modeltype("GAMMASITEOMEGA"), datafile(indatafile), treefile(intreefile) {
+    //! constructor for a new chain: datafile, treefile, saving frequency, final
+    //! chain size, chain name and overwrite flag -- calls New
+    SiteOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
+                     int force)
+        : modeltype("SITEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
         name = inname;
         New(force);
     }
 
-    GammaSiteOmegaChain(string filename) {
+    //! constructor for re-opening an already existing chain from file -- calls
+    //! Open
+    SiteOmegaChain(string filename) {
         name = filename;
         Open();
         Save();
     }
 
     void New(int force) override {
-        model = new GammaSiteOmegaModel(datafile, treefile);
+        model = new SiteOmegaModel(datafile, treefile);
         GetModel()->Allocate();
-        GetModel()->Unfold();
+        GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -55,8 +60,8 @@ class GammaSiteOmegaChain : public Chain {
         }
         is >> every >> until >> size;
 
-        if (modeltype == "GAMMASITEOMEGA") {
-            model = new GammaSiteOmegaModel(datafile, treefile);
+        if (modeltype == "SITEOMEGA") {
+            model = new SiteOmegaModel(datafile, treefile);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -65,7 +70,6 @@ class GammaSiteOmegaChain : public Chain {
         GetModel()->Allocate();
         model->FromStream(is);
         model->Update();
-        GetModel()->Unfold();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
@@ -77,35 +81,41 @@ class GammaSiteOmegaChain : public Chain {
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
+    }
 
-        ofstream pos((name + ".siteom").c_str(), ios_base::app);
-        GetModel()->TraceSiteOmega(pos);
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream os((name + ".siteom").c_str(), ios_base::app);
+        GetModel()->TraceOmega(os);
     }
 
     void MakeFiles(int force) override {
         Chain::MakeFiles(force);
-        ofstream pos((name + ".sitepp").c_str());
+        ofstream os((name + ".siteom").c_str());
     }
+
+    //! return the model, with its derived type (unlike ProbModel::GetModel)
+    SiteOmegaModel *GetModel() { return static_cast<SiteOmegaModel *>(model); }
+
+    //! return model type
+    string GetModelType() override { return modeltype; }
 };
 
 int main(int argc, char *argv[]) {
+    string name = "";
+    SiteOmegaChain *chain = 0;
+
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
-        string name = argv[1];
-        GammaSiteOmegaChain *chain = new GammaSiteOmegaChain(name);
-        cerr << "chain " << name << " started\n";
-        chain->Start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize()
-             << " points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        name = argv[1];
+        chain = new SiteOmegaChain(name);
     }
 
     // new chain
     else {
         string datafile = "";
         string treefile = "";
-        string name = "";
+        name = "";
         int force = 1;
         int every = 1;
         int until = -1;
@@ -146,18 +156,18 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
+            cerr << "siteom -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        GammaSiteOmegaChain *chain =
-            new GammaSiteOmegaChain(datafile, treefile, every, until, name, force);
-        cerr << "chain " << name << " started\n";
-        chain->Start();
-        cerr << "chain " << name << " stopped\n";
-        cerr << chain->GetSize()
-             << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
-        chain->GetModel()->Trace(cerr);
+        chain = new SiteOmegaChain(datafile, treefile, every, until, name, force);
     }
+
+    cerr << "chain " << name << " started\n";
+    chain->Start();
+    cerr << "chain " << name << " stopped\n";
+    cerr << chain->GetSize()
+         << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
+    chain->GetModel()->Trace(cerr);
 }

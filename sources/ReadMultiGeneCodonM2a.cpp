@@ -10,12 +10,13 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
   private:
     string modeltype, datafile, treefile;
     int writegenedata;
-    int blmode, nucmode, purommode, dposommode, purwmode, poswmode;
+    int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
     double puromhypermean, puromhyperinvconc;
     double dposomhypermean, dposomhyperinvshape;
     double purwhypermean, purwhyperinvconc;
     double poswhypermean, poswhyperinvconc;
+    int modalprior;
 
   public:
     string GetModelType() { return modeltype; }
@@ -42,16 +43,17 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> writegenedata;
-        is >> blmode >> nucmode >> dposommode >> purwmode >> poswmode;
+        is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
         is >> puromhypermean >> puromhyperinvconc;
         is >> dposomhypermean >> dposomhyperinvshape;
         is >> purwhypermean >> purwhyperinvconc;
         is >> poswhypermean >> poswhyperinvconc;
+        is >> modalprior;
 
         int check;
         is >> check;
-        if (check) {
+        if (check)  {
             cerr << "Error when reading model\n";
             exit(1);
         }
@@ -62,9 +64,11 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
+            GetModel()->SetBLSamplingMode(blsamplemode);
             GetModel()->SetMixtureHyperParameters(
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
+            GetModel()->SetModalMixturePrior(modalprior);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

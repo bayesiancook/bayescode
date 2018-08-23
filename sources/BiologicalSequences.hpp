@@ -5,8 +5,6 @@
 #include <iostream>
 #include <string>
 
-static const std::string Path = "";
-
 enum DataType { DNA = 0, RNA = 1, Protein = 2, Other = 3 };
 
 const int RYN = 2;

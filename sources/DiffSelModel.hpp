@@ -83,9 +83,11 @@ class DiffSelModel : public ProbModel {
     // model selectors
     // -----
 
+    int codonmodel;
+    int blmode;
+    int nucmode;
     int fixglob;
     int fixvar;
-    int codonmodel;
 
     // -----
     // external parameters
@@ -123,13 +125,21 @@ class DiffSelModel : public ProbModel {
     //  model structure
     // -----
 
-    // branch lengths iid expo (gamma of shape 1 and scale lambda)
-    // where lambda is a hyperparameter
+    // branch lengths
     double lambda;
-    BranchIIDGamma *branchlength;
+    BranchIIDGamma *blhypermean;
+    double blhyperinvshape;
+    GammaWhiteNoise *branchlength;
+    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary
-    // probabilities)
+    // probabilities) hyperparameters
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    // parameters
     std::vector<double> nucrelrate;
     std::vector<double> nucstat;
     GTRSubMatrix *nucmatrix;
@@ -165,14 +175,6 @@ class DiffSelModel : public ProbModel {
     // path suff stats across conditions and sites
     PathSuffStatBidimArray *suffstatarray;
 
-    // Poisson suffstats for substitution histories, as a function of branch
-    // lengths
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-
-    // suff stats branch lengths, as a function of their hyper parameter lambda
-    // (bl are iid gamma, of scale parameter lambda)
-    GammaSuffStat hyperlengthsuffstat;
-
   public:
     //! \brief constructor
     //!
@@ -194,6 +196,10 @@ class DiffSelModel : public ProbModel {
     //! 2017)
     DiffSelModel(const std::string &datafile, const std::string &treefile, int inNcond,
                  int inNlevel, int infixglob, int infixvar, int incodonmodel) {
+
+        blmode = 0;
+        nucmode = 0;
+
         fixglob = infixglob;
         if (!fixglob) {
             cerr << "error: free hyperparameters for baseline (global profile) not "
@@ -267,13 +273,22 @@ class DiffSelModel : public ProbModel {
 
         // branch lengths
         lambda = 10;
-        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
+        blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
+        blhypermean->SetAllBranches(1.0 / lambda);
+        blhyperinvshape = 1.0;
+        branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
-        // nucleotide matrix
-        nucrelrate.assign(Nrr, 1.0 / Nrr);
+        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
+
+        // nucleotide mutation matrix
+        nucrelrate.assign(Nrr, 0);
         Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
-        nucstat.assign(Nnuc, 1.0 / Nnuc);
+        nucstat.assign(Nnuc, 0);
         Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
         nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
@@ -320,9 +335,72 @@ class DiffSelModel : public ProbModel {
         suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
     }
 
+    //! \brief set estimation method for branch lengths
+    //!
+    //! Used in a multigene context.
+    //! - mode == 2: global
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
+    void SetBLMode(int in) { blmode = in; }
+
+    //! \brief set estimation method for nuc rates
+    //!
+    //! Used in a multigene context.
+    //! - mode == 2: global
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! - mode == 0: gene-specific, with fixed hyperparameters
+    void SetNucMode(int in) { nucmode = in; }
+
+
     // ------------------
     // Update system
     // ------------------
+
+    //! \brief set branch lengths to a new value
+    //!
+    //! Used in a multigene context.
+    void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
+        branchlength->Copy(inbranchlength);
+    }
+
+    //! get a copy of branch lengths into array given as argument
+    void GetBranchLengths(BranchArray<double> &inbranchlength) const {
+        inbranchlength.Copy(*branchlength);
+    }
+
+    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
+    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
+                                         double inblinvshape) {
+        blhypermean->Copy(inblmean);
+        blhyperinvshape = inblinvshape;
+        branchlength->SetShape(1.0 / blhyperinvshape);
+    }
+
+    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
+    void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
+                                    double innucrelratehyperinvconc,
+                                    const std::vector<double> &innucstathypercenter,
+                                    double innucstathyperinvconc) {
+        nucrelratehypercenter = innucrelratehypercenter;
+        nucrelratehyperinvconc = innucrelratehyperinvconc;
+        nucstathypercenter = innucstathypercenter;
+        nucstathyperinvconc = innucstathyperinvconc;
+    }
+
+    //! set nucleotide rates to a new value (multi-gene analyses)
+    void SetNucRates(const std::vector<double> &innucrelrate,
+                     const std::vector<double> &innucstat) {
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
+        CorruptMatrices();
+    }
+
+    //! copy nucleotide rates into vectors given as arguments (multi-gene
+    //! analyses)
+    void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
+        innucrelrate = nucrelrate;
+        innucstat = nucstat;
+    }
 
     //! \brief dummy function that does not do anything.
     //!
@@ -354,7 +432,9 @@ class DiffSelModel : public ProbModel {
     }
 
     void Update() override {
-        branchlength->SetScale(lambda);
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
         UpdateAll();
         ResampleSub(1.0);
     }
@@ -388,6 +468,13 @@ class DiffSelModel : public ProbModel {
     double GetLogPrior() const {
         double total = 0;
 
+        if (blmode < 2) {
+            total += BranchLengthsLogPrior();
+        }
+        if (nucmode < 2) {
+            total += NucRatesLogPrior();
+        }
+
         // branchlengths
         total += BranchLengthsHyperLogPrior();
         total += BranchLengthsLogPrior();
@@ -409,21 +496,24 @@ class DiffSelModel : public ProbModel {
 
     //! \brief log prior over hyperparameter of prior over branch lengths (here,
     //! lambda ~ exponential of rate 10)
-    double BranchLengthsHyperLogPrior() const {
-        // exponential of mean 10
-        return -log(10.0) - lambda / 10;
-    }
+    double BranchLengthsHyperLogPrior() const { return -log(10.0) - lambda / 10; }
 
     //! log prior over branch lengths (iid exponential of rate lambda)
-    double BranchLengthsLogPrior() const { return branchlength->GetLogProb(); }
+    double BranchLengthsLogPrior() const {
+        double ret = branchlength->GetLogProb();
+        if (blmode == 0) {
+            ret += BranchLengthsHyperLogPrior();
+        }
+        return ret;
+    }
 
-    //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq.
-    //! freqs. (nucstat) -- uniform Dirichlet in both cases
+    //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
-        // uniform on relrates and nucstat
         double total = 0;
-        total += Random::logGamma((double)Nnuc);
-        total += Random::logGamma((double)Nrr);
+        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
+                                             1.0 / nucrelratehyperinvconc);
+        total +=
+            Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
     }
 
@@ -445,6 +535,11 @@ class DiffSelModel : public ProbModel {
     // ---------------
     // collecting suff stats
     // ---------------
+
+    //! \brief const access to array of length-pathsuffstats across branches
+    const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
+        return lengthpathsuffstatarray;
+    }
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
@@ -500,7 +595,8 @@ class DiffSelModel : public ProbModel {
     // Moves
     // ---------------
 
-    //! \brief complete MCMC move schedule
+    /*
+    // old move schedule
     double Move() override {
         int nrep0 = 3;
         int nrep = 20;
@@ -531,10 +627,52 @@ class DiffSelModel : public ProbModel {
         ResampleSub(1.0);
         return 1.0;
     }
+    */
+
+    //! \brief complete MCMC move schedule
+    double Move() override {
+        ResampleSub(1.0);
+        MoveParameters(3, 20);
+        return 1.0;
+    }
+
+    //! complete series of MCMC moves on all parameters (repeated nrep times)
+    void MoveParameters(int nrep0, int nrep) {
+        for (int rep0 = 0; rep0 < nrep0; rep0++) {
+            if (blmode < 2) {
+                MoveBranchLengths();
+            }
+
+            CollectPathSuffStat();
+            UpdateAll();
+
+            for (int rep = 0; rep < nrep; rep++) {
+                MoveBaseline();
+                UpdateAll();
+                MoveDelta();
+                if (!fixvar) {
+                    MoveVarSel();
+                }
+            }
+
+            if (nucmode < 2) {
+                MoveNucRates();
+            }
+        }
+        UpdateAll();
+    }
 
     //! Gibbs resample substitution mappings conditional on current parameter
     //! configuration
     void ResampleSub(double frac) { phyloprocess->Move(frac); }
+
+    //! MCMC move schedule on branch lengths
+    void MoveBranchLengths() {
+        ResampleBranchLengths();
+        if (blmode == 0) {
+            MoveLambda();
+        }
+    }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
     //! value of lambda)
@@ -545,14 +683,14 @@ class DiffSelModel : public ProbModel {
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
     //! based on suffstats for branch lengths)
-    void MoveBranchLengthsHyperParameter() {
+    void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &DiffSelModel::BranchLengthsHyperLogProb,
                     &DiffSelModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &DiffSelModel::BranchLengthsHyperLogProb,
                     &DiffSelModel::NoUpdate, this);
-        branchlength->SetScale(lambda);
+        blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
@@ -686,12 +824,32 @@ class DiffSelModel : public ProbModel {
     }
 
     //! return number of sites
-    int GetNsite() { return Nsite; }
+    int GetNsite() const { return Nsite; }
     //! return number of conditions
-    int GetNcond() { return Ncond; }
+    int GetNcond() const { return Ncond; }
 
     const vector<vector<double>> &GetCondDeltaArray(int k) const {
         return delta->GetSubArray(k - 1);
+    }
+
+    //! get a copy of baseline array
+    void GetBaselineArray(double* array) const  {
+        int j = 0;
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                array[j++] = baseline->GetVal(i)[a];
+            }
+        }
+    }
+
+    //! get a copy of delta array for condition k
+    void GetDeltaArray(int k, double* array) const  {
+        int j = 0;
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                array[j++] = delta->GetVal(k-1,i)[a];
+            }
+        }
     }
 
     //-------------------
@@ -720,26 +878,102 @@ class DiffSelModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
+    //! trace the current value of baselines, across all sites and all amino-acids
+    void TraceBaseline(ostream& os) const   {
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                os << baseline->GetVal(i)[a] << '\t';
+            }
+        }
+        os << '\n';
+    }
+
+    //! trace the current value of deltas, across all sites and all amino-acids,
+    //! under condition k (one single line in output stream)
+    void TraceDelta(int k, ostream &os) const {
+        for (int i = 0; i < GetNsite(); i++) {
+            for (int a = 0; a < Naa; a++) {
+                os << delta->GetVal(k - 1, i)[a] << '\t';
+            }
+        }
+        os << '\n';
+    }
+
     void Monitor(ostream &) const override {}
 
     void FromStream(istream &is) override {
-        is >> lambda;
-        is >> *branchlength;
-        is >> nucrelrate;
-        is >> nucstat;
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2) {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
         is >> *baseline;
         is >> *varsel;
         is >> *delta;
     }
 
     void ToStream(ostream &os) const override {
-        os << lambda << '\n';
-        os << *branchlength << '\n';
-        os << nucrelrate << '\n';
-        os << nucstat << '\n';
+        if (blmode < 2) {
+            os << lambda << '\t';
+            os << *branchlength << '\t';
+        }
+        if (nucmode < 2) {
+            os << nucrelrate << '\t';
+            os << nucstat << '\t';
+        }
         os << *baseline << '\n';
         os << *varsel << '\n';
         os << *delta << '\n';
+    }
+
+    //! return size of model, when put into an MPI buffer (in multigene context)
+    unsigned int GetMPISize() const {
+        int size = 0;
+        if (blmode < 2) {
+            size++;
+            size += branchlength->GetMPISize();
+        }
+        if (nucmode < 2) {
+            size += nucrelrate.size();
+            size += nucstat.size();
+        }
+        size += varsel->GetMPISize();
+        size += baseline->GetMPISize();
+        size += delta->GetMPISize();
+        return size;
+    }
+
+    //! get complete parameter configuration from MPI buffer
+    void MPIGet(const MPIBuffer &is) {
+        if (blmode < 2) {
+            is >> lambda;
+            is >> *branchlength;
+        }
+        if (nucmode < 2) {
+            is >> nucrelrate;
+            is >> nucstat;
+        }
+        is >> *varsel;
+        is >> *baseline;
+        is >> *delta;
+    }
+
+    //! write complete current parameter configuration into MPI buffer
+    void MPIPut(MPIBuffer &os) const {
+        if (blmode < 2) {
+            os << lambda;
+            os << *branchlength;
+        }
+        if (nucmode < 2) {
+            os << nucrelrate;
+            os << nucstat;
+        }
+        os << *varsel;
+        os << *baseline;
+        os << *delta;
     }
 
   private:

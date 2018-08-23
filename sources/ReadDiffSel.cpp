@@ -143,6 +143,8 @@ int main(int argc, char *argv[]) {
     int siteoffset = 0;
     double cutoff = 0.90;
 
+    int ppred = 0;
+
     try {
         if (argc == 1) {
             throw(0);
@@ -151,19 +153,32 @@ int main(int argc, char *argv[]) {
         int i = 1;
         while (i < argc) {
             string s = argv[i];
-            if ((s == "-x") || (s == "-extract")) {
+            if (s == "-ppred") {
+                ppred = 1;
+            } else if ((s == "-x") || (s == "-extract")) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
+                if (!IsInt(s)) {
+                    throw(0);
+                }
                 burnin = atoi(argv[i]);
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
-                every = atoi(argv[i]);
-                i++;
-                if (i == argc) throw(0);
-                s = argv[i];
-                until = atoi(argv[i]);
+                if (IsInt(s)) {
+                    every = atoi(argv[i]);
+                    i++;
+                    if (i == argc) throw(0);
+                    s = argv[i];
+                    if (IsInt(s)) {
+                        until = atoi(argv[i]);
+                    } else {
+                        i--;
+                    }
+                } else {
+                    i--;
+                }
             } else if (s == "-c") {
                 i++;
                 cutoff = atof(argv[i]);
@@ -188,5 +203,9 @@ int main(int argc, char *argv[]) {
     }
 
     DiffSelSample *sample = new DiffSelSample(name, burnin, every, until);
-    sample->ReadPP(cutoff, siteoffset);
+    if (ppred) {
+        sample->PostPred();
+    } else  {
+        sample->ReadPP(cutoff, siteoffset);
+    }
 }
