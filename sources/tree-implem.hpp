@@ -63,15 +63,22 @@ std::vector<Element> branch_container_from_parser(TreeParser& parser,
 std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<std::string>& taxa) {
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
-    std::map<std::string, int> mapping; // node name -> node index mapping
+    std::map<std::string, int> mapping;  // node name -> node index mapping
+    std::set<std::string> taxa_in_tree;  // set of taxa in tree to check consistency
     for (NodeIndex i = 0; i < NodeIndex(tree.nb_nodes()); i++) {
         auto node_name = tree.tag(i, "name");
         if (node_name != "") {
             mapping[node_name] = i;
+            taxa_in_tree.insert(node_name);
         }
     }
+    if (taxa_in_tree != std::set<std::string>{taxa.begin(), taxa.end()}) {
+        std::cerr
+            << "Error: taxa list provided to taxa_index_from_parser does not match taxa in tree.\n";
+        exit(1);
+    }
     std::vector<int> result(taxa.size(), -1);
-    for (size_t i=0; i<taxa.size(); i++) {
+    for (size_t i = 0; i < taxa.size(); i++) {
         result.at(i) = mapping.at(taxa.at(i));
     }
     return result;
@@ -82,6 +89,10 @@ class TreeElementVector {
     std::vector<Element> v_;
     std::vector<int> index_;
 
+    friend TreeElementVector<Element> taxa_container_from_parser(
+        TreeParser& parser, const std::vector<std::string>& taxa,
+        Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&));
+
   public:
     using NodeIndex = AnnotatedTree::NodeIndex;
 
@@ -89,3 +100,17 @@ class TreeElementVector {
     const std::vector<Element>& vector() const { return v_; }
     NodeIndex topology_index(int vector_index) const { return index_.at(vector_index); }
 };
+
+template <class Element>
+TreeElementVector<Element> taxa_container_from_parser(TreeParser& parser,
+                                                      const std::vector<std::string>& taxa,
+                                                      Element (*init)(AnnotatedTree::NodeIndex,
+                                                                      const AnnotatedTree&)) {
+    TreeElementVector<Element> result;
+    result.index_ = taxa_index_from_parser(parser, taxa);
+    using NodeIndex = AnnotatedTree::NodeIndex;
+    auto& tree = parser.get_tree();
+    for (size_t i = 0; i < taxa.size(); i++) {
+        result.v_.push_back(init(NodeIndex(result.index_(i)), tree));
+    }
+}
