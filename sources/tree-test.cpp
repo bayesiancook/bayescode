@@ -36,4 +36,11 @@ int main() {
         std::cout << i << " ";
     }
     std::cout << "\n";
+
+    auto taxa_conditions = taxa_container_from_parser<int>(
+        parser, taxa, [](int i, const AnnotatedTree& t) { return stoi(t.tag(i, "Condition")); });
+    for (size_t i = 0; i < taxa_conditions.vector().size(); i++) {
+        std::cout << "Taxa " << taxa.at(i) << "\tcondition " << taxa_conditions.vector().at(i)
+                  << "\ttopology index " << taxa_conditions.topology_index(i) << "\n";
+    }
 }

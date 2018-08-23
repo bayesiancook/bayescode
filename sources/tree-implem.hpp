@@ -89,9 +89,10 @@ class TreeElementVector {
     std::vector<Element> v_;
     std::vector<int> index_;
 
-    friend TreeElementVector<Element> taxa_container_from_parser(
+    template <class E>
+    friend TreeElementVector<E> taxa_container_from_parser(
         TreeParser& parser, const std::vector<std::string>& taxa,
-        Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&));
+        E (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&));
 
   public:
     using NodeIndex = AnnotatedTree::NodeIndex;
@@ -111,6 +112,7 @@ TreeElementVector<Element> taxa_container_from_parser(TreeParser& parser,
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
     for (size_t i = 0; i < taxa.size(); i++) {
-        result.v_.push_back(init(NodeIndex(result.index_(i)), tree));
+        result.v_.push_back(init(NodeIndex(result.index_.at(i)), tree));
     }
+    return result;
 }
