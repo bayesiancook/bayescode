@@ -24,18 +24,25 @@ class SingleOmegaArgParse : public BaseArgParse {
 };
 
 class SingleOmegaTrace : public ChainComponent {
-    Tracer t;
-    std::string filename;
+    Tracer model_tracer;
+    Tracer stats_tracer;
+    std::string chain_name;
 
 public:
-    SingleOmegaTrace(SingleOmegaModel& m, std::string filename) : t(m), filename(filename) {}
+    SingleOmegaTrace(SingleOmegaModel& m, std::string chain_name) : model_tracer(m,&SingleOmegaModel::declare_model),
+                                                                    stats_tracer(m,&SingleOmegaModel::declare_stats),
+                                                                    chain_name(chain_name) {}
     void start() {
-        std::ofstream os{filename, std::ios_base::trunc};
-        t.write_header(os);
+        std::ofstream model_os{chain_name + ".chain", std::ios_base::trunc};
+        model_tracer.write_header(model_os);
+        std::ofstream stats_os{chain_name + ".trace", std::ios_base::trunc};
+        stats_tracer.write_header(stats_os);
     }
     void savepoint(int) {
-        std::ofstream os{filename, std::ios_base::app};
-        t.write_line(os);
+        std::ofstream model_os{chain_name + ".chain", std::ios_base::app};
+        model_tracer.write_line(model_os);
+        std::ofstream trace_os{chain_name + ".trace", std::ios_base::app};
+        stats_tracer.write_line(trace_os);
     }
 };
 
@@ -59,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     ConsoleLogger console_logger;
     ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
-    SingleOmegaTrace trace(*model, cmd.chain_name() + ".trace");
+    SingleOmegaTrace trace(*model, cmd.chain_name());
     chain_driver->add(*model);
     chain_driver->add(console_logger);
     chain_driver->add(chain_checkpoint);

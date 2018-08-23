@@ -9,7 +9,7 @@ class Tracer {
 
 public:
     template<class T>
-    Tracer(T& x) { x.declare_trace(*this); }
+    Tracer(T& x, void(T::*f)(Tracer&)) { (x.*f)(*this); }
     
     void write_header(std::ostream& os) const {
         int n = header_to_stream.size();
@@ -93,6 +93,16 @@ public:
             });
         data_to_stream.push_back([o, f](std::ostream& os) {
                 os << (o ->* f)();
+            });
+    }
+
+    void add(std::string name, std::function<double()> f) {
+        names.push_back(name);
+        header_to_stream.push_back([name](std::ostream& os) {
+                os << name;
+            });
+        data_to_stream.push_back([f](std::ostream& os) {
+                os << f();
             });
     }
 };

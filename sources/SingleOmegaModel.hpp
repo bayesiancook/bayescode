@@ -135,8 +135,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     void move(int it) override { Move(); }
 
-    void declare_trace(Tracer& t) {
-        t.add("LL", this, &SingleOmegaModel::GetLogLikelihood);
+    template<class C>
+    void declare_model(C& t) {
         t.add("omega", omega);
         t.add("nucstat", nucstat);
         t.add("nucrelrate", nucrelrate);
@@ -144,7 +144,17 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         t.add("branchlength", *branchlength);
     }
 
-    //! model allocation
+    template<class C>
+    void declare_stats(C& t) {
+        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
+        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
+        t.add("length", [this]() { return branchlength->GetTotalLength(); });
+        t.add("omega", omega);
+        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
+        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+    }
+
+              //! model allocation
     void Allocate() {
         // Branch lengths
 
