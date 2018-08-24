@@ -1,4 +1,5 @@
 #include <fstream>
+#include <map>
 #include "tree-implem.hpp"
 
 int main() {
