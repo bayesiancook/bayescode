@@ -9,6 +9,7 @@
 #include "ProbModel.hpp"
 #include "Tree.hpp"
 #include "Tracer.hpp"
+#include "Move.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -334,7 +335,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update() override {
+    void Update() {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -573,10 +574,10 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                    &SingleOmegaModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                    &SingleOmegaModel::NoUpdate, this);
+        Move::Scaling(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                      &SingleOmegaModel::NoUpdate, this);
+        Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                     &SingleOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -587,16 +588,16 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     void MoveNucRates() {
         CollectNucPathSuffStat();
 
-        ProfileMove(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
                     &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
                     &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
                     &SingleOmegaModel::TouchNucMatrix, this);
 
-        ProfileMove(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
                     &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
                     &SingleOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
