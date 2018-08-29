@@ -162,6 +162,10 @@ class SimpleBranchArray : public BranchArray<T> {
     //! Constructor with tree and initializer value
     SimpleBranchArray(const Tree &intree, const T &initval)
         : tree(intree), array(intree.nb_nodes() - 1, initval) {}
+    SimpleBranchArray(const Tree &intree, const vector<T> &initvals) : tree(intree), array(intree.nb_nodes() - 1) {
+        array = initvals;
+    }
+
     virtual ~SimpleBranchArray() {}
 
     const Tree &GetTree() const /*override*/ { return tree; }
