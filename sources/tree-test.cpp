@@ -2,6 +2,18 @@
 #include <map>
 #include "tree-implem.hpp"
 
+int tree_size(const Tree* tree, Tree::NodeIndex from)  {
+
+    if (tree->is_leaf(from))    {
+        return 1;
+    }
+    int tot = 0;
+    for (auto c : tree->children(from)) {
+        tot += tree_size(tree,c);
+    }
+    return tot;
+}
+
 int main() {
     // parsing file
     std::ifstream file("../data/cyp_coding.nhx");
@@ -10,6 +22,17 @@ int main() {
     // creating topology
     auto tree = make_from_parser(parser);
     std::cout << "Nb nodes = " << tree->nb_nodes() << std::endl;
+    std::cout << "root index = " << tree->root() << '\n';
+
+    const Tree* tree2 = tree.get();
+
+    std::cout << "tree size : " << tree_size(tree2,tree2->root()) << '\n';
+    exit(1);
+
+    for (size_t i=0; i<tree->nb_nodes(); i++)   {
+        std::cout << i << '\t' << tree->node_name(i) << '\n';
+    }
+    exit(1);
 
     // creating vector of node names
     auto node_names = node_container_from_parser<std::string>(

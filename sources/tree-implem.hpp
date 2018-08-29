@@ -3,10 +3,11 @@
 #include "tree-interface.hpp"
 
 // a tree with both a vector of parents and a vector of children
-class DoubleVectorTree : public TreeTopology {
-    using TreeTopology::NodeIndex;
+class DoubleVectorTree : public Tree {
+    using Tree::NodeIndex;
     std::vector<NodeIndex> parent_;
     std::vector<std::set<NodeIndex>> children_;
+    std::vector<std::string> name_;
     NodeIndex root_{0};
 
   public:
@@ -15,20 +16,21 @@ class DoubleVectorTree : public TreeTopology {
         for (std::size_t i = 0; i < input_tree.nb_nodes(); i++) {
             parent_.push_back(input_tree.parent(i));
             children_.emplace_back(input_tree.children(i).begin(), input_tree.children(i).end());
+            name_.push_back(input_tree.tag(i,"name"));
         }
     }
 
     const std::set<NodeIndex>& children(NodeIndex node) const final { return children_.at(node); }
     NodeIndex parent(NodeIndex node) const final { return parent_.at(node); }
+    std::string node_name(NodeIndex node) const final {return name_[node];}
     NodeIndex root() const final { return root_; }
     std::size_t nb_nodes() const final { return parent_.size(); }
     bool is_root(NodeIndex i) const final { return i == root_; }
     bool is_leaf(NodeIndex i) const final { return children_.at(i).size() == 0; }
 };
 
-std::unique_ptr<const TreeTopology> make_from_parser(TreeParser& parser) {
-    return std::unique_ptr<TreeTopology>(new DoubleVectorTree(parser.get_tree()));
-}
+std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<std::string>& taxa);
+std::unique_ptr<const Tree> make_from_parser(TreeParser& parser);
 
 template <class Element>
 std::vector<Element> node_container_from_parser(TreeParser& parser,
@@ -56,30 +58,6 @@ std::vector<Element> branch_container_from_parser(TreeParser& parser,
         } else {
             result.emplace_back();  // default-constructed element for root
         }
-    }
-    return result;
-}
-
-std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<std::string>& taxa) {
-    using NodeIndex = AnnotatedTree::NodeIndex;
-    auto& tree = parser.get_tree();
-    std::map<std::string, int> mapping;  // node name -> node index mapping
-    std::set<std::string> taxa_in_tree;  // set of taxa in tree to check consistency
-    for (NodeIndex i = 0; i < NodeIndex(tree.nb_nodes()); i++) {
-        auto node_name = tree.tag(i, "name");
-        if (node_name != "") {
-            mapping[node_name] = i;
-            taxa_in_tree.insert(node_name);
-        }
-    }
-    if (taxa_in_tree != std::set<std::string>{taxa.begin(), taxa.end()}) {
-        std::cerr
-            << "Error: taxa list provided to taxa_index_from_parser does not match taxa in tree.\n";
-        exit(1);
-    }
-    std::vector<int> result(taxa.size(), -1);
-    for (size_t i = 0; i < taxa.size(); i++) {
-        result.at(i) = mapping.at(taxa.at(i));
     }
     return result;
 }
