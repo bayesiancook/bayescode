@@ -124,31 +124,20 @@ class PhyloProcess {
     void GetLeafData(SequenceAlignment *data);
 
   private:
-    //! \brief const access to substitution history (BranchSitePath) for given
-    //! node and given site
-    //!
-    //! Substitution histories are indexed by node (not by branch);
-    //! root node also has a substitution history (starting state).
-    const BranchSitePath *GetPath(const Node *node, int site) const {
-        map<const Node *, BranchSitePath **>::const_iterator it = pathmap.find(node);
-        if (it == pathmap.end()) {
-            std::cerr << "error in phyloprocess::did not find entry for node in "
-                         "branch site path\n";
+
+    int GetBranchIndex(int index) const {
+        if (index <= 0) {
+            cerr << "error in PhyloProcess::GetBranchIndex\n";
             exit(1);
         }
-        const BranchSitePath *path = it->second[site];
-        if (path == nullptr) {
-            std::cerr << "error in phyloprocess::getpath: null path\n";
-            exit(1);
-        }
-        return path;
+        return index-1;
     }
 
     double GetFastLogProb() const;
     double FastSiteLogLikelihood(int site) const;
 
-    //! return branch length for given branch
-    double GetBranchLength(int branch) const { return branchlength->GetVal(branch); }
+    //! return branch length for given branch, based on index of node at the tip of the branch
+    double GetBranchLength(int index) const { return branchlength->GetVal(GetBranchIndex(index)); }
 
     //! return site rate for given site (if no rates-across-sites array was given
     //! to phyloprocess, returns 1)
@@ -159,9 +148,9 @@ class PhyloProcess {
         return siterate->GetVal(site);
     }
 
-    //! return matrix that should be used
-    const SubMatrix &GetSubMatrix(int branch, int site) const {
-        return submatrixarray->GetVal(branch, site);
+    //! return matrix that should be used on a given branch based on index of node at branch tip
+    const SubMatrix &GetSubMatrix(int index, int site) const {
+        return submatrixarray->GetVal(GetBranchIndex(index), site);
     }
 
     const EVector &GetRootFreq(int site) const {
@@ -177,10 +166,16 @@ class PhyloProcess {
     int GetNstate() const { return Nstate; }
 
     const SequenceAlignment *GetData() const { return data; }
-    int GetData(int taxon, int site) const { return data->GetState(taxon, site); }
+    int GetData(int taxon, int site) const {
+        if (taxon_table[taxon] == -1)	{
+            cerr << "error in taxon correspondance table\n";
+            exit(1);
+        }
+        return data->GetState(taxon_table[taxon], site); 
+    }
 
     const Tree *GetTree() const { return tree; }
-    const Link *GetRoot() const { return GetTree()->GetRoot(); }
+    Tree::NodeIndex GetRoot() const {return GetTree()->root();}
 
     int GetMaxTrial() const { return maxtrial; }
     void SetMaxTrial(int i) { maxtrial = i; }
@@ -188,12 +183,6 @@ class PhyloProcess {
     void SetData(const SequenceAlignment *indata);
     void ClampData() { clampdata = true; }
     void UnclampData() { clampdata = false; }
-
-    // const int& GetFixedState(...)
-    int &GetState(const Node *node, int site) { return statemap[node][site]; }
-    const int &GetState(const Node *node, int site) const { return statemap[node][site]; }
-
-    void RecursiveGetLeafData(const Link *from, SequenceAlignment *data);
 
     bool isDataCompatible(int taxon, int site, int state) const {
         return GetStateSpace()->isCompatible(GetData(taxon, site), state);
@@ -226,28 +215,23 @@ class PhyloProcess {
     //! to branchlengthpathsuffstatarray
     void AddRateSuffStat(Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
 
-    void RecursiveAddPathSuffStat(const Link *from, PathSuffStat &suffstat) const;
-    void LocalAddPathSuffStat(const Link *from, PathSuffStat &suffstat) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suffstat) const;
+    void LocalAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suffstat) const;
 
-    void RecursiveAddPathSuffStat(const Link *from, NodeArray<PathSuffStat> &suffstatarray) const;
-    void LocalAddPathSuffStat(const Link *from, NodeArray<PathSuffStat> &suffstatarray) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const;
+    void LocalAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const;
 
-    void RecursiveAddPathSuffStat(const Link *from, Array<PathSuffStat> &suffstatarray) const;
-    void LocalAddPathSuffStat(const Link *from, Array<PathSuffStat> &suffstatarray) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
+    void LocalAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
 
-    void RecursiveAddPathSuffStat(const Link *from, BidimArray<PathSuffStat> &suffstatarray,
-                                  const BranchAllocationSystem &branchalloc) const;
-    void LocalAddPathSuffStat(const Link *from, BidimArray<PathSuffStat> &suffstatarray,
-                              int cond) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, const BranchAllocationSystem &branchalloc) const;
+    void LocalAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, int cond) const;
 
-    void RecursiveAddLengthSuffStat(
-        const Link *from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;
-    void LocalAddLengthSuffStat(const Link *from, PoissonSuffStat &branchlengthsuffstat) const;
+    void RecursiveAddLengthSuffStat(Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;
+    void LocalAddLengthSuffStat(Tree::NodeIndex from, PoissonSuffStat &branchlengthsuffstat) const;
 
-    void RecursiveAddRateSuffStat(const Link *from,
-                                  Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
-    void LocalAddRateSuffStat(const Link *from,
-                              Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void RecursiveAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void LocalAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
 
     void PostPredSample(int site, bool rootprior = false);
     // rootprior == true : root state drawn from stationary probability of the
@@ -256,45 +240,37 @@ class PhyloProcess {
 
     // various accessors
 
-    bool isMissing(const Node *node, int site) const { return false; }
-
+    bool isMissing(Tree::NodeIndex node, int site) const { return false; }
+    /*
     bool isMissing(const Link *link, int site) const {
         return false;
         // return (missingmap[link->GetNode()][site] ||
         // missingmap[link->Out()->GetNode()][site]);
     }
+    */
 
     void CreateMissingMap();
     void DeleteMissingMap();
-    void RecursiveCreateMissingMap(const Link *from);
+    void RecursiveCreateMissingMap(Tree::NodeIndex from);
     void FillMissingMap();
-    void BackwardFillMissingMap(const Link *from);
-    void ForwardFillMissingMap(const Link *from, const Link *up);
-
-    double *GetCondLikelihood(const Link *from) const {
-        map<const Link *, double *>::const_iterator i = condlmap.find(from);
-        if (i == condlmap.end()) {
-            cerr << "error in PhyloProcess::GetCondLikelihood\n";
-            exit(1);
-        }
-        return i->second;
-    }
+    void BackwardFillMissingMap(Tree::NodeIndex from);
+    void ForwardFillMissingMap(Tree::NodeIndex from, Tree::NodeIndex up);
 
     double GetPruningTime() const { return pruningchrono.GetTime(); }
     double GetResampleTime() const { return resamplechrono.GetTime(); }
 
-    void RecursiveCreate(const Link *from);
-    void RecursiveDelete(const Link *from);
+    void RecursiveCreate(Tree::NodeIndex from);
+    void RecursiveDelete(Tree::NodeIndex from);
 
-    void RecursiveCreateTBL(const Link *from);
-    void RecursiveDeleteTBL(const Link *from);
+    void RecursiveCreateTBL(Tree::NodeIndex from);
+    void RecursiveDeleteTBL(Tree::NodeIndex from);
 
-    void Pruning(const Link *from, int site) const;
-    void ResampleSub(const Link *from, int site);
+    void Pruning(Tree::NodeIndex from, int site) const;
+    void ResampleSub(Tree::NodeIndex from, int site);
     void ResampleState();
     void ResampleState(int site);
-    void PruningAncestral(const Link *from, int site);
-    void PriorSample(const Link *from, int site, bool rootprior);
+    void PruningAncestral(Tree::NodeIndex from, int site);
+    void PriorSample(Tree::NodeIndex from, int site, bool rootprior);
     void PriorSample();
     void RootPosteriorDraw(int site);
 
@@ -310,6 +286,7 @@ class PhyloProcess {
 
     const Tree *tree;
     const SequenceAlignment *data;
+    vector<int> taxon_table;
     // const PolyProcess* polyprocess;
     const BranchSelector<double> *branchlength;
     const Selector<double> *siterate;
@@ -325,19 +302,10 @@ class PhyloProcess {
 
     bool clampdata;
 
-    BranchSitePath *GetPath(const Node *node, int site) {
-        if (pathmap[node][site] == nullptr) {
-            std::cerr << "error in phyloprocess::getpath: null path\n";
-            exit(1);
-        }
-        return pathmap[node][site];
-    }
-
-    mutable std::map<const Link *, double *> condlmap;
-    mutable std::map<const Node *, BranchSitePath **> pathmap;
-    mutable std::map<const Node *, int *> statemap;
-    // std::map<const Node *, int> totmissingmap;
-
+    mutable double** uppercondlmap;
+    mutable double** lowercondlmap;
+    mutable BranchSitePath*** pathmap;
+    int** statemap;
     int **missingmap;
 
     int maxtrial;

@@ -6,7 +6,9 @@
 #include "IIDGamma.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
-#include "Tree.hpp"
+
+// #include "Tree.hpp"
+
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -27,9 +29,9 @@
 
 class SingleOmegaModel : public ProbModel {
     // tree and data
-    Tree *tree;
+    const Tree *tree;
     FileSequenceAlignment *data;
-    const TaxonSet *taxonset;
+    // const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
 
     int Nsite;
@@ -111,16 +113,17 @@ class SingleOmegaModel : public ProbModel {
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
 
-        taxonset = codondata->GetTaxonSet();
-
-        // get tree from file (newick format)
-        tree = new Tree(treefile);
-
-        // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
-
-        tree->SetIndices();
-        Nbranch = tree->GetNbranch();
+        std::ifstream file(treefile);
+        NHXParser parser{file};
+        tree = make_from_parser(parser).get();
+        // DEBUG
+        cerr << tree << '\n';
+        cerr << "nb nodes 1: " << tree->nb_nodes() << '\n';
+        Nbranch = tree->nb_nodes() - 1;
+        // auto v = data->GetTaxonSet()->get_index_table(tree);
+        // auto v = codondata->GetTaxonSet()->get_index_table(tree);
+        // cerr << v.size() << '\n';
+        // exit(1);
     }
 
     //! model allocation
@@ -128,12 +131,17 @@ class SingleOmegaModel : public ProbModel {
 
         // Branch lengths
 
+        cerr << "BL\n";
+        // DEBUG
+        cerr << tree << '\n';
+        cerr << "nb nodes 2: " << tree->nb_nodes() << '\n';
         lambda = 10.0;
         blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
         blhypermean->SetAllBranches(1.0 / lambda);
         blhyperinvshape = 1.0;
         branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        cerr << "BL ok\n";
 
         // Nucleotide rates
 
@@ -158,8 +166,11 @@ class SingleOmegaModel : public ProbModel {
         omega = 1.0;
         codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
+        cerr << "create phyloprocess\n";
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrix);
+        cerr << "unfold phyloprocess\n";
         phyloprocess->Unfold();
+        cerr << "ok\n";
     }
 
     //-------------------

@@ -22,32 +22,23 @@ TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxl
     }
 }
 
-TaxonSet::TaxonSet(const TaxonSet &from)
-    : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist) {}
-
-/*
-TaxonSet::TaxonSet(const Tree *tree, const Link *subgroup) {
-    Ntaxa = tree->GetSize(subgroup);
-    taxlist.assign(Ntaxa,"");
-    if (subgroup == nullptr) {
-        subgroup = tree->GetRoot();
-    }
-    int i = 0;
-    RecursiveGetSubSet(subgroup, i);
-}
-*/
-
-void TaxonSet::RecursiveGetSubSet(const Link *from, int &i) {
-    if (from->isLeaf()) {
-        taxlist[i] = from->GetNode()->GetName();
-        taxmap[from->GetNode()->GetName()] = i + 1;
-        i++;
-    } else {
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveGetSubSet(link->Out(), i);
+std::vector<int> TaxonSet::get_index_table(const Tree* tree) const {
+    std::vector<int> ret(tree->nb_nodes(),-1);
+    for (size_t node=0; node<tree->nb_nodes(); node++)   {
+        if (tree->is_leaf(node))    {
+            if (tree->node_name(node) == "")   {
+                cerr << "error: leaf has no name\n";
+                exit(1);
+            }
+            ret[node] = GetTaxonIndex(tree->node_name(node));
         }
     }
+    cerr << "get index table ok\n";
+    return ret;
 }
+
+TaxonSet::TaxonSet(const TaxonSet &from)
+    : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist) {}
 
 void TaxonSet::ToStream(ostream &os) const {
     os << Ntaxa << '\n';

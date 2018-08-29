@@ -26,7 +26,7 @@ class BranchSelector {
     virtual ~BranchSelector() {}
 
     //! return the number of branches of the underlying tree
-    int GetNbranch() const { return GetTree().GetNbranch(); }
+    int GetNbranch() const { return GetTree().nb_nodes() - 1; }
 
     //! return a const reference to the underlying tree
     virtual const Tree &GetTree() const = 0;
@@ -157,11 +157,11 @@ template <class T>
 class SimpleBranchArray : public BranchArray<T> {
   public:
     //! Constructor (with only the tree given as argument)
-    SimpleBranchArray(const Tree &intree) : tree(intree), array(intree.GetNbranch()) {}
+    SimpleBranchArray(const Tree &intree) : tree(intree), array(intree.nb_nodes() - 1) {}
 
     //! Constructor with tree and initializer value
     SimpleBranchArray(const Tree &intree, const T &initval)
-        : tree(intree), array(intree.GetNbranch(), initval) {}
+        : tree(intree), array(intree.nb_nodes() - 1, initval) {}
     virtual ~SimpleBranchArray() {}
 
     const Tree &GetTree() const /*override*/ { return tree; }

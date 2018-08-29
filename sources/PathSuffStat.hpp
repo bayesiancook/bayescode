@@ -223,21 +223,24 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
     //! matrices
     double GetLogProb(const BranchSelector<SubMatrix> &matrixarray,
                       const SubMatrix &rootmatrix) const {
-        double ret = RecursiveGetLogProb(GetTree().GetRoot(), matrixarray, rootmatrix);
+        double ret = RecursiveGetLogProb(GetTree().root(), matrixarray, rootmatrix);
         return ret;
     }
 
-    double RecursiveGetLogProb(const Link *from, const BranchSelector<SubMatrix> &matrixarray,
+    int GetBranchIndex(int index) const {
+        return index-1;
+    }
+
+    double RecursiveGetLogProb(Tree::NodeIndex from, const BranchSelector<SubMatrix> &matrixarray,
                                const SubMatrix &rootmatrix) const {
         double total = 0;
-        if (from->isRoot()) {
-            total += GetVal(from->GetNode()->GetIndex()).GetLogProb(rootmatrix);
+        if (GetTree().is_root(from))    {
+            total += GetVal(from).GetLogProb(rootmatrix);
         } else {
-            total += GetVal(from->GetNode()->GetIndex())
-                         .GetLogProb(matrixarray.GetVal(from->GetBranch()->GetIndex()));
+            total += GetVal(from).GetLogProb(matrixarray.GetVal(GetBranchIndex(from)));
         }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            total += RecursiveGetLogProb(link->Out(), matrixarray, rootmatrix);
+        for (auto c : GetTree().children(from)) {
+            total += RecursiveGetLogProb(c, matrixarray, rootmatrix);
         }
         return total;
     }

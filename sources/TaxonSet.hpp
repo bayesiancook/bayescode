@@ -8,7 +8,6 @@
 #define nullptr 0
 
 class Tree;
-class Link;
 
 /**
  * \brief A set of taxa (simply, a bi-directional correspondance between taxon
@@ -47,12 +46,14 @@ class TaxonSet {
     //! formatted output to stream
     void ToStream(std::ostream &os) const;
 
+    std::vector<int> get_index_table(const Tree* tree) const;
+
   private:
-    void RecursiveGetSubSet(const Link *from, int &i);
 
     int Ntaxa;
     std::map<std::string, int> taxmap;
     std::vector<std::string> taxlist;
+
 };
 
 inline int TaxonSet::GetTaxonIndex(std::string intaxon) const {
