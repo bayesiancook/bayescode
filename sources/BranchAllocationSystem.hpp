@@ -20,9 +20,9 @@ class BranchAllocationSystem {
     BranchAllocationSystem(const Tree &intree, int inNcond)
         : tree(intree),
           Ncond(inNcond),
-          branchalloc(intree.GetNbranch(), 0),
-          Nbranch(intree.GetNbranch()) {
-        MakeBranchAllocations();
+          branchalloc(intree.nb_nodes()-1, 0),
+          Nbranch(intree.nb_nodes()) {
+              MakeBranchAllocations();
     }
 
     //! return allocation status of branch j
@@ -45,7 +45,7 @@ class BranchAllocationSystem {
             branchalloc[j] = -1;
         }
 
-        RecursiveMakeBranchAllocations(tree.GetRoot());
+        RecursiveMakeBranchAllocations(tree.root());
 
         // check that all branches have been correctly initialized
         for (int j = 0; j < Nbranch; j++) {
@@ -58,9 +58,12 @@ class BranchAllocationSystem {
     }
 
     //! recursive helper function for MakeBranchAllocations
-    void RecursiveMakeBranchAllocations(const Link *from) {
-        if (!from->isRoot()) {
-            int k = atoi(from->GetBranch()->GetName().c_str());
+    void RecursiveMakeBranchAllocations(Tree::NodeIndex from)   {
+        if (!tree.is_root(from))    {
+            cerr << "branch alloc system\n";
+            exit(1);
+            int k = 0;
+            // atoi(from->GetBranch()->GetName().c_str());
             if (k >= Ncond) {
                 k = Ncond - 1;
             }
@@ -69,10 +72,10 @@ class BranchAllocationSystem {
                 std::cerr << "k" << '\t' << "Ncond" << '\n';
                 exit(1);
             }
-            branchalloc[from->GetBranch()->GetIndex()] = k;
+            branchalloc[from] = k;
         }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveMakeBranchAllocations(link->Out());
+        for (auto c : tree.children(from))  {
+            RecursiveMakeBranchAllocations(c);
         }
     }
 
