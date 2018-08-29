@@ -29,7 +29,6 @@ The fact that you are presently reading this means that you have had knowledge
 of the CeCILL-C license and that you accept its terms.*/
 
 #include "AADiffSelCodonMatrixBidimArray.hpp"
-#include "BranchAllocationSystem.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
 #include "GTRSubMatrix.hpp"
@@ -113,9 +112,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     // external parameters
     // -----
 
-    Tree *tree;
+    unique_ptr<const Tree> treeptr;
+    const Tree* tree;
     FileSequenceAlignment *data;
-    const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
 
     // number of sites
@@ -134,7 +133,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     int Nlevel;
 
     // which branch is under which condition
-    BranchAllocationSystem *branchalloc;
+    SimpleBranchArray<int>* branchalloc;
 
     // -----
     //  model structure
@@ -273,9 +272,6 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
 
         ReadFiles(datafile, treefile);
-
-        // specifies which condition for which branch
-        branchalloc = new BranchAllocationSystem(*tree, Ncond);
     }
 
     DiffSelDoublySparseModel(const DiffSelDoublySparseModel &) = delete;
@@ -296,20 +292,21 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
 
-        taxonset = codondata->GetTaxonSet();
+        std::ifstream file(treefile);
+        NHXParser parser{file};
+        treeptr = make_from_parser(parser);
+        tree = treeptr.get();
+        Nbranch = tree->nb_nodes() - 1;
 
-        // get tree from file (newick format)
-        tree = new Tree(treefile);
-
-        // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
-
-        // traversal of the tree, so as to number links, branches and nodes
-        // convention is: branches start at 1 (branch number 0 is the null branch
-        // behind the root) nodes start at 0 (for the root), and nodes 1..Ntaxa are
-        // tip nodes (corresponding to taxa in sequence alignment)
-        tree->SetIndices();
-        Nbranch = tree->GetNbranch();
+        auto v = branch_container_from_parser<std::string>(parser, [](int i, const AnnotatedTree& t) { return t.tag(i, "Condition"); });
+        vector<int> iv(v.size(),0);
+        for (size_t i=0; i<v.size(); i++)   {
+            iv[i] = atoi(v[i].c_str());
+            if (iv[i] >= Ncond) {
+                iv[i] = Ncond-1;
+            }
+        }
+        branchalloc = new SimpleBranchArray<int>(*tree,iv);
     }
 
     //! allocate the model (data structures)

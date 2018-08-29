@@ -29,7 +29,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= globom
+ALL= globom diffseldsparse
 # ALL= multigenesiteom siteom readmultigenediffseldsparse readmultigeneaamutselddp multigenecodonm2a sparseaamutsel sparseaasubsel sparsecatgtr simucodonm2a readcodonm2a aamutselsparse diffseldsparse readdiffseldsparse readglobom multigenediffseldsparse multigenediffselsparse multigenecondom multigeneaamutselddp multigenediffselsparse codonm2a aamutselddp diffselsparse readdiffselsparse diffsel multigenediffsel readdiffsel multigenebranchom readmultigenebranchom multigeneglobom globom readglobom readmultigeneglobom readmultigenecodonm2a
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 

@@ -758,18 +758,18 @@ void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suff
 }
 
 void PhyloProcess::AddPathSuffStat(BidimArray<PathSuffStat> &suffstatarray,
-                                   const BranchAllocationSystem &branchalloc) const {
+                                   const BranchSelector<int> &branchalloc) const {
     RecursiveAddPathSuffStat(GetRoot(), suffstatarray, branchalloc);
 }
 
 void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from,
                                             BidimArray<PathSuffStat> &suffstatarray,
-                                            const BranchAllocationSystem &branchalloc) const {
+                                            const BranchSelector<int> &branchalloc) const {
     if (tree->is_root(from))    {
         LocalAddPathSuffStat(from, suffstatarray, 0);
     } else {
         LocalAddPathSuffStat(from, suffstatarray,
-                             branchalloc.GetBranchAlloc(GetBranchIndex(from)));
+                             branchalloc.GetVal(GetBranchIndex(from)));
     }
     for (auto c : tree->children(from)) {
         RecursiveAddPathSuffStat(c, suffstatarray, branchalloc);

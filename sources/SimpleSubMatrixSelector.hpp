@@ -4,7 +4,6 @@
 
 #include "Array.hpp"
 #include "BidimArray.hpp"
-#include "BranchAllocationSystem.hpp"
 #include "CodonSubMatrix.hpp"
 
 /**
@@ -12,7 +11,7 @@
  *
  * In DiffSelModel and DiffSelSparseModel, the substitution process varies
  * across sites and across the k=0..K-1 conditions. In addition, each branch is
- * allocated to one of the K conditions (see BranchAllocationSystem).
+ * allocated to one of the K conditions
  * Accordingly, SimpleMGOmegaCodonSubMatrixSelector returns, for a given branch
  * and a given site, a pointer to the substitution matrix corresponding to that
  * site, and under the condition being active for that branch.
@@ -23,18 +22,18 @@ class SimpleSubMatrixSelector : public BranchSelector<SubMatrix> {
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
     SimpleSubMatrixSelector(const Selector<SubMatrix> &inmatrixarray,
-                            const BranchAllocationSystem &inbranchalloc)
+                            const BranchSelector<int> &inbranchalloc)
         : matrixarray(inmatrixarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }
 
     virtual const SubMatrix &GetVal(int branch) const override {
-        return matrixarray.GetVal(branchalloc.GetBranchAlloc(branch));
+        return matrixarray.GetVal(branchalloc.GetVal(branch));
     }
 
   private:
     const Selector<SubMatrix> &matrixarray;
-    const BranchAllocationSystem &branchalloc;
+    const BranchSelector<int> &branchalloc;
 };
 
 class SimpleMGOmegaCodonSubMatrixSelector : public BranchSelector<MGOmegaCodonSubMatrix> {
@@ -42,18 +41,18 @@ class SimpleMGOmegaCodonSubMatrixSelector : public BranchSelector<MGOmegaCodonSu
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
     SimpleMGOmegaCodonSubMatrixSelector(const Selector<MGOmegaCodonSubMatrix> &inmatrixarray,
-                                        const BranchAllocationSystem &inbranchalloc)
+                                        const BranchSelector<int> &inbranchalloc)
         : matrixarray(inmatrixarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }
 
     virtual const MGOmegaCodonSubMatrix &GetVal(int branch) const override {
-        return matrixarray.GetVal(branchalloc.GetBranchAlloc(branch));
+        return matrixarray.GetVal(branchalloc.GetVal(branch));
     }
 
   private:
     const Selector<MGOmegaCodonSubMatrix> &matrixarray;
-    const BranchAllocationSystem &branchalloc;
+    const BranchSelector<int> &branchalloc;
 };
 
 /**

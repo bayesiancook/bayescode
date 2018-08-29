@@ -368,7 +368,7 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
 
     void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                      const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
-                     const BranchAllocationSystem &alloc) {
+                     const BranchSelector<int> &alloc) {
         RecursiveAddSuffStat(alloc.GetTree(), alloc.GetTree().root(), codonsubmatrixarray, pathsuffstatnodearray,
                              alloc);
     }
@@ -376,9 +376,9 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
     void RecursiveAddSuffStat(const Tree& tree, Tree::NodeIndex from,
                               const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                               const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
-                              const BranchAllocationSystem &alloc) {
+                              const BranchSelector<int> &alloc) {
         if (! tree.is_root(from))   {
-            int i = alloc.GetBranchAlloc(from);
+            int i = alloc.GetVal(from);
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatnodearray.GetVal(from));
         }
         for (auto c : tree.children(from))  {

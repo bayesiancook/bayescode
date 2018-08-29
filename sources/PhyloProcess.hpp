@@ -4,7 +4,6 @@
 
 #include <map>
 #include "BidimArray.hpp"
-#include "BranchAllocationSystem.hpp"
 #include "BranchSitePath.hpp"
 #include "BranchSiteSelector.hpp"
 #include "Chrono.hpp"
@@ -206,7 +205,7 @@ class PhyloProcess {
     //! DiffSelModel) heterogeneeous across sites, branches partitioned into
     //! conditions
     void AddPathSuffStat(BidimArray<PathSuffStat> &suffstatarray,
-                         const BranchAllocationSystem &branchalloc) const;
+                         const BranchSelector<int> &branchalloc) const;
 
     //! compute path sufficient statistics for resampling branch lengths add them
     //! to branchlengthpathsuffstatarray
@@ -225,7 +224,7 @@ class PhyloProcess {
     void RecursiveAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
     void LocalAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
 
-    void RecursiveAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, const BranchAllocationSystem &branchalloc) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, const BranchSelector<int> &branchalloc) const;
     void LocalAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, int cond) const;
 
     void RecursiveAddLengthSuffStat(Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;

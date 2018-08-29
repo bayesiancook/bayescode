@@ -1,4 +1,3 @@
-#include "BranchAllocationSystem.hpp"
 #include "BranchArray.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrixArray.hpp"
@@ -21,19 +20,19 @@ template <class T>
 class BranchMixtureSelector : public BranchSelector<T> {
   public:
     //! Constructor takes the array of components and the allocation vector
-    BranchMixtureSelector(const Selector<T> &incomponents, const BranchAllocationSystem &inalloc)
+    BranchMixtureSelector(const Selector<T> &incomponents, const BranchSelector<int> &inalloc)
         : components(incomponents), alloc(inalloc) {}
     ~BranchMixtureSelector() {}
 
     const Tree &GetTree() const override { return alloc.GetTree(); }
-    T &operator[](int index) override { return components[alloc.GetBranchAlloc(index)]; }
+    T &operator[](int index) override { return components[alloc.GetVal(index)]; }
     const T &GetVal(int index) const override {
-        return components.GetVal(alloc.GetBranchAlloc(index));
+        return components.GetVal(alloc.GetVal(index));
     }
 
   private:
     const Selector<T> &components;
-    const BranchAllocationSystem &alloc;
+    const BranchSelector<int> &alloc;
 };
 
 /**
@@ -106,7 +105,7 @@ class ConditionOmegaModel : public ProbModel {
     ConditionSpecificMeanGammaArray *condomegaarray;
 
     // which branch is under which condition
-    BranchAllocationSystem *branchalloc;
+    SimpleBranchArray<int> *branchalloc;
 
     // a nucleotide matrix (parameterized by nucrelrate and nucstat)
     GTRSubMatrix *nucmatrix;

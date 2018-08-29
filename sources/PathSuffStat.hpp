@@ -271,7 +271,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
 
     //! add path sufficient statistics from PhyloProcess (site- and
     //! condition-heterogeneous case)
-    void AddSuffStat(const PhyloProcess &process, const BranchAllocationSystem &branchalloc) {
+    void AddSuffStat(const PhyloProcess &process, const BranchSelector<int> &branchalloc) {
         process.AddPathSuffStat(*this, branchalloc);
     }
 
