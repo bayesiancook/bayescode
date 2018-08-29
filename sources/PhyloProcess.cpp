@@ -25,14 +25,10 @@ PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
 PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
                            const BranchSelector<double> *inbranchlength,
                            const Selector<double> *insiterate, const SubMatrix *insubmatrix) {
-    cerr << "phylo const\n";
     tree = intree;
     data = indata;
     Nstate = data->GetNstate();
-    cerr << Nstate << '\n';
-    cerr << "get index table\n";
     taxon_table = data->GetTaxonSet()->get_index_table(tree);
-    cerr << taxon_table << '\n';
     maxtrial = DEFAULTMAXTRIAL;
     branchlength = inbranchlength;
     siterate = insiterate;
@@ -103,11 +99,20 @@ void PhyloProcess::Unfold() {
     for (int i = 0; i < GetNsite(); i++) {
         sitearray[i] = 1;
     }
+    statemap = new int*[GetNnode()];
+    uppercondlmap = new double*[GetNnode()];
+    lowercondlmap = new double*[GetNnode()];
+    pathmap = new BranchSitePath**[GetNnode()];
+
     CreateMissingMap();
     FillMissingMap();
+    cerr << "recursive create\n";
     RecursiveCreate(GetRoot());
+    cerr << "create tbl\n";
     RecursiveCreateTBL(GetRoot());
+    cerr << "clamp data\n";
     ClampData();
+    cerr << "clamp data ok\n";
 }
 
 void PhyloProcess::Cleanup() {
@@ -231,6 +236,7 @@ void PhyloProcess::RecursiveDelete(Tree::NodeIndex from)    {
     for (int i = 0; i < GetNsite(); i++) {
         delete path[i];
     }
+    delete[] path;
 }
 
 void PhyloProcess::RecursiveCreateTBL(Tree::NodeIndex from) {
@@ -375,10 +381,9 @@ void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
 }
 
 void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
-    int &state = statemap[from][site];
     if (tree->is_root(from))    {
-        auto aux = new double[GetNstate()];
-        auto cumulaux = new double[GetNstate()];
+        double aux[GetNstate()];
+        double cumulaux[GetNstate()];
         try {
             double *tbl = uppercondlmap[from];
             const EVector &stat = GetRootFreq(site);
@@ -397,7 +402,7 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
                 cerr << "error in pruning ancestral: overflow\n";
                 exit(1);
             }
-            state = s;
+            statemap[from][site] = s;
         } catch (...) {
             cerr << "in root::PruningAncestral\n";
             for (int k = 0; k < GetNstate(); k++) {
@@ -406,8 +411,6 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
             exit(1);
             throw;
         }
-        delete[] aux;
-        delete[] cumulaux;
     }
     for (auto c : tree->children(from))   {
         double aux[GetNstate()];
@@ -416,7 +419,7 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
             for (int k = 0; k < GetNstate(); k++) {
                 aux[k] = 1;
             }
-            GetSubMatrix(c, site).GetFiniteTimeTransitionProb(state, aux, GetBranchLength(c)*GetSiteRate(site));
+            GetSubMatrix(c, site).GetFiniteTimeTransitionProb(statemap[from][site], aux, GetBranchLength(c)*GetSiteRate(site));
             double *tbl = uppercondlmap[c];
             for (int k = 0; k < GetNstate(); k++) {
                 aux[k] *= tbl[k];
@@ -439,6 +442,7 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
                 }
             }
             // end of dealing with dirty numerical problems
+
             double tot = 0;
             for (int k = 0; k < GetNstate(); k++) {
                 tot += aux[k];
@@ -453,8 +457,7 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
                 cerr << "error in pruning ancestral: overflow\n";
                 exit(1);
             }
-            int &nodestate = statemap[c][site];
-            nodestate = s;
+            statemap[c][site] = s;
         } catch (...) {
             cerr << "in internal leave::PruningAncestral\n";
             for (int k = 0; k < GetNstate(); k++) {

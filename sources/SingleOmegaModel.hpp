@@ -28,10 +28,11 @@
  */
 
 class SingleOmegaModel : public ProbModel {
+
     // tree and data
-    const Tree *tree;
+    unique_ptr<const Tree> treeptr;
+    const Tree* tree;
     FileSequenceAlignment *data;
-    // const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
 
     int Nsite;
@@ -115,15 +116,9 @@ class SingleOmegaModel : public ProbModel {
 
         std::ifstream file(treefile);
         NHXParser parser{file};
-        tree = make_from_parser(parser).get();
-        // DEBUG
-        cerr << tree << '\n';
-        cerr << "nb nodes 1: " << tree->nb_nodes() << '\n';
+        treeptr = make_from_parser(parser);
+        tree = treeptr.get();
         Nbranch = tree->nb_nodes() - 1;
-        // auto v = data->GetTaxonSet()->get_index_table(tree);
-        // auto v = codondata->GetTaxonSet()->get_index_table(tree);
-        // cerr << v.size() << '\n';
-        // exit(1);
     }
 
     //! model allocation
@@ -131,17 +126,12 @@ class SingleOmegaModel : public ProbModel {
 
         // Branch lengths
 
-        cerr << "BL\n";
-        // DEBUG
-        cerr << tree << '\n';
-        cerr << "nb nodes 2: " << tree->nb_nodes() << '\n';
         lambda = 10.0;
         blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
         blhypermean->SetAllBranches(1.0 / lambda);
         blhyperinvshape = 1.0;
         branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-        cerr << "BL ok\n";
 
         // Nucleotide rates
 

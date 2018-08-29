@@ -162,6 +162,7 @@ class PhyloProcess {
 
     int GetNsite() const { return data->GetNsite(); }
     int GetNtaxa() const { return data->GetNtaxa(); }
+    int GetNnode() const { return tree->nb_nodes(); }
 
     int GetNstate() const { return Nstate; }
 
@@ -240,8 +241,8 @@ class PhyloProcess {
 
     // various accessors
 
-    bool isMissing(Tree::NodeIndex node, int site) const { return false; }
     /*
+    bool isMissing(Tree::NodeIndex node, int site) const { return false; }
     bool isMissing(const Link *link, int site) const {
         return false;
         // return (missingmap[link->GetNode()][site] ||
