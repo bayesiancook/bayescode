@@ -6,6 +6,7 @@ class Tracer {
     std::vector<std::string> names;
     std::vector<std::function<void(ostream&)>> header_to_stream;
     std::vector<std::function<void(ostream&)>> data_to_stream;
+    std::vector<std::function<void(istream&)>> set_from_stream;
 
 public:
     template<class T>
@@ -33,6 +34,15 @@ public:
             }
         }
     }
+
+    void ignore_header(std::istream& is) const {
+        std::string s;
+        std::getline(is, s);
+    }
+
+    void read_line(std::istream& is) const {
+        for(auto& f: set_from_stream) f(is);
+    }
     
     void add(std::string name, double& d) {
         names.push_back(name);
@@ -41,6 +51,9 @@ public:
             });
         data_to_stream.push_back([&d](std::ostream& os) {
                 os << d;
+            });
+        set_from_stream.push_back([&d](std::istream& is) {
+                is >> d;
             });
     }
 
@@ -62,10 +75,13 @@ public:
                         os << "\t" << v.at(i);
                 }
             });
+        set_from_stream.push_back([&v](std::istream& is) {
+                for(auto& e: v) is >> e;
+            });
     }
 
     template<class T>
-    void add(std::string name, BranchSelector<T>& v) {
+    void add(std::string name, BranchArray<T>& v) {
         names.push_back(name);
         header_to_stream.push_back([&v, name](std::ostream& os) {
                 int n = v.GetNbranch();
@@ -83,6 +99,10 @@ public:
                         os << "\t" << v.GetVal(i);
                 }
             });
+        set_from_stream.push_back([&v](std::istream& is) {
+                for(int i = 1; i < v.GetNbranch(); i++)
+                    is >> v[i];
+            });
     }
 
     template<class T>
@@ -94,6 +114,10 @@ public:
         data_to_stream.push_back([o, f](std::ostream& os) {
                 os << (o ->* f)();
             });
+        set_from_stream.push_back([](std::istream& is) {
+                double d;
+                is >> d;
+            });
     }
 
     void add(std::string name, std::function<double()> f) {
@@ -103,6 +127,10 @@ public:
             });
         data_to_stream.push_back([f](std::ostream& os) {
                 os << f();
+            });
+        set_from_stream.push_back([](std::istream& is) {
+                double d;
+                is >> d;
             });
     }
 };
