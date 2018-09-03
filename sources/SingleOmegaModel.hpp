@@ -31,6 +31,7 @@
 class SingleOmegaModel : public ProbModel, public ChainComponent {
     // tree and data
     std::string datafile, treefile;
+    std::unique_ptr<Tracer> tracer;
     Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
@@ -132,6 +133,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
         Allocate();
+        tracer = unique_ptr<Tracer>(new Tracer(*this, &SingleOmegaModel::declare_model));
     }
 
     void move(int it) override { Move(); }
@@ -643,27 +645,19 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
-        os << omega << '\t';
-        os << nucstat << '\t';
-        os << nucrelrate << '\t';
-        os << lambda << '\t';
-        os << *branchlength << '\n';
+        tracer->write_line(os);
     }
 
-    void FromStream(istream &is) {
-        std::string model_name;
-        is >> model_name;
-        if (model_name != "SingleOmega") {
-            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-            exit(1);
-        }
-        is >> datafile;
-        is >> treefile;
-        is >> omega;
-        is >> nucstat;
-        is >> nucrelrate;
-        is >> lambda;
-        is >> *branchlength;
+    void FromStream(istream &) { /* DEPRECATED */
+        // std::string model_name;
+        // is >> model_name;
+        // if (model_name != "SingleOmega") {
+        //     std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+        //     exit(1);
+        // }
+        // is >> datafile;
+        // is >> treefile;
+        // tracer.read_line(is);
     }
 
     SingleOmegaModel(istream &is) {
@@ -676,11 +670,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         is >> datafile;
         is >> treefile;
         init();
-        is >> omega;
-        is >> nucstat;
-        is >> nucrelrate;
-        is >> lambda;
-        is >> *branchlength;
+        tracer->read_line(is);
         Update();
     }
 };
