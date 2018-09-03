@@ -258,30 +258,39 @@ int main(int argc, char *argv[]) {
     MultiGeneDiffSelDoublySparseChain *chain = 0;
 
     // command syntax
-    if (argc == 1)  {
-        if (! myid)	{
+    if (argc == 1) {
+        if (!myid) {
             cerr << '\n';
             cerr << "The multi-gene version of the doubly-sparse differential selection model.\n";
-            cerr << "see diffseldsparse for a more detailed description of the single-gene version.\n";
+            cerr << "see diffseldsparse for a more detailed description of the single-gene "
+                    "version.\n";
             cerr << "\n";
-            cerr << "the key gene-specific parameters, for which shrinkage across genes is implemented, are:\n";
+            cerr << "the key gene-specific parameters, for which shrinkage across genes is "
+                    "implemented, are:\n";
             cerr << " - branch lengths\n";
             cerr << " - nucleotide mutation rates\n";
-            cerr << " - shiftprob_gk, for gene g, condition k=1..K-1 (specifying the probability that an amino-acid at any site in gene g undergoes a shift in condition k)\n";
+            cerr << " - shiftprob_gk, for gene g, condition k=1..K-1 (specifying the probability "
+                    "that an amino-acid at any site in gene g undergoes a shift in condition k)\n";
             cerr << "concerning shiftprob_gk, the prior distribution is:\n";
-            cerr << " - with prob (1-pi_k), shiftprob_gk = 0 (i.e. the gene does not have any site showing differential effect in condition k)\n";
-            cerr << " - with prob pi_k, shiftprob_gk ~ Beta(shiftprobhypermean_k, shiftprobhyperinvconc_k)\n";
-            cerr << "thus, the probability that a gene is under differential selection is given by the post prob that shiftprob_k > 0\n";
-            cerr << "by default, the hyperparameters pi_k, shiftprobhypermean_k, shiftprobhyperinvconc_k are estimated across genes\n";
+            cerr << " - with prob (1-pi_k), shiftprob_gk = 0 (i.e. the gene does not have any site "
+                    "showing differential effect in condition k)\n";
+            cerr << " - with prob pi_k, shiftprob_gk ~ Beta(shiftprobhypermean_k, "
+                    "shiftprobhyperinvconc_k)\n";
+            cerr << "thus, the probability that a gene is under differential selection is given by "
+                    "the post prob that shiftprob_k > 0\n";
+            cerr << "by default, the hyperparameters pi_k, shiftprobhypermean_k, "
+                    "shiftprobhyperinvconc_k are estimated across genes\n";
             cerr << "they can also be fixed a priori\n";
             cerr << '\n';
-            cerr << "command: mpirun -np <n> multigenediffseldsparse -d <alignment_list> -t <tree> -ncond <ncond> <chainname>\n";
+            cerr << "command: mpirun -np <n> multigenediffseldsparse -d <alignment_list> -t <tree> "
+                    "-ncond <ncond> <chainname>\n";
             cerr << '\n';
             cerr << "chain options:\n";
             cerr << "\t-f: force overwrite of already existing chain\n";
             cerr << "\t-x <every> <until>: saving frequency and stopping time "
                     "(default: every = 1, until = -1)\n";
-            cerr << "\t-g: without gene-specific output files (.geneshiftprob and geneshiftcounts)\n";
+            cerr << "\t-g: without gene-specific output files (.geneshiftprob and "
+                    "geneshiftcounts)\n";
             cerr << "\t+g: with gene-specific output files\n";
             cerr << "\t+G: with gene- and site-specific output files\n";
             // cerr << "\tin all cases, complete information about chain state is saved "
@@ -292,12 +301,18 @@ int main(int argc, char *argv[]) {
             cerr << "model options:\n";
             cerr << "\t-ncond <ncond>:  specify number of conditions\n";
             cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
-            cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
-            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi_k for all k=1..K-1\n";
-            cerr << "\t                                (default: hypermean = 0.1, hyperinvconc = 0.1)\n";
-            cerr << "\t-shiftprob <hypermean> <hyperinvconc>: set values of shiftprobhypermean_k and shiftprobhyperinvconc_k for all k=1..K-1\n";
-            cerr << "\t                                       (default: hypermean = 0.1, hyperinvconc = 0.1)\n";
-            cerr << "\t                                       (if hyperinvconc == 0, then shiftprob_gk is fixed to hypermean for all genes and conditions)\n";
+            cerr
+                << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi_k "
+                    "for all k=1..K-1\n";
+            cerr << "\t                                (default: hypermean = 0.1, hyperinvconc = "
+                    "0.1)\n";
+            cerr << "\t-shiftprob <hypermean> <hyperinvconc>: set values of shiftprobhypermean_k "
+                    "and shiftprobhyperinvconc_k for all k=1..K-1\n";
+            cerr << "\t                                       (default: hypermean = 0.1, "
+                    "hyperinvconc = 0.1)\n";
+            cerr << "\t                                       (if hyperinvconc == 0, then "
+                    "shiftprob_gk is fixed to hypermean for all genes and conditions)\n";
             cerr << '\n';
         }
         MPI_Finalize();
@@ -456,7 +471,7 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            if (! myid) {
+            if (!myid) {
                 cerr << "error in command\n";
                 cerr << '\n';
             }

@@ -6,11 +6,12 @@ class StandardTracer : public ChainComponent {
     Tracer stats_tracer;
     std::string chain_name;
 
-public:
-    template<class M>
-    StandardTracer(M& m, std::string chain_name) : model_tracer(m,&M::declare_model),
-                                                   stats_tracer(m,&M::declare_stats),
-                                                   chain_name(chain_name) {}
+  public:
+    template <class M>
+    StandardTracer(M& m, std::string chain_name)
+        : model_tracer(m, &M::declare_model),
+          stats_tracer(m, &M::declare_stats),
+          chain_name(chain_name) {}
     void start() {
         std::ofstream model_os{chain_file(chain_name), std::ios_base::trunc};
         model_tracer.write_header(model_os);
@@ -23,7 +24,5 @@ public:
         std::ofstream trace_os{chain_name + ".trace", std::ios_base::app};
         stats_tracer.write_line(trace_os);
     }
-    static std::string chain_file(std::string chain_name) {
-        return chain_name + ".chain";
-    }
+    static std::string chain_file(std::string chain_name) { return chain_name + ".chain"; }
 };

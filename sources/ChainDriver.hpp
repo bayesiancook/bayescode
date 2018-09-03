@@ -16,7 +16,8 @@ class ChainDriver {
         : name(name), toggle(name + ".run"), every(every), until(until), size(size) {}
 
     void go() {
-        if(size == 0) for (auto c : components) c->start();
+        if (size == 0)
+            for (auto c : components) c->start();
         while (toggle.check() and (until == -1 or size < until)) {
             for (int i = 0; i < every; i++)
                 for (auto c : components) c->move(size * every + i);

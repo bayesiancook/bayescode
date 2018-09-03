@@ -1,5 +1,5 @@
 class Move {
-public:
+  public:
     //! new type name for a const method of class C taking no argument and
     //! returning a double (intended: a log prob function)
     template <class C>
@@ -60,8 +60,8 @@ public:
     //! update functions, as well as a pointer to the model itself. Returns
     //! success rate.
     template <class C>
-    static double Scaling(double &x, double tuning, int nrep, LogProbF<C> logprobf, UpdateF<C> updatef,
-                       C *This) {
+    static double Scaling(double &x, double tuning, int nrep, LogProbF<C> logprobf,
+                          UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
@@ -94,7 +94,7 @@ public:
     //! itself. Returns success rate.
     template <class C>
     static double Profile(vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
-                       UpdateF<C> updatef, C *This) {
+                          UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         vector<double> bk(x.size(), 0);
@@ -116,5 +116,4 @@ public:
         }
         return nacc / ntot;
     }
-    
 };

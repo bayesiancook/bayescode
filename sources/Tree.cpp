@@ -515,7 +515,7 @@ void Tree::Subdivide(Link *from, int Ninterpol) {
         delete from->GetBranch();
 
         Link *current = from;
-        Link *final = from->Out();
+        Link * final = from->Out();
         int i = 0;
         while (i < Ninterpol - 1) {
             Link *link1 = new Link;

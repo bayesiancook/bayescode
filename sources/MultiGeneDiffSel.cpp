@@ -187,13 +187,14 @@ int main(int argc, char *argv[]) {
     string name = "";
     MultiGeneDiffSelChain *chain = 0;
 
-    if (argc == 1)  {
-        if (! myid)	{
+    if (argc == 1) {
+        if (!myid) {
             cerr << '\n';
             cerr << "The multi-gene version of the non-sparse differential selection model.\n";
             cerr << "see diffsel for the single-gene version.\n";
             cerr << '\n';
-            cerr << "command: mpirun -np <n> multigenediffsel -d <alignment_list> -t <tree> -ncond <ncond> <chainname>\n";
+            cerr << "command: mpirun -np <n> multigenediffsel -d <alignment_list> -t <tree> -ncond "
+                    "<ncond> <chainname>\n";
             cerr << '\n';
             cerr << "chain options:\n";
             cerr << "\t-f: force overwrite of already existing chain\n";
@@ -204,7 +205,8 @@ int main(int argc, char *argv[]) {
             cerr << "model options:\n";
             cerr << "\t-ncond <ncond>:  specify number of conditions\n";
             cerr << "\t-bl {shrunken|ind}: shrinkage mode for branch lengths\n";
-            cerr << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
+            cerr
+                << "\t-nucrates {shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
             cerr << '\n';
         }
         MPI_Finalize();

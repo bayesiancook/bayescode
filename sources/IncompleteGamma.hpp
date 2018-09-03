@@ -219,8 +219,9 @@ double PointNormal(double prob)
     p1 = (p < 0.5 ? p : 1 - p);
     if (p1 < 1e-20) return (-9999);
     y = sqrt(log(1 / (p1 * p1)));
-    z = y + ((((y * a4 + a3) * y + a2) * y + a1) * y + a0) /
-                ((((y * b4 + b3) * y + b2) * y + b1) * y + b0);
+    z = y +
+        ((((y * a4 + a3) * y + a2) * y + a1) * y + a0) /
+            ((((y * b4 + b3) * y + b2) * y + b1) * y + b0);
     return (p < 0.5 ? -z : z);
 }
 

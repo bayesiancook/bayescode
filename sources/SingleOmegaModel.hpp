@@ -5,11 +5,11 @@
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDGamma.hpp"
+#include "Move.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
-#include "Tree.hpp"
 #include "Tracer.hpp"
-#include "Move.hpp"
+#include "Tree.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -136,8 +136,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     void move(int it) override { Move(); }
 
-    template<class C>
-    void declare_model(C& t) {
+    template <class C>
+    void declare_model(C &t) {
         t.add("omega", omega);
         t.add("nucstat", nucstat);
         t.add("nucrelrate", nucrelrate);
@@ -145,8 +145,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         t.add("branchlength", *branchlength);
     }
 
-    template<class C>
-    void declare_stats(C& t) {
+    template <class C>
+    void declare_stats(C &t) {
         t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
         t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
         t.add("length", [this]() { return branchlength->GetTotalLength(); });
@@ -155,7 +155,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
     }
 
-              //! model allocation
+    //! model allocation
     void Allocate() {
         // Branch lengths
 
@@ -577,7 +577,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         Move::Scaling(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
                       &SingleOmegaModel::NoUpdate, this);
         Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                     &SingleOmegaModel::NoUpdate, this);
+                      &SingleOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -589,16 +589,16 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         CollectNucPathSuffStat();
 
         Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+                      &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+                      &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+                      &SingleOmegaModel::TouchNucMatrix, this);
 
         Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+                      &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+                      &SingleOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }

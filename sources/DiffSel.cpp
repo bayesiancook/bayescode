@@ -120,16 +120,16 @@ class DiffSelChain : public Chain {
 };
 
 int main(int argc, char *argv[]) {
-
     string name = "";
     DiffSelChain *chain = 0;
 
-    if (argc == 1)  {
+    if (argc == 1) {
         cerr << "command: diffsel -d <alignment> -t <treefile> <chainname>\n";
         cerr << '\n';
         cerr << "program options:\n";
         cerr << "\t-f: force overwrite of already existing chain\n";
-        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, "
+                "until = -1)\n";
         cerr << "\t-ncond <ncond>:  specify number of conditions\n";
         cerr << '\n';
         exit(0);

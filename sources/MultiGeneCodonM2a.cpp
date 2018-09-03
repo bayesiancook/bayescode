@@ -257,8 +257,8 @@ int main(int argc, char *argv[]) {
     MultiGeneCodonM2aChain *chain = 0;
     string name = "";
 
-    if (argc == 1)  {
-        if (! myid)	{
+    if (argc == 1) {
+        if (!myid) {
             cerr << '\n';
             cerr << "The multigene version of the M2a model of codeml (Muse and Gaut version)\n";
             cerr << '\n';
@@ -272,17 +272,24 @@ int main(int argc, char *argv[]) {
             cerr << " - w2 = posw\n";
             cerr << "where 0<purw<1 and 0<=posw<1;\n";
             cerr << '\n';
-            cerr << "purom, dposom, purw, posw are gene-specific, and are iid from the following distributions:\n";
+            cerr << "purom, dposom, purw, posw are gene-specific, and are iid from the following "
+                    "distributions:\n";
             cerr << "- purom ~ Beta(puromhypermean, puromhyperinvconc)\n";
             cerr << "- purw ~ Beta(purwhypermean, purwhyperinvshape)\n";
             cerr << "- dposom ~ Gamma(dposomhypermean, dposomhyperinvshape)\n";
             cerr << "- posw ~ (1-pi) * delta_0 + pi * Beta(poswhypermean, poswhyperinvshape)\n";
-            cerr << "(i.e. with probability 1-pi, posw = 0, and with probability pi, posw is drawn from a Beta)\n";
+            cerr << "(i.e. with probability 1-pi, posw = 0, and with probability pi, posw is drawn "
+                    "from a Beta)\n";
             cerr << '\n';
-            cerr << "The parameters pi, puromhyper*, dposomhyper*, purwhyper* and poswhyper* of these distributions across genes can be either fixed or estimated across genes (by default, estimated across genes).\n";
-            cerr << "Branch lengths and nucleotide rates can be either shared across genes or gene-specific; if gene-specific, then the parameters of their distribution across genes can either be fixed or estimated (by default).\n";
+            cerr << "The parameters pi, puromhyper*, dposomhyper*, purwhyper* and poswhyper* of "
+                    "these distributions across genes can be either fixed or estimated across "
+                    "genes (by default, estimated across genes).\n";
+            cerr << "Branch lengths and nucleotide rates can be either shared across genes or "
+                    "gene-specific; if gene-specific, then the parameters of their distribution "
+                    "across genes can either be fixed or estimated (by default).\n";
             cerr << '\n';
-            cerr << "command: mpirun -np <n> multigenecodonm2a -d <alignment_list> -t <tree> <chainname>\n";
+            cerr << "command: mpirun -np <n> multigenecodonm2a -d <alignment_list> -t <tree> "
+                    "<chainname>\n";
             cerr << '\n';
             cerr << "chain options:\n";
             cerr << "\t-f: force overwrite of already existing chain\n";
@@ -298,15 +305,21 @@ int main(int argc, char *argv[]) {
             cerr << '\n';
             cerr << "model options:\n";
             cerr << "\t-bl {shared|shrunken|ind}: shrinkage mode for branch lengths\n";
-            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for nucleotide substitution rates\n";
-            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi (default: hypermean = 0.1, hyperinvconc = 0.2)\n";
-            cerr << "\t-purom <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purom\n";
+            cerr << "\t-nucrates {shared|shrunken|ind}: shrinkage mode for nucleotide substitution "
+                    "rates\n";
+            cerr << "\t-pi <hypermean> <hyperinvconc>: set parameters of beta hyperprior for pi "
+                    "(default: hypermean = 0.1, hyperinvconc = 0.2)\n";
+            cerr << "\t-purom <hypermean> <hyperinvconc>: set parameters of beta hyperprior for "
+                    "purom\n";
             cerr << "\t-purom uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
-            cerr << "\t-purw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for purw\n";
+            cerr << "\t-purw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for "
+                    "purw\n";
             cerr << "\t-purw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 0.5\n";
-            cerr << "\t-dposom <hypermean> <hyperinvshape>: set parameters of gamma hyperprior for dposom\n";
+            cerr << "\t-dposom <hypermean> <hyperinvshape>: set parameters of gamma hyperprior for "
+                    "dposom\n";
             cerr << "\t-dposom uninf: set parameters to hypermean = 1.0 and hyperinvshape = 0.5\n";
-            cerr << "\t-posw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for posw\n";
+            cerr << "\t-posw <hypermean> <hyperinvconc>: set parameters of beta hyperprior for "
+                    "posw\n";
             cerr << "\t-posw uninf: set parameters to hypermean = 0.5 and hyperinvconc = 1.0\n";
             cerr << '\n';
         }
@@ -474,7 +487,7 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            if (! myid) {
+            if (!myid) {
                 cerr << "error in command\n";
             }
             MPI_Finalize();
