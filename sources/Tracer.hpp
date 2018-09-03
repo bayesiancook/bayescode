@@ -92,7 +92,7 @@ class Tracer {
             }
         });
         set_from_stream.push_back([&v](std::istream& is) {
-            for (int i = 1; i < v.GetNbranch(); i++) is >> v[i];
+            for (int i = 0; i < v.GetNbranch(); i++) is >> v[i];
         });
     }
 
