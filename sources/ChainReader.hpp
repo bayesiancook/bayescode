@@ -9,8 +9,9 @@ class ChainReader {
   public:
     template <class M>
     ChainReader(M& model, std::string filename) : tracer(model, &M::declare_model), is(filename) {
-        tracer.ignore_header();
+        tracer.ignore_header(is);
     }
 
-    void next() { tracer.read_line(); }
+    void next() { tracer.read_line(is); }
+    void skip(int n) { for(int i = 0; i < n; i++) next(); }
 };
