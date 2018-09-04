@@ -39,7 +39,12 @@ class ChainDriver {
         is >> size;
     }
 
-  private:
+    static void fake_read(std::istream& is) {
+        std::string tmp;
+        is >> tmp >> tmp >> tmp >> tmp;
+    }
+
+private:
     std::string name;
     std::vector<ChainComponent*> components;
     RunToggle toggle;
