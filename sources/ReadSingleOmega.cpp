@@ -1,78 +1,58 @@
 #include <cmath>
 #include <fstream>
-#include "Sample.hpp"
 #include "SingleOmegaModel.hpp"
+#include "tclap/CmdLine.h"
+#include "ChainReader.hpp"
+#include "ChainDriver.hpp"
 using namespace std;
+using namespace TCLAP;
 
-/**
- * \brief An MCMC sample for SingleOmegaModel
- *
- * implements a simple read function, returning the MCMC estimate of the
- * posterior mean and standard deviation of omega=dN/dS
- */
+class ReadSingleOmegaArgParse {
+    CmdLine &cmd;
 
-class SingleOmegaSample : public Sample {
-  private:
-    string modeltype;
-    string datafile;
-    string treefile;
+public:
+    ReadSingleOmegaArgParse(CmdLine &cmd) : cmd(cmd) {}
+    ValueArg<int> every{"e",   "every", "Number of iterations between two traces", false, 1,
+                        "int", cmd};
+    ValueArg<int> until{"u",   "until", "Maximum number of (saved) iterations (-1 means unlimited)",
+                        false, -1,      "int",
+                        cmd};
+    ValueArg<int> burnin{"b",   "burnin", "Number of iterations for burnin",
+                        false, 0,      "int",
+                        cmd};
+    SwitchArg ppred{"p", "ppred", "Perform simulations under posterior distribution", cmd};
+    UnlabeledValueArg<std::string> chain_name{
+        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
+};
 
-  public:
-    string GetModelType() override { return modeltype; }
 
-    SingleOmegaModel *GetModel() { return (SingleOmegaModel *)model; }
+int main(int argc, char *argv[]) {
+    CmdLine cmd{"ReadSingleOmega", ' ', "0.1"};
+    ReadSingleOmegaArgParse args(cmd);
+    cmd.parse(argc, argv);
 
-    //! \brief Constructor (file name, burn-in, thinning and upper limit, see
-    //! Sample)
-    SingleOmegaSample(string filename, int inburnin, int inevery, int inuntil)
-        : Sample(filename, inburnin, inevery, inuntil) {
-        Open();
-    }
+    int burnin = args.burnin.getValue();
+    int every = args.every.getValue();
+    int until = args.until.getValue();
+    int ppred = args.ppred.getValue();
+    int size = (until - burnin) / every;
+    std::string chain_name = args.chain_name.getValue();
 
-    void Open() override {
-        // open <name>.param
-        ifstream is((name + ".param").c_str());
+    std::ifstream is{chain_name + ".param"};
+    ChainDriver::fake_read(is); // We're not interested in the ChainDriver of the param file
+    SingleOmegaModel model{is};
+    ChainReader cr{model, chain_name + ".chain"};
 
-        // check that file exists
-        if (!is) {
-            cerr << "error : cannot find file : " << name << ".param\n";
-            exit(1);
+    cr.skip(burnin);
+    if (ppred) {
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            cr.skip(every);
+            model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
         }
-
-        // read model type, and other standard fields
-        is >> modeltype;
-        is >> datafile >> treefile;
-        int check;
-        is >> check;
-        if (check) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
-        }
-        is >> chainevery >> chainuntil >> chainsize;
-
-        // make a new model depending on the type obtained from the file
-        if (modeltype == "SINGLEOMEGA") {
-            model = new SingleOmegaModel(datafile, treefile);
-        } else {
-            cerr << "error when opening file " << name << '\n';
-            exit(1);
-        }
-
-        GetModel()->Allocate();
-
-        // read model (i.e. chain's last point) from <name>.param
-        model->FromStream(is);
-
-        // open <name>.chain, and prepare stream and stream iterator
-        OpenChainFile();
-        // now, size is defined (it is the total number of points with which this
-        // Sample object will make all its various posterior averages) all these
-        // points can be accessed to (only once) by repeated calls to GetNextPoint()
-    }
-
-    //! \brief computes the posterior mean estimate (and the posterior standard
-    //! deviation) of omega
-    void Read() {
+        cerr << '\n';
+    } else {
         cerr << size << " points to read\n";
 
         double meanomega = 0;
@@ -80,8 +60,8 @@ class SingleOmegaSample : public Sample {
 
         for (int i = 0; i < size; i++) {
             cerr << '.';
-            GetNextPoint();
-            double om = GetModel()->GetOmega();
+            cr.skip(every);
+            double om = model.GetOmega();
             meanomega += om;
             varomega += om * om;
         }
@@ -91,55 +71,5 @@ class SingleOmegaSample : public Sample {
         varomega -= meanomega * meanomega;
 
         cout << "posterior mean omega : " << meanomega << '\t' << sqrt(varomega) << '\n';
-    }
-};
-
-int main(int argc, char *argv[]) {
-    int burnin = 0;
-    int every = 1;
-    int until = -1;
-    int ppred = 0;
-
-    string name;
-
-    try {
-        if (argc == 1) { throw(0); }
-
-        int i = 1;
-        while (i < argc) {
-            string s = argv[i];
-            if ((s == "-x") || (s == "-extract")) {
-                i++;
-                if (i == argc) throw(0);
-                s = argv[i];
-                burnin = atoi(argv[i]);
-                i++;
-                if (i == argc) throw(0);
-                s = argv[i];
-                every = atoi(argv[i]);
-                i++;
-                if (i == argc) throw(0);
-                s = argv[i];
-                until = atoi(argv[i]);
-            } else if (s == "-ppred") {
-                ppred = 1;
-            } else {
-                if (i != (argc - 1)) { throw(0); }
-                name = argv[i];
-            }
-            i++;
-        }
-        if (name == "") { throw(0); }
-    } catch (...) {
-        cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
-        cerr << '\n';
-        exit(1);
-    }
-
-    SingleOmegaSample *sample = new SingleOmegaSample(name, burnin, every, until);
-    if (ppred) {
-        sample->PostPred();
-    } else {
-        sample->Read();
     }
 }
