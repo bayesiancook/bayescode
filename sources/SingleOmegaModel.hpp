@@ -28,7 +28,7 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel, public ChainComponent {
+class SingleOmegaModel : public ChainComponent {
     // tree and data
     std::string datafile, treefile;
     std::unique_ptr<Tracer> tracer;
@@ -604,45 +604,12 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         TouchCodonMatrix();
     }
 
-    //-------------------
-    // Traces and Monitors
-    // ------------------
-
-    void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\tlength\t";
-        os << "omega\t";
-        os << "statent\t";
-        os << "rrent\n";
-    }
-
-    void Trace(ostream &os) const override {
-        os << GetLogPrior() << '\t';
-        os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
-        os << omega << '\t';
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
-    }
-
-    void Monitor(ostream &os) const {}
 
     void ToStream(ostream &os) const {
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
         tracer->write_line(os);
-    }
-
-    void FromStream(istream &) { /* DEPRECATED */
-        // std::string model_name;
-        // is >> model_name;
-        // if (model_name != "SingleOmega") {
-        //     std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-        //     exit(1);
-        // }
-        // is >> datafile;
-        // is >> treefile;
-        // tracer.read_line(is);
     }
 
     SingleOmegaModel(istream &is) {
