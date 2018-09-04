@@ -27,7 +27,7 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel, public ChainComponent {
+class SingleOmegaModel : public ChainComponent {
     // tree and data
     std::string datafile, treefile;
     std::unique_ptr<Tracer> tracer;
@@ -333,7 +333,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update() override {
+    void Update() {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         ResampleSub(1.0);
@@ -345,7 +345,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) override {
+    void PostPred(string name) {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
@@ -372,7 +372,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
     // Branch lengths
 
@@ -510,7 +510,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move() override {
+    double Move() {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
@@ -601,45 +601,11 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         TouchCodonMatrix();
     }
 
-    //-------------------
-    // Traces and Monitors
-    // ------------------
-
-    void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\tlength\t";
-        os << "omega\t";
-        os << "statent\t";
-        os << "rrent\n";
-    }
-
-    void Trace(ostream &os) const override {
-        os << GetLogPrior() << '\t';
-        os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
-        os << omega << '\t';
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
-    }
-
-    void Monitor(ostream &os) const override {}
-
-    void ToStream(ostream &os) const override {
+    void ToStream(ostream &os) const {
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
         tracer->write_line(os);
-    }
-
-    void FromStream(istream &) override { /* DEPRECATED */
-        // std::string model_name;
-        // is >> model_name;
-        // if (model_name != "SingleOmega") {
-        //     std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-        //     exit(1);
-        // }
-        // is >> datafile;
-        // is >> treefile;
-        // tracer.read_line(is);
     }
 
     SingleOmegaModel(istream &is) {
