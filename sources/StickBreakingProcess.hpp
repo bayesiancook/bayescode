@@ -56,9 +56,7 @@ class StickBreakingProcess : public SimpleArray<double> {
     //! Sample from posterior distribution (given occupany sufficient statistics)
     void GibbsResample(const OccupancySuffStat &occupancy) {
         int remainingOcc = 0;
-        for (int i = 0; i < occupancy.GetSize(); i++) {
-            remainingOcc += occupancy.GetVal(i);
-        }
+        for (int i = 0; i < occupancy.GetSize(); i++) { remainingOcc += occupancy.GetVal(i); }
 
         double cumulProduct = 1.0;
         double totweight = 0;
@@ -67,9 +65,7 @@ class StickBreakingProcess : public SimpleArray<double> {
             double x = Random::sGamma(1 + occupancy.GetVal(k));
             double y = Random::sGamma(kappa + remainingOcc);
             double v = x / (x + y);
-            if (!v) {
-                v = 1e-50;
-            }
+            if (!v) { v = 1e-50; }
             V[k] = v;
             if (k == GetSize() - 1) {
                 V[k] = 1;
@@ -103,9 +99,7 @@ class StickBreakingProcess : public SimpleArray<double> {
     //! specified occupancy sufficient statistics)
     double GetMarginalLogProb(const OccupancySuffStat &occupancy) const {
         int remainingOcc = 0;
-        for (int i = 0; i < occupancy.GetSize(); i++) {
-            remainingOcc += occupancy.GetVal(i);
-        }
+        for (int i = 0; i < occupancy.GetSize(); i++) { remainingOcc += occupancy.GetVal(i); }
 
         double total = 0;
         for (int k = 0; k < GetSize(); k++) {
@@ -217,16 +211,12 @@ class StickBreakingProcess : public SimpleArray<double> {
 
     //! get array from MPI buffer (specialized)
     void MPIGetSB(const MPIBuffer &is) {
-        for (int k = 0; k < GetSize(); k++) {
-            is >> (*this)[k] >> V[k];
-        }
+        for (int k = 0; k < GetSize(); k++) { is >> (*this)[k] >> V[k]; }
     }
 
     //! write array into MPI buffer (specialized)
     void MPIPutSB(MPIBuffer &os) const {
-        for (int k = 0; k < GetSize(); k++) {
-            os << GetVal(k) << V[k];
-        }
+        for (int k = 0; k < GetSize(); k++) { os << GetVal(k) << V[k]; }
     }
 
   private:

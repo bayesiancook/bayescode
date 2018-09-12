@@ -29,14 +29,13 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     //! constructor parameterized by a bidim array of fitness profiles, a codon
     //! state space and a single nucleotide matrix.
     AADiffSelCodonMatrixBidimArray(const BidimSelector<vector<double>> &infitnessarray,
-                                   const CodonStateSpace &incodonstatespace,
-                                   const SubMatrix &innucmatrix)
+        const CodonStateSpace &incodonstatespace, const SubMatrix &innucmatrix)
         : fitnessarray(infitnessarray),
           codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           matrixarray(infitnessarray.GetNrow(),
-                      vector<AAMutSelOmegaCodonSubMatrix *>(infitnessarray.GetNcol(),
-                                                            (AAMutSelOmegaCodonSubMatrix *)0)) {
+              vector<AAMutSelOmegaCodonSubMatrix *>(
+                  infitnessarray.GetNcol(), (AAMutSelOmegaCodonSubMatrix *)0)) {
         Create();
     }
 
@@ -68,35 +67,27 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     //! destruction of all matrices
     void Delete() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                delete matrixarray[i][j];
-            }
+            for (int j = 0; j < GetNcol(); j++) { delete matrixarray[i][j]; }
         }
     }
 
     //! signal corruption of the parameters (matrices should recompute themselves)
     void Corrupt() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                matrixarray[i][j]->CorruptMatrix();
-            }
+            for (int j = 0; j < GetNcol(); j++) { matrixarray[i][j]->CorruptMatrix(); }
         }
     }
 
     //! signal corruption for column (site) j
     void CorruptColumn(int j) {
-        for (int i = 0; i < GetNrow(); i++) {
-            matrixarray[i][j]->CorruptMatrix();
-        }
+        for (int i = 0; i < GetNrow(); i++) { matrixarray[i][j]->CorruptMatrix(); }
     }
 
     //! signal corruption for column (site) j, and only for those rows
     //! (conditions) that are flagged
     void CorruptColumn(int j, const vector<int> &flag) {
         for (int i = 0; i < GetNrow(); i++) {
-            if (flag[i]) {
-                matrixarray[i][j]->CorruptMatrix();
-            }
+            if (flag[i]) { matrixarray[i][j]->CorruptMatrix(); }
         }
     }
 

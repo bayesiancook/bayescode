@@ -21,8 +21,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     string GetModelType() override { return modeltype; }
 
     MultiGeneConditionOmegaChain(string indatafile, string intreefile, int inncond, int innlevel,
-                                 int inevery, int inuntil, string inname, int force, int inmyid,
-                                 int innprocs)
+        int inevery, int inuntil, string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECONDOMEGA"),
           datafile(indatafile),
@@ -44,16 +43,12 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
-        if (!myid) {
-            cerr << "allocate\n";
-        }
+        if (!myid) { cerr << "allocate\n"; }
         GetModel()->Allocate();
         GetModel()->Update();
         Reset(force);
 
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -172,9 +167,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -199,29 +192,23 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "globom -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        chain = new MultiGeneConditionOmegaChain(datafile, treefile, ncond, nlevel, every, until,
-                                                 name, force, myid, nprocs);
+        chain = new MultiGeneConditionOmegaChain(
+            datafile, treefile, ncond, nlevel, every, until, name, force, myid, nprocs);
     }
 
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

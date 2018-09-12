@@ -85,7 +85,7 @@ class SparseAAMutSelModel : public ProbModel {
 
   public:
     SparseAAMutSelModel(const string &datafile, const string &treefile, int inratemode,
-                        int inprofilemode, double inepsilon, double ingc, double inxi) {
+        int inprofilemode, double inepsilon, double ingc, double inxi) {
         blmode = 0;
         ratemode = inratemode;
         profilemode = inprofilemode;
@@ -174,9 +174,7 @@ class SparseAAMutSelModel : public ProbModel {
         siteratepathsuffstatarray = 0;
         if (ratemode == 1) {
             siterate = new IIDGamma(Nsite, alpha, alpha);
-            for (int i = 0; i < Nsite; i++) {
-                (*siterate)[i] = 1.0;
-            }
+            for (int i = 0; i < Nsite; i++) { (*siterate)[i] = 1.0; }
             siteratepathsuffstatarray = new PoissonSuffStatArray(Nsite);
         }
 
@@ -190,9 +188,7 @@ class SparseAAMutSelModel : public ProbModel {
         profileshape = 20.0;
         profilecenter.assign(Naa, 1.0 / Naa);
         preprofile = new IIDMultiGamma(Nsite, Naa, profileshape, profilecenter);
-        if (profilemode == 3) {
-            preprofile->SetUniform();
-        }
+        if (profilemode == 3) { preprofile->SetUniform(); }
 
         // pi = 0.1;
         // sitemaskarray = new IIDProfileMask(Nsite,Naa,pi);
@@ -226,13 +222,9 @@ class SparseAAMutSelModel : public ProbModel {
     void FitSiteMaskArray() {
         for (int i = 0; i < Nsite; i++) {
             vector<int> &x = (*sitemaskarray)[i];
-            for (int k = 0; k < Naa; k++) {
-                x[k] = 0;
-            }
+            for (int k = 0; k < Naa; k++) { x[k] = 0; }
             for (int j = 0; j < Ntaxa; j++) {
-                if (data->GetState(j, i) != unknown) {
-                    x[data->GetState(j, i)] = 1;
-                }
+                if (data->GetState(j, i) != unknown) { x[data->GetState(j, i)] = 1; }
             }
         }
     }
@@ -254,8 +246,8 @@ class SparseAAMutSelModel : public ProbModel {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -274,9 +266,7 @@ class SparseAAMutSelModel : public ProbModel {
     double GetMaskEpsilon() const { return maskepsilon; }
 
     void Update() override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         if (ratemode == 1) {
             siterate->SetShape(alpha);
             siterate->SetScale(alpha);
@@ -335,9 +325,7 @@ class SparseAAMutSelModel : public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        if (blmode < 2) {
-            total += BranchLengthsLogPrior();
-        }
+        if (blmode < 2) { total += BranchLengthsLogPrior(); }
         if (ratemode == 1) {
             total += SiteRateHyperLogPrior();
             total += SiteRateLogPrior();
@@ -357,9 +345,7 @@ class SparseAAMutSelModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) {
-            ret += BranchLengthsHyperLogPrior();
-        }
+        if (blmode == 0) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
@@ -369,18 +355,14 @@ class SparseAAMutSelModel : public ProbModel {
 
     double NucRateLogPrior() const {
         double ret = -kappa / 10;
-        if (ximode < 2) {
-            ret -= 10 * xi;
-        }
+        if (ximode < 2) { ret -= 10 * xi; }
         return ret;
     }
 
     //! log prior over mask array hyperparameters
     double MaskHyperLogPrior() const {
         double ret = 0;
-        if (maskepsilonmode < 2) {
-            ret -= 10 * maskepsilon;
-        }
+        if (maskepsilonmode < 2) { ret -= 10 * maskepsilon; }
         return ret;
     }
 
@@ -484,12 +466,8 @@ class SparseAAMutSelModel : public ProbModel {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode < 2) {
-                MoveBranchLengths();
-            }
-            if (ratemode == 1) {
-                MoveSiteRates();
-            }
+            if (blmode < 2) { MoveBranchLengths(); }
+            if (ratemode == 1) { MoveSiteRates(); }
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
@@ -497,15 +475,9 @@ class SparseAAMutSelModel : public ProbModel {
                     MovePreProfile(10);
                     CompMovePreProfile(3);
                 }
-                if (maskmode < 3) {
-                    MoveMasks(20);
-                }
-                if (maskmode < 2) {
-                    MoveMaskHyperParameters();
-                }
-                if (maskepsilonmode < 2) {
-                    MoveMaskEpsilon(10);
-                }
+                if (maskmode < 3) { MoveMasks(20); }
+                if (maskmode < 2) { MoveMaskHyperParameters(); }
+                if (maskepsilonmode < 2) { MoveMaskEpsilon(10); }
             }
             MoveNucRate();
             CorruptMatrices();
@@ -531,9 +503,7 @@ class SparseAAMutSelModel : public ProbModel {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
@@ -542,35 +512,35 @@ class SparseAAMutSelModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &SparseAAMutSelModel::BranchLengthsHyperLogProb,
-                    &SparseAAMutSelModel::NoUpdate, this);
+            &SparseAAMutSelModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &SparseAAMutSelModel::BranchLengthsHyperLogProb,
-                    &SparseAAMutSelModel::NoUpdate, this);
+            &SparseAAMutSelModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH move on nuc rate parameters: kappa and gc
     void MoveNucRate() {
         ScalingMove(kappa, 1.0, 3, &SparseAAMutSelModel::NucRateLogProb,
-                    &SparseAAMutSelModel::CorruptMatrices, this);
+            &SparseAAMutSelModel::CorruptMatrices, this);
         ScalingMove(kappa, 0.3, 3, &SparseAAMutSelModel::NucRateLogProb,
-                    &SparseAAMutSelModel::CorruptMatrices, this);
+            &SparseAAMutSelModel::CorruptMatrices, this);
         ScalingMove(kappa, 0.1, 3, &SparseAAMutSelModel::NucRateLogProb,
-                    &SparseAAMutSelModel::CorruptMatrices, this);
+            &SparseAAMutSelModel::CorruptMatrices, this);
         if (gcmode < 2) {
             SlidingMove(gc, 1.0, 3, 0, 1.0, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
             SlidingMove(gc, 0.3, 3, 0, 1.0, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
             SlidingMove(gc, 0.1, 3, 0, 1.0, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
         }
         if (ximode < 2) {
             ScalingMove(xi, 1.0, 3, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
             ScalingMove(xi, 0.3, 3, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
             ScalingMove(xi, 0.1, 3, &SparseAAMutSelModel::NucRateLogProb,
-                        &SparseAAMutSelModel::CorruptMatrices, this);
+                &SparseAAMutSelModel::CorruptMatrices, this);
         }
     }
 
@@ -588,9 +558,9 @@ class SparseAAMutSelModel : public ProbModel {
         siteratehypersuffstat.Clear();
         siteratehypersuffstat.AddSuffStat(*siterate);
         ScalingMove(alpha, 1.0, 10, &SparseAAMutSelModel::SiteRateHyperLogProb,
-                    &SparseAAMutSelModel::NoUpdate, this);
+            &SparseAAMutSelModel::NoUpdate, this);
         ScalingMove(alpha, 0.3, 10, &SparseAAMutSelModel::SiteRateHyperLogProb,
-                    &SparseAAMutSelModel::NoUpdate, this);
+            &SparseAAMutSelModel::NoUpdate, this);
         siterate->SetShape(alpha);
         siterate->SetScale(alpha);
     }
@@ -648,9 +618,7 @@ class SparseAAMutSelModel : public ProbModel {
                     nacc++;
                 } else {
                     for (int a = 0; a < Naa; a++) {
-                        if (mask[a]) {
-                            x[a] /= e;
-                        }
+                        if (mask[a]) { x[a] /= e; }
                     }
                 }
                 ntot++;
@@ -748,18 +716,18 @@ class SparseAAMutSelModel : public ProbModel {
     void MoveMaskHyperParameters() {
         for (int k = 0; k < Naa; k++) {
             SlidingMove(pi[k], 1.0, 10, 0.05, 0.975, &SparseAAMutSelModel::MaskLogProb,
-                        &SparseAAMutSelModel::UpdateMask, this);
+                &SparseAAMutSelModel::UpdateMask, this);
             SlidingMove(pi[k], 0.1, 10, 0.05, 0.975, &SparseAAMutSelModel::MaskLogProb,
-                        &SparseAAMutSelModel::UpdateMask, this);
+                &SparseAAMutSelModel::UpdateMask, this);
         }
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon(int nrep) {
         SlidingMove(maskepsilon, 1.0, nrep, 0, 1.0, &SparseAAMutSelModel::MaskEpsilonLogProb,
-                    &SparseAAMutSelModel::UpdateAll, this);
+            &SparseAAMutSelModel::UpdateAll, this);
         SlidingMove(maskepsilon, 0.1, nrep, 0, 1.0, &SparseAAMutSelModel::MaskEpsilonLogProb,
-                    &SparseAAMutSelModel::UpdateAll, this);
+            &SparseAAMutSelModel::UpdateAll, this);
     }
 
     //! MH move on masks across sites
@@ -769,14 +737,10 @@ class SparseAAMutSelModel : public ProbModel {
         for (int i = 0; i < Nsite; i++) {
             vector<int> &mask = (*sitemaskarray)[i];
             int naa = 0;
-            for (int k = 0; k < Naa; k++) {
-                naa += mask[k];
-            }
+            for (int k = 0; k < Naa; k++) { naa += mask[k]; }
             for (int rep = 0; rep < nrep; rep++) {
                 int k = (int)(Naa * Random::Uniform());
-                if (nrep == 20) {
-                    k = rep;
-                }
+                if (nrep == 20) { k = rep; }
                 // for (int k=0; k<Naa; k++)   {
                 if ((!mask[k]) || (naa > 1)) {
                     double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
@@ -785,9 +749,7 @@ class SparseAAMutSelModel : public ProbModel {
                     naa += mask[k];
                     if ((profilemode < 2) && mask[k]) {
                         (*preprofile)[i][k] = Random::sGamma(profileshape * profilecenter[k]);
-                        if (!(*preprofile)[i][k]) {
-                            (*preprofile)[i][k] = 1e-8;
-                        }
+                        if (!(*preprofile)[i][k]) { (*preprofile)[i][k] = 1e-8; }
                     }
                     UpdateSite(i);
                     deltalogprob += MaskLogPrior(i) + SiteSuffStatLogProb(i);
@@ -821,21 +783,15 @@ class SparseAAMutSelModel : public ProbModel {
     //! write header of tracefile
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
-        if (ratemode == 1) {
-            os << "alpha\tmeanrate\tvarrate\t";
-        }
+        if (ratemode == 1) { os << "alpha\tmeanrate\tvarrate\t"; }
         // os << "pi\t";
         os << "meanpi\t";
         os << "varpi\t";
         os << "width\t";
         os << "epsilon\t";
         os << "kappa\t";
-        if (ximode < 2) {
-            os << "xi\t";
-        }
-        if (gcmode < 2) {
-            os << "gc\t";
-        }
+        if (ximode < 2) { os << "xi\t"; }
+        if (gcmode < 2) { os << "gc\t"; }
         os << '\n';
     }
 
@@ -854,20 +810,14 @@ class SparseAAMutSelModel : public ProbModel {
         os << sitemaskarray->GetMeanWidth() << '\t';
         os << maskepsilon << '\t';
         os << kappa << '\t';
-        if (ximode < 2) {
-            os << xi << '\t';
-        }
-        if (gcmode < 2) {
-            os << gc << '\t';
-        }
+        if (ximode < 2) { os << xi << '\t'; }
+        if (gcmode < 2) { os << gc << '\t'; }
         os << '\n';
     }
 
     double GetMeanPi() const {
         double mean = 0;
-        for (int k = 0; k < Naa; k++) {
-            mean += pi[k];
-        }
+        for (int k = 0; k < Naa; k++) { mean += pi[k]; }
         mean /= Naa;
         return mean;
     }
@@ -887,9 +837,7 @@ class SparseAAMutSelModel : public ProbModel {
 
     double GetMeanSiteRate() const {
         double tot = 0;
-        for (int i = 0; i < Nsite; i++) {
-            tot += (*siterate)[i];
-        }
+        for (int i = 0; i < Nsite; i++) { tot += (*siterate)[i]; }
         tot /= Nsite;
         return tot;
     }
@@ -917,24 +865,12 @@ class SparseAAMutSelModel : public ProbModel {
             is >> *branchlength;
         }
         is >> kappa;
-        if (ximode < 2) {
-            is >> xi;
-        }
-        if (gcmode < 2) {
-            is >> gc;
-        }
-        if (profilemode < 2) {
-            is >> *preprofile;
-        }
-        if (maskmode < 2) {
-            is >> pi;
-        }
-        if (maskmode < 3) {
-            is >> *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            is >> maskepsilon;
-        }
+        if (ximode < 2) { is >> xi; }
+        if (gcmode < 2) { is >> gc; }
+        if (profilemode < 2) { is >> *preprofile; }
+        if (maskmode < 2) { is >> pi; }
+        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (maskepsilonmode < 2) { is >> maskepsilon; }
     }
 
     //! write complete current parameter configuration to stream
@@ -944,24 +880,12 @@ class SparseAAMutSelModel : public ProbModel {
             os << *branchlength << '\t';
         }
         os << kappa << '\t';
-        if (ximode < 2) {
-            os << xi << '\t';
-        }
-        if (gcmode < 2) {
-            os << gc << '\t';
-        }
-        if (profilemode < 2) {
-            os << *preprofile << '\t';
-        }
-        if (maskmode < 2) {
-            os << pi << '\t';
-        }
-        if (maskmode < 3) {
-            os << *sitemaskarray << '\t';
-        }
-        if (maskepsilonmode < 2) {
-            os << maskepsilon << '\t';
-        }
+        if (ximode < 2) { os << xi << '\t'; }
+        if (gcmode < 2) { os << gc << '\t'; }
+        if (profilemode < 2) { os << *preprofile << '\t'; }
+        if (maskmode < 2) { os << pi << '\t'; }
+        if (maskmode < 3) { os << *sitemaskarray << '\t'; }
+        if (maskepsilonmode < 2) { os << maskepsilon << '\t'; }
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context)
@@ -973,19 +897,13 @@ class SparseAAMutSelModel : public ProbModel {
         }
         // mut rates
         size += 3;
-        if (profilemode < 2) {
-            size += preprofile->GetMPISize();
-        }
+        if (profilemode < 2) { size += preprofile->GetMPISize(); }
         if (maskmode < 2) {
             // size++;
             size += Naa;
         }
-        if (maskmode < 3) {
-            size += sitemaskarray->GetMPISize();
-        }
-        if (maskepsilonmode < 2) {
-            size++;
-        }
+        if (maskmode < 3) { size += sitemaskarray->GetMPISize(); }
+        if (maskepsilonmode < 2) { size++; }
         return size;
     }
 
@@ -996,24 +914,12 @@ class SparseAAMutSelModel : public ProbModel {
             is >> *branchlength;
         }
         is >> kappa;
-        if (ximode < 2) {
-            is >> xi;
-        }
-        if (gcmode < 2) {
-            is >> gc;
-        }
-        if (profilemode < 2) {
-            is >> *preprofile;
-        }
-        if (maskmode < 2) {
-            is >> pi;
-        }
-        if (maskmode < 3) {
-            is >> *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            is >> maskepsilon;
-        }
+        if (ximode < 2) { is >> xi; }
+        if (gcmode < 2) { is >> gc; }
+        if (profilemode < 2) { is >> *preprofile; }
+        if (maskmode < 2) { is >> pi; }
+        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (maskepsilonmode < 2) { is >> maskepsilon; }
     }
 
     //! write complete current parameter configuration into MPI buffer
@@ -1023,23 +929,11 @@ class SparseAAMutSelModel : public ProbModel {
             os << *branchlength;
         }
         os << kappa;
-        if (ximode < 2) {
-            os << xi;
-        }
-        if (gcmode < 2) {
-            os << gc;
-        }
-        if (profilemode < 2) {
-            os << *preprofile;
-        }
-        if (maskmode < 2) {
-            os << pi;
-        }
-        if (maskmode < 3) {
-            os << *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            os << maskepsilon;
-        }
+        if (ximode < 2) { os << xi; }
+        if (gcmode < 2) { os << gc; }
+        if (profilemode < 2) { os << *preprofile; }
+        if (maskmode < 2) { os << pi; }
+        if (maskmode < 3) { os << *sitemaskarray; }
+        if (maskepsilonmode < 2) { os << maskepsilon; }
     }
 };

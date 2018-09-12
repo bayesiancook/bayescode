@@ -185,8 +185,8 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         UpdateMatrices();
@@ -234,15 +234,11 @@ class DiscGammaSiteOmegaModel : public ProbModel {
             for (int k = 0; k < Ncat; k++) {
                 (*sitealloc)[i] = k;
                 logp[k] = phyloprocess->SiteLogLikelihood(i);
-                if ((!k) || (max < logp[k])) {
-                    max = logp[k];
-                }
+                if ((!k) || (max < logp[k])) { max = logp[k]; }
             }
 
             double p = 0;
-            for (int k = 0; k < Ncat; k++) {
-                p += w[k] * exp(logp[k] - max);
-            }
+            for (int k = 0; k < Ncat; k++) { p += w[k] * exp(logp[k] - max); }
             double logl = log(p) + max;
             total += logl;
 
@@ -294,8 +290,8 @@ class DiscGammaSiteOmegaModel : public ProbModel {
 
     double OmegaPathSuffStatLogProb() const {
         componentomegaarray->SetParameters(omegamean, omegainvshape);
-        return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray,
-                                                     sitepostprobarray);
+        return componentomegaarray->GetPostProbArray(
+            *siteomegapathsuffstatarray, sitepostprobarray);
     }
 
     //-------------------
@@ -354,9 +350,9 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &DiscGammaSiteOmegaModel::BranchLengthsHyperLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &DiscGammaSiteOmegaModel::BranchLengthsHyperLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
 
@@ -386,13 +382,13 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         CollectOmegaPathSuffStat();
 
         ScalingMove(omegamean, 1.0, 10, &DiscGammaSiteOmegaModel::OmegaLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
         ScalingMove(omegamean, 0.3, 10, &DiscGammaSiteOmegaModel::OmegaLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 1.0, 10, &DiscGammaSiteOmegaModel::OmegaLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 0.3, 10, &DiscGammaSiteOmegaModel::OmegaLogProb,
-                    &DiscGammaSiteOmegaModel::NoUpdate, this);
+            &DiscGammaSiteOmegaModel::NoUpdate, this);
 
         ResampleAlloc();
     }
@@ -408,16 +404,16 @@ class DiscGammaSiteOmegaModel : public ProbModel {
         CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &DiscGammaSiteOmegaModel::NucRatesLogProb,
-                    &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
+            &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &DiscGammaSiteOmegaModel::NucRatesLogProb,
-                    &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
+            &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &DiscGammaSiteOmegaModel::NucRatesLogProb,
-                    &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
+            &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &DiscGammaSiteOmegaModel::NucRatesLogProb,
-                    &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
+            &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &DiscGammaSiteOmegaModel::NucRatesLogProb,
-                    &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
+            &DiscGammaSiteOmegaModel::UpdateNucMatrix, this);
 
         UpdateMatrices();
     }

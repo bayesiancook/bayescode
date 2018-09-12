@@ -53,9 +53,7 @@ class IIDBernoulliGamma : public SimpleArray<double> {
     int GetNullSet() const {
         int tot = 0;
         for (int i = 0; i < GetSize(); i++) {
-            if (!GetVal(i)) {
-                tot++;
-            }
+            if (!GetVal(i)) { tot++; }
         }
         return tot;
     }
@@ -63,9 +61,7 @@ class IIDBernoulliGamma : public SimpleArray<double> {
     //! return log probability summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -85,9 +81,7 @@ class IIDBernoulliGamma : public SimpleArray<double> {
     int GetNpos() const {
         int n = 0;
         for (int i = 0; i < GetSize(); i++) {
-            if (GetVal(i)) {
-                n++;
-            }
+            if (GetVal(i)) { n++; }
         }
         return n;
     }
@@ -102,9 +96,7 @@ class IIDBernoulliGamma : public SimpleArray<double> {
                 tot++;
             }
         }
-        if (!tot) {
-            return 0;
-        }
+        if (!tot) { return 0; }
         m1 /= tot;
         return m1;
     }

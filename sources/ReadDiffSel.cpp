@@ -78,8 +78,8 @@ class DiffSelSample : public Sample {
     void ReadPP(double cutoff, int siteoffset) {
         int Nsite = GetModel()->GetNsite();
         int Ncond = category;
-        vector<vector<vector<double>>> pp(Ncond - 1,
-                                          vector<vector<double>>(Nsite, vector<double>(Naa, 0)));
+        vector<vector<vector<double>>> pp(
+            Ncond - 1, vector<vector<double>>(Nsite, vector<double>(Naa, 0)));
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
@@ -93,12 +93,8 @@ class DiffSelSample : public Sample {
                         tot += d[a];
                     }
                     tot /= Naa;
-                    for (int a = 0; a < Naa; a++) {
-                        d[a] -= tot;
-                    }
-                    for (int a = 0; a < Naa; a++) {
-                        pp[k - 1][j][a] += (d[a] > 0);
-                    }
+                    for (int a = 0; a < Naa; a++) { d[a] -= tot; }
+                    for (int a = 0; a < Naa; a++) { pp[k - 1][j][a] += (d[a] > 0); }
                 }
             }
         }
@@ -107,9 +103,7 @@ class DiffSelSample : public Sample {
         // normalization
         for (int k = 1; k < Ncond; k++) {
             for (int j = 0; j < Nsite; j++) {
-                for (int a = 0; a < Naa; a++) {
-                    pp[k - 1][j][a] /= size;
-                }
+                for (int a = 0; a < Naa; a++) { pp[k - 1][j][a] /= size; }
             }
         }
 
@@ -146,9 +140,7 @@ int main(int argc, char *argv[]) {
     int ppred = 0;
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -159,9 +151,7 @@ int main(int argc, char *argv[]) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
-                if (!IsInt(s)) {
-                    throw(0);
-                }
+                if (!IsInt(s)) { throw(0); }
                 burnin = atoi(argv[i]);
                 i++;
                 if (i == argc) throw(0);
@@ -186,16 +176,12 @@ int main(int argc, char *argv[]) {
                 i++;
                 siteoffset = atoi(argv[i]);
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if (name == "") {
-            throw(0);
-        }
+        if (name == "") { throw(0); }
     } catch (...) {
         cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
         cerr << '\n';

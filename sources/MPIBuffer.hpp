@@ -62,16 +62,12 @@ class MPIBuffer {
     }
 
     void ToStream(ostream &os) const {
-        for (unsigned int i = 0; i < size; i++) {
-            os << buffer[i] << '\t';
-        }
+        for (unsigned int i = 0; i < size; i++) { os << buffer[i] << '\t'; }
         os << '\n';
     }
 
     void FromStream(istream &is) {
-        for (unsigned int i = 0; i < size; i++) {
-            is >> buffer[i];
-        }
+        for (unsigned int i = 0; i < size; i++) { is >> buffer[i]; }
     }
 
   private:
@@ -113,17 +109,13 @@ const MPIBuffer &operator>>(const MPIBuffer &buffer, T &t) {
 
 template <class T>
 MPIBuffer &operator<<(MPIBuffer &buffer, const vector<T> &v) {
-    for (unsigned int i = 0; i < v.size(); i++) {
-        buffer << v[i];
-    }
+    for (unsigned int i = 0; i < v.size(); i++) { buffer << v[i]; }
     return buffer;
 }
 
 template <class T>
 const MPIBuffer &operator>>(const MPIBuffer &buffer, vector<T> &v) {
-    for (unsigned int i = 0; i < v.size(); i++) {
-        buffer >> v[i];
-    }
+    for (unsigned int i = 0; i < v.size(); i++) { buffer >> v[i]; }
     return buffer;
 }
 

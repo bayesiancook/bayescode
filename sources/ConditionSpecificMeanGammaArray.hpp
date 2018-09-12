@@ -43,9 +43,7 @@ class ConditionSpecificMeanGammaArray : public SimpleArray<double> {
     //! return total log prob summed over all entries
     double GetLogProb() {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -58,9 +56,7 @@ class ConditionSpecificMeanGammaArray : public SimpleArray<double> {
 
     double GetMean() const {
         double m1 = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            m1 += GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { m1 += GetVal(i); }
         return m1 / GetSize();
     }
 
@@ -96,18 +92,14 @@ class ConditionSpecificMeanGammaBidimArray : public Array<ConditionSpecificMeanG
     }
 
     ~ConditionSpecificMeanGammaBidimArray() {
-        for (int gene = 0; gene < GetSize(); gene++) {
-            delete array[gene];
-        }
+        for (int gene = 0; gene < GetSize(); gene++) { delete array[gene]; }
     }
 
     //! set the shape parameter (should be called whenever the shape parameter has
     //! changed during the MCMC)
     void SetInvShape(double ininvshape) {
         invshape = ininvshape;
-        for (int gene = 0; gene < GetSize(); gene++) {
-            array[gene]->SetInvShape(invshape);
-        }
+        for (int gene = 0; gene < GetSize(); gene++) { array[gene]->SetInvShape(invshape); }
     }
 
     //! return total number of entries (number of genes)
@@ -160,9 +152,7 @@ class ConditionSpecificMeanGammaBidimArray : public Array<ConditionSpecificMeanG
     //! return total log prob (over all genes and over all branches)
     double GetLogProb() const {
         double total = 0;
-        for (int gene = 0; gene < GetSize(); gene++) {
-            total += array[gene]->GetLogProb();
-        }
+        for (int gene = 0; gene < GetSize(); gene++) { total += array[gene]->GetLogProb(); }
         return total;
     }
 

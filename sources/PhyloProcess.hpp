@@ -50,9 +50,9 @@ class PhyloProcess {
     //! be used for getting the equilibrium frequencies at each site, from which
     //! to draw the root state
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
-                 const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-                 const BranchSiteSelector<SubMatrix> *insubmatrixarray,
-                 const Selector<SubMatrix> *inrootsubmatrixarray);
+        const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+        const BranchSiteSelector<SubMatrix> *insubmatrixarray,
+        const Selector<SubMatrix> *inrootsubmatrixarray);
 
     //! \brief special (short-cut) constructor for branch-homogeneous and
     //! site-homogeneous model
@@ -63,8 +63,8 @@ class PhyloProcess {
     //! internally allocated by PhyloProcess based on this matrix. If insiterate
     //! pointer is null, then rates across sites are all equal to 1.
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
-                 const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-                 const SubMatrix *insubmatrix);
+        const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+        const SubMatrix *insubmatrix);
 
     //! \brief special (short-cut) constructor for branch-homogeneous and
     //! site-heterogeneous model
@@ -76,8 +76,8 @@ class PhyloProcess {
     //! rootmatrixarray is set to insubmatrixarray. If insiterate pointer is null,
     //! then rates across sites are all equal to 1.
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
-                 const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-                 const Selector<SubMatrix> *insubmatrixarray);
+        const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+        const Selector<SubMatrix> *insubmatrixarray);
 
     //! \brief special (short-cut) constructor for branch-heterogeneous and
     //! site-homogeneous model
@@ -89,9 +89,8 @@ class PhyloProcess {
     //! internally allocated by PhyloProcess based on these parameters. If
     //! insiterate pointer is null, then rates across sites are all equal to 1.
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
-                 const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-                 const BranchSelector<SubMatrix> *insubmatrixbrancharray,
-                 const SubMatrix *inrootsubmatrix);
+        const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+        const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *inrootsubmatrix);
 
     ~PhyloProcess();
 
@@ -152,9 +151,7 @@ class PhyloProcess {
     //! return site rate for given site (if no rates-across-sites array was given
     //! to phyloprocess, returns 1)
     double GetSiteRate(int site) const {
-        if (!siterate) {
-            return 1.0;
-        }
+        if (!siterate) { return 1.0; }
         return siterate->GetVal(site);
     }
 
@@ -214,8 +211,8 @@ class PhyloProcess {
     //! them to bidim suffstatarray (branches partitioned into conditions, see
     //! DiffSelModel) heterogeneeous across sites, branches partitioned into
     //! conditions
-    void AddPathSuffStat(BidimArray<PathSuffStat> &suffstatarray,
-                         const BranchAllocationSystem &branchalloc) const;
+    void AddPathSuffStat(
+        BidimArray<PathSuffStat> &suffstatarray, const BranchAllocationSystem &branchalloc) const;
 
     //! compute path sufficient statistics for resampling branch lengths add them
     //! to branchlengthpathsuffstatarray
@@ -235,18 +232,18 @@ class PhyloProcess {
     void LocalAddPathSuffStat(const Link *from, Array<PathSuffStat> &suffstatarray) const;
 
     void RecursiveAddPathSuffStat(const Link *from, BidimArray<PathSuffStat> &suffstatarray,
-                                  const BranchAllocationSystem &branchalloc) const;
-    void LocalAddPathSuffStat(const Link *from, BidimArray<PathSuffStat> &suffstatarray,
-                              int cond) const;
+        const BranchAllocationSystem &branchalloc) const;
+    void LocalAddPathSuffStat(
+        const Link *from, BidimArray<PathSuffStat> &suffstatarray, int cond) const;
 
     void RecursiveAddLengthSuffStat(
         const Link *from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;
     void LocalAddLengthSuffStat(const Link *from, PoissonSuffStat &branchlengthsuffstat) const;
 
-    void RecursiveAddRateSuffStat(const Link *from,
-                                  Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
-    void LocalAddRateSuffStat(const Link *from,
-                              Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void RecursiveAddRateSuffStat(
+        const Link *from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void LocalAddRateSuffStat(
+        const Link *from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
 
     void PostPredSample(int site, bool rootprior = false);
     // rootprior == true : root state drawn from stationary probability of the
@@ -299,13 +296,13 @@ class PhyloProcess {
 
     // borrowed from phylobayes
     // where should that be?
-    BranchSitePath *SamplePath(int stateup, int statedown, double time, double rate,
-                               const SubMatrix &matrix);
+    BranchSitePath *SamplePath(
+        int stateup, int statedown, double time, double rate, const SubMatrix &matrix);
     BranchSitePath *SampleRootPath(int rootstate);
     BranchSitePath *ResampleAcceptReject(int maxtrial, int stateup, int statedown, double rate,
-                                         double totaltime, const SubMatrix &matrix);
-    BranchSitePath *ResampleUniformized(int stateup, int statedown, double rate, double totaltime,
-                                        const SubMatrix &matrix);
+        double totaltime, const SubMatrix &matrix);
+    BranchSitePath *ResampleUniformized(
+        int stateup, int statedown, double rate, double totaltime, const SubMatrix &matrix);
 
     const Tree *tree;
     const SequenceAlignment *data;

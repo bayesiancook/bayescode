@@ -41,9 +41,7 @@ class BranchAllocationSystem {
     //! read out branch names (recursively) and fill-in allocation map
     void MakeBranchAllocations() {
         // default pre-initialization
-        for (int j = 0; j < Nbranch; j++) {
-            branchalloc[j] = -1;
-        }
+        for (int j = 0; j < Nbranch; j++) { branchalloc[j] = -1; }
 
         RecursiveMakeBranchAllocations(tree.GetRoot());
 
@@ -61,9 +59,7 @@ class BranchAllocationSystem {
     void RecursiveMakeBranchAllocations(const Link *from) {
         if (!from->isRoot()) {
             int k = atoi(from->GetBranch()->GetName().c_str());
-            if (k >= Ncond) {
-                k = Ncond - 1;
-            }
+            if (k >= Ncond) { k = Ncond - 1; }
             if (k < 0) {
                 std::cerr << "error : allocation out of bound\n";
                 std::cerr << "k" << '\t' << "Ncond" << '\n';

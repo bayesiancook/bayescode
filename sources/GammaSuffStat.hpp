@@ -60,9 +60,7 @@ class GammaSuffStat : public SuffStat {
     //! 0
     void AddSuffStat(const IIDGamma &array, const Selector<int> &occupancy) {
         for (int i = 0; i < array.GetSize(); i++) {
-            if (occupancy.GetVal(i)) {
-                AddSuffStat(array.GetVal(i), log(array.GetVal(i)));
-            }
+            if (occupancy.GetVal(i)) { AddSuffStat(array.GetVal(i), log(array.GetVal(i))); }
         }
     }
 
@@ -70,9 +68,7 @@ class GammaSuffStat : public SuffStat {
     //! 0
     void AddSuffStat(const IIDGamma &array, const Selector<double> &probarray) {
         for (int i = 0; i < array.GetSize(); i++) {
-            if (probarray.GetVal(i)) {
-                AddSuffStat(array.GetVal(i), log(array.GetVal(i)));
-            }
+            if (probarray.GetVal(i)) { AddSuffStat(array.GetVal(i), log(array.GetVal(i))); }
         }
     }
 
@@ -151,9 +147,7 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
 
     //! member-wise addition between the two arrays ((*this) += from)
     void Add(const GammaSuffStatBranchArray &from) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Add(from.GetVal(i));
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Add(from.GetVal(i)); }
     }
 
     //! member-wise addition between the two arrays, operator version
@@ -170,8 +164,8 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
     }
 
     //! get suff stats from a GammaWhiteNoise
-    void AddSuffStat(const GammaWhiteNoise &array,
-                     const PoissonSuffStatBranchArray &suffstatarray) {
+    void AddSuffStat(
+        const GammaWhiteNoise &array, const PoissonSuffStatBranchArray &suffstatarray) {
         for (int i = 0; i < array.GetNbranch(); i++) {
             if (suffstatarray.GetVal(i).GetBeta() > 0) {
                 (*this)[i].AddSuffStat(array.GetVal(i), log(array.GetVal(i)));
@@ -181,15 +175,13 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
 
     //! get suff stats from a GammaWhiteNoiseArray
     void AddSuffStat(GammaWhiteNoiseArray &array) {
-        for (int gene = 0; gene < array.GetNgene(); gene++) {
-            AddSuffStat(array.GetVal(gene));
-        }
+        for (int gene = 0; gene < array.GetNgene(); gene++) { AddSuffStat(array.GetVal(gene)); }
     }
 
     //! get suff stats from a GammaWhiteNoiseArray, skipping branch lengths for which suff stats are
     //! empty
-    void AddSuffStat(GammaWhiteNoiseArray &array,
-                     const Selector<PoissonSuffStatBranchArray> &suffstatarray) {
+    void AddSuffStat(
+        GammaWhiteNoiseArray &array, const Selector<PoissonSuffStatBranchArray> &suffstatarray) {
         for (int gene = 0; gene < array.GetNgene(); gene++) {
             AddSuffStat(array.GetVal(gene), suffstatarray.GetVal(gene));
         }
@@ -200,30 +192,22 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
     }
 
     //! read array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
     }
 
     //! read from MPI buffer and add to current array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Add(buffer);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Add(buffer); }
     }
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Clear(); }
     }
 
     //! get total log prob

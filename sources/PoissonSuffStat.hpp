@@ -129,9 +129,7 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
 
     //! set suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Clear(); }
     }
 
     //! add path sufficient statistics for resampling branch lengths from
@@ -141,9 +139,7 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
     //! member-wise addition: essentially (*this)[i] += from[i], for
     //! i=0..GetSize()-1
     void Add(const PoissonSuffStatArray &from) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Add(from.GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Add(from.GetVal(i)); }
     }
 
     //! member-wise addition, operator version
@@ -157,23 +153,17 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get array from MPI buffer and add it to this array (member-wise addition)
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 
     //! \brief get logprob, based on an array of rates (of same size)
@@ -182,9 +172,7 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
     //! p((*this)[i] | ratearray[i])
     double GetLogProb(const Array<double> &ratearray) const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetVal(i).GetLogProb(ratearray.GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetVal(i).GetLogProb(ratearray.GetVal(i)); }
         return total;
     }
 
@@ -226,9 +214,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Clear(); }
     }
 
     //! get total log prob, based on an array of branch-specific rates (or
@@ -243,9 +229,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
 
     //! member-wise addition (*this)[i] = from[i] for all i=0..GetNbranch()-1
     void Add(const PoissonSuffStatBranchArray &from) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Add(from.GetVal(i));
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Add(from.GetVal(i)); }
     }
 
     //! member-wise addition: operator version
@@ -263,23 +247,17 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get an array from MPI buffer and then add it to this array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] += buffer; }
     }
 
     //! get total (summed) marginal log prob integrated over branch-specific rates
@@ -319,15 +297,11 @@ class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
     //! constructor, parameterized by underlying tree and size (number of genes)
     PoissonSuffStatTreeArray(const Tree &intree, int insize)
         : tree(intree), size(insize), array(insize, (PoissonSuffStatBranchArray *)0) {
-        for (int i = 0; i < GetSize(); i++) {
-            array[i] = new PoissonSuffStatBranchArray(tree);
-        }
+        for (int i = 0; i < GetSize(); i++) { array[i] = new PoissonSuffStatBranchArray(tree); }
     }
 
     ~PoissonSuffStatTreeArray() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete[] array[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete[] array[i]; }
     }
 
     int GetSize() const override { return size; }
@@ -338,9 +312,7 @@ class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
 
     //! clear all suff stats
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            array[i]->Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { array[i]->Clear(); }
     }
 
   private:

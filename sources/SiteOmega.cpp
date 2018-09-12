@@ -17,8 +17,8 @@ class SiteOmegaChain : public Chain {
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    SiteOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
-                   int force)
+    SiteOmegaChain(
+        string indatafile, string intreefile, int inevery, int inuntil, string inname, int force)
         : modeltype("SITEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
@@ -121,9 +121,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -145,16 +143,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "siteom -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';

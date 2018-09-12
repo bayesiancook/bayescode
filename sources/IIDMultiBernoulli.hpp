@@ -37,9 +37,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     //! sample all entries from prior distribution
     void Sample() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Sample(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Sample(i, j); }
         }
     }
 
@@ -48,9 +46,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
                 vector<int> &x = (*this)(i, j);
-                for (int k = 0; k < GetDim(); k++) {
-                    x[k] = 0;
-                }
+                for (int k = 0; k < GetDim(); k++) { x[k] = 0; }
             }
         }
     }
@@ -58,9 +54,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     //! sample entry i,j
     void Sample(int i, int j) {
         vector<int> &x = (*this)(i, j);
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] = (Random::Uniform() < prob[i]);
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] = (Random::Uniform() < prob[i]); }
     }
 
     //! get number of shift events (number of 1's out of dim) for row i and column
@@ -68,18 +62,14 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     int GetEventNumber(int i, int j) const {
         int tot = 0;
         const vector<int> &x = GetVal(i, j);
-        for (int k = 0; k < GetDim(); k++) {
-            tot += x[k];
-        }
+        for (int k = 0; k < GetDim(); k++) { tot += x[k]; }
         return tot;
     }
 
     //! get total number of shift events for row i
     int GetRowEventNumber(int i) const {
         int tot = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            tot += GetEventNumber(i, j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { tot += GetEventNumber(i, j); }
         return tot;
     }
 

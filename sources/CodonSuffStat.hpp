@@ -100,41 +100,41 @@ class NucPathSuffStat : public SuffStat {
     //! second array has a potentially different codon matrix, such as specified
     //! by the first array.
     void AddSuffStat(const MGOmegaCodonSubMatrixArray &codonmatrixarray,
-                     const PathSuffStatArray &codonpathsuffstatarray) {
+        const PathSuffStatArray &codonpathsuffstatarray) {
         for (int i = 0; i < codonmatrixarray.GetSize(); i++) {
             AddSuffStat(codonmatrixarray.GetVal(i), codonpathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
-                     const MGOmegaCodonSubMatrix &rootcodonmatrix,
-                     const PathSuffStatNodeArray &codonpathsuffstatnodearray) {
+        const MGOmegaCodonSubMatrix &rootcodonmatrix,
+        const PathSuffStatNodeArray &codonpathsuffstatnodearray) {
         // void AddSuffStat(const MGOmegaCodonSubMatrixBranchArray& codonmatrixtree,
         // const MGOmegaCodonSubMatrix& rootcodonmatrix, const
         // PathSuffStatNodeArray& codonpathsuffstatnodearray)    {
         RecursiveAddSuffStat(codonmatrixtree.GetTree().GetRoot(), codonmatrixtree, rootcodonmatrix,
-                             codonpathsuffstatnodearray);
+            codonpathsuffstatnodearray);
     }
 
     void RecursiveAddSuffStat(const Link *from,
-                              const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
-                              const MGOmegaCodonSubMatrix &rootcodonmatrix,
-                              const PathSuffStatNodeArray &codonpathsuffstatnodearray) {
+        const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
+        const MGOmegaCodonSubMatrix &rootcodonmatrix,
+        const PathSuffStatNodeArray &codonpathsuffstatnodearray) {
         // void RecursiveAddSuffStat(const Link* from, const
         // MGOmegaCodonSubMatrixBranchArray& codonmatrixtree, const
         // MGOmegaCodonSubMatrix& rootcodonmatrix, const PathSuffStatNodeArray&
         // codonpathsuffstatnodearray)    {
 
         if (from->isRoot()) {
-            AddSuffStat(rootcodonmatrix,
-                        codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
+            AddSuffStat(
+                rootcodonmatrix, codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
         } else {
             AddSuffStat(codonmatrixtree.GetVal(from->GetBranch()->GetIndex()),
-                        codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
+                codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveAddSuffStat(link->Out(), codonmatrixtree, rootcodonmatrix,
-                                 codonpathsuffstatnodearray);
+            RecursiveAddSuffStat(
+                link->Out(), codonmatrixtree, rootcodonmatrix, codonpathsuffstatnodearray);
         }
     }
 
@@ -168,9 +168,7 @@ class NucPathSuffStat : public SuffStat {
 
     //! add another nucpath suff stat to this
     void Add(const NucPathSuffStat &from) {
-        for (int i = 0; i < Nnuc; i++) {
-            rootcount[i] += from.rootcount[i];
-        }
+        for (int i = 0; i < Nnuc; i++) { rootcount[i] += from.rootcount[i]; }
         for (int i = 0; i < Nnuc; i++) {
             for (int j = 0; j < Nnuc; j++) {
                 paircount[i][j] += from.paircount[i][j];
@@ -190,35 +188,23 @@ class NucPathSuffStat : public SuffStat {
 
     //! put object into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
+        for (int i = 0; i < Nnuc; i++) { buffer << rootcount[i]; }
         for (int i = 0; i < Nnuc; i++) {
-            buffer << rootcount[i];
+            for (int j = 0; j < Nnuc; j++) { buffer << paircount[i][j]; }
         }
         for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer << paircount[i][j];
-            }
-        }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer << pairbeta[i][j];
-            }
+            for (int j = 0; j < Nnuc; j++) { buffer << pairbeta[i][j]; }
         }
     }
 
     //! get object from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
+        for (int i = 0; i < Nnuc; i++) { buffer >> rootcount[i]; }
         for (int i = 0; i < Nnuc; i++) {
-            buffer >> rootcount[i];
+            for (int j = 0; j < Nnuc; j++) { buffer >> paircount[i][j]; }
         }
         for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer >> paircount[i][j];
-            }
-        }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer >> pairbeta[i][j];
-            }
+            for (int j = 0; j < Nnuc; j++) { buffer >> pairbeta[i][j]; }
         }
     }
 
@@ -305,9 +291,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         int tmpcount = 0;
         for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
-            if (!statespace->Synonymous(i->first.first, i->first.second)) {
-                tmpcount += i->second;
-            }
+            if (!statespace->Synonymous(i->first.first, i->first.second)) { tmpcount += i->second; }
         }
 
         PoissonSuffStat::AddSuffStat(tmpcount, tmpbeta);
@@ -320,7 +304,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
     //! has a potentially different codon matrix, such as specified by the first
     //! array.
     void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const Selector<PathSuffStat> &pathsuffstatarray) {
+        const Selector<PathSuffStat> &pathsuffstatarray) {
         for (int i = 0; i < codonsubmatrixarray.GetSize(); i++) {
             AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
@@ -354,35 +338,33 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Clear(); }
     }
 
     //! compute omega suff stats and do a member-wise addition -- for Muse and
     //! Gaut codon matrices
     void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const Selector<PathSuffStat> &pathsuffstatarray) {
+        const Selector<PathSuffStat> &pathsuffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
-                     const BranchAllocationSystem &alloc) {
-        RecursiveAddSuffStat(alloc.GetTree().GetRoot(), codonsubmatrixarray, pathsuffstatnodearray,
-                             alloc);
+        const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
+        const BranchAllocationSystem &alloc) {
+        RecursiveAddSuffStat(
+            alloc.GetTree().GetRoot(), codonsubmatrixarray, pathsuffstatnodearray, alloc);
     }
 
     void RecursiveAddSuffStat(const Link *from,
-                              const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                              const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
-                              const BranchAllocationSystem &alloc) {
+        const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+        const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
+        const BranchAllocationSystem &alloc) {
         if (!from->isRoot()) {
             int i = alloc.GetBranchAlloc(from->GetBranch()->GetIndex());
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),
-                                   pathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
+                pathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()));
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatnodearray, alloc);
@@ -392,7 +374,7 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
     //! compute omega suff stats and do a member-wise addition -- for
     //! mutation-selection codon matrices
     void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const Selector<PathSuffStat> &pathsuffstatarray) {
+        const Selector<PathSuffStat> &pathsuffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
@@ -437,23 +419,17 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get an array from MPI buffer and then add it to this array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 };
 
@@ -485,32 +461,30 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Clear(); }
     }
 
     //! compute omega suff stats and do a member-wise addition -- for Muse and
     //! Gaut codon matrices
     void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const MGOmegaCodonSubMatrix &rootcodonsubmatrix,
-                     const NodeSelector<PathSuffStat> &pathsuffstatarray) {
-        RecursiveAddSuffStat(GetTree().GetRoot(), codonsubmatrixarray, rootcodonsubmatrix,
-                             pathsuffstatarray);
+        const MGOmegaCodonSubMatrix &rootcodonsubmatrix,
+        const NodeSelector<PathSuffStat> &pathsuffstatarray) {
+        RecursiveAddSuffStat(
+            GetTree().GetRoot(), codonsubmatrixarray, rootcodonsubmatrix, pathsuffstatarray);
     }
 
     void RecursiveAddSuffStat(const Link *from,
-                              const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                              const MGOmegaCodonSubMatrix &rootcodonsubmatrix,
-                              const NodeSelector<PathSuffStat> &pathsuffstatarray) {
+        const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+        const MGOmegaCodonSubMatrix &rootcodonsubmatrix,
+        const NodeSelector<PathSuffStat> &pathsuffstatarray) {
         if (!from->isRoot()) {
             (*this)[from->GetBranch()->GetIndex()].AddSuffStat(
                 codonsubmatrixarray.GetVal(from->GetBranch()->GetIndex()),
                 pathsuffstatarray.GetVal(from->GetNode()->GetIndex()));
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, rootcodonsubmatrix,
-                                 pathsuffstatarray);
+            RecursiveAddSuffStat(
+                link->Out(), codonsubmatrixarray, rootcodonsubmatrix, pathsuffstatarray);
         }
     }
 
@@ -542,23 +516,17 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get an array from MPI buffer and then add it to this array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] += buffer; }
     }
 
   private:

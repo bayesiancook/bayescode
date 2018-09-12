@@ -203,8 +203,8 @@ class BranchOmegaModel : public ProbModel {
     //! equilibrium frequencies (nucstat) to a new value
     //!
     //! Notifies corruption to the nucleotide and the codon matrices
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
@@ -416,9 +416,9 @@ class BranchOmegaModel : public ProbModel {
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ;
         ScalingMove(lambda, 1.0, 10, &BranchOmegaModel::BranchLengthsHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
+            &BranchOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &BranchOmegaModel::BranchLengthsHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
+            &BranchOmegaModel::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
 
@@ -458,16 +458,16 @@ class BranchOmegaModel : public ProbModel {
         CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+            &BranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+            &BranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+            &BranchOmegaModel::TouchNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+            &BranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+            &BranchOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }

@@ -26,8 +26,7 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     //! constructor parameterized by a codon state space, a single nucleotide
     //! matrix and an array (in fact, a BranchSelector) of omega's
     MGOmegaCodonSubMatrixBranchArray(const CodonStateSpace *incodonstatespace,
-                                     const SubMatrix *innucmatrix,
-                                     const BranchSelector<double> *inomegaarray)
+        const SubMatrix *innucmatrix, const BranchSelector<double> *inomegaarray)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           omegaarray(inomegaarray),
@@ -65,9 +64,7 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     }
 
     void Delete() {
-        for (int i = 0; i < GetNbranch(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetNbranch(); i++) { delete matrixarray[i]; }
     }
 
     const CodonStateSpace *codonstatespace;

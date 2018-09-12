@@ -34,15 +34,11 @@ class OmegaPathSuffStatTreeArray : public Array<OmegaPathSuffStatBranchArray> {
     //! constructor, parameterized by underlying tree and size (number of genes)
     OmegaPathSuffStatTreeArray(const Tree &intree, int insize)
         : tree(intree), size(insize), array(insize, (OmegaPathSuffStatBranchArray *)0) {
-        for (int i = 0; i < GetSize(); i++) {
-            array[i] = new OmegaPathSuffStatBranchArray(tree);
-        }
+        for (int i = 0; i < GetSize(); i++) { array[i] = new OmegaPathSuffStatBranchArray(tree); }
     }
 
     ~OmegaPathSuffStatTreeArray() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete[] array[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete[] array[i]; }
     }
 
     int GetSize() const override { return size; }
@@ -53,9 +49,7 @@ class OmegaPathSuffStatTreeArray : public Array<OmegaPathSuffStatBranchArray> {
 
     //! clear all suff stats
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            array[i]->Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { array[i]->Clear(); }
     }
 
   private:
@@ -169,9 +163,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         double alpha = 1.0 / branchvhyperinvshape;
         double beta = alpha / branchvhypermean;
         branchvarray = new BranchIIDGamma(*tree, alpha, beta);
-        for (int j = 0; j < GetNbranch(); j++) {
-            (*branchvarray)[j] = 1.0;
-        }
+        for (int j = 0; j < GetNbranch(); j++) { (*branchvarray)[j] = 1.0; }
 
         genewhypermean = 1.0;
         genewhyperinvshape = 1.0;
@@ -325,9 +317,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     }
 
     void GeneUpdate() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->Update();
-        }
+        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
     }
 
     void TouchNucMatrix() {
@@ -415,25 +405,19 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
     double OmegaSuffStatLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetNgene(); i++) {
-            total += GeneOmegaSuffStatLogProb(i);
-        }
+        for (int i = 0; i < GetNgene(); i++) { total += GeneOmegaSuffStatLogProb(i); }
         return total;
     }
 
     double GeneOmegaSuffStatLogProb(int gene) const {
         double total = 0;
-        for (int j = 0; j < GetNbranch(); j++) {
-            total += GeneBranchOmegaSuffStatLogProb(gene, j);
-        }
+        for (int j = 0; j < GetNbranch(); j++) { total += GeneBranchOmegaSuffStatLogProb(gene, j); }
         return total;
     }
 
     double BranchOmegaSuffStatLogProb(int branch) const {
         double total = 0;
-        for (int i = 0; i < GetNgene(); i++) {
-            total += GeneBranchOmegaSuffStatLogProb(i, branch);
-        }
+        for (int i = 0; i < GetNgene(); i++) { total += GeneBranchOmegaSuffStatLogProb(i, branch); }
         return total;
     }
 
@@ -527,9 +511,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     }
 
     void GeneResampleSub(double frac) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleSub(frac);
-        }
+        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->ResampleSub(frac); }
     }
 
     void GeneCollectPathSuffStat() {
@@ -539,9 +521,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
     }
 
     void GeneResampleOmega() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleOmega();
-        }
+        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->ResampleOmega(); }
     }
 
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
@@ -551,25 +531,25 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         hyperlengthsuffstat.AddSuffStat(*branchlength);
 
         ScalingMove(lambda, 1.0, 10, &MultiGeneBranchOmegaModel::BranchLengthsHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &MultiGeneBranchOmegaModel::BranchLengthsHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
 
         branchlength->SetScale(lambda);
     }
 
     void MoveNucRates() {
         ProfileMove(nucrelrate, 0.1, 1, 3, &MultiGeneBranchOmegaModel::NucRatesLogProb,
-                    &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
+            &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &MultiGeneBranchOmegaModel::NucRatesLogProb,
-                    &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
+            &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &MultiGeneBranchOmegaModel::NucRatesLogProb,
-                    &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
+            &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &MultiGeneBranchOmegaModel::NucRatesLogProb,
-                    &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
+            &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &MultiGeneBranchOmegaModel::NucRatesLogProb,
-                    &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
+            &MultiGeneBranchOmegaModel::TouchNucMatrix, this);
     }
 
     double BranchGeneCompMove(double tuning, int nrep) {
@@ -579,12 +559,8 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
 
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
-            for (int i = 0; i < GetNgene(); i++) {
-                (*genewarray)[i] *= e;
-            }
-            for (int j = 0; j < GetNbranch(); j++) {
-                (*branchvarray)[j] /= e;
-            }
+            for (int i = 0; i < GetNgene(); i++) { (*genewarray)[i] *= e; }
+            for (int j = 0; j < GetNbranch(); j++) { (*branchvarray)[j] /= e; }
 
             deltalogprob += BranchVLogPrior() + GeneWLogPrior();
             deltalogprob += (GetNgene() - GetNbranch()) * m;
@@ -593,12 +569,8 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
             if (acc) {
                 nacc++;
             } else {
-                for (int i = 0; i < GetNgene(); i++) {
-                    (*genewarray)[i] /= e;
-                }
-                for (int j = 0; j < GetNbranch(); j++) {
-                    (*branchvarray)[j] *= e;
-                }
+                for (int i = 0; i < GetNgene(); i++) { (*genewarray)[i] /= e; }
+                for (int j = 0; j < GetNbranch(); j++) { (*branchvarray)[j] *= e; }
             }
         }
         return nacc / nrep;
@@ -694,9 +666,9 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         ScalingMove(branchvhypermean,0.3,10,&MultiGeneBranchOmegaModel::BranchVHyperLogProb,&MultiGeneBranchOmegaModel::NoUpdate,this);
         */
         ScalingMove(branchvhyperinvshape, 1.0, 10, &MultiGeneBranchOmegaModel::BranchVHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
         ScalingMove(branchvhyperinvshape, 0.3, 10, &MultiGeneBranchOmegaModel::BranchVHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
 
         double alpha = 1.0 / branchvhyperinvshape;
         double beta = alpha / branchvhypermean;
@@ -709,13 +681,13 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         hypergenewsuffstat.AddSuffStat(*genewarray);
 
         ScalingMove(genewhypermean, 1.0, 10, &MultiGeneBranchOmegaModel::GeneWHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
         ScalingMove(genewhypermean, 0.3, 10, &MultiGeneBranchOmegaModel::GeneWHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
         ScalingMove(genewhyperinvshape, 1.0, 10, &MultiGeneBranchOmegaModel::GeneWHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
         ScalingMove(genewhyperinvshape, 0.3, 10, &MultiGeneBranchOmegaModel::GeneWHyperLogProb,
-                    &MultiGeneBranchOmegaModel::NoUpdate, this);
+            &MultiGeneBranchOmegaModel::NoUpdate, this);
 
         double alpha = 1.0 / genewhyperinvshape;
         double beta = alpha / genewhypermean;

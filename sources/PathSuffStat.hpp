@@ -94,26 +94,20 @@ class PathSuffStat : public SuffStat {
 
     int GetRootCount(int state) const {
         std::map<int, int>::const_iterator i = rootcount.find(state);
-        if (i == rootcount.end()) {
-            return 0;
-        }
+        if (i == rootcount.end()) { return 0; }
         return i->second;
     }
 
     int GetPairCount(int state1, int state2) const {
         std::map<pair<int, int>, int>::const_iterator i =
             paircount.find(pair<int, int>(state1, state2));
-        if (i == paircount.end()) {
-            return 0;
-        }
+        if (i == paircount.end()) { return 0; }
         return i->second;
     }
 
     double GetWaitingTime(int state) const {
         std::map<int, double>::const_iterator i = waitingtime.find(state);
-        if (i == waitingtime.end()) {
-            return 0;
-        }
+        if (i == waitingtime.end()) { return 0; }
         return i->second;
     }
 
@@ -166,9 +160,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Clear(); }
     }
 
     //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
@@ -210,9 +202,7 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
 
     //! set all suff stats to 0
     void Clear() {
-        for (int i = 0; i < GetNnode(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetNnode(); i++) { (*this)[i].Clear(); }
     }
 
     //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
@@ -220,14 +210,14 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
 
     //! return total log prob (summed over all items), given an array of rate
     //! matrices
-    double GetLogProb(const BranchSelector<SubMatrix> &matrixarray,
-                      const SubMatrix &rootmatrix) const {
+    double GetLogProb(
+        const BranchSelector<SubMatrix> &matrixarray, const SubMatrix &rootmatrix) const {
         double ret = RecursiveGetLogProb(GetTree().GetRoot(), matrixarray, rootmatrix);
         return ret;
     }
 
     double RecursiveGetLogProb(const Link *from, const BranchSelector<SubMatrix> &matrixarray,
-                               const SubMatrix &rootmatrix) const {
+        const SubMatrix &rootmatrix) const {
         double total = 0;
         if (from->isRoot()) {
             total += GetVal(from->GetNode()->GetIndex()).GetLogProb(rootmatrix);
@@ -259,9 +249,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
     //! set all suff stats to 0
     void Clear() {
         for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) {
-                (*this)(i, j).Clear();
-            }
+            for (int j = 0; j < this->GetNcol(); j++) { (*this)(i, j).Clear(); }
         }
     }
 
@@ -275,9 +263,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
     //! array of rate matrices
     double GetLogProb(const BidimSelector<SubMatrix> &matrixarray) const {
         double total = 0;
-        for (int j = 0; j < this->GetNcol(); j++) {
-            total += GetLogProb(j, matrixarray);
-        }
+        for (int j = 0; j < this->GetNcol(); j++) { total += GetLogProb(j, matrixarray); }
         return total;
     }
 
@@ -292,13 +278,11 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
 
     //! return log prob summed over a given column (and only for items for which
     //! flag is non 0)
-    double GetLogProb(int j, const vector<int> &flag,
-                      const BidimSelector<SubMatrix> &matrixarray) const {
+    double GetLogProb(
+        int j, const vector<int> &flag, const BidimSelector<SubMatrix> &matrixarray) const {
         double total = 0;
         for (int i = 0; i < this->GetNrow(); i++) {
-            if (flag[i]) {
-                total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
-            }
+            if (flag[i]) { total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j)); }
         }
         return total;
     }

@@ -28,18 +28,14 @@ class MechM2aMix : public SimpleArray<double> {
         double max = 0;
         for (int cat = 0; cat < GetSize(); cat++) {
             logp[cat] = suffstat.GetLogProb(GetVal(cat));
-            if ((!cat) || (max < logp[cat])) {
-                max = logp[cat];
-            }
+            if ((!cat) || (max < logp[cat])) { max = logp[cat]; }
         }
         double tot = 0;
         for (int cat = 0; cat < GetSize(); cat++) {
             postprob[cat] = weight[cat] * exp(logp[cat] - max);
             tot += postprob[cat];
         }
-        for (int cat = 0; cat < GetSize(); cat++) {
-            postprob[cat] /= tot;
-        }
+        for (int cat = 0; cat < GetSize(); cat++) { postprob[cat] /= tot; }
         double ret = log(tot) + max;
         if (std::isinf(ret)) {
             cerr << "ret is inf: " << tot << '\t' << max << '\n';
@@ -57,8 +53,8 @@ class MechM2aMix : public SimpleArray<double> {
         return ret;
     }
 
-    double GetPostProbArray(const OmegaPathSuffStatArray &suffstatarray,
-                            vector<vector<double>> &postprobarray) const {
+    double GetPostProbArray(
+        const OmegaPathSuffStatArray &suffstatarray, vector<vector<double>> &postprobarray) const {
         double total = 0;
         for (int i = 0; i < suffstatarray.GetSize(); i++) {
             total += GetPostProbArray(suffstatarray.GetVal(i), postprobarray[i]);

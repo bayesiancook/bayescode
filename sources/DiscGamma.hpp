@@ -27,8 +27,8 @@ class DiscGamma : public SimpleArray<double> {
 
     const vector<double> &GetWeights() const { return weight; }
 
-    double GetPostProbArray(OmegaPathSuffStatArray &suffstatarray,
-                            vector<vector<double>> &postprobarray) const {
+    double GetPostProbArray(
+        OmegaPathSuffStatArray &suffstatarray, vector<vector<double>> &postprobarray) const {
         double total = 0;
         for (int i = 0; i < GetNcat(); i++) {
             total += GetPostProbArray(suffstatarray.GetVal(i), postprobarray[i]);
@@ -41,18 +41,14 @@ class DiscGamma : public SimpleArray<double> {
         double max = 0;
         for (int cat = 0; cat < GetNcat(); cat++) {
             logp[cat] = suffstat.GetLogProb(GetVal(cat));
-            if ((!cat) || (max < logp[cat])) {
-                max = logp[cat];
-            }
+            if ((!cat) || (max < logp[cat])) { max = logp[cat]; }
         }
         double tot = 0;
         for (int cat = 0; cat < GetNcat(); cat++) {
             postprob[cat] = weight[cat] * exp(logp[cat] - max);
             tot += postprob[cat];
         }
-        for (int cat = 0; cat < GetNcat(); cat++) {
-            postprob[cat] /= tot;
-        }
+        for (int cat = 0; cat < GetNcat(); cat++) { postprob[cat] /= tot; }
         double ret = log(tot) + max;
         if (std::isinf(ret)) {
             cerr << "ret is inf: " << tot << '\t' << max << '\n';
@@ -85,12 +81,8 @@ class DiscGamma : public SimpleArray<double> {
         }
         y[GetNcat() - 1] = 1.0;
         (*this)[0] = GetNcat() * y[0];
-        for (int i = 1; i < GetNcat(); i++) {
-            (*this)[i] = GetNcat() * (y[i] - y[i - 1]);
-        }
-        for (int i = 0; i < GetNcat(); i++) {
-            (*this)[i] *= mean;
-        }
+        for (int i = 1; i < GetNcat(); i++) { (*this)[i] = GetNcat() * (y[i] - y[i - 1]); }
+        for (int i = 0; i < GetNcat(); i++) { (*this)[i] *= mean; }
     }
 
     int ncat;

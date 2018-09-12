@@ -129,8 +129,8 @@ class CodonM2aModel : public ProbModel {
     void GetBranchLengths(BranchArray<double> &inbranchlength) const;
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape);
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape);
 
     //! resample all branches not conditioned by sequence data from prior (as indicated by
     //! lengthpathsuffstats)
@@ -145,22 +145,20 @@ class CodonM2aModel : public ProbModel {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc);
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc);
 
     //! set omega mixture parameters to a new value
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
 
     //! get omega mixture parameter values
-    void GetMixtureParameters(double &inpurom, double &indposom, double &inpurw,
-                              double &inposw) const;
+    void GetMixtureParameters(
+        double &inpurom, double &indposom, double &inpurw, double &inposw) const;
 
     //! set omega mixture hyperparameters to a new value
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
-                                   double indposomhypermean, double indposomhyperinvshape,
-                                   double inpi, double inpurwhypermean, double inpurwhyperinvconc,
-                                   double inposwhypermean, double inposwhyperinvconc);
+        double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean,
+        double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     //-------------------
     // Matrices

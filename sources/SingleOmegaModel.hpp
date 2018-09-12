@@ -239,8 +239,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -254,8 +254,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
@@ -269,9 +269,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc) {
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -338,9 +337,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -352,9 +349,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(string name) {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -369,12 +364,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     double GetLogPrior() const {
         double total = 0;
 
-        if (!FixedBranchLengths()) {
-            total += BranchLengthsLogPrior();
-        }
-        if (!FixedNucRates()) {
-            total += NucRatesLogPrior();
-        }
+        if (!FixedBranchLengths()) { total += BranchLengthsLogPrior(); }
+        if (!FixedNucRates()) { total += NucRatesLogPrior(); }
         total += OmegaLogPrior();
         return total;
     }
@@ -391,9 +382,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double total = 0;
-        if (blmode == 0) {
-            total += LambdaHyperLogPrior();
-        }
+        if (blmode == 0) { total += LambdaHyperLogPrior(); }
         total += branchlength->GetLogProb();
         return total;
     }
@@ -408,8 +397,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const {
         double total = 0;
-        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                             1.0 / nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(
+            nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
         total +=
             Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
@@ -540,9 +529,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            if (!FixedBranchLengths()) {
-                MoveBranchLengths();
-            }
+            if (!FixedBranchLengths()) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             MoveOmega();
@@ -559,9 +546,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //! overall schedule branch length updatdes
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
@@ -577,9 +562,9 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         Move::Scaling(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                      &SingleOmegaModel::NoUpdate, this);
+            &SingleOmegaModel::NoUpdate, this);
         Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                      &SingleOmegaModel::NoUpdate, this);
+            &SingleOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -591,16 +576,16 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         CollectNucPathSuffStat();
 
         Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                      &SingleOmegaModel::TouchNucMatrix, this);
+            &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                      &SingleOmegaModel::TouchNucMatrix, this);
+            &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                      &SingleOmegaModel::TouchNucMatrix, this);
+            &SingleOmegaModel::TouchNucMatrix, this);
 
         Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                      &SingleOmegaModel::TouchNucMatrix, this);
+            &SingleOmegaModel::TouchNucMatrix, this);
         Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                      &SingleOmegaModel::TouchNucMatrix, this);
+            &SingleOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }
@@ -614,8 +599,8 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         omegapathsuffstat.AddSuffStat(*codonmatrix, pathsuffstat);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
-                                    beta + omegapathsuffstat.GetBeta());
+        omega = Random::GammaSample(
+            alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
         TouchCodonMatrix();
     }
 

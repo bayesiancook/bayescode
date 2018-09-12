@@ -46,14 +46,12 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     //! MCMC run \param force: overwrite existing files with same name \param
     //! inmyid, int innprocs: process id and total number of MPI processes
     MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode,
-                           int innucmode, int inpurommode, int indposommode, int inpurwmode,
-                           int inposwmode, double inpihypermean, double inpihyperinvconc,
-                           double inpuromhypermean, double inpuromhyperinvconc,
-                           double indposomhypermean, double indposomhyperinvshape,
-                           double inpurwhypermean, double inpurwhyperinvconc,
-                           double inposwhypermean, double inposwhyperinvconc, int inmodalprior,
-                           int inevery, int inuntil, int inwritegenedata, string inname, int force,
-                           int inmyid, int innprocs)
+        int innucmode, int inpurommode, int indposommode, int inpurwmode, int inposwmode,
+        double inpihypermean, double inpihyperinvconc, double inpuromhypermean,
+        double inpuromhyperinvconc, double indposomhypermean, double indposomhyperinvshape,
+        double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean,
+        double inposwhyperinvconc, int inmodalprior, int inevery, int inuntil, int inwritegenedata,
+        string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECODONM2A"),
           datafile(indatafile),
@@ -93,27 +91,20 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc, myid,
-                                           nprocs);
+        model = new MultiGeneCodonM2aModel(
+            datafile, treefile, pihypermean, pihyperinvconc, myid, nprocs);
         GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode, poswmode);
         GetModel()->SetBLSamplingMode(blsamplemode);
         GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
-                                              dposomhyperinvshape, purwhypermean, purwhyperinvconc,
-                                              poswhypermean, poswhyperinvconc);
+            dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
         GetModel()->SetModalMixturePrior(modalprior);
 
-        if (!myid) {
-            cerr << "allocate\n";
-        }
+        if (!myid) { cerr << "allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << "update\n";
-        }
+        if (!myid) { cerr << "update\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -142,14 +133,14 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENECODONM2A") {
-            model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc,
-                                               myid, nprocs);
-            GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
-                                            poswmode);
+            model = new MultiGeneCodonM2aModel(
+                datafile, treefile, pihypermean, pihyperinvconc, myid, nprocs);
+            GetModel()->SetAcrossGenesModes(
+                blmode, nucmode, purommode, dposommode, purwmode, poswmode);
             GetModel()->SetBLSamplingMode(blsamplemode);
-            GetModel()->SetMixtureHyperParameters(
-                puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
-                purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
+            GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc,
+                dposomhypermean, dposomhyperinvshape, purwhypermean, purwhyperinvconc,
+                poswhypermean, poswhyperinvconc);
             GetModel()->SetModalMixturePrior(modalprior);
         } else {
             cerr << "Error when opening file " << name
@@ -157,19 +148,13 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             exit(1);
         }
 
-        if (!myid) {
-            cerr << "allocate\n";
-        }
+        if (!myid) { cerr << "allocate\n"; }
         GetModel()->Allocate();
 
-        if (!myid) {
-            cerr << "read from file\n";
-        }
+        if (!myid) { cerr << "read from file\n"; }
         GetModel()->FromStream(is);
 
-        if (!myid) {
-            cerr << "update\n";
-        }
+        if (!myid) { cerr << "update\n"; }
         GetModel()->Update();
 
         if (!myid) {
@@ -207,9 +192,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             ofstream pos((name + ".posw").c_str());
             ofstream omos((name + ".posom").c_str());
         }
-        if (writegenedata == 2) {
-            ofstream siteos((name + ".sitepp").c_str());
-        }
+        if (writegenedata == 2) { ofstream siteos((name + ".sitepp").c_str()); }
     }
 
     void SavePoint() override {
@@ -371,9 +354,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -476,40 +457,30 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
-            if (!myid) {
-                cerr << "error in command\n";
-            }
+            if (!myid) { cerr << "error in command\n"; }
             MPI_Finalize();
             exit(0);
         }
 
-        chain = new MultiGeneCodonM2aChain(
-            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode,
-            poswmode, pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc,
-            dposomhypermean, dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean,
-            poswhyperinvconc, modalprior, every, until, writegenedata, name, force, myid, nprocs);
+        chain = new MultiGeneCodonM2aChain(datafile, treefile, blmode, blsamplemode, nucmode,
+            purommode, dposommode, purwmode, poswmode, pihypermean, pihyperinvconc, puromhypermean,
+            puromhyperinvconc, dposomhypermean, dposomhyperinvshape, purwhypermean,
+            purwhyperinvconc, poswhypermean, poswhyperinvconc, modalprior, every, until,
+            writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();
-    if (!myid) {
-        cout << "total time to set things up: " << chrono.GetTime() << '\n';
-    }
+    if (!myid) { cout << "total time to set things up: " << chrono.GetTime() << '\n'; }
     chrono.Reset();
     chrono.Start();
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

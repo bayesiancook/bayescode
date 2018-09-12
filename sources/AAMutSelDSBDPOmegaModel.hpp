@@ -194,7 +194,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
     AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inomegaprior,
-                            int inNcat, int inbaseNcat) {
+        int inNcat, int inbaseNcat) {
         blmode = 0;
         nucmode = 0;
         basemode = 0;
@@ -210,9 +210,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         Ncat = inNcat;
         if (Ncat == -1) {
             Ncat = Nsite;
-            if (Ncat > 100) {
-                Ncat = 100;
-            }
+            if (Ncat > 100) { Ncat = 100; }
         }
 
         basemin = 0;
@@ -344,12 +342,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         double beta = alpha / baseconchypermean;
 
         baseconcentrationarray = new IIDGamma(baseNcat, alpha, beta);
-        for (int k = 0; k < baseNcat; k++) {
-            (*baseconcentrationarray)[k] = 20.0;
-        }
-        if (basemin == 1) {
-            (*baseconcentrationarray)[0] = 1.0;
-        }
+        for (int k = 0; k < baseNcat; k++) { (*baseconcentrationarray)[k] = 20.0; }
+        if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
         // suff stats for component aa fitness arrays
         basesuffstatarray = new DirichletSuffStatArray(baseNcat, Naa);
         componentalloc = new MultinomialAllocationVector(Ncat, baseweight->GetArray());
@@ -441,8 +435,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -468,9 +462,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc) {
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -478,8 +471,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         UpdateMatrices();
@@ -495,8 +488,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! set base mixture concentration and center parameters to new value
     //! (multi-gene analyses)
     void SetBaseMixture(const Selector<vector<double>> &inbasecenterarray,
-                        const Selector<double> &inbaseconcentrationarray,
-                        const Selector<double> &inbaseweight, const Selector<int> &inpermut) {
+        const Selector<double> &inbaseconcentrationarray, const Selector<double> &inbaseweight,
+        const Selector<int> &inpermut) {
         basecenterarray->Copy(inbasecenterarray);
         baseconcentrationarray->Copy(inbaseconcentrationarray);
         baseweight->Copy(inbaseweight);
@@ -536,9 +529,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void NoUpdate() {}
 
     void Update() override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
@@ -548,9 +539,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     void PostPred(string name) override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
@@ -566,12 +555,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! \brief return total log prior (up to some constant)
     double GetLogPrior() const {
         double total = 0;
-        if (blmode < 2) {
-            total += BranchLengthsLogPrior();
-        }
-        if (nucmode < 2) {
-            total += NucRatesLogPrior();
-        }
+        if (blmode < 2) { total += BranchLengthsLogPrior(); }
+        if (nucmode < 2) { total += NucRatesLogPrior(); }
         if (basemode < 2) {
             if (baseNcat > 1) {
                 total += BaseStickBreakingHyperLogPrior();
@@ -582,9 +567,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
         total += AALogPrior();
-        if (omegamode < 2) {
-            total += OmegaLogPrior();
-        }
+        if (omegamode < 2) { total += OmegaLogPrior(); }
         return total;
     }
 
@@ -601,9 +584,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) {
-            ret += LambdaHyperLogPrior();
-        }
+        if (blmode == 0) { ret += LambdaHyperLogPrior(); }
         return ret;
     }
 
@@ -645,8 +626,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
         double total = 0;
-        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                             1.0 / nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(
+            nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
         total +=
             Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
@@ -740,8 +721,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! profiles drawn from component k of the base distribution), as a function
     //! of the center and concentration parameters of this component
     double BaseSuffStatLogProb(int k) const {
-        return basesuffstatarray->GetVal(k).GetLogProb(basecenterarray->GetVal(k),
-                                                       baseconcentrationarray->GetVal(k));
+        return basesuffstatarray->GetVal(k).GetLogProb(
+            basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k));
     }
 
     //-------------------
@@ -819,29 +800,21 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
             totchrono.Start();
-            if (blmode < 2) {
-                MoveBranchLengths();
-            }
+            if (blmode < 2) { MoveBranchLengths(); }
 
             CollectSitePathSuffStat();
             CollectComponentPathSuffStat();
 
-            if (nucmode < 2) {
-                MoveNucRates();
-            }
+            if (nucmode < 2) { MoveNucRates(); }
 
-            if (omegamode < 2) {
-                MoveOmega();
-            }
+            if (omegamode < 2) { MoveOmega(); }
 
             aachrono.Start();
             MoveAAMixture(3);
             aachrono.Stop();
 
             basechrono.Start();
-            if (basemode < 2) {
-                MoveBase(3);
-            }
+            if (basemode < 2) { MoveBase(3); }
             basechrono.Stop();
 
             totchrono.Stop();
@@ -850,9 +823,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     //! MH move on base mixture
     void MoveBase(int nrep) {
-        if (baseNcat > 1) {
-            ResampleBaseAlloc();
-        }
+        if (baseNcat > 1) { ResampleBaseAlloc(); }
         MoveBaseMixture(nrep);
     }
 
@@ -866,9 +837,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
@@ -877,9 +846,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -898,8 +867,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void GibbsResampleOmega() {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
-                                    beta + omegapathsuffstat.GetBeta());
+        omega = Random::GammaSample(
+            alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
     }
 
     int MultipleTryMoveOmega(int ntry) {
@@ -936,14 +905,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                 dposomarray[i] = omega - 1.0;
             } else {
                 dposomarray[i] = Random::Gamma(alpha, beta);
-                if (!dposomarray[i]) {
-                    dposomarray[i] = 1e-5;
-                }
+                if (!dposomarray[i]) { dposomarray[i] = 1e-5; }
             }
             logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
-            if ((!i) || (max < logparray[i])) {
-                max = logparray[i];
-            }
+            if ((!i) || (max < logparray[i])) { max = logparray[i]; }
         }
 
         double tot = 0;
@@ -995,9 +960,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             // randomly choose dposom among the ntry values in array
             double u = tot * Random::Uniform();
             int i = 0;
-            while ((i < ntry) && (u > cumulprob[i])) {
-                i++;
-            }
+            while ((i < ntry) && (u > cumulprob[i])) { i++; }
             if (i == ntry) {
                 cerr << "error in MultipleTryMoveOmega: overflow\n";
                 exit(1);
@@ -1013,16 +976,16 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! MH move on nucleotide rate parameters
     void MoveNucRates() {
         ProfileMove(nucrelrate, 0.1, 1, 3, &AAMutSelDSBDPOmegaModel::NucRatesLogProb,
-                    &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
+            &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &AAMutSelDSBDPOmegaModel::NucRatesLogProb,
-                    &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
+            &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &AAMutSelDSBDPOmegaModel::NucRatesLogProb,
-                    &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
+            &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &AAMutSelDSBDPOmegaModel::NucRatesLogProb,
-                    &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
+            &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
         ProfileMove(nucstat, 0.01, 1, 3, &AAMutSelDSBDPOmegaModel::NucRatesLogProb,
-                    &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
+            &AAMutSelDSBDPOmegaModel::UpdateMatrices, this);
     }
 
     //! MCMC module for the mixture amino-acid fitness profiles
@@ -1089,9 +1052,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             if (occupancy->GetVal(i)) {
                 vector<double> &aa = (*componentaafitnessarray)[i];
                 for (int rep = 0; rep < nrep; rep++) {
-                    for (int l = 0; l < Naa; l++) {
-                        bk[l] = aa[l];
-                    }
+                    for (int l = 0; l < Naa; l++) { bk[l] = aa[l]; }
                     double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
                     double loghastings = Random::ProfileProposeMove(aa, Naa, tuning, n);
                     deltalogprob += loghastings;
@@ -1101,9 +1062,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                     if (accepted) {
                         nacc++;
                     } else {
-                        for (int l = 0; l < Naa; l++) {
-                            aa[l] = bk[l];
-                        }
+                        for (int l = 0; l < Naa; l++) { aa[l] = bk[l]; }
                         UpdateCodonMatrix(i);
                     }
                     ntot++;
@@ -1136,9 +1095,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                 vector<double> &aa = (*componentaafitnessarray)[i];
                 vector<double> x(Naa, 0);
                 double z = Random::sGamma(aaconc);
-                for (int l = 0; l < Naa; l++) {
-                    x[l] = z * aa[l];
-                }
+                for (int l = 0; l < Naa; l++) { x[l] = z * aa[l]; }
 
                 double bkz = z;
                 vector<double> bkx = x;
@@ -1159,9 +1116,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                     }
                     for (int l = 0; l < Naa; l++) {
                         aa[l] = x[l] / z;
-                        if (aa[l] < 1e-50) {
-                            aa[l] = 1e-50;
-                        }
+                        if (aa[l] < 1e-50) { aa[l] = 1e-50; }
                     }
 
                     deltalogprob += loghastings;
@@ -1213,9 +1168,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         for (int i = 0; i < Ncat; i++) {
             double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i));
             postprob[i] = tmp;
-            if ((!i) || (max < tmp)) {
-                max = tmp;
-            }
+            if ((!i) || (max < tmp)) { max = tmp; }
         }
 
         double total = 0;
@@ -1224,9 +1177,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             total += postprob[i];
         }
 
-        for (int i = 0; i < Ncat; i++) {
-            postprob[i] /= total;
-        }
+        for (int i = 0; i < Ncat; i++) { postprob[i] /= total; }
     }
 
     //! MCMC sequence for label switching moves
@@ -1243,9 +1194,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! MH move on kappa, concentration parameter of the mixture
     void MoveKappa() {
         ScalingMove(kappa, 1.0, 10, &AAMutSelDSBDPOmegaModel::StickBreakingHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         ScalingMove(kappa, 0.3, 10, &AAMutSelDSBDPOmegaModel::StickBreakingHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         weight->SetKappa(kappa);
     }
 
@@ -1255,9 +1206,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             MoveBaseComponents(10);
             ResampleBaseEmptyComponents();
             if (baseNcat > 1) {
-                if (!basemin) {
-                    BaseLabelSwitchingMove();
-                }
+                if (!basemin) { BaseLabelSwitchingMove(); }
                 ResampleBaseWeights();
                 MoveBaseKappa();
             }
@@ -1341,9 +1290,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void ResampleBaseEmptyComponents() {
         basecenterarray->PriorResample(*baseoccupancy);
         baseconcentrationarray->PriorResample(*baseoccupancy);
-        if (basemin == 1) {
-            (*baseconcentrationarray)[0] = 1.0;
-        }
+        if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
     }
 
     //! Gibbs resample base mixture allocations
@@ -1373,12 +1320,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         const vector<double> &w = baseweight->GetArray();
         for (int i = 0; i < baseNcat; i++) {
             double tmp = Random::logDirichletDensity(componentaafitnessarray->GetVal(cat),
-                                                     basecenterarray->GetVal(i),
-                                                     baseconcentrationarray->GetVal(i));
+                basecenterarray->GetVal(i), baseconcentrationarray->GetVal(i));
             postprob[i] = tmp;
-            if ((!i) || (max < tmp)) {
-                max = tmp;
-            }
+            if ((!i) || (max < tmp)) { max = tmp; }
         }
 
         double total = 0;
@@ -1387,9 +1331,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             total += postprob[i];
         }
 
-        for (int i = 0; i < baseNcat; i++) {
-            postprob[i] /= total;
-        }
+        for (int i = 0; i < baseNcat; i++) { postprob[i] /= total; }
     }
 
     //! MCMC sequence for label switching moves of the base mixture
@@ -1408,9 +1350,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! MH move on basekappa, concentration parameter of the base mixture
     void MoveBaseKappa() {
         ScalingMove(basekappa, 1.0, 10, &AAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         ScalingMove(basekappa, 0.3, 10, &AAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,
-                    &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         baseweight->SetKappa(basekappa);
     }
 
@@ -1423,9 +1365,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     int GetNcluster() const {
         int n = 0;
         for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) {
-                n++;
-            }
+            if (occupancy->GetVal(i)) { n++; }
         }
         return n;
     }
@@ -1434,9 +1374,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     int GetBaseNcluster() const {
         int n = 0;
         for (int i = 0; i < baseNcat; i++) {
-            if (baseoccupancy->GetVal(i)) {
-                n++;
-            }
+            if (baseoccupancy->GetVal(i)) { n++; }
         }
         return n;
     }
@@ -1555,9 +1493,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // is >> *weight;
         is >> *componentaafitnessarray;
         is >> *sitealloc;
-        if (omegamode < 2) {
-            is >> omega;
-        }
+        if (omegamode < 2) { is >> omega; }
     }
 
     void ToStream(ostream &os) const override {
@@ -1582,9 +1518,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // os << *weight << '\t';
         os << *componentaafitnessarray << '\t';
         os << *sitealloc << '\t';
-        if (omegamode < 2) {
-            os << omega << '\t';
-        }
+        if (omegamode < 2) { os << omega << '\t'; }
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context --
@@ -1610,9 +1544,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         size += weight->GetMPISizeSB();
         size += componentaafitnessarray->GetMPISize();
         size += sitealloc->GetMPISize();
-        if (omegamode < 2) {
-            size++;
-        }
+        if (omegamode < 2) { size++; }
         return size;
     }
 
@@ -1637,9 +1569,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         weight->MPIGetSB(is);
         is >> *componentaafitnessarray;
         is >> *sitealloc;
-        if (omegamode < 2) {
-            is >> omega;
-        }
+        if (omegamode < 2) { is >> omega; }
     }
 
     //! write array into MPI buffer
@@ -1663,8 +1593,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         weight->MPIPutSB(os);
         os << *componentaafitnessarray;
         os << *sitealloc;
-        if (omegamode < 2) {
-            os << omega;
-        }
+        if (omegamode < 2) { os << omega; }
     }
 };

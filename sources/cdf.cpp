@@ -12,9 +12,9 @@ const double SQRT2 = 1.414214;
 // log gamma using the Lanczos approximation
 // must have x > 0
 double logGamma(double x) {
-    const double c[8] = {676.5203681218851,     -1259.1392167224028,  771.32342877765313,
-                         -176.61502916214059,   12.507343278686905,   -0.13857109526572012,
-                         9.9843695780195716e-6, 1.5056327351493116e-7};
+    const double c[8] = {676.5203681218851, -1259.1392167224028, 771.32342877765313,
+        -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6,
+        1.5056327351493116e-7};
     double sum = 0.99999999999980993;
     double y = x;
     for (int j = 0; j < 8; j++) sum += c[j] / ++y;
@@ -56,9 +56,7 @@ double betaContFrac(double a, double b, double x) {
         h *= del;
         if (fabs(del - 1) < EPS) break;
     }
-    if (m > MAXIT) {
-        cerr << "betaContFrac: too many iterations\n";
-    }
+    if (m > MAXIT) { cerr << "betaContFrac: too many iterations\n"; }
     return h;
 }
 

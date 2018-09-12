@@ -12,7 +12,7 @@
 class AASubSelSubMatrixArray : public Array<SubMatrix>, public Array<AASubSelSubMatrix> {
   public:
     AASubSelSubMatrixArray(const vector<double> &inrelrate,
-                           const Selector<vector<double>> *inprofilearray, int innormalise)
+        const Selector<vector<double>> *inprofilearray, int innormalise)
         : relrate(inrelrate),
           profilearray(inprofilearray),
           nstate(inprofilearray->GetVal(0).size()),
@@ -52,9 +52,7 @@ class AASubSelSubMatrixArray : public Array<SubMatrix>, public Array<AASubSelSub
     }
 
     void Delete() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete matrixarray[i]; }
     }
 
     const vector<double> &relrate;

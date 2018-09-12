@@ -16,9 +16,7 @@ class Permutation : public SimpleArray<int> {
 
     //! set equal to identity permuation
     void Reset() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = i;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = i; }
     }
 
     //! return size when put into an MPI buffer
@@ -26,16 +24,12 @@ class Permutation : public SimpleArray<int> {
 
     //! put current value of count and beta into an MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! get value from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 };
 

@@ -16,7 +16,7 @@ class DiscGammaSiteOmegaChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     DiscGammaSiteOmegaChain(string indatafile, string intreefile, int inNcat, int inevery,
-                            int inuntil, string inname, int force)
+        int inuntil, string inname, int force)
         : modeltype("DISCGAMMASITEOMEGA"),
           datafile(indatafile),
           treefile(intreefile),
@@ -110,9 +110,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -137,16 +135,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "discom -d <alignment> -t <tree> -dgam <ncat> <chainname> \n";
             cerr << '\n';

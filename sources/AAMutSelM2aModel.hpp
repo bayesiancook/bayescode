@@ -62,16 +62,15 @@ class AAMutSelM2aModel : public ProbModel {
     void SetBranchLengths(const BranchSelector<double> &inbranchlength);
     void GetBranchLengths(BranchArray<double> &inbranchlength) const;
 
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape);
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape);
 
     void SetNucRates(const std::vector<double> &innucrelrate, const std::vector<double> &innucstat);
     void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const;
 
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc);
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc);
 
     // void SetMixtureParameters(double inpurom, double indposom, double inpurw,
     // double inposw); void GetMixtureParameters(double& inpurom, double& indposom,
@@ -84,7 +83,7 @@ class AAMutSelM2aModel : public ProbModel {
     // double inpi, double inpurwhypermean, double inpurwhyperinvconc, double
     // inposwhypermean, double inposwhyperinvconc);
     void SetMixtureHyperParameters(double indposomhypermean, double indposomhyperinvshape,
-                                   double inpi, double inposwhypermean, double inposwhyperinvconc);
+        double inpi, double inposwhypermean, double inposwhyperinvconc);
 
     // void Update() override {}
     void NoUpdate() {}

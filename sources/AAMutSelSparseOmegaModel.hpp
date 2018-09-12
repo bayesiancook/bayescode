@@ -187,7 +187,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
     AAMutSelSparseOmegaModel(const std::string &datafile, const std::string &treefile,
-                             int inomegamode, double inepsilon, double inshape)
+        int inomegamode, double inepsilon, double inshape)
         : hyperfitnesssuffstat(Naa) {
         blmode = 0;
         nucmode = 0;
@@ -298,8 +298,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         fitnessprofile = new MutSelSparseFitnessArray(*fitness, *sitemaskarray, maskepsilon);
 
         // mut sel codon matrices (based on the fitness profiles of the mixture)
-        sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix,
-                                                                    fitnessprofile, omega);
+        sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(
+            GetCodonStateSpace(), nucmatrix, fitnessprofile, omega);
 
         phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, sitecodonmatrixarray);
         phyloprocess->Unfold();
@@ -342,9 +342,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetFitnessShapeMode(int in, double inshape = 0) {
         fitnessshapemode = in;
-        if (inshape > 0) {
-            fitnessshape = inshape;
-        }
+        if (inshape > 0) { fitnessshape = inshape; }
     }
 
     //! \brief set estimation method for nuc rates
@@ -389,8 +387,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -398,9 +396,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc) {
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -408,8 +405,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     }
 
     //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         CorruptMatrices();
@@ -450,9 +447,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     double GetMaskEpsilon() const { return maskepsilon; }
 
     void Update() override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -524,23 +519,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        if (blmode < 2) {
-            total += BranchLengthsLogPrior();
-        }
-        if (nucmode < 2) {
-            total += NucRatesLogPrior();
-        }
-        if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) {
-            total += FitnessHyperLogPrior();
-        }
+        if (blmode < 2) { total += BranchLengthsLogPrior(); }
+        if (nucmode < 2) { total += NucRatesLogPrior(); }
+        if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) { total += FitnessHyperLogPrior(); }
         // total += FitnessLogPrior();
         if (maskmode < 2) {
             total += MaskHyperLogPrior();
             total += MaskLogPrior();
         }
-        if (omegamode < 2) {
-            total += OmegaLogPrior();
-        }
+        if (omegamode < 2) { total += OmegaLogPrior(); }
         return total;
     }
 
@@ -551,17 +538,15 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) {
-            ret += BranchLengthsHyperLogPrior();
-        }
+        if (blmode == 0) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
     //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
         double total = 0;
-        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                             1.0 / nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(
+            nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
         total +=
             Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
@@ -579,12 +564,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
         double ret = 0;
-        if (fitnessshapemode < 2) {
-            ret += FitnessShapeLogPrior();
-        }
-        if (fitnesscentermode < 2) {
-            ret += FitnessCenterLogPrior();
-        }
+        if (fitnessshapemode < 2) { ret += FitnessShapeLogPrior(); }
+        if (fitnesscentermode < 2) { ret += FitnessCenterLogPrior(); }
         return ret;
     }
 
@@ -606,9 +587,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! log prior over mask array hyperparameters
     double MaskHyperLogPrior() const {
         double ret = 0;
-        if (maskepsilonmode < 2) {
-            ret -= 10 * maskepsilon;
-        }
+        if (maskepsilonmode < 2) { ret -= 10 * maskepsilon; }
         return ret;
     }
 
@@ -714,33 +693,21 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode < 2) {
-                MoveBranchLengths();
-            }
+            if (blmode < 2) { MoveBranchLengths(); }
             CollectSitePathSuffStat();
             UpdateAll();
             for (int rep = 0; rep < nrep; rep++) {
                 MoveFitness();
                 CompMoveFitness();
-                if (maskmode < 3) {
-                    MoveMasks();
-                }
-                if (maskmode < 2) {
-                    MoveMaskHyperParameters();
-                }
+                if (maskmode < 3) { MoveMasks(); }
+                if (maskmode < 2) { MoveMaskHyperParameters(); }
                 if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) {
                     MoveFitnessHyperParameters();
                 }
-                if (maskepsilonmode < 2) {
-                    MoveMaskEpsilon();
-                }
+                if (maskepsilonmode < 2) { MoveMaskEpsilon(); }
             }
-            if (nucmode < 2) {
-                MoveNucRates();
-            }
-            if (omegamode < 2) {
-                MoveOmega();
-            }
+            if (nucmode < 2) { MoveNucRates(); }
+            if (omegamode < 2) { MoveOmega(); }
         }
 
         UpdateAll();
@@ -763,9 +730,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
@@ -774,9 +739,9 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &AAMutSelSparseOmegaModel::BranchLengthsHyperLogProb,
-                    &AAMutSelSparseOmegaModel::NoUpdate, this);
+            &AAMutSelSparseOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &AAMutSelSparseOmegaModel::BranchLengthsHyperLogProb,
-                    &AAMutSelSparseOmegaModel::NoUpdate, this);
+            &AAMutSelSparseOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -786,16 +751,16 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         CorruptMatrices();
 
         ProfileMove(nucrelrate, 0.1, 1, 10, &AAMutSelSparseOmegaModel::NucRatesLogProb,
-                    &AAMutSelSparseOmegaModel::CorruptMatrices, this);
+            &AAMutSelSparseOmegaModel::CorruptMatrices, this);
         ProfileMove(nucrelrate, 0.03, 3, 10, &AAMutSelSparseOmegaModel::NucRatesLogProb,
-                    &AAMutSelSparseOmegaModel::CorruptMatrices, this);
+            &AAMutSelSparseOmegaModel::CorruptMatrices, this);
         ProfileMove(nucrelrate, 0.01, 3, 10, &AAMutSelSparseOmegaModel::NucRatesLogProb,
-                    &AAMutSelSparseOmegaModel::CorruptMatrices, this);
+            &AAMutSelSparseOmegaModel::CorruptMatrices, this);
 
         ProfileMove(nucstat, 0.1, 1, 10, &AAMutSelSparseOmegaModel::NucRatesLogProb,
-                    &AAMutSelSparseOmegaModel::CorruptMatrices, this);
+            &AAMutSelSparseOmegaModel::CorruptMatrices, this);
         ProfileMove(nucstat, 0.01, 1, 10, &AAMutSelSparseOmegaModel::NucRatesLogProb,
-                    &AAMutSelSparseOmegaModel::CorruptMatrices, this);
+            &AAMutSelSparseOmegaModel::CorruptMatrices, this);
 
         CorruptMatrices();
     }
@@ -806,8 +771,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         omegapathsuffstat.AddSuffStat(*sitecodonmatrixarray, *sitepathsuffstatarray);
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
-                                    beta + omegapathsuffstat.GetBeta());
+        omega = Random::GammaSample(
+            alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
         CorruptCodonMatrices();
     }
 
@@ -865,9 +830,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
                     nacc++;
                 } else {
                     for (int a = 0; a < Naa; a++) {
-                        if (mask[a]) {
-                            x[a] /= e;
-                        }
+                        if (mask[a]) { x[a] /= e; }
                     }
                 }
                 ntot++;
@@ -966,17 +929,17 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! or pi)
     void MoveMaskHyperParameters() {
         SlidingMove(pi, 1.0, 10, 0.05, 0.975, &AAMutSelSparseOmegaModel::MaskLogProb,
-                    &AAMutSelSparseOmegaModel::UpdateMask, this);
+            &AAMutSelSparseOmegaModel::UpdateMask, this);
         SlidingMove(pi, 0.1, 10, 0.05, 0.975, &AAMutSelSparseOmegaModel::MaskLogProb,
-                    &AAMutSelSparseOmegaModel::UpdateMask, this);
+            &AAMutSelSparseOmegaModel::UpdateMask, this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon() {
         SlidingMove(maskepsilon, 1.0, 10, 0, 1.0, &AAMutSelSparseOmegaModel::MaskEpsilonLogProb,
-                    &AAMutSelSparseOmegaModel::UpdateAll, this);
+            &AAMutSelSparseOmegaModel::UpdateAll, this);
         SlidingMove(maskepsilon, 0.1, 10, 0, 1.0, &AAMutSelSparseOmegaModel::MaskEpsilonLogProb,
-                    &AAMutSelSparseOmegaModel::UpdateAll, this);
+            &AAMutSelSparseOmegaModel::UpdateAll, this);
     }
 
     //! MH move on fitness masks across sites
@@ -986,9 +949,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         for (int i = 0; i < Nsite; i++) {
             vector<int> &mask = (*sitemaskarray)[i];
             int naa = 0;
-            for (int k = 0; k < Naa; k++) {
-                naa += mask[k];
-            }
+            for (int k = 0; k < Naa; k++) { naa += mask[k]; }
             for (int k = 0; k < Naa; k++) {
                 if ((!mask[k]) || (naa > 1)) {
                     double deltalogprob = -MaskLogPrior(i) - SiteSuffStatLogProb(i);
@@ -1029,21 +990,21 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 
         if (fitnessshapemode < 2) {
             ScalingMove(fitnessshape, 1.0, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
             ScalingMove(fitnessshape, 0.3, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
             ScalingMove(fitnessshape, 0.1, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
         }
         fitness->SetShape(fitnessshape);
 
         if (fitnesscentermode < 2) {
             ProfileMove(fitnesscenter, 0.3, 1, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
             ProfileMove(fitnesscenter, 0.1, 1, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
             ProfileMove(fitnesscenter, 0.1, 3, 100, &AAMutSelSparseOmegaModel::FitnessHyperLogProb,
-                        &AAMutSelSparseOmegaModel::NoUpdate, this);
+                &AAMutSelSparseOmegaModel::NoUpdate, this);
         }
     }
 
@@ -1121,25 +1082,13 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (omegamode < 2) {
-            is >> omega;
-        }
-        if (fitnessshapemode < 2) {
-            is >> fitnessshape;
-        }
-        if (fitnesscentermode < 2) {
-            is >> fitnesscenter;
-        }
+        if (omegamode < 2) { is >> omega; }
+        if (fitnessshapemode < 2) { is >> fitnessshape; }
+        if (fitnesscentermode < 2) { is >> fitnesscenter; }
         is >> *fitness;
-        if (maskmode < 2) {
-            is >> pi;
-        }
-        if (maskmode < 3) {
-            is >> *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            is >> maskepsilon;
-        }
+        if (maskmode < 2) { is >> pi; }
+        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (maskepsilonmode < 2) { is >> maskepsilon; }
     }
 
     //! write complete current parameter configuration to stream
@@ -1152,25 +1101,13 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             os << nucrelrate << '\t';
             os << nucstat << '\t';
         }
-        if (omegamode < 2) {
-            os << omega << '\t';
-        }
-        if (fitnessshapemode < 2) {
-            os << fitnessshape << '\t';
-        }
-        if (fitnesscentermode < 2) {
-            os << fitnesscenter << '\t';
-        }
+        if (omegamode < 2) { os << omega << '\t'; }
+        if (fitnessshapemode < 2) { os << fitnessshape << '\t'; }
+        if (fitnesscentermode < 2) { os << fitnesscenter << '\t'; }
         os << *fitness << '\t';
-        if (maskmode < 2) {
-            os << pi << '\t';
-        }
-        if (maskmode < 3) {
-            os << *sitemaskarray << '\t';
-        }
-        if (maskepsilonmode < 2) {
-            os << maskepsilon << '\t';
-        }
+        if (maskmode < 2) { os << pi << '\t'; }
+        if (maskmode < 3) { os << *sitemaskarray << '\t'; }
+        if (maskepsilonmode < 2) { os << maskepsilon << '\t'; }
     }
 
     //! return size of model, when put into an MPI buffer (in multigene context)
@@ -1184,26 +1121,14 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             size += nucrelrate.size();
             size += nucstat.size();
         }
-        if (omegamode < 2) {
-            size++;
-        }
-        if (fitnessshapemode < 2) {
-            size++;
-        }
-        if (fitnesscentermode < 2) {
-            size += fitnesscenter.size();
-        }
+        if (omegamode < 2) { size++; }
+        if (fitnessshapemode < 2) { size++; }
+        if (fitnesscentermode < 2) { size += fitnesscenter.size(); }
         size += fitness->GetMPISize();
         // pi and epsilon
-        if (maskmode < 2) {
-            size++;
-        }
-        if (maskmode < 3) {
-            size += sitemaskarray->GetMPISize();
-        }
-        if (maskepsilonmode < 2) {
-            size++;
-        }
+        if (maskmode < 2) { size++; }
+        if (maskmode < 3) { size += sitemaskarray->GetMPISize(); }
+        if (maskepsilonmode < 2) { size++; }
         return size;
     }
 
@@ -1217,25 +1142,13 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (omegamode < 2) {
-            is >> omega;
-        }
-        if (fitnessshapemode < 2) {
-            is >> fitnessshape;
-        }
-        if (fitnesscentermode < 2) {
-            is >> fitnesscenter;
-        }
+        if (omegamode < 2) { is >> omega; }
+        if (fitnessshapemode < 2) { is >> fitnessshape; }
+        if (fitnesscentermode < 2) { is >> fitnesscenter; }
         is >> *fitness;
-        if (maskmode < 2) {
-            is >> pi;
-        }
-        if (maskmode < 3) {
-            is >> *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            is >> maskepsilon;
-        }
+        if (maskmode < 2) { is >> pi; }
+        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (maskepsilonmode < 2) { is >> maskepsilon; }
     }
 
     //! write complete current parameter configuration into MPI buffer
@@ -1248,24 +1161,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             os << nucrelrate;
             os << nucstat;
         }
-        if (omegamode < 2) {
-            os << omega;
-        }
-        if (fitnessshapemode < 2) {
-            os << fitnessshape;
-        }
-        if (fitnesscentermode < 2) {
-            os << fitnesscenter;
-        }
+        if (omegamode < 2) { os << omega; }
+        if (fitnessshapemode < 2) { os << fitnessshape; }
+        if (fitnesscentermode < 2) { os << fitnesscenter; }
         os << *fitness;
-        if (maskmode < 2) {
-            os << pi;
-        }
-        if (maskmode < 3) {
-            os << *sitemaskarray;
-        }
-        if (maskepsilonmode < 2) {
-            os << maskepsilon;
-        }
+        if (maskmode < 2) { os << pi; }
+        if (maskmode < 3) { os << *sitemaskarray; }
+        if (maskepsilonmode < 2) { os << maskepsilon; }
     }
 };

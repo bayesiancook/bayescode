@@ -54,9 +54,7 @@ int main(int argc, char *argv[]) {
     string name = "";
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -147,16 +145,12 @@ int main(int argc, char *argv[]) {
             } else if (s == "-g") {
                 writegenedata = 1;
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if ((datafile == "") || (treefile == "") || (name == "")) {
-            throw(0);
-        }
+        if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
     } catch (...) {
         cerr << "codonm8 -d <alignment> -t <tree> [-fixparam <paramfile> -fixhyper "
                 "<hyperparamfile>] <chainname> \n";
@@ -171,15 +165,11 @@ int main(int argc, char *argv[]) {
     // model->SetAcrossGenesModes(blmode,nucmode,purommode,dposommode,purwmode,poswmode);
     model->SetAcrossGenesModes(blmode, dposommode, poswmode);
     // model->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
-    model->SetMixtureHyperParameters(dposomhypermean, dposomhyperinvshape, poswhypermean,
-                                     poswhyperinvconc);
-    if (!myid) {
-        cerr << " -- master allocate\n";
-    }
+    model->SetMixtureHyperParameters(
+        dposomhypermean, dposomhyperinvshape, poswhypermean, poswhyperinvconc);
+    if (!myid) { cerr << " -- master allocate\n"; }
     model->Allocate();
-    if (!myid) {
-        cerr << " -- master unfold\n";
-    }
+    if (!myid) { cerr << " -- master unfold\n"; }
     model->Unfold();
     if (!myid) {
         cerr << " -- start\n";
@@ -203,16 +193,12 @@ int main(int argc, char *argv[]) {
             model->Trace(os);
             model->TracePosWeight(pos);
             model->TracePosOm(omos);
-            if (writegenedata) {
-                model->MasterTraceSitesPostProb(siteos);
-            }
+            if (writegenedata) { model->MasterTraceSitesPostProb(siteos); }
         }
     } else {
         while (1) {
             model->SlaveMove();
-            if (writegenedata) {
-                model->SlaveTraceSitesPostProb();
-            }
+            if (writegenedata) { model->SlaveTraceSitesPostProb(); }
         }
     }
 

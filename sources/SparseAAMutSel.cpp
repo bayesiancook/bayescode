@@ -26,8 +26,8 @@ class SparseAAMutSelChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     SparseAAMutSelChain(string indatafile, string intreefile, int inratemode, int inprofilemode,
-                        double inepsilon, double ingc, double inxi, int inevery, int inuntil,
-                        string inname, int force)
+        double inepsilon, double ingc, double inxi, int inevery, int inuntil, string inname,
+        int force)
         : modeltype("SPARSEAASUBSEL"),
           datafile(indatafile),
           treefile(intreefile),
@@ -133,9 +133,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -187,24 +185,20 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "sparsecatgtr -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        chain = new SparseAAMutSelChain(datafile, treefile, ratemode, profilemode, epsilon, gc, xi,
-                                        every, until, name, force);
+        chain = new SparseAAMutSelChain(
+            datafile, treefile, ratemode, profilemode, epsilon, gc, xi, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

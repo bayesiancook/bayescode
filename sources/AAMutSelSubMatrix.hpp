@@ -8,8 +8,7 @@
 class AAMutSelSubMatrix : public virtual SubMatrix {
   public:
     AAMutSelSubMatrix(const CodonStateSpace *incodonstatespace, const SubMatrix *innucmatrix,
-                      double inxi, const vector<double> &inaa, double inNe,
-                      bool innormalise = false)
+        double inxi, const vector<double> &inaa, double inNe, bool innormalise = false)
         : SubMatrix(Naa, innormalise),
           codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),

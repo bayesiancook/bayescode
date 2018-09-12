@@ -35,9 +35,7 @@ double Tree::ToStreamSimplified(ostream &os, const Link *from) const {
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             double tmp = ToStreamSimplified(os, link->Out());
             os << ':' << tmp;
-            if (link->Next() != from) {
-                os << ',';
-            }
+            if (link->Next() != from) { os << ','; }
         }
         os << ')';
 
@@ -52,9 +50,7 @@ double Tree::ToStreamSimplified(ostream &os, const Link *from) const {
       }
       }
     */
-    if (from->isRoot()) {
-        return 0;
-    }
+    if (from->isRoot()) { return 0; }
     return atof(GetBranchName(from).c_str());
 }
 
@@ -63,9 +59,7 @@ void Tree::ToStream(ostream &os, const Link *from) const {
         os << '(';
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             ToStream(os, link->Out());
-            if (link->Next() != from) {
-                os << ',';
-            }
+            if (link->Next() != from) { os << ','; }
         }
         os << ')';
     }
@@ -74,9 +68,7 @@ void Tree::ToStream(ostream &os, const Link *from) const {
     // }
     if (!from->isRoot()) {
         string brval = GetBranchName(from);
-        if (brval != "") {
-            os << ':' << brval;
-        }
+        if (brval != "") { os << ':' << brval; }
     }
 }
 
@@ -85,18 +77,14 @@ void Tree::ToStreamWithBranchIndex(ostream &os, const Link *from) const {
         os << '(';
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             ToStreamWithBranchIndex(os, link->Out());
-            if (link->Next() != from) {
-                os << ',';
-            }
+            if (link->Next() != from) { os << ','; }
         }
         os << ')';
     }
     // if (from->isLeaf())	{
     os << GetNodeName(from);
     // }
-    if (!from->isRoot()) {
-        os << ':' << from->GetBranch()->GetIndex();
-    }
+    if (!from->isRoot()) { os << ':' << from->GetBranch()->GetIndex(); }
 }
 
 Tree::Tree() {
@@ -245,9 +233,7 @@ void Tree::RootAt(Link *from) {
 void Tree::EraseInternalNodeName() { EraseInternalNodeName(GetRoot()); }
 
 void Tree::EraseInternalNodeName(Link *from) {
-    if (!from->isLeaf()) {
-        from->GetNode()->SetName("");
-    }
+    if (!from->isLeaf()) { from->GetNode()->SetName(""); }
     for (Link *link = from->Next(); link != from; link = link->Next()) {
         EraseInternalNodeName(link->Out());
     }
@@ -312,9 +298,7 @@ void Tree::ReadFromStream(istream &is) {
         string s;
         is >> s;
         unsigned int k = 0;
-        while ((k < s.length()) && (s[k] != ';')) {
-            k++;
-        }
+        while ((k < s.length()) && (s[k] != ';')) { k++; }
         expr += s.substr(0, k);
         cont = static_cast<int>((!is.eof()) && (k == s.length()));
     }
@@ -445,12 +429,8 @@ Link *Tree::ParseGroup(string input, Link *from) {
             k = 1;
             while ((k < input.length()) && (brack != 0)) {
                 char c = input[k];
-                if (c == '(') {
-                    brack++;
-                }
-                if (c == ')') {
-                    brack--;
-                }
+                if (c == '(') { brack++; }
+                if (c == ')') { brack--; }
                 k++;
             }
             if (brack != 0) {
@@ -462,15 +442,11 @@ Link *Tree::ParseGroup(string input, Link *from) {
         }
 
         int b = k;
-        while ((k < input.length()) && (input[k] != ':')) {
-            k++;
-        }
+        while ((k < input.length()) && (input[k] != ':')) { k++; }
         string nodeval = input.substr(b, k - b);
 
         string branchval = "";
-        if (k < input.length()) {
-            branchval = input.substr(k + 1, input.length() - k);
-        }
+        if (k < input.length()) { branchval = input.substr(k + 1, input.length() - k); }
 
         // make a new node and a new branch
         Node *node = new Node(nodeval);
@@ -515,7 +491,7 @@ void Tree::Subdivide(Link *from, int Ninterpol) {
         delete from->GetBranch();
 
         Link *current = from;
-        Link * final = from->Out();
+        Link *final = from->Out();
         int i = 0;
         while (i < Ninterpol - 1) {
             Link *link1 = new Link;
@@ -601,9 +577,7 @@ int Tree::CountInternalNodes(const Link *from) const {
 }
 
 const Link *Tree::ChooseInternalNode(const Link *from, const Link *&fromup, int &n) const {
-    if (from->isLeaf()) {
-        return nullptr;
-    }
+    if (from->isLeaf()) { return nullptr; }
     const Link *ret = nullptr;
     if (n == 0) {
         ret = from;
@@ -612,14 +586,10 @@ const Link *Tree::ChooseInternalNode(const Link *from, const Link *&fromup, int 
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             if (ret == nullptr) {
                 const Link *tmp = ChooseInternalNode(link->Out(), fromup, n);
-                if (tmp != nullptr) {
-                    ret = tmp;
-                }
+                if (tmp != nullptr) { ret = tmp; }
             }
         }
-        if ((ret != nullptr) && (fromup == nullptr)) {
-            fromup = from;
-        }
+        if ((ret != nullptr) && (fromup == nullptr)) { fromup = from; }
     }
     return ret;
 }
@@ -641,13 +611,9 @@ const Link *Tree::ChooseNode(const Link *from, const Link *&fromup, int &n) cons
         for (const Link *link = from->Next(); ((ret == nullptr) && (link != from));
              link = link->Next()) {
             const Link *tmp = ChooseNode(link->Out(), fromup, n);
-            if (tmp != nullptr) {
-                ret = tmp;
-            }
+            if (tmp != nullptr) { ret = tmp; }
         }
-        if ((ret != nullptr) && (fromup == nullptr)) {
-            fromup = from;
-        }
+        if ((ret != nullptr) && (fromup == nullptr)) { fromup = from; }
     }
     return ret;
 }

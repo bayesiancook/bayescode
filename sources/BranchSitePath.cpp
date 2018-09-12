@@ -109,22 +109,18 @@ void BranchSitePath::AddPathSuffStat(PathSuffStat &suffstat, double factor) cons
     while (link) {
         int state = link->GetState();
         suffstat.AddWaitingTime(state, GetRelativeTime(link) * factor);
-        if (link != last) {
-            suffstat.IncrementPairCount(state, link->Next()->GetState());
-        }
+        if (link != last) { suffstat.IncrementPairCount(state, link->Next()->GetState()); }
         link = link->Next();
     }
 }
 
-void BranchSitePath::AddLengthSuffStat(PoissonSuffStat &suffstat, double factor,
-                                       const SubMatrix &mat) const {
+void BranchSitePath::AddLengthSuffStat(
+    PoissonSuffStat &suffstat, double factor, const SubMatrix &mat) const {
     const Plink *link = Init();
     while (link) {
         int state = link->GetState();
         suffstat.AddBeta(-GetRelativeTime(link) * factor * mat(state, state));
-        if (link != last) {
-            suffstat.IncrementCount();
-        }
+        if (link != last) { suffstat.IncrementCount(); }
         link = link->Next();
     }
 }

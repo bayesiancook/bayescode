@@ -26,13 +26,13 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double>> {
   public:
     //! constructor, parameterized by baseline (G), delta (D) and Nlevel
     DiffSelFitnessArray(const Selector<vector<double>> &inbaseline,
-                        const BidimSelector<vector<double>> &indelta,
-                        int inNlevel)
+        const BidimSelector<vector<double>> &indelta,
+        int inNlevel)
         :  // DiffSelFitnessArray(const Selector<vector<double> >& inbaseline,
            // const BidimSelector<vector<double> >& indelta, const
            // vector<vector<int> >& inpattern) :
           SimpleBidimArray<vector<double>>(indelta.GetNrow() + 1, indelta.GetNcol(),
-                                           vector<double>(indelta.GetVal(0, 0).size(), 0)),
+              vector<double>(indelta.GetVal(0, 0).size(), 0)),
           baseline(inbaseline),
           delta(indelta),
           Nlevel(inNlevel) {
@@ -46,26 +46,20 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double>> {
     //! full update of the array
     void Update() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Update(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Update(i, j); }
         }
     }
 
     //! update of column j (i.e. site j)
     void UpdateColumn(int j) {
-        for (int i = 0; i < GetNrow(); i++) {
-            Update(i, j);
-        }
+        for (int i = 0; i < GetNrow(); i++) { Update(i, j); }
     }
 
     //! update of column j (i.e. site j), but only for those conditions that are
     //! flagged
     void UpdateColumn(int j, const vector<int> &flag) {
         for (int i = 0; i < GetNrow(); i++) {
-            if (flag[i]) {
-                Update(i, j);
-            }
+            if (flag[i]) { Update(i, j); }
         }
     }
 
@@ -75,12 +69,8 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double>> {
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             double d = 0;
-            if ((i == 1) || (Nlevel == 2)) {
-                d += delta.GetVal(0, j)[k];
-            }
-            if (i > 1) {
-                d += delta.GetVal(i - 1, j)[k];
-            }
+            if ((i == 1) || (Nlevel == 2)) { d += delta.GetVal(0, j)[k]; }
+            if (i > 1) { d += delta.GetVal(i - 1, j)[k]; }
             /*
             for (unsigned int l=1; l<pattern[i].size(); l++)    {
                 if (pattern[l][i])  {
@@ -91,9 +81,7 @@ class DiffSelFitnessArray : public SimpleBidimArray<vector<double>> {
             x[k] = baseline.GetVal(j)[k] * exp(d);
             total += x[k];
         }
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] /= total;
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] /= total; }
     }
 
   protected:

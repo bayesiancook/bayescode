@@ -10,9 +10,7 @@ int main(int argc, char *argv[]) {
     string name = "";
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -28,16 +26,12 @@ int main(int argc, char *argv[]) {
                 i++;
                 paramfile = argv[i];
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if ((datafile == "") || (treefile == "") || (name == "")) {
-            throw(0);
-        }
+        if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
     } catch (...) {
         cerr << "simucodonm2a -d <alignment> -t <tree> -p <paramfile> <name> \n";
         cerr << '\n';

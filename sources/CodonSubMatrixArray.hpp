@@ -25,7 +25,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
     //! constructor parameterized by a codon state space, a single nucleotide
     //! matrix and an array (in fact, a Selector) of omega's
     MGOmegaCodonSubMatrixArray(const CodonStateSpace *incodonstatespace,
-                               const SubMatrix *innucmatrix, const Selector<double> *inomegaarray)
+        const SubMatrix *innucmatrix, const Selector<double> *inomegaarray)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           omegaarray(inomegaarray),
@@ -77,9 +77,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
     }
 
     void Delete() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete matrixarray[i]; }
     }
 
     const CodonStateSpace *codonstatespace;
@@ -102,9 +100,8 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     //! constructor with a nucleotide matrix, an array of amino-acid fitness
     //! profiles and a single omega value (for all matrices)
     AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace *incodonstatespace,
-                                     const SubMatrix *innucmatrix,
-                                     const Selector<vector<double>> *inaafitnessarray,
-                                     double inomega)
+        const SubMatrix *innucmatrix, const Selector<vector<double>> *inaafitnessarray,
+        double inomega)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           aafitnessarray(inaafitnessarray),
@@ -118,9 +115,8 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     //! profiles and an array of omega value (one for each entry of the matrix
     //! array)
     AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace *incodonstatespace,
-                                     const SubMatrix *innucmatrix,
-                                     const Selector<vector<double>> *inaafitnessarray,
-                                     const Selector<double> *inomegaarray)
+        const SubMatrix *innucmatrix, const Selector<vector<double>> *inaafitnessarray,
+        const Selector<double> *inomegaarray)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           aafitnessarray(inaafitnessarray),
@@ -197,8 +193,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
         for (int i = 0; i < GetSize(); i++) {
             if (omegaarray) {
                 matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(codonstatespace, nucmatrix,
-                                                                 aafitnessarray->GetVal(i),
-                                                                 omegaarray->GetVal(i), 1.0);
+                    aafitnessarray->GetVal(i), omegaarray->GetVal(i), 1.0);
             } else {
                 matrixarray[i] = new AAMutSelOmegaCodonSubMatrix(
                     codonstatespace, nucmatrix, aafitnessarray->GetVal(i), omega, 1.0);
@@ -207,9 +202,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     }
 
     void Delete() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete matrixarray[i]; }
     }
 
     const CodonStateSpace *codonstatespace;

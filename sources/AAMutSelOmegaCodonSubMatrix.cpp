@@ -14,9 +14,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeStationary() const {
 
     // renormalize stationary probabilities
     // double min = 1;
-    for (int i = 0; i < Nstate; i++) {
-        mStationary[i] /= total;
-    }
+    for (int i = 0; i < Nstate; i++) { mStationary[i] /= total; }
 }
 
 void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
@@ -44,9 +42,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
                 } else {
                     Q(i, j) *= deltaS / (1.0 - exp(-deltaS));
                 }
-                if (!Synonymous(i, j)) {
-                    Q(i, j) *= GetOmega();
-                }
+                if (!Synonymous(i, j)) { Q(i, j) *= GetOmega(); }
             } else {
                 Q(i, j) = 0;
             }

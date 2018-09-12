@@ -2,16 +2,12 @@
 #include "MultiGeneSample.hpp"
 
 void MultiGeneSample::OpenChainFile() {
-    if (until == -1) {
-        until = chainsize;
-    }
+    if (until == -1) { until = chainsize; }
     if (until > chainsize) {
         cerr << "number of points saved is less than " << until << '\n';
         until = chainsize;
     }
-    if (burnin == -1) {
-        burnin = chainsize / 10;
-    }
+    if (burnin == -1) { burnin = chainsize / 10; }
     size = (until - burnin) / every;
     if (size <= 0) {
         cerr << "error : chain not long enough\n";
@@ -25,13 +21,9 @@ void MultiGeneSample::OpenChainFile() {
             cerr << "error: cannot find file " << name << ".chain\n";
             exit(1);
         }
-        for (int i = 0; i < burnin; i++) {
-            GetMultiGeneModel()->MasterFromStream(*chain_is);
-        }
+        for (int i = 0; i < burnin; i++) { GetMultiGeneModel()->MasterFromStream(*chain_is); }
     } else {
-        for (int i = 0; i < burnin; i++) {
-            GetMultiGeneModel()->SlaveFromStream();
-        }
+        for (int i = 0; i < burnin; i++) { GetMultiGeneModel()->SlaveFromStream(); }
     }
 }
 
@@ -46,9 +38,7 @@ void MultiGeneSample::GetNextPoint() {
                 GetMultiGeneModel()->MasterFromStream(*chain_is);
             }
         } else {
-            for (int i = 0; i < every - 1; i++) {
-                GetMultiGeneModel()->SlaveFromStream();
-            }
+            for (int i = 0; i < every - 1; i++) { GetMultiGeneModel()->SlaveFromStream(); }
         }
     }
     currentpoint++;

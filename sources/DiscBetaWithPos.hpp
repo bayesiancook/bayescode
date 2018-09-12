@@ -7,7 +7,7 @@
 class DiscBetaWithPos : public SimpleArray<double> {
   public:
     DiscBetaWithPos(int inncat, double inpurifmean, double inpurifinvconc, double inposw,
-                    double inposom, vector<double> &inw)
+        double inposom, vector<double> &inw)
         : SimpleArray<double>(inncat + 3),
           ncat(inncat),
           weight(inncat + 3),
@@ -26,7 +26,7 @@ class DiscBetaWithPos : public SimpleArray<double> {
     ~DiscBetaWithPos() {}
 
     void SetParameters(double inpurifmean, double inpurifinvconc, double inposw, double inposom,
-                       vector<double> &inw) {
+        vector<double> &inw) {
         if ((purifmean != inpurifmean) || (purifinvconc != inpurifinvconc)) {
             purifmean = inpurifmean;
             purifinvconc = inpurifinvconc;
@@ -65,18 +65,14 @@ class DiscBetaWithPos : public SimpleArray<double> {
         double max = 0;
         for (int cat = 0; cat < GetSize(); cat++) {
             logp[cat] = suffstat.GetLogProb(GetVal(cat));
-            if ((!cat) || (max < logp[cat])) {
-                max = logp[cat];
-            }
+            if ((!cat) || (max < logp[cat])) { max = logp[cat]; }
         }
         double tot = 0;
         for (int cat = 0; cat < GetSize(); cat++) {
             postprob[cat] = weight[cat] * exp(logp[cat] - max);
             tot += postprob[cat];
         }
-        for (int cat = 0; cat < GetSize(); cat++) {
-            postprob[cat] /= tot;
-        }
+        for (int cat = 0; cat < GetSize(); cat++) { postprob[cat] /= tot; }
         double ret = log(tot) + max;
         if (std::isinf(ret)) {
             cerr << "ret is inf: " << tot << '\t' << max << '\n';
@@ -94,8 +90,8 @@ class DiscBetaWithPos : public SimpleArray<double> {
         return ret;
     }
 
-    double GetPostProbArray(OmegaPathSuffStatArray &suffstatarray,
-                            vector<vector<double>> &postprobarray) const {
+    double GetPostProbArray(
+        OmegaPathSuffStatArray &suffstatarray, vector<vector<double>> &postprobarray) const {
         double total = 0;
         for (int i = 0; i < suffstatarray.GetSize(); i++) {
             total += GetPostProbArray(suffstatarray.GetVal(i), postprobarray[i]);
@@ -126,9 +122,7 @@ class DiscBetaWithPos : public SimpleArray<double> {
             cerr << "error: negative pos weight\n";
             exit(1);
         }
-        for (int cat = 0; cat < ncat; cat++) {
-            weight[cat + 1] = w[1] * (1 - posw) / ncat;
-        }
+        for (int cat = 0; cat < ncat; cat++) { weight[cat + 1] = w[1] * (1 - posw) / ncat; }
         weight[0] = w[0] * (1 - posw);
         weight[ncat + 1] = w[2] * (1 - posw);
         weight[ncat + 2] = posw;

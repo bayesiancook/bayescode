@@ -12,8 +12,7 @@
 class AAMutSelSubMatrixArray : public Array<SubMatrix>, public Array<AAMutSelSubMatrix> {
   public:
     AAMutSelSubMatrixArray(const CodonStateSpace *incodonstatespace, const SubMatrix *innucmatrix,
-                           double inxi, const Selector<vector<double>> *inprofilearray,
-                           int innormalise)
+        double inxi, const Selector<vector<double>> *inprofilearray, int innormalise)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           xi(inxi),
@@ -47,15 +46,13 @@ class AAMutSelSubMatrixArray : public Array<SubMatrix>, public Array<AAMutSelSub
   private:
     void Create() {
         for (int i = 0; i < GetSize(); i++) {
-            matrixarray[i] = new AAMutSelSubMatrix(codonstatespace, nucmatrix, xi,
-                                                   profilearray->GetVal(i), 1.0, normalise);
+            matrixarray[i] = new AAMutSelSubMatrix(
+                codonstatespace, nucmatrix, xi, profilearray->GetVal(i), 1.0, normalise);
         }
     }
 
     void Delete() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete matrixarray[i]; }
     }
 
     const CodonStateSpace *codonstatespace;

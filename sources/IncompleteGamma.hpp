@@ -135,7 +135,7 @@ double LnGamma(double alpha) {
     z = 1.0 / (x * x);
     return f + (x - 0.5) * log(x) - x + 0.918938533204673 +
            (((-0.000595238095238 * z + 0.000793650793651) * z - 0.002777777777778) * z +
-            0.083333333333333) /
+               0.083333333333333) /
                x;
 }
 
@@ -219,9 +219,8 @@ double PointNormal(double prob)
     p1 = (p < 0.5 ? p : 1 - p);
     if (p1 < 1e-20) return (-9999);
     y = sqrt(log(1 / (p1 * p1)));
-    z = y +
-        ((((y * a4 + a3) * y + a2) * y + a1) * y + a0) /
-            ((((y * b4 + b3) * y + b2) * y + b1) * y + b0);
+    z = y + ((((y * a4 + a3) * y + a2) * y + a1) * y + a0) /
+                ((((y * b4 + b3) * y + b2) * y + b1) * y + b0);
     return (p < 0.5 ? -z : z);
 }
 

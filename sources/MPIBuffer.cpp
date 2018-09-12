@@ -53,16 +53,12 @@ int &operator+=(int &i, const MPIBuffer &buffer) {
 
 template <>
 vector<int> &operator+=(vector<int> &v, const MPIBuffer &buffer) {
-    for (unsigned int i = 0; i < v.size(); i++) {
-        v[i] += buffer;
-    }
+    for (unsigned int i = 0; i < v.size(); i++) { v[i] += buffer; }
     return v;
 }
 
 template <>
 vector<double> &operator+=(vector<double> &v, const MPIBuffer &buffer) {
-    for (unsigned int i = 0; i < v.size(); i++) {
-        v[i] += buffer;
-    }
+    for (unsigned int i = 0; i < v.size(); i++) { v[i] += buffer; }
     return v;
 }

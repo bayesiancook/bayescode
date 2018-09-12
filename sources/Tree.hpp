@@ -128,9 +128,7 @@ class Link {
     void SetNext(Link *innext) { next = innext; }
 
     void AppendTo(Link *link) {
-        if (link != nullptr) {
-            link->next = this;
-        }
+        if (link != nullptr) { link->next = this; }
     }
 
     void Insert(Link *link) {  // insert link after this
@@ -269,9 +267,7 @@ class Tree {
     // return const pointer to link with given index
     Link *GetLink(int index) const {
         map<int, Link *>::const_iterator i = linkmap.find(index);
-        if (i == linkmap.end()) {
-            cerr << "error in Tree::GetLink(int): not found\n";
-        }
+        if (i == linkmap.end()) { cerr << "error in Tree::GetLink(int): not found\n"; }
         return i->second;
     }
 
@@ -285,13 +281,9 @@ class Tree {
         double max = 0;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             double tmp = GetMaxHeight(link->Out());
-            if (max < tmp) {
-                max = tmp;
-            }
+            if (max < tmp) { max = tmp; }
         }
-        if (!from->isRoot()) {
-            max += GetBranchLength(from);
-        }
+        if (!from->isRoot()) { max += GetBranchLength(from); }
         return max;
     }
 
@@ -301,13 +293,9 @@ class Tree {
         double min = -1;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             double tmp = GetMinHeight(link->Out());
-            if ((min == -1) || (min > tmp)) {
-                min = tmp;
-            }
+            if ((min == -1) || (min > tmp)) { min = tmp; }
         }
-        if (!from->isRoot()) {
-            min += GetBranchLength(from);
-        }
+        if (!from->isRoot()) { min += GetBranchLength(from); }
         return min;
     }
 
@@ -320,9 +308,7 @@ class Tree {
             os << "(";
             for (const Link *link = from->Next(); link != from; link = link->Next()) {
                 ToStreamRenorm(link->Out(), os, normfactor);
-                if (link->Next() != from) {
-                    os << ",";
-                }
+                if (link->Next() != from) { os << ","; }
             }
             os << ")";
             os << GetNodeName(from);
@@ -347,9 +333,7 @@ class Tree {
     void EraseInternalNodeName(Link *from);
 
     int GetSize(const Link *from) const {
-        if (from->isLeaf()) {
-            return 1;
-        }
+        if (from->isLeaf()) { return 1; }
         int total = 0;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             total += GetSize(link->Out());
@@ -360,9 +344,7 @@ class Tree {
     }
 
     int GetFullSize(const Link *from) const {
-        if (from->isLeaf()) {
-            return 1;
-        }
+        if (from->isLeaf()) { return 1; }
         int total = 1;
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             total += GetFullSize(link->Out());
@@ -389,9 +371,7 @@ class Tree {
     void Subdivide(Link *from, int Ninterpol);
 
     std::string Reduce(const Link *from = nullptr) {
-        if (from == nullptr) {
-            from = GetRoot();
-        }
+        if (from == nullptr) { from = GetRoot(); }
         if (from->isLeaf()) {
             std::cerr << from->GetNode()->GetName() << '\n';
             ;
@@ -416,24 +396,18 @@ class Tree {
     }
 
     void PrintReduced(std::ostream &os, const Link *from = nullptr) {
-        if (from == nullptr) {
-            from = GetRoot();
-        }
+        if (from == nullptr) { from = GetRoot(); }
         if (from->GetNode()->GetName() != "diff") {
             os << from->GetNode()->GetName();
         } else {
             os << '(';
             for (const Link *link = from->Next(); link != from; link = link->Next()) {
                 PrintReduced(os, link->Out());
-                if (link->Next() != from) {
-                    os << ',';
-                }
+                if (link->Next() != from) { os << ','; }
             }
             os << ')';
         }
-        if (from->isRoot()) {
-            os << ";\n";
-        }
+        if (from->isRoot()) { os << ";\n"; }
     }
 
     const Link *ChooseInternalNode() const {
@@ -499,8 +473,8 @@ class Tree {
 
     // returns 0 if not found
     // returns link if found (then found1 and found2 must
-    const Link *RecursiveGetLCA(const Link *from, std::string tax1, std::string tax2, bool &found1,
-                                bool &found2) const {
+    const Link *RecursiveGetLCA(
+        const Link *from, std::string tax1, std::string tax2, bool &found1, bool &found2) const {
         const Link *ret = nullptr;
         if (from->isLeaf()) {
             // found1 |= (from->GetNode()->GetName() == tax1);
@@ -514,9 +488,7 @@ class Tree {
               found2 |= (GetLeafNodeName(from) == tax2);
             */
             if (ret == nullptr) {
-                if (found1 && found2) {
-                    ret = from;
-                }
+                if (found1 && found2) { ret = from; }
             }
         } else {
             for (const Link *link = from->Next(); link != from; link = link->Next()) {
@@ -539,23 +511,19 @@ class Tree {
                 }
             }
             if (ret == nullptr) {
-                if (found1 && found2) {
-                    ret = from;
-                }
+                if (found1 && found2) { ret = from; }
             }
         }
         return ret;
     }
 
-    const Link *RecursiveGetLCA(const Link *from, const Link *from1, const Link *from2,
-                                bool &found1, bool &found2) const {
+    const Link *RecursiveGetLCA(
+        const Link *from, const Link *from1, const Link *from2, bool &found1, bool &found2) const {
         const Link *ret = nullptr;
         found1 |= static_cast<int>(from == from1);
         found2 |= static_cast<int>(from == from2);
         if (ret == nullptr) {
-            if (found1 && found2) {
-                ret = from;
-            }
+            if (found1 && found2) { ret = from; }
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             bool tmp1 = false;
@@ -577,9 +545,7 @@ class Tree {
             }
         }
         if (ret == nullptr) {
-            if (found1 && found2) {
-                ret = from;
-            }
+            if (found1 && found2) { ret = from; }
         }
         return ret;
     }
@@ -623,38 +589,26 @@ class Tree {
     double ToStreamSimplified(std::ostream &os, const Link *from) const;
 
     const Link *GetLeftMostLink(const Link *from) const {
-        if (from->isLeaf()) {
-            return from;
-        }
+        if (from->isLeaf()) { return from; }
         return GetLeftMostLink(from->Next()->Out());
     }
 
     const Link *GetRightMostLink(const Link *from) const {
-        if (from->isLeaf()) {
-            return from;
-        }
+        if (from->isLeaf()) { return from; }
         const Link *link = from->Next();
-        while (link->Next() != from) {
-            link = link->Next();
-        }
+        while (link->Next() != from) { link = link->Next(); }
         return GetRightMostLink(link->Out());
     }
 
     std::string GetLeftMost(const Link *from) const {
-        if (from->isLeaf()) {
-            return GetNodeName(from);
-        }
+        if (from->isLeaf()) { return GetNodeName(from); }
         return GetLeftMost(from->Next()->Out());
     }
 
     std::string GetRightMost(const Link *from) const {
-        if (from->isLeaf()) {
-            return GetNodeName(from);
-        }
+        if (from->isLeaf()) { return GetNodeName(from); }
         const Link *link = from->Next();
-        while (link->Next() != from) {
-            link = link->Next();
-        }
+        while (link->Next() != from) { link = link->Next(); }
         return GetRightMost(link->Out());
     }
 
@@ -671,9 +625,7 @@ class Tree {
 
     int RecursiveGetNinternalNode(const Link *from) const {
         int n = 0;
-        if (!from->isLeaf()) {
-            n++;
-        }
+        if (!from->isLeaf()) { n++; }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             n += RecursiveGetNinternalNode(link->Out());
         }

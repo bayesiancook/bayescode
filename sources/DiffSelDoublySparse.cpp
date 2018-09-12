@@ -29,10 +29,9 @@ class DiffSelDoublySparseChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel,
-                             int incodonmodel, double infitnessshape, int infitnesscentermode,
-                             double inepsilon, double inpihypermean, double inshiftprobmean,
-                             double inshiftprobinvconc, int inburnin, int inevery, int inuntil,
-                             int insaveall, string inname, int force)
+        int incodonmodel, double infitnessshape, int infitnesscentermode, double inepsilon,
+        double inpihypermean, double inshiftprobmean, double inshiftprobinvconc, int inburnin,
+        int inevery, int inuntil, int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
           treefile(intree),
@@ -61,8 +60,7 @@ class DiffSelDoublySparseChain : public Chain {
 
     void New(int force) override {
         model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon,
-                                             fitnessshape, pihypermean, shiftprobmean,
-                                             shiftprobinvconc);
+            fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
@@ -100,8 +98,7 @@ class DiffSelDoublySparseChain : public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                 epsilon, fitnessshape, pihypermean, shiftprobmean,
-                                                 shiftprobinvconc);
+                epsilon, fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -121,9 +118,7 @@ class DiffSelDoublySparseChain : public Chain {
     }
 
     void Save() override {
-        if (size == burnin) {
-            GetModel()->SetWithToggles(1);
-        }
+        if (size == burnin) { GetModel()->SetWithToggles(1); }
 
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
@@ -159,9 +154,7 @@ class DiffSelDoublySparseChain : public Chain {
         for (int k = 0; k < ncond; k++) {
             ostringstream s;
             s << name << "_" << k;
-            if (k) {
-                ofstream tos((s.str() + ".shifttoggle").c_str());
-            }
+            if (k) { ofstream tos((s.str() + ".shifttoggle").c_str()); }
             ofstream fos((s.str() + ".fitness").c_str());
         }
     }
@@ -270,9 +263,7 @@ int main(int argc, char *argv[]) {
         int force = 0;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -339,9 +330,7 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
@@ -351,9 +340,8 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         chain = new DiffSelDoublySparseChain(datafile, treefile, ncond, nlevel, codonmodel,
-                                             fitnessshape, fitnesscentermode, epsilon, pihypermean,
-                                             shiftprobmean, shiftprobinvconc, burnin, every, until,
-                                             saveall, name, force);
+            fitnessshape, fitnesscentermode, epsilon, pihypermean, shiftprobmean, shiftprobinvconc,
+            burnin, every, until, saveall, name, force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

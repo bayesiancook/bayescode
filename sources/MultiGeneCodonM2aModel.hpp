@@ -61,7 +61,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // ------------------
 
     MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean,
-                           double inpihyperinvconc, int inmyid, int innprocs);
+        double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
 
     //-------------------
@@ -81,16 +81,15 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
     void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode,
-                             int inpurwmode, int inposwmode);
+        int inpurwmode, int inposwmode);
 
     void SetBLSamplingMode(int inmode) { blsamplemode = inmode; }
 
     void SetModalMixturePrior(int in) { modalprior = in; }
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
-                                   double indposomhypermean, double indposomhyperinvshape,
-                                   double inpurwhypermean, double inpurwhyperinvconc,
-                                   double inposwhypermean, double inposwhyperinvconc);
+        double indposomhypermean, double indposomhyperinvshape, double inpurwhypermean,
+        double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     void UpdateNucMatrix();
     void SetMixtureArrays();

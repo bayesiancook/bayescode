@@ -42,19 +42,13 @@ void SubMatrix::Create() {
 
     if (!witheigen) {
         ptrQ = new double *[Nstate];
-        for (int i = 0; i < Nstate; i++) {
-            ptrQ[i] = new double[Nstate];
-        }
+        for (int i = 0; i < Nstate; i++) { ptrQ[i] = new double[Nstate]; }
 
         ptru = new double *[Nstate];
-        for (int i = 0; i < Nstate; i++) {
-            ptru[i] = new double[Nstate];
-        }
+        for (int i = 0; i < Nstate; i++) { ptru[i] = new double[Nstate]; }
 
         ptrinvu = new double *[Nstate];
-        for (int i = 0; i < Nstate; i++) {
-            ptrinvu[i] = new double[Nstate];
-        }
+        for (int i = 0; i < Nstate; i++) { ptrinvu[i] = new double[Nstate]; }
 
         ptrv = new double[Nstate];
         ptrStationary = new double[Nstate];
@@ -62,16 +56,12 @@ void SubMatrix::Create() {
 
     UniMu = 1;
     mPow = new double **[UniSubNmax];
-    for (int n = 0; n < UniSubNmax; n++) {
-        mPow[n] = nullptr;
-    }
+    for (int n = 0; n < UniSubNmax; n++) { mPow[n] = nullptr; }
 
     flagarray = new bool[Nstate];
     diagflag = false;
     statflag = false;
-    for (int i = 0; i < Nstate; i++) {
-        flagarray[i] = false;
-    }
+    for (int i = 0; i < Nstate; i++) { flagarray[i] = false; }
     powflag = false;
 }
 
@@ -96,9 +86,7 @@ SubMatrix::~SubMatrix() {
     if (mPow != nullptr) {
         for (int n = 0; n < UniSubNmax; n++) {
             if (mPow[n] != nullptr) {
-                for (int i = 0; i < Nstate; i++) {
-                    delete[] mPow[n][i];
-                }
+                for (int i = 0; i < Nstate; i++) { delete[] mPow[n][i]; }
                 delete[] mPow[n];
             }
         }
@@ -133,9 +121,7 @@ int SubMatrix::Diagonalise() const {
 }
 
 int SubMatrix::EigenDiagonalise() const {
-    if (!ArrayUpdated()) {
-        UpdateMatrix();
-    }
+    if (!ArrayUpdated()) { UpdateMatrix(); }
 
     diagcount++;
     auto &stat = GetStationary();
@@ -143,9 +129,7 @@ int SubMatrix::EigenDiagonalise() const {
     EMatrix a(Nstate, Nstate);
 
     for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            a(i, j) = Q(i, j) * sqrt(stat[i] / stat[j]);
-        }
+        for (int j = 0; j < Nstate; j++) { a(i, j) = Q(i, j) * sqrt(stat[i] / stat[j]); }
     }
 
     solver.compute(a);
@@ -154,21 +138,15 @@ int SubMatrix::EigenDiagonalise() const {
     u = solver.eigenvectors().real();
 
     for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            invu(i, j) = u(j, i) * sqrt(stat[j]);
-        }
+        for (int j = 0; j < Nstate; j++) { invu(i, j) = u(j, i) * sqrt(stat[j]); }
     }
     for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            u(i, j) /= sqrt(stat[i]);
-        }
+        for (int j = 0; j < Nstate; j++) { u(i, j) /= sqrt(stat[i]); }
     }
 
     diagflag = true;
     double err = CheckDiag();
-    if (diagerr < err) {
-        diagerr = err;
-    }
+    if (diagerr < err) { diagerr = err; }
     return 0;
 }
 
@@ -178,13 +156,9 @@ double SubMatrix::CheckDiag() const {
     EMatrix Q2(Nstate, Nstate);
 
     for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            D(i, j) = 0;
-        }
+        for (int j = 0; j < Nstate; j++) { D(i, j) = 0; }
     }
-    for (int i = 0; i < Nstate; i++) {
-        D(i, i) = v[i];
-    }
+    for (int i = 0; i < Nstate; i++) { D(i, i) = v[i]; }
 
     tmp = D * invu;
     Q2 = u * tmp;
@@ -193,9 +167,7 @@ double SubMatrix::CheckDiag() const {
     for (int i = 0; i < Nstate; i++) {
         for (int j = 0; j < Nstate; j++) {
             double temp = fabs(Q2(i, j) - Q(i, j));
-            if (max < temp) {
-                max = temp;
-            }
+            if (max < temp) { max = temp; }
         }
     }
     return max;
@@ -211,24 +183,18 @@ int SubMatrix::OldDiagonalise() const {
         exit(1);
     }
 
-    if (!ArrayUpdated()) {
-        UpdateMatrix();
-    }
+    if (!ArrayUpdated()) { UpdateMatrix(); }
 
     int nmax = 1000;
     double epsilon = 1e-20;
 
+    for (int i = 0; i < Nstate; i++) { ptrStationary[i] = mStationary[i]; }
     for (int i = 0; i < Nstate; i++) {
-        ptrStationary[i] = mStationary[i];
-    }
-    for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            ptrQ[i][j] = Q(i, j);
-        }
+        for (int j = 0; j < Nstate; j++) { ptrQ[i][j] = Q(i, j); }
     }
 
-    int n = LinAlg::DiagonalizeRateMatrix(ptrQ, ptrStationary, Nstate, ptrv, ptru, ptrinvu, nmax,
-                                          epsilon);
+    int n = LinAlg::DiagonalizeRateMatrix(
+        ptrQ, ptrStationary, Nstate, ptrv, ptru, ptrinvu, nmax, epsilon);
     bool failed = (n == nmax);
     if (failed) {
         cerr << "in submatrix: diag failed\n";
@@ -245,14 +211,10 @@ int SubMatrix::OldDiagonalise() const {
             u(i, j) = ptru[i][j];
         }
     }
-    for (int i = 0; i < Nstate; i++) {
-        v[i] = ptrv[i];
-    }
+    for (int i = 0; i < Nstate; i++) { v[i] = ptrv[i]; }
 
     double err = CheckDiag();
-    if (diagerr < err) {
-        diagerr = err;
-    }
+    if (diagerr < err) { diagerr = err; }
     return 0;
 }
 
@@ -263,18 +225,12 @@ int SubMatrix::OldDiagonalise() const {
 double SubMatrix::GetRate() const {
     if (!ArrayUpdated()) {
         UpdateStationary();
-        for (int k = 0; k < Nstate; k++) {
-            ComputeArray(k);
-        }
+        for (int k = 0; k < Nstate; k++) { ComputeArray(k); }
     }
-    for (int k = 0; k < Nstate; k++) {
-        flagarray[k] = true;
-    }
+    for (int k = 0; k < Nstate; k++) { flagarray[k] = true; }
     double norm = 0;
     for (int i = 0; i < Nstate - 1; i++) {
-        for (int j = i + 1; j < Nstate; j++) {
-            norm += mStationary[i] * Q(i, j);
-        }
+        for (int j = i + 1; j < Nstate; j++) { norm += mStationary[i] * Q(i, j); }
     }
     return 2 * norm;
 }
@@ -285,15 +241,9 @@ double SubMatrix::GetRate() const {
 
 void SubMatrix::UpdateMatrix() const {
     UpdateStationary();
-    for (int k = 0; k < Nstate; k++) {
-        ComputeArray(k);
-    }
-    for (int k = 0; k < Nstate; k++) {
-        flagarray[k] = true;
-    }
-    if (isNormalised()) {
-        Normalise();
-    }
+    for (int k = 0; k < Nstate; k++) { ComputeArray(k); }
+    for (int k = 0; k < Nstate; k++) { flagarray[k] = true; }
+    if (isNormalised()) { Normalise(); }
 }
 
 // ---------------------------------------------------------------------------
@@ -303,9 +253,7 @@ void SubMatrix::UpdateMatrix() const {
 void SubMatrix::Normalise() const {
     double norm = GetRate();
     for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            Q(i, j) /= norm;
-        }
+        for (int j = 0; j < Nstate; j++) { Q(i, j) /= norm; }
     }
 }
 
@@ -317,26 +265,18 @@ void SubMatrix::Normalise() const {
 
 void SubMatrix::ActivatePowers() const {
     if (!powflag) {
-        if (!ArrayUpdated()) {
-            UpdateMatrix();
-        }
+        if (!ArrayUpdated()) { UpdateMatrix(); }
 
         UniMu = 0;
         for (int i = 0; i < Nstate; i++) {
-            if (UniMu < fabs(Q(i, i))) {
-                UniMu = fabs(Q(i, i));
-            }
+            if (UniMu < fabs(Q(i, i))) { UniMu = fabs(Q(i, i)); }
         }
 
         CreatePowers(0);
         for (int i = 0; i < Nstate; i++) {
-            for (int j = 0; j < Nstate; j++) {
-                mPow[0][i][j] = 0;
-            }
+            for (int j = 0; j < Nstate; j++) { mPow[0][i][j] = 0; }
         }
-        for (int i = 0; i < Nstate; i++) {
-            mPow[0][i][i] = 1;
-        }
+        for (int i = 0; i < Nstate; i++) { mPow[0][i][i] = 1; }
         for (int i = 0; i < Nstate; i++) {
             for (int j = 0; j < Nstate; j++) {
                 mPow[0][i][j] += Q(i, j) / UniMu;
@@ -357,9 +297,7 @@ void SubMatrix::InactivatePowers() const {
     if (powflag) {
         for (int n = 0; n < UniSubNmax; n++) {
             if (mPow[n] != nullptr) {
-                for (int i = 0; i < Nstate; i++) {
-                    delete[] mPow[n][i];
-                }
+                for (int i = 0; i < Nstate; i++) { delete[] mPow[n][i]; }
                 delete[] mPow[n];
                 mPow[n] = nullptr;
             }
@@ -375,39 +313,25 @@ void SubMatrix::InactivatePowers() const {
 void SubMatrix::CreatePowers(int n) const {
     if (mPow[n] == nullptr) {
         mPow[n] = new double *[Nstate];
-        for (int i = 0; i < Nstate; i++) {
-            mPow[n][i] = new double[Nstate];
-        }
+        for (int i = 0; i < Nstate; i++) { mPow[n][i] = new double[Nstate]; }
     }
 }
 
 double SubMatrix::GetUniformizationMu() const {
-    if (!powflag) {
-        ActivatePowers();
-    }
+    if (!powflag) { ActivatePowers(); }
     return UniMu;
 }
 
 double SubMatrix::Power(int n, int i, int j) const {
-    if (!powflag) {
-        ActivatePowers();
-    }
-    if (n == 0) {
-        return static_cast<double>(i == j);
-    }
-    if (n > UniSubNmax) {
-        return Stationary(j);
-    }
-    if (n > npow) {
-        ComputePowers(n);
-    }
+    if (!powflag) { ActivatePowers(); }
+    if (n == 0) { return static_cast<double>(i == j); }
+    if (n > UniSubNmax) { return Stationary(j); }
+    if (n > npow) { ComputePowers(n); }
     return mPow[n - 1][i][j];
 }
 
 void SubMatrix::ComputePowers(int N) const {
-    if (!powflag) {
-        ActivatePowers();
-    }
+    if (!powflag) { ActivatePowers(); }
     if (N > npow) {
         for (int n = npow; n < N; n++) {
             CreatePowers(n);
@@ -415,9 +339,7 @@ void SubMatrix::ComputePowers(int N) const {
                 for (int j = 0; j < Nstate; j++) {
                     double &t = mPow[n][i][j];
                     t = 0;
-                    for (int k = 0; k < Nstate; k++) {
-                        t += mPow[n - 1][i][k] * mPow[0][k][j];
-                    }
+                    for (int k = 0; k < Nstate; k++) { t += mPow[n - 1][i][k] * mPow[0][k][j]; }
                 }
             }
         }
@@ -428,9 +350,7 @@ void SubMatrix::ComputePowers(int N) const {
 void SubMatrix::ToStream(ostream &os) const {
     os << GetNstate() << '\n';
     os << "stationaries: \n";
-    for (int i = 0; i < GetNstate(); i++) {
-        os << Stationary(i) << '\t';
-    }
+    for (int i = 0; i < GetNstate(); i++) { os << Stationary(i) << '\t'; }
     os << '\n';
 
     os << "rate matrix\n";
@@ -443,9 +363,7 @@ void SubMatrix::ToStream(ostream &os) const {
     }
 
     os << '\n';
-    for (int i = 0; i < GetNstate(); i++) {
-        os << v[i] << '\t';
-    }
+    for (int i = 0; i < GetNstate(); i++) { os << v[i] << '\t'; }
     os << '\n';
 }
 

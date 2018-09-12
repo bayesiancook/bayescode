@@ -194,20 +194,14 @@ inline bool Plink::IsLast() const { return next == nullptr; }
 
 inline void Plink::Insert(Plink *link) {
     link->next = next;
-    if (next != nullptr) {
-        next->prev = link;
-    }
+    if (next != nullptr) { next->prev = link; }
     link->prev = this;
     next = link;
 }
 
 inline void Plink::Splice() {
-    if (prev != nullptr) {
-        prev->next = next;
-    }
-    if (next != nullptr) {
-        next->prev = prev;
-    }
+    if (prev != nullptr) { prev->next = next; }
+    if (next != nullptr) { next->prev = prev; }
     prev = next = nullptr;
 }
 

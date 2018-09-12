@@ -9,7 +9,7 @@ class AASubSelSubMatrix : public virtual SubMatrix {
     //! constructor parameterized by an array of relative rates (size
     //! Nstate*(Nstate-1)/2) and an array of equilibrium frequencies (size Nstate)
     AASubSelSubMatrix(int inNstate, const std::vector<double> &rr, const std::vector<double> &stat,
-                      bool innormalise = false);
+        bool innormalise = false);
     ~AASubSelSubMatrix() override = default;
 
     //! return number of relative rates

@@ -206,17 +206,13 @@ class SubMatrix {
 //-------------------------------------------------------------------------
 
 inline double SubMatrix::operator()(int i, int j) const {
-    if (!flagarray[i]) {
-        UpdateRow(i);
-    }
+    if (!flagarray[i]) { UpdateRow(i); }
     return Q(i, j);
     // return Q[i][j];
 }
 
 inline EVector SubMatrix::GetRow(int i) const {
-    if (!flagarray[i]) {
-        UpdateRow(i);
-    }
+    if (!flagarray[i]) { UpdateRow(i); }
     return Q.row(i);
 }
 
@@ -231,33 +227,25 @@ inline const double *SubMatrix::GetRow(int i) const {
 
 inline const EVector &SubMatrix::GetStationary() const {
     // inline const double *SubMatrix::GetStationary() const {
-    if (!statflag) {
-        UpdateStationary();
-    }
+    if (!statflag) { UpdateStationary(); }
     return mStationary;
 }
 
 inline double SubMatrix::Stationary(int i) const {
-    if (!statflag) {
-        UpdateStationary();
-    }
+    if (!statflag) { UpdateStationary(); }
     return mStationary[i];
 }
 
 inline void SubMatrix::CorruptMatrix() {
     diagflag = false;
     statflag = false;
-    for (int k = 0; k < Nstate; k++) {
-        flagarray[k] = false;
-    }
+    for (int k = 0; k < Nstate; k++) { flagarray[k] = false; }
     InactivatePowers();
 }
 
 inline bool SubMatrix::ArrayUpdated() const {
     bool qflag = true;
-    for (int k = 0; k < Nstate; k++) {
-        qflag &= static_cast<int>(flagarray[k]);
-    }
+    for (int k = 0; k < Nstate; k++) { qflag &= static_cast<int>(flagarray[k]); }
     return qflag;
 }
 
@@ -270,26 +258,20 @@ inline void SubMatrix::UpdateRow(int state) const {
     if (isNormalised()) {
         UpdateMatrix();
     } else {
-        if (!statflag) {
-            UpdateStationary();
-        }
+        if (!statflag) { UpdateStationary(); }
         ComputeArray(state);
         flagarray[state] = true;
     }
 }
 
 inline void SubMatrix::BackwardPropagate(const double *up, double *down, double length) const {
-    if (!diagflag) {
-        Diagonalise();
-    }
+    if (!diagflag) { Diagonalise(); }
 
     int matSize = GetNstate();
 
     auto aux = new double[GetNstate()];
 
-    for (int i = 0; i < GetNstate(); i++) {
-        aux[i] = 0;
-    }
+    for (int i = 0; i < GetNstate(); i++) { aux[i] = 0; }
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
             aux[i] += invu(i, j) * up[j];
@@ -297,13 +279,9 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
         }
     }
 
-    for (int i = 0; i < GetNstate(); i++) {
-        aux[i] *= exp(length * v[i]);
-    }
+    for (int i = 0; i < GetNstate(); i++) { aux[i] *= exp(length * v[i]); }
 
-    for (int i = 0; i < GetNstate(); i++) {
-        down[i] = 0;
-    }
+    for (int i = 0; i < GetNstate(); i++) { down[i] = 0; }
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
@@ -327,18 +305,12 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
             std::cerr << "error in backward propagate: negative prob : " << up[k] << "\n";
             // down[k] = 0;
         }
-        if (maxup < up[k]) {
-            maxup = up[k];
-        }
+        if (maxup < up[k]) { maxup = up[k]; }
     }
     double max = 0;
     for (int k = 0; k < matSize; k++) {
-        if (down[k] < 0) {
-            down[k] = 0;
-        }
-        if (max < down[k]) {
-            max = down[k];
-        }
+        if (down[k] < 0) { down[k] = 0; }
+        if (max < down[k]) { max = down[k]; }
     }
     if (maxup == 0) {
         std::cerr << "error in backward propagate: null up array\n";
@@ -346,9 +318,7 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
     }
     if (max == 0) {
         std::cerr << "error in backward propagate: null array\n";
-        for (int k = 0; k < matSize; k++) {
-            std::cerr << up[k] << '\t' << down[k] << '\n';
-        }
+        for (int k = 0; k < matSize; k++) { std::cerr << up[k] << '\t' << down[k] << '\n'; }
         std::cerr << '\n';
         exit(1);
     }
@@ -358,15 +328,11 @@ inline void SubMatrix::BackwardPropagate(const double *up, double *down, double 
 }
 
 inline void SubMatrix::ForwardPropagate(const double *down, double *up, double length) const {
-    if (!diagflag) {
-        Diagonalise();
-    }
+    if (!diagflag) { Diagonalise(); }
 
     auto aux = new double[GetNstate()];
 
-    for (int i = 0; i < GetNstate(); i++) {
-        aux[i] = 0;
-    }
+    for (int i = 0; i < GetNstate(); i++) { aux[i] = 0; }
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
@@ -375,13 +341,9 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
         }
     }
 
-    for (int i = 0; i < GetNstate(); i++) {
-        aux[i] *= exp(length * v[i]);
-    }
+    for (int i = 0; i < GetNstate(); i++) { aux[i] *= exp(length * v[i]); }
 
-    for (int i = 0; i < GetNstate(); i++) {
-        up[i] = 0;
-    }
+    for (int i = 0; i < GetNstate(); i++) { up[i] = 0; }
 
     for (int i = 0; i < GetNstate(); i++) {
         for (int j = 0; j < GetNstate(); j++) {
@@ -393,11 +355,9 @@ inline void SubMatrix::ForwardPropagate(const double *down, double *up, double l
     delete[] aux;
 }
 
-inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown,
-                                                     double efflength) const {
-    if (!diagflag) {
-        Diagonalise();
-    }
+inline double SubMatrix::GetFiniteTimeTransitionProb(
+    int stateup, int statedown, double efflength) const {
+    if (!diagflag) { Diagonalise(); }
 
     double tot = 0;
     for (int i = 0; i < GetNstate(); i++) {
@@ -409,15 +369,11 @@ inline double SubMatrix::GetFiniteTimeTransitionProb(int stateup, int statedown,
 
 inline void SubMatrix::GetFiniteTimeTransitionProb(int state, double *p, double efflength) const {
     double *p1 = new double[GetNstate()];
-    for (int k = 0; k < GetNstate(); k++) {
-        p1[k] = 0;
-    }
+    for (int k = 0; k < GetNstate(); k++) { p1[k] = 0; }
     p1[state] = 1;
     ForwardPropagate(p1, p, efflength);
     double tot = 0;
-    for (int k = 0; k < GetNstate(); k++) {
-        tot += p[k];
-    }
+    for (int k = 0; k < GetNstate(); k++) { tot += p[k]; }
     delete[] p1;
     if (fabs(1 - tot) > 1e-4) {
         std::cerr << "error in forward propagate: normalization : " << tot << '\t' << fabs(1 - tot)
@@ -439,9 +395,7 @@ inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n)
 
     double s = tot * Random::Uniform();
     int k = 0;
-    while ((k < GetNstate()) && (s > p[k])) {
-        k++;
-    }
+    while ((k < GetNstate()) && (s > p[k])) { k++; }
     delete[] p;
     if (k == GetNstate()) {
         std::cerr << "error in DrawUniformizedTransition: overflow\n";
@@ -450,8 +404,8 @@ inline int SubMatrix::DrawUniformizedTransition(int state, int statedown, int n)
     return k;
 }
 
-inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedown,
-                                                        double efflength) const {
+inline int SubMatrix::DrawUniformizedSubstitutionNumber(
+    int stateup, int statedown, double efflength) const {
     double mu = GetUniformizationMu();
     double fact = exp(-efflength * mu);
     int m = 0;
@@ -477,9 +431,7 @@ inline int SubMatrix::DrawUniformizedSubstitutionNumber(int stateup, int statedo
             throw;
         }
     }
-    if (m == UniSubNmax) {
-        nunisubcount++;
-    }
+    if (m == UniSubNmax) { nunisubcount++; }
     return m;
 }
 
@@ -489,9 +441,7 @@ inline int SubMatrix::DrawFiniteTime(int initstate, double time) const {
     while (t < time) {
         double dt = DrawWaitingTime(s);
         t += dt;
-        if (t < time) {
-            s = DrawOneStep(s);
-        }
+        if (t < time) { s = DrawOneStep(s); }
     }
     return s;
 }
@@ -510,16 +460,12 @@ inline int SubMatrix::DrawOneStep(int state) const {
     double tot = 0;
     do {
         k++;
-        if (k != state) {
-            tot += row[k];
-        }
+        if (k != state) { tot += row[k]; }
     } while ((k < GetNstate()) && (tot < p));
     if (k == GetNstate()) {
         std::cerr << "error in DrawOneStep\n";
         std::cerr << GetNstate() << '\n';
-        for (int k = 0; k < GetNstate(); k++) {
-            std::cerr << row[k] << '\n';
-        }
+        for (int k = 0; k < GetNstate(); k++) { std::cerr << row[k] << '\n'; }
         exit(1);
     }
     return k;

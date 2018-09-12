@@ -46,9 +46,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelSparseChain(string indatafile, string intreefile, int inncond, int innlevel,
-                                int incodonmodel, int inblmode, int innucmode, int inburnin,
-                                int inevery, int inuntil, int insaveall, int inwritegenedata,
-                                string inname, int force, int inmyid, int innprocs)
+        int incodonmodel, int inblmode, int innucmode, int inburnin, int inevery, int inuntil,
+        int insaveall, int inwritegenedata, string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEDIFFSELSPARSE"),
           datafile(indatafile),
@@ -76,25 +75,19 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                blmode, nucmode, myid, nprocs);
+        model = new MultiGeneDiffSelSparseModel(
+            datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid, nprocs);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
             GetModel()->SetWithToggles(1);
         }
-        if (!myid) {
-            cerr << " -- master allocate\n";
-        }
+        if (!myid) { cerr << " -- master allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << " -- master unfold\n";
-        }
+        if (!myid) { cerr << " -- master unfold\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -117,8 +110,8 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSELSPARSE") {
-            model = new MultiGeneDiffSelSparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                    blmode, nucmode, myid, nprocs);
+            model = new MultiGeneDiffSelSparseModel(
+                datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -153,9 +146,7 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
         } else {
             GetModel()->SlaveToStream();
         }
-        if (size == burnin) {
-            GetModel()->SetWithToggles(1);
-        }
+        if (size == burnin) { GetModel()->SetWithToggles(1); }
     }
 
     void MakeFiles(int force) override {
@@ -166,13 +157,9 @@ class MultiGeneDiffSelSparseChain : public MultiGeneChain {
                 s << name << "_" << k;
                 if (k) {
                     ofstream pos((s.str() + ".geneshiftprob").c_str());
-                    if (writegenedata == 2) {
-                        ofstream tos((s.str() + ".shifttoggle").c_str());
-                    }
+                    if (writegenedata == 2) { ofstream tos((s.str() + ".shifttoggle").c_str()); }
                 }
-                if (writegenedata == 2) {
-                    ofstream fos((s.str() + ".fitness").c_str());
-                }
+                if (writegenedata == 2) { ofstream fos((s.str() + ".fitness").c_str()); }
             }
         }
     }
@@ -236,9 +223,7 @@ int main(int argc, char *argv[]) {
         int nucmode = 1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -301,36 +286,28 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "error in command\n";
             cerr << '\n';
             exit(1);
         }
 
-        chain = new MultiGeneDiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel,
-                                                blmode, nucmode, burnin, every, until, saveall,
-                                                writegenedata, name, force, myid, nprocs);
+        chain =
+            new MultiGeneDiffSelSparseChain(datafile, treefile, ncond, nlevel, codonmodel, blmode,
+                nucmode, burnin, every, until, saveall, writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();
-    if (!myid) {
-        cout << "total time to set things up: " << chrono.GetTime() << '\n';
-    }
+    if (!myid) { cout << "total time to set things up: " << chrono.GetTime() << '\n'; }
     chrono.Reset();
     chrono.Start();
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

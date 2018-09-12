@@ -6,17 +6,15 @@ using namespace std;
 //     AASubSelSubMatrix
 // ---------------------------------------------------------------------------
 
-AASubSelSubMatrix::AASubSelSubMatrix(int inNstate, const std::vector<double> &rr,
-                                     const std::vector<double> &stat, bool innormalise)
+AASubSelSubMatrix::AASubSelSubMatrix(
+    int inNstate, const std::vector<double> &rr, const std::vector<double> &stat, bool innormalise)
     : SubMatrix(inNstate, innormalise), mRelativeRate(rr) {
     Nrr = Nstate * (Nstate - 1) / 2;
     CopyStationary(stat);
 }
 
 void AASubSelSubMatrix::CopyStationary(const std::vector<double> &instat) {
-    for (int k = 0; k < Nstate; k++) {
-        mStationary[k] = instat[k];
-    }
+    for (int k = 0; k < Nstate; k++) { mStationary[k] = instat[k]; }
 }
 
 // ---------------------------------------------------------------------------

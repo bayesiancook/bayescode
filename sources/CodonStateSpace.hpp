@@ -72,9 +72,7 @@ class CodonStateSpace : public StateSpace {
             std::cerr << pos << '\n';
             exit(1);
         }
-        if (codon == -1) {
-            return -1;
-        }
+        if (codon == -1) { return -1; }
         if ((codon < 0) || (codon >= Nstate)) {
             std::cerr << "GetCodonPosition: codon out of bound\n";
             std::cerr << codon << '\n';

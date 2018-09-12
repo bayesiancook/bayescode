@@ -208,8 +208,8 @@ class SiteOmegaModel : public ProbModel {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -223,8 +223,8 @@ class SiteOmegaModel : public ProbModel {
 
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
@@ -238,9 +238,8 @@ class SiteOmegaModel : public ProbModel {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc) {
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -259,8 +258,7 @@ class SiteOmegaModel : public ProbModel {
     }
 
     void SetOmegaHyperParameters(double inomegameanhypermean, double inomegameanhyperinvshape,
-                                 double inomegainvshapehypermean,
-                                 double inomegainvshapehyperinvshape) {
+        double inomegainvshapehypermean, double inomegainvshapehyperinvshape) {
         omegameanhypermean = inomegameanhypermean;
         omegameanhyperinvshape = inomegameanhyperinvshape;
         omegainvshapehypermean = inomegainvshapehypermean;
@@ -305,9 +303,7 @@ class SiteOmegaModel : public ProbModel {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         SetOmegaParameters(omegamean, omegainvshape);
         TouchMatrices();
         ResampleSub(1.0);
@@ -320,9 +316,7 @@ class SiteOmegaModel : public ProbModel {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(string name) {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         SetOmegaParameters(omegamean, omegainvshape);
         TouchMatrices();
         phyloprocess->PostPredSample(name);
@@ -338,12 +332,8 @@ class SiteOmegaModel : public ProbModel {
     double GetLogPrior() const {
         double total = 0;
 
-        if (!FixedBranchLengths()) {
-            total += BranchLengthsLogPrior();
-        }
-        if (!FixedNucRates()) {
-            total += NucRatesLogPrior();
-        }
+        if (!FixedBranchLengths()) { total += BranchLengthsLogPrior(); }
+        if (!FixedNucRates()) { total += NucRatesLogPrior(); }
         total += OmegaHyperLogPrior();
         total += OmegaLogPrior();
         return total;
@@ -361,9 +351,7 @@ class SiteOmegaModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double total = 0;
-        if (blmode == 0) {
-            total += LambdaHyperLogPrior();
-        }
+        if (blmode == 0) { total += LambdaHyperLogPrior(); }
         total += branchlength->GetLogProb();
         return total;
     }
@@ -378,8 +366,8 @@ class SiteOmegaModel : public ProbModel {
     //! freqs. (nucstat) -- uniform Dirichlet in both cases
     double NucRatesLogPrior() const {
         double total = 0;
-        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                             1.0 / nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(
+            nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
         total +=
             Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
@@ -530,9 +518,7 @@ class SiteOmegaModel : public ProbModel {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            if (!FixedBranchLengths()) {
-                MoveBranchLengths();
-            }
+            if (!FixedBranchLengths()) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
 
@@ -551,9 +537,7 @@ class SiteOmegaModel : public ProbModel {
     //! overall schedule branch length updatdes
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
@@ -568,10 +552,10 @@ class SiteOmegaModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate,
-                    this);
-        ScalingMove(lambda, 0.3, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate,
-                    this);
+        ScalingMove(
+            lambda, 1.0, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate, this);
+        ScalingMove(
+            lambda, 0.3, 10, &SiteOmegaModel::LambdaHyperLogProb, &SiteOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -583,16 +567,16 @@ class SiteOmegaModel : public ProbModel {
         CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &SiteOmegaModel::NucRatesLogProb,
-                    &SiteOmegaModel::TouchNucMatrix, this);
+            &SiteOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &SiteOmegaModel::NucRatesLogProb,
-                    &SiteOmegaModel::TouchNucMatrix, this);
+            &SiteOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &SiteOmegaModel::NucRatesLogProb,
-                    &SiteOmegaModel::TouchNucMatrix, this);
+            &SiteOmegaModel::TouchNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &SiteOmegaModel::NucRatesLogProb,
-                    &SiteOmegaModel::TouchNucMatrix, this);
+            &SiteOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &SiteOmegaModel::NucRatesLogProb,
-                    &SiteOmegaModel::TouchNucMatrix, this);
+            &SiteOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }
@@ -610,13 +594,13 @@ class SiteOmegaModel : public ProbModel {
         omegahypersuffstat.Clear();
         omegahypersuffstat.AddSuffStat(*omegaarray);
         ScalingMove(omegamean, 1.0, 10, &SiteOmegaModel::OmegaHyperLogProb,
-                    &SiteOmegaModel::NoUpdate, this);
+            &SiteOmegaModel::NoUpdate, this);
         ScalingMove(omegamean, 0.3, 10, &SiteOmegaModel::OmegaHyperLogProb,
-                    &SiteOmegaModel::NoUpdate, this);
+            &SiteOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 1.0, 10, &SiteOmegaModel::OmegaHyperLogProb,
-                    &SiteOmegaModel::NoUpdate, this);
+            &SiteOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 0.3, 10, &SiteOmegaModel::OmegaHyperLogProb,
-                    &SiteOmegaModel::NoUpdate, this);
+            &SiteOmegaModel::NoUpdate, this);
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
         omegaarray->SetShape(alpha);
@@ -630,9 +614,7 @@ class SiteOmegaModel : public ProbModel {
     double GetEmpiricalPosFrac() const {
         double tot = 0;
         for (int i = 0; i < Nsite; i++) {
-            if ((*omegaarray)[i] > 1.0) {
-                tot++;
-            }
+            if ((*omegaarray)[i] > 1.0) { tot++; }
         }
         return tot / Nsite;
     }
@@ -644,16 +626,12 @@ class SiteOmegaModel : public ProbModel {
     double GetOmegaInvShape() const { return omegainvshape; }
 
     void TraceOmega(ostream &os) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            os << omegaarray->GetVal(i) << '\t';
-        }
+        for (int i = 0; i < GetNsite(); i++) { os << omegaarray->GetVal(i) << '\t'; }
         os << '\n';
     }
 
     void GetSiteOmega(double *array) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            array[i] = omegaarray->GetVal(i);
-        }
+        for (int i = 0; i < GetNsite(); i++) { array[i] = omegaarray->GetVal(i); }
     }
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";

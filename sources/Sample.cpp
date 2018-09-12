@@ -17,16 +17,12 @@ void Sample::OpenChainFile() {
         cerr << "error: no chain file\n";
         exit(1);
     }
-    if (until == -1) {
-        until = chainsize;
-    }
+    if (until == -1) { until = chainsize; }
     if (until > chainsize) {
         cerr << "number of points saved is less than " << until << '\n';
         until = chainsize;
     }
-    if (burnin == -1) {
-        burnin = chainsize / 10;
-    }
+    if (burnin == -1) { burnin = chainsize / 10; }
     size = (until - burnin) / every;
     if (size <= 0) {
         cerr << "error : chain not long enough\n";
@@ -39,9 +35,7 @@ void Sample::OpenChainFile() {
         cerr << "error: cannot find file " << name << ".chain\n";
         exit(1);
     }
-    for (int i = 0; i < burnin; i++) {
-        model->FromStream(*chain_is);
-    }
+    for (int i = 0; i < burnin; i++) { model->FromStream(*chain_is); }
 }
 
 void Sample::GetNextPoint() {
@@ -50,9 +44,7 @@ void Sample::GetNextPoint() {
         exit(1);
     }
     if (currentpoint) {
-        for (int i = 0; i < every - 1; i++) {
-            model->FromStream(*chain_is);
-        }
+        for (int i = 0; i < every - 1; i++) { model->FromStream(*chain_is); }
     }
     model->FromStream(*chain_is);
     currentpoint++;

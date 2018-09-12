@@ -256,8 +256,8 @@ class ConditionOmegaModel : public ProbModel {
     //! equilibrium frequencies (nucstat) to a new value
     //!
     //! Notifies corruption to the nucleotide and the codon matrices
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         TouchMatrices();
@@ -469,9 +469,9 @@ class ConditionOmegaModel : public ProbModel {
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ;
         ScalingMove(lambda, 1.0, 10, &ConditionOmegaModel::BranchLengthsHyperLogProb,
-                    &ConditionOmegaModel::NoUpdate, this);
+            &ConditionOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &ConditionOmegaModel::BranchLengthsHyperLogProb,
-                    &ConditionOmegaModel::NoUpdate, this);
+            &ConditionOmegaModel::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
 
@@ -507,16 +507,16 @@ class ConditionOmegaModel : public ProbModel {
         CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &ConditionOmegaModel::NucRatesLogProb,
-                    &ConditionOmegaModel::TouchNucMatrix, this);
+            &ConditionOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &ConditionOmegaModel::NucRatesLogProb,
-                    &ConditionOmegaModel::TouchNucMatrix, this);
+            &ConditionOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &ConditionOmegaModel::NucRatesLogProb,
-                    &ConditionOmegaModel::TouchNucMatrix, this);
+            &ConditionOmegaModel::TouchNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &ConditionOmegaModel::NucRatesLogProb,
-                    &ConditionOmegaModel::TouchNucMatrix, this);
+            &ConditionOmegaModel::TouchNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &ConditionOmegaModel::NucRatesLogProb,
-                    &ConditionOmegaModel::TouchNucMatrix, this);
+            &ConditionOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }

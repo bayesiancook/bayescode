@@ -115,9 +115,7 @@ class DPOmegaModel : public ProbModel {
 
         if (Ncat == -1) {
             Ncat = Nsite;
-            if (Ncat > 100) {
-                Ncat = 100;
-            }
+            if (Ncat > 100) { Ncat = 100; }
         }
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
@@ -202,8 +200,8 @@ class DPOmegaModel : public ProbModel {
         branchlength->Copy(inbranchlength);
     }
 
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         UpdateMatrices();
@@ -357,9 +355,9 @@ class DPOmegaModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &DPOmegaModel::BranchLengthsHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &DPOmegaModel::BranchLengthsHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
 
@@ -408,8 +406,8 @@ class DPOmegaModel : public ProbModel {
     void ResampleAlloc() {
         vector<double> postprob(Ncat, 0);
         for (int i = 0; i < Nsite; i++) {
-            componentomegaarray->GetAllocPostProb(siteomegapathsuffstatarray->GetVal(i),
-                                                  weight->GetArray(), postprob);
+            componentomegaarray->GetAllocPostProb(
+                siteomegapathsuffstatarray->GetVal(i), weight->GetArray(), postprob);
             sitealloc->GibbsResample(i, postprob);
         }
         UpdateOccupancies();
@@ -491,14 +489,14 @@ class DPOmegaModel : public ProbModel {
     void MoveOmegaHyperParameters() {
         omegahypersuffstat.Clear();
         omegahypersuffstat.AddSuffStat(*componentomegaarray, *occupancy);
-        ScalingMove(omegamean, 1.0, 10, &DPOmegaModel::OmegaHyperLogProb, &DPOmegaModel::NoUpdate,
-                    this);
-        ScalingMove(omegamean, 0.3, 10, &DPOmegaModel::OmegaHyperLogProb, &DPOmegaModel::NoUpdate,
-                    this);
+        ScalingMove(
+            omegamean, 1.0, 10, &DPOmegaModel::OmegaHyperLogProb, &DPOmegaModel::NoUpdate, this);
+        ScalingMove(
+            omegamean, 0.3, 10, &DPOmegaModel::OmegaHyperLogProb, &DPOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 1.0, 10, &DPOmegaModel::OmegaHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
         ScalingMove(omegainvshape, 0.3, 10, &DPOmegaModel::OmegaHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
         componentomegaarray->SetShape(alpha);
@@ -508,9 +506,9 @@ class DPOmegaModel : public ProbModel {
 
     void MoveKappa() {
         ScalingMove(kappa, 1.0, 10, &DPOmegaModel::StickBreakingHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
         ScalingMove(kappa, 0.3, 10, &DPOmegaModel::StickBreakingHyperLogProb,
-                    &DPOmegaModel::NoUpdate, this);
+            &DPOmegaModel::NoUpdate, this);
     }
 
     void CollectNucPathSuffStat() {
@@ -524,16 +522,16 @@ class DPOmegaModel : public ProbModel {
         CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &DPOmegaModel::NucRatesLogProb,
-                    &DPOmegaModel::UpdateNucMatrix, this);
+            &DPOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucrelrate, 0.03, 3, 3, &DPOmegaModel::NucRatesLogProb,
-                    &DPOmegaModel::UpdateNucMatrix, this);
+            &DPOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucrelrate, 0.01, 3, 3, &DPOmegaModel::NucRatesLogProb,
-                    &DPOmegaModel::UpdateNucMatrix, this);
+            &DPOmegaModel::UpdateNucMatrix, this);
 
         ProfileMove(nucstat, 0.1, 1, 3, &DPOmegaModel::NucRatesLogProb,
-                    &DPOmegaModel::UpdateNucMatrix, this);
+            &DPOmegaModel::UpdateNucMatrix, this);
         ProfileMove(nucstat, 0.01, 1, 3, &DPOmegaModel::NucRatesLogProb,
-                    &DPOmegaModel::UpdateNucMatrix, this);
+            &DPOmegaModel::UpdateNucMatrix, this);
 
         UpdateMatrices();
     }
@@ -545,9 +543,7 @@ class DPOmegaModel : public ProbModel {
     int GetNcluster() const {
         int n = 0;
         for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) {
-                n++;
-            }
+            if (occupancy->GetVal(i)) { n++; }
         }
         return n;
     }
@@ -579,9 +575,7 @@ class DPOmegaModel : public ProbModel {
     double GetEmpiricalPosFrac() const {
         double tot = 0;
         for (int i = 0; i < Nsite; i++) {
-            if ((*componentomegaarray)[(*sitealloc)[i]] > 1) {
-                tot++;
-            }
+            if ((*componentomegaarray)[(*sitealloc)[i]] > 1) { tot++; }
         }
         return tot / Nsite;
     }
@@ -612,9 +606,7 @@ class DPOmegaModel : public ProbModel {
     }
 
     void TraceSiteOmega(ostream &os) const {
-        for (int i = 0; i < Nsite; i++) {
-            os << (*componentomegaarray)[(*sitealloc)[i]] << '\t';
-        }
+        for (int i = 0; i < Nsite; i++) { os << (*componentomegaarray)[(*sitealloc)[i]] << '\t'; }
         os << '\n';
         os.flush();
     }

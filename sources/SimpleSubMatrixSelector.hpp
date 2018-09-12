@@ -22,8 +22,8 @@ class SimpleSubMatrixSelector : public BranchSelector<SubMatrix> {
   public:
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
-    SimpleSubMatrixSelector(const Selector<SubMatrix> &inmatrixarray,
-                            const BranchAllocationSystem &inbranchalloc)
+    SimpleSubMatrixSelector(
+        const Selector<SubMatrix> &inmatrixarray, const BranchAllocationSystem &inbranchalloc)
         : matrixarray(inmatrixarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }
@@ -42,7 +42,7 @@ class SimpleMGOmegaCodonSubMatrixSelector : public BranchSelector<MGOmegaCodonSu
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
     SimpleMGOmegaCodonSubMatrixSelector(const Selector<MGOmegaCodonSubMatrix> &inmatrixarray,
-                                        const BranchAllocationSystem &inbranchalloc)
+        const BranchAllocationSystem &inbranchalloc)
         : matrixarray(inmatrixarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }

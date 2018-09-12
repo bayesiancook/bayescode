@@ -14,7 +14,7 @@ class MultiGeneAAMutSelM2aModel : public MultiGeneMPIModule, public ProbModel {
     // ------------------
 
     MultiGeneAAMutSelM2aModel(string datafile, string intreefile, double inpihypermean,
-                              double inpihyperinvconc, int inmyid, int innprocs);
+        double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
     void Unfold();
 
@@ -43,7 +43,7 @@ class MultiGeneAAMutSelM2aModel : public MultiGeneMPIModule, public ProbModel {
     // double inpurwhypermean, double inpurwhyperinvconc, double inposwhypermean,
     // double inposwhyperinvconc);
     void SetMixtureHyperParameters(double indposomhypermean, double indposomhyperinvshape,
-                                   double inposwhypermean, double inposwhyperinvconc);
+        double inposwhypermean, double inposwhyperinvconc);
 
     // void UpdateNucMatrix();
     void SetMixtureArrays();

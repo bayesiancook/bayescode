@@ -43,9 +43,8 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelChain(string indatafile, string intreefile, int inncond, int innlevel,
-                          int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil,
-                          int insaveall, int inwritegenedata, string inname, int force, int inmyid,
-                          int innprocs)
+        int incodonmodel, int inblmode, int innucmode, int inevery, int inuntil, int insaveall,
+        int inwritegenedata, string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEDIFFSEL"),
           datafile(indatafile),
@@ -72,20 +71,14 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode,
-                                          nucmode, myid, nprocs);
-        if (!myid) {
-            cerr << " -- master allocate\n";
-        }
+        model = new MultiGeneDiffSelModel(
+            datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid, nprocs);
+        if (!myid) { cerr << " -- master allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << " -- master unfold\n";
-        }
+        if (!myid) { cerr << " -- master unfold\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -107,8 +100,8 @@ class MultiGeneDiffSelChain : public MultiGeneChain {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSEL") {
-            model = new MultiGeneDiffSelModel(datafile, treefile, ncond, nlevel, codonmodel, blmode,
-                                              nucmode, myid, nprocs);
+            model = new MultiGeneDiffSelModel(
+                datafile, treefile, ncond, nlevel, codonmodel, blmode, nucmode, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -235,9 +228,7 @@ int main(int argc, char *argv[]) {
         int nucmode = 1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -297,16 +288,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "error in command\n";
             cerr << '\n';
@@ -314,19 +301,14 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneDiffSelChain(datafile, treefile, ncond, nlevel, codonmodel, blmode,
-                                          nucmode, every, until, saveall, writegenedata, name,
-                                          force, myid, nprocs);
+            nucmode, every, until, saveall, writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();
-    if (!myid) {
-        cout << "total time to set things up: " << chrono.GetTime() << '\n';
-    }
+    if (!myid) { cout << "total time to set things up: " << chrono.GetTime() << '\n'; }
     chrono.Reset();
     chrono.Start();
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

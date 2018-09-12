@@ -51,13 +51,11 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     //! run \param force: overwrite existing files with same name \param inmyid,
     //! int innprocs: process id and total number of MPI processes
     MultiGeneDiffSelDoublySparseChain(string indatafile, string intreefile, int inncond,
-                                      int innlevel, int incodonmodel, double inepsilon,
-                                      double infitnessshape, int infitnesscentermode, int inblmode,
-                                      int innucmode, int inshiftmode, double inpihypermean,
-                                      double inpihyperinvconc, double inshiftprobmean,
-                                      double inshiftprobinvconc, int inburnin, int inevery,
-                                      int inuntil, int insaveall, int inwritegenedata,
-                                      string inname, int force, int inmyid, int innprocs)
+        int innlevel, int incodonmodel, double inepsilon, double infitnessshape,
+        int infitnesscentermode, int inblmode, int innucmode, int inshiftmode, double inpihypermean,
+        double inpihyperinvconc, double inshiftprobmean, double inshiftprobinvconc, int inburnin,
+        int inevery, int inuntil, int insaveall, int inwritegenedata, string inname, int force,
+        int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEDIFFSELDSPARSE"),
           datafile(indatafile),
@@ -93,27 +91,21 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneDiffSelDoublySparseModel(
-            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode,
-            shiftmode, pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
+        model = new MultiGeneDiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
+            epsilon, fitnessshape, blmode, nucmode, shiftmode, pihypermean, pihyperinvconc,
+            shiftprobmean, shiftprobinvconc, myid, nprocs);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
             GetModel()->SetWithToggles(1);
         }
         GetModel()->SetFitnessCenterMode(fitnesscentermode);
-        if (!myid) {
-            cerr << " -- master allocate\n";
-        }
+        if (!myid) { cerr << " -- master allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << " -- master unfold\n";
-        }
+        if (!myid) { cerr << " -- master unfold\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -140,10 +132,9 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         is >> every >> until >> saveall >> writegenedata >> size;
 
         if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
-            model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode,
-                nucmode, shiftmode, pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc,
-                myid, nprocs);
+            model = new MultiGeneDiffSelDoublySparseModel(datafile, treefile, ncond, nlevel,
+                codonmodel, epsilon, fitnessshape, blmode, nucmode, shiftmode, pihypermean,
+                pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -183,9 +174,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
         } else {
             GetModel()->SlaveToStream();
         }
-        if (size == burnin) {
-            GetModel()->SetWithToggles(1);
-        }
+        if (size == burnin) { GetModel()->SetWithToggles(1); }
     }
 
     void MakeFiles(int force) override {
@@ -203,9 +192,7 @@ class MultiGeneDiffSelDoublySparseChain : public MultiGeneChain {
                             ofstream tos((s.str() + ".shifttoggle").c_str());
                         }
                     }
-                    if (writegenedata == 2) {
-                        ofstream fos((s.str() + ".fitness").c_str());
-                    }
+                    if (writegenedata == 2) { ofstream fos((s.str() + ".fitness").c_str()); }
                 }
                 ofstream os((name + ".genemaskcounts").c_str());
             } else {
@@ -350,9 +337,7 @@ int main(int argc, char *argv[]) {
         double shiftprobinvconc = 0.1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -460,16 +445,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             if (!myid) {
                 cerr << "error in command\n";
@@ -479,22 +460,17 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        chain = new MultiGeneDiffSelDoublySparseChain(
-            datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, fitnesscentermode,
-            blmode, nucmode, shiftmode, pihypermean, pihyperinvconc, shiftprobmean,
-            shiftprobinvconc, burnin, every, until, saveall, writegenedata, name, force, myid,
-            nprocs);
+        chain = new MultiGeneDiffSelDoublySparseChain(datafile, treefile, ncond, nlevel, codonmodel,
+            epsilon, fitnessshape, fitnesscentermode, blmode, nucmode, shiftmode, pihypermean,
+            pihyperinvconc, shiftprobmean, shiftprobinvconc, burnin, every, until, saveall,
+            writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();
-    if (!myid) {
-        cout << "total time to set things up: " << chrono.GetTime() << '\n';
-    }
+    if (!myid) { cout << "total time to set things up: " << chrono.GetTime() << '\n'; }
     chrono.Reset();
     chrono.Start();
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

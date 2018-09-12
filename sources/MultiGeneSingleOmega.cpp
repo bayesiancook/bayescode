@@ -35,9 +35,8 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
     //! \param force: overwrite existing files with same name
     //! \param inmyid, int innprocs: process id and total number of MPI processes
     MultiGeneSingleOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode,
-                              int inomegamode, double inomegahypermean, double inomegahyperinvshape,
-                              int inevery, int inuntil, string inname, int force, int inmyid,
-                              int innprocs)
+        int inomegamode, double inomegahypermean, double inomegahyperinvshape, int inevery,
+        int inuntil, string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENESINGLEOMEGA"),
           datafile(indatafile),
@@ -65,18 +64,12 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
         model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
         GetModel()->SetAcrossGenesModes(blmode, nucmode, omegamode);
         GetModel()->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
-        if (!myid) {
-            cerr << "allocate\n";
-        }
+        if (!myid) { cerr << "allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << "update\n";
-        }
+        if (!myid) { cerr << "update\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -106,14 +99,10 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
-        if (!myid) {
-            cerr << "allocate\n";
-        }
+        if (!myid) { cerr << "allocate\n"; }
         GetModel()->Allocate();
         model->FromStream(is);
-        if (!myid) {
-            cerr << "update\n";
-        }
+        if (!myid) { cerr << "update\n"; }
         model->Update();
         if (!myid) {
             cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -195,9 +184,7 @@ int main(int argc, char *argv[]) {
         double omegahyperinvshape = 1.0;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -254,16 +241,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "globom -d <alignment> -t <tree> <chainname> \n";
             cerr << '\n';
@@ -271,13 +254,10 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode, omegamode,
-                                              omegahypermean, omegahyperinvshape, every, until,
-                                              name, force, myid, nprocs);
+            omegahypermean, omegahyperinvshape, every, until, name, force, myid, nprocs);
     }
 
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

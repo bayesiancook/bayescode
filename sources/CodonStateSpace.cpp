@@ -26,9 +26,7 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
             CodonCodeWithStops[i] = UniCodonCode[i];
             if (CodonCodeWithStops[i] != -1) {
                 CodonCode[k] = CodonCodeWithStops[i];
-                for (int pos = 0; pos < Npos; pos++) {
-                    CodonPos[pos][k] = codonpos[pos][i];
-                }
+                for (int pos = 0; pos < Npos; pos++) { CodonPos[pos][k] = codonpos[pos][i]; }
                 k++;
             }
         }
@@ -61,9 +59,7 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
             CodonCodeWithStops[i] = MtInvCodonCode[i];
             if (CodonCodeWithStops[i] != -1) {
                 CodonCode[k] = CodonCodeWithStops[i];
-                for (int pos = 0; pos < Npos; pos++) {
-                    CodonPos[pos][k] = codonpos[pos][i];
-                }
+                for (int pos = 0; pos < Npos; pos++) { CodonPos[pos][k] = codonpos[pos][i]; }
                 k++;
             }
         }
@@ -95,9 +91,7 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
             CodonCodeWithStops[i] = MtMamCodonCode[i];
             if (CodonCodeWithStops[i] != -1) {
                 CodonCode[k] = CodonCodeWithStops[i];
-                for (int pos = 0; pos < Npos; pos++) {
-                    CodonPos[pos][k] = codonpos[pos][i];
-                }
+                for (int pos = 0; pos < Npos; pos++) { CodonPos[pos][k] = codonpos[pos][i]; }
                 k++;
             }
         }
@@ -123,9 +117,7 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
 CodonStateSpace::~CodonStateSpace() throw() {
     delete[] CodonCode;
     delete[] CodonCodeWithStops;
-    for (int pos = 0; pos < Npos; pos++) {
-        delete[] CodonPos[pos];
-    }
+    for (int pos = 0; pos < Npos; pos++) { delete[] CodonPos[pos]; }
     delete[] CodonPos;
 
     delete nucstatespace;
@@ -149,30 +141,26 @@ string CodonStateSpace::GetState(int codon) const {
 
 int CodonStateSpace::GetState(string word) const {
     return GetCodonFromDNA(GetDNAStateSpace()->GetState(word.substr(0, 1)),
-                           GetDNAStateSpace()->GetState(word.substr(1, 1)),
-                           GetDNAStateSpace()->GetState(word.substr(2, 1)));
+        GetDNAStateSpace()->GetState(word.substr(1, 1)),
+        GetDNAStateSpace()->GetState(word.substr(2, 1)));
 }
 
 bool CodonStateSpace::CheckStop(int pos1, int pos2, int pos3) const {
-    if ((pos1 == unknown) || (pos2 == unknown) || (pos3 == unknown)) {
-        return false;
-    }
+    if ((pos1 == unknown) || (pos2 == unknown) || (pos3 == unknown)) { return false; }
     int l = 0;
-    while ((l < Nstop) &&
-           ((pos1 != StopPos1[l]) || (pos2 != StopPos2[l]) || (pos3 != StopPos3[l]))) {
+    while (
+        (l < Nstop) && ((pos1 != StopPos1[l]) || (pos2 != StopPos2[l]) || (pos3 != StopPos3[l]))) {
         l++;
     }
     return (l < Nstop);
 }
 
 int CodonStateSpace::GetCodonFromDNA(int pos1, int pos2, int pos3) const {
-    if ((pos1 == unknown) || (pos2 == unknown) || (pos3 == unknown)) {
-        return unknown;
-    }
+    if ((pos1 == unknown) || (pos2 == unknown) || (pos3 == unknown)) { return unknown; }
     int l = 0;
     while ((l < GetNstate()) &&
            ((pos1 != GetCodonPosition(0, l)) || (pos2 != GetCodonPosition(1, l)) ||
-            (pos3 != GetCodonPosition(2, l)))) {
+               (pos3 != GetCodonPosition(2, l)))) {
         l++;
     }
     if (l == GetNstate()) {

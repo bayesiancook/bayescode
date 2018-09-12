@@ -9,8 +9,7 @@
 // intreefile, double inpihypermean, double inpihyperinvconc, int inmyid, int
 // innprocs) :
 MultiGeneAAMutSelM2aModel::MultiGeneAAMutSelM2aModel(string datafile, string intreefile,
-                                                     double inpihypermean, double inpihyperinvconc,
-                                                     int inmyid, int innprocs)
+    double inpihypermean, double inpihyperinvconc, int inmyid, int innprocs)
     :
 
       MultiGeneMPIModule(inmyid, innprocs),
@@ -144,9 +143,7 @@ void MultiGeneAAMutSelM2aModel::Unfold() {
         MasterSendMixture();
         MasterReceiveLogProbs();
     } else {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->Allocate();
-        }
+        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->Allocate(); }
 
         SlaveReceiveBranchLengthsHyperParameters();
         // SlaveReceiveNucRatesHyperParameters();
@@ -178,8 +175,8 @@ void MultiGeneAAMutSelM2aModel::Unfold() {
 
 // void MultiGeneCodonM2aModel::SetAcrossGenesModes(int inblmode, int innucmode,
 // int inpurommode, int indposommode, int inpurwmode, int inposwmode)  {
-void MultiGeneAAMutSelM2aModel::SetAcrossGenesModes(int inblmode, int indposommode,
-                                                    int inposwmode) {
+void MultiGeneAAMutSelM2aModel::SetAcrossGenesModes(
+    int inblmode, int indposommode, int inposwmode) {
     blmode = inblmode;
     // nucmode = innucmode;
     // purommode = inpurommode;
@@ -193,9 +190,7 @@ void MultiGeneAAMutSelM2aModel::SetAcrossGenesModes(int inblmode, int indposommo
 // indposomhyperinvshape, double inpurwhypermean, double inpurwhyperinvconc,
 // double inposwhypermean, double inposwhyperinvconc)   {
 void MultiGeneAAMutSelM2aModel::SetMixtureHyperParameters(double indposomhypermean,
-                                                          double indposomhyperinvshape,
-                                                          double inposwhypermean,
-                                                          double inposwhyperinvconc) {
+    double indposomhyperinvshape, double inposwhypermean, double inposwhyperinvconc) {
     // puromhypermean = inpuromhypermean;
     // puromhyperinvconc = inpuromhyperinvconc;
     dposomhypermean = indposomhypermean;
@@ -316,17 +311,13 @@ void MultiGeneAAMutSelM2aModel::Trace(ostream &os) const {
 }
 
 void MultiGeneAAMutSelM2aModel::TracePosWeight(ostream &os) const {
-    for (int gene = 0; gene < Ngene; gene++) {
-        os << poswarray->GetVal(gene) << '\t';
-    }
+    for (int gene = 0; gene < Ngene; gene++) { os << poswarray->GetVal(gene) << '\t'; }
     os << '\n';
     os.flush();
 }
 
 void MultiGeneAAMutSelM2aModel::TracePosOm(ostream &os) const {
-    for (int gene = 0; gene < Ngene; gene++) {
-        os << 1 + dposomarray->GetVal(gene) << '\t';
-    }
+    for (int gene = 0; gene < Ngene; gene++) { os << 1 + dposomarray->GetVal(gene) << '\t'; }
     os << '\n';
     os.flush();
 }
@@ -335,9 +326,7 @@ int MultiGeneAAMutSelM2aModel::GetNpos() const { return GetNgene() - poswarray->
 
 double MultiGeneAAMutSelM2aModel::GetMeanTotalLength() const {
     double tot = 0;
-    for (int j = 0; j < Nbranch; j++) {
-        tot += branchlength->GetVal(j);
-    }
+    for (int j = 0; j < Nbranch; j++) { tot += branchlength->GetVal(j); }
     return tot;
 }
 
@@ -483,9 +472,7 @@ void MultiGeneAAMutSelM2aModel::MasterMove() {
         }*/
     }
     burnin++;
-    if (blmode != 2) {
-        MasterReceiveGeneBranchLengths();
-    }
+    if (blmode != 2) { MasterReceiveGeneBranchLengths(); }
     // if (nucmode != 2)   {
     //    MasterReceiveGeneNucRates();
     //}
@@ -531,9 +518,7 @@ void MultiGeneAAMutSelM2aModel::SlaveMove() {
     burnin++;
 
     // collect current state
-    if (blmode != 2) {
-        SlaveSendGeneBranchLengths();
-    }
+    if (blmode != 2) { SlaveSendGeneBranchLengths(); }
     // if (nucmode != 2)   {
     //    SlaveSendGeneNucRates();
     //}
@@ -542,9 +527,7 @@ void MultiGeneAAMutSelM2aModel::SlaveMove() {
 }
 
 void MultiGeneAAMutSelM2aModel::GeneResampleSub(double frac) {
-    for (int gene = 0; gene < GetLocalNgene(); gene++) {
-        geneprocess[gene]->ResampleSub(frac);
-    }
+    for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->ResampleSub(frac); }
 }
 
 void MultiGeneAAMutSelM2aModel::MoveGeneParameters(int nrep) {
@@ -552,9 +535,7 @@ void MultiGeneAAMutSelM2aModel::MoveGeneParameters(int nrep) {
         geneprocess[gene]->MoveParameters(nrep);
         // geneprocess[gene]->GetMixtureParameters((*puromarray)[gene],(*dposomarray)[gene],(*purwarray)[gene],(*poswarray)[gene]);
         geneprocess[gene]->GetMixtureParameters((*dposomarray)[gene], (*poswarray)[gene]);
-        if (blmode != 2) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
+        if (blmode != 2) { geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]); }
         // if (nucmode != 2)    {
         //    geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
         //}
@@ -569,9 +550,9 @@ void MultiGeneAAMutSelM2aModel::MoveLambda() {
     hyperlengthsuffstat.Clear();
     hyperlengthsuffstat.AddSuffStat(*branchlength);
     ScalingMove(lambda, 1.0, 10, &MultiGeneAAMutSelM2aModel::LambdaHyperLogProb,
-                &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+        &MultiGeneAAMutSelM2aModel::NoUpdate, this);
     ScalingMove(lambda, 0.3, 10, &MultiGeneAAMutSelM2aModel::LambdaHyperLogProb,
-                &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+        &MultiGeneAAMutSelM2aModel::NoUpdate, this);
     branchlength->SetScale(lambda);
 }
 
@@ -582,9 +563,9 @@ void MultiGeneAAMutSelM2aModel::MoveBranchLengthsHyperParameters() {
     }
 
     ScalingMove(blhyperinvshape, 1.0, 10, &MultiGeneAAMutSelM2aModel::BranchLengthsHyperLogProb,
-                &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+        &MultiGeneAAMutSelM2aModel::NoUpdate, this);
     ScalingMove(blhyperinvshape, 0.3, 10, &MultiGeneAAMutSelM2aModel::BranchLengthsHyperLogProb,
-                &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+        &MultiGeneAAMutSelM2aModel::NoUpdate, this);
 
     branchlengtharray->SetShape(1.0 / blhyperinvshape);
     MoveLambda();
@@ -602,10 +583,9 @@ double MultiGeneAAMutSelM2aModel::BranchLengthsHyperScalingMove(double tuning, i
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
             (*branchlength)[j] *= e;
-            deltalogprob +=
-                branchlength->GetLogProb(j) +
-                lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                    1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
+            deltalogprob += branchlength->GetLogProb(j) +
+                            lengthhypersuffstatarray->GetVal(j).GetLogProb(1.0 / blhyperinvshape,
+                                1.0 / blhyperinvshape / branchlength->GetVal(j));
             deltalogprob += m;
             int accepted = (log(Random::Uniform()) < deltalogprob);
             if (accepted) {
@@ -649,26 +629,26 @@ void MultiGeneAAMutSelM2aModel::MoveMixtureHyperParameters() {
 
     if (dposommode == 1) {
         SlidingMove(dposomhypermean, 3.0, 10, 0, 1, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         SlidingMove(dposomhypermean, 1.0, 10, 0, 1, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         SlidingMove(dposomhypermean, 0.3, 10, 0, 1, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         ScalingMove(dposomhyperinvshape, 1.0, 10, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         ScalingMove(dposomhyperinvshape, 0.3, 10, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
     }
 
     if (poswmode == 1) {
         SlidingMove(poswhypermean, 1.0, 10, 0, 1, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         SlidingMove(poswhypermean, 0.3, 10, 0, 1, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         ScalingMove(poswhyperinvconc, 1.0, 10, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
         ScalingMove(poswhyperinvconc, 0.3, 10, &MultiGeneAAMutSelM2aModel::MixtureHyperLogProb,
-                    &MultiGeneAAMutSelM2aModel::NoUpdate, this);
+            &MultiGeneAAMutSelM2aModel::NoUpdate, this);
     }
 
     /*if (purwmode == 1)  {
@@ -679,9 +659,7 @@ void MultiGeneAAMutSelM2aModel::MoveMixtureHyperParameters() {
     }*/
 
     if (burnin > 10) {
-        if (pihyperinvconc) {
-            ResamplePi();
-        }
+        if (pihyperinvconc) { ResamplePi(); }
     }
 }
 
@@ -802,8 +780,8 @@ void MultiGeneAAMutSelM2aModel::SlaveReceiveMixtureHyperParameters() {
 
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         // geneprocess[gene]->SetMixtureHyperParameters(puromhypermean,puromhyperinvconc,dposomhypermean,dposomhyperinvshape,pi,purwhypermean,purwhyperinvconc,poswhypermean,poswhyperinvconc);
-        geneprocess[gene]->SetMixtureHyperParameters(dposomhypermean, dposomhyperinvshape, pi,
-                                                     poswhypermean, poswhyperinvconc);
+        geneprocess[gene]->SetMixtureHyperParameters(
+            dposomhypermean, dposomhyperinvshape, pi, poswhypermean, poswhyperinvconc);
     }
 }
 

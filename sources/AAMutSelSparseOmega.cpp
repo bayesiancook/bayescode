@@ -25,8 +25,8 @@ class AAMutSelSparseOmegaChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     AAMutSelSparseOmegaChain(string indatafile, string intreefile, int inomegamode,
-                             double infitnessshape, int infitnesscentermode, double inepsilon,
-                             int inevery, int inuntil, string inname, int force)
+        double infitnessshape, int infitnesscentermode, double inepsilon, int inevery, int inuntil,
+        string inname, int force)
         : modeltype("AAMUTSELSPARSEOMEGA"),
           datafile(indatafile),
           treefile(intreefile),
@@ -130,9 +130,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -182,16 +180,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "aamutseldp -d <alignment> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
@@ -199,7 +193,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new AAMutSelSparseOmegaChain(datafile, treefile, omegamode, fitnessshape,
-                                             fitnesscentermode, epsilon, every, until, name, force);
+            fitnesscentermode, epsilon, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

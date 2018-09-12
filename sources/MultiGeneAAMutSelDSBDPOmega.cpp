@@ -26,11 +26,10 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
     string GetModelType() override { return modeltype; }
 
     MultiGeneAAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inNcat,
-                                     int inbaseNcat, int inblmode, int innucmode, int inbasemode,
-                                     int inomegamode, int inomegaprior, int inmodalprior,
-                                     double inpihypermean, double inpihyperinvconc, int inevery,
-                                     int inuntil, int inwritegenedata, string inname, int force,
-                                     int inmyid, int innprocs)
+        int inbaseNcat, int inblmode, int innucmode, int inbasemode, int inomegamode,
+        int inomegaprior, int inmodalprior, double inpihypermean, double inpihyperinvconc,
+        int inevery, int inuntil, int inwritegenedata, string inname, int force, int inmyid,
+        int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
@@ -60,21 +59,15 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneAAMutSelDSBDPOmegaModel(
-            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior,
-            modalprior, pihypermean, pihyperinvconc, myid, nprocs);
-        if (!myid) {
-            cerr << " -- allocate\n";
-        }
+        model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
+            nucmode, basemode, omegamode, omegaprior, modalprior, pihypermean, pihyperinvconc, myid,
+            nprocs);
+        if (!myid) { cerr << " -- allocate\n"; }
         GetModel()->Allocate();
-        if (!myid) {
-            cerr << " -- update\n";
-        }
+        if (!myid) { cerr << " -- update\n"; }
         GetModel()->Update();
         Reset(force);
-        if (!myid) {
-            model->Trace(cerr);
-        }
+        if (!myid) { model->Trace(cerr); }
     }
 
     void Open() override {
@@ -98,9 +91,9 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(
-                datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode,
-                omegaprior, modalprior, pihypermean, pihyperinvconc, myid, nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
+                nucmode, basemode, omegamode, omegaprior, modalprior, pihypermean, pihyperinvconc,
+                myid, nprocs);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -229,9 +222,7 @@ int main(int argc, char *argv[]) {
         int writegenedata = 1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -317,16 +308,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "multigeneaamutselddp -d <list> -t <tree> -ncat <ncat> "
                     "<chainname> \n";
@@ -334,21 +321,16 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneAAMutSelDSBDPOmegaChain(
-            datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior,
-            modalprior, pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid,
-            nprocs);
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(datafile, treefile, Ncat, baseNcat, blmode,
+            nucmode, basemode, omegamode, omegaprior, modalprior, pihypermean, pihyperinvconc,
+            every, until, writegenedata, name, force, myid, nprocs);
     }
 
     chrono.Stop();
-    if (!myid) {
-        cout << "total time to set things up: " << chrono.GetTime() << '\n';
-    }
+    if (!myid) { cout << "total time to set things up: " << chrono.GetTime() << '\n'; }
     chrono.Reset();
     chrono.Start();
-    if (!myid) {
-        cerr << "chain " << name << " started\n";
-    }
+    if (!myid) { cerr << "chain " << name << " started\n"; }
     chain->Start();
     if (!myid) {
         cerr << "chain " << name << " stopped\n";

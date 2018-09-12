@@ -31,8 +31,8 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
         return (MultiGeneDiffSelDoublySparseModel *)model;
     }
 
-    MultiGeneDiffSelDoublySparseSample(string filename, int inburnin, int inevery, int inuntil,
-                                       int myid, int nprocs)
+    MultiGeneDiffSelDoublySparseSample(
+        string filename, int inburnin, int inevery, int inuntil, int myid, int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
         Open();
     }
@@ -65,10 +65,9 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
         is >> chainevery >> chainuntil >> chainsaveall >> writegenedata >> chainsize;
 
         if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
-            model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode,
-                nucmode, shiftmode, pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc,
-                myid, nprocs);
+            model = new MultiGeneDiffSelDoublySparseModel(datafile, treefile, ncond, nlevel,
+                codonmodel, epsilon, fitnessshape, blmode, nucmode, shiftmode, pihypermean,
+                pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -137,9 +136,7 @@ int main(int argc, char *argv[]) {
     int ppred = 0;
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -150,9 +147,7 @@ int main(int argc, char *argv[]) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
-                if (!IsInt(s)) {
-                    throw(0);
-                }
+                if (!IsInt(s)) { throw(0); }
                 burnin = atoi(argv[i]);
                 i++;
                 if (i == argc) throw(0);
@@ -171,16 +166,12 @@ int main(int argc, char *argv[]) {
                     i--;
                 }
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if (name == "") {
-            throw(0);
-        }
+        if (name == "") { throw(0); }
     } catch (...) {
         cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
         cerr << '\n';

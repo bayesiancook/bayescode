@@ -86,7 +86,7 @@ class MultiGeneMPIModule {
             MPIBuffer buffer(MPISize(t));
             MPI_Status stat;
             MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
-                     &stat);
+                &stat);
             t += buffer;
         }
     }
@@ -111,18 +111,14 @@ class MultiGeneMPIModule {
         MPIBuffer buffer(ngene * MPISize(array[0]));
         MPI_Status stat;
         MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD, &stat);
-        for (int gene = 0; gene < ngene; gene++) {
-            buffer >> array[gene];
-        }
+        for (int gene = 0; gene < ngene; gene++) { buffer >> array[gene]; }
     }
 
     template <class T>
     void SlaveSendGeneArray(const Selector<T> &array) const {
         int ngene = GetLocalNgene();
         MPIBuffer buffer(ngene * MPISize(array.GetVal(0)));
-        for (int gene = 0; gene < ngene; gene++) {
-            buffer << array.GetVal(gene);
-        }
+        for (int gene = 0; gene < ngene; gene++) { buffer << array.GetVal(gene); }
         MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
     }
 
@@ -134,7 +130,7 @@ class MultiGeneMPIModule {
             MPIBuffer buffer(ngene * MPISize(array[0]));
             MPI_Status stat;
             MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
-                     &stat);
+                &stat);
             for (int gene = 0; gene < ngene; gene++) {
                 buffer >> array[thusfar];
                 thusfar++;
@@ -162,18 +158,14 @@ class MultiGeneMPIModule {
         MPIBuffer buffer(ngene * (MPISize(v[0]) + MPISize(w[0])));
         MPI_Status stat;
         MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD, &stat);
-        for (int gene = 0; gene < ngene; gene++) {
-            buffer >> v[gene] >> w[gene];
-        }
+        for (int gene = 0; gene < ngene; gene++) { buffer >> v[gene] >> w[gene]; }
     }
 
     template <class T, class U>
     void SlaveSendGeneArray(const Selector<T> &v, const Selector<U> &w) const {
         int ngene = GetLocalNgene();
         MPIBuffer buffer(ngene * (MPISize(v.GetVal(0)) + MPISize(w.GetVal(0))));
-        for (int gene = 0; gene < ngene; gene++) {
-            buffer << v.GetVal(gene) << w.GetVal(gene);
-        }
+        for (int gene = 0; gene < ngene; gene++) { buffer << v.GetVal(gene) << w.GetVal(gene); }
         MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
     }
 
@@ -185,7 +177,7 @@ class MultiGeneMPIModule {
             MPIBuffer buffer(ngene * (MPISize(v[0]) + MPISize(w[0])));
             MPI_Status stat;
             MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
-                     &stat);
+                &stat);
             for (int gene = 0; gene < ngene; gene++) {
                 buffer >> v[thusfar] >> w[thusfar];
                 thusfar++;

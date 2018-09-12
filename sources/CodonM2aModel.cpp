@@ -93,9 +93,7 @@ void CodonM2aModel::Allocate() {
 }
 
 void CodonM2aModel::Update() {
-    if (blmode == 0) {
-        blhypermean->SetAllBranches(1.0 / lambda);
-    }
+    if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     UpdateMatrices();
     GetIntegratedLogLikelihood();
@@ -103,9 +101,7 @@ void CodonM2aModel::Update() {
 }
 
 void CodonM2aModel::PostPred(string name) {
-    if (blmode == 0) {
-        blhypermean->SetAllBranches(1.0 / lambda);
-    }
+    if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     UpdateMatrices();
     sitealloc->SampleAlloc();
@@ -123,39 +119,38 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double> &inbranchlength) const 
     inbranchlength.Copy(*branchlength);
 }
 
-void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                                    double inblinvshape) {
+void CodonM2aModel::SetBranchLengthsHyperParameters(
+    const BranchSelector<double> &inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
     blhyperinvshape = inblinvshape;
     branchlength->SetShape(1.0 / blhyperinvshape);
     // branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
 }
 
-void CodonM2aModel::SetNucRates(const std::vector<double> &innucrelrate,
-                                const std::vector<double> &innucstat) {
+void CodonM2aModel::SetNucRates(
+    const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
     nucrelrate = innucrelrate;
     nucstat = innucstat;
     UpdateMatrices();
 }
 
-void CodonM2aModel::GetNucRates(std::vector<double> &innucrelrate,
-                                std::vector<double> &innucstat) const {
+void CodonM2aModel::GetNucRates(
+    std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
     innucrelrate = nucrelrate;
     innucstat = nucstat;
 }
 
 void CodonM2aModel::SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                               double innucrelratehyperinvconc,
-                                               const std::vector<double> &innucstathypercenter,
-                                               double innucstathyperinvconc) {
+    double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+    double innucstathyperinvconc) {
     nucrelratehypercenter = innucrelratehypercenter;
     nucrelratehyperinvconc = innucrelratehyperinvconc;
     nucstathypercenter = innucstathypercenter;
     nucstathyperinvconc = innucstathyperinvconc;
 }
 
-void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double inpurw,
-                                         double inposw) {
+void CodonM2aModel::SetMixtureParameters(
+    double inpurom, double indposom, double inpurw, double inposw) {
     purom = inpurom;
     dposom = indposom;
     purw = inpurw;
@@ -163,8 +158,8 @@ void CodonM2aModel::SetMixtureParameters(double inpurom, double indposom, double
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
 }
 
-void CodonM2aModel::GetMixtureParameters(double &inpurom, double &indposom, double &inpurw,
-                                         double &inposw) const {
+void CodonM2aModel::GetMixtureParameters(
+    double &inpurom, double &indposom, double &inpurw, double &inposw) const {
     inpurom = purom;
     indposom = dposom;
     inpurw = purw;
@@ -172,10 +167,8 @@ void CodonM2aModel::GetMixtureParameters(double &inpurom, double &indposom, doub
 }
 
 void CodonM2aModel::SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
-                                              double indposomhypermean,
-                                              double indposomhyperinvshape, double inpi,
-                                              double inpurwhypermean, double inpurwhyperinvconc,
-                                              double inposwhypermean, double inposwhyperinvconc) {
+    double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean,
+    double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc) {
     puromhypermean = inpuromhypermean;
     puromhyperinvconc = inpuromhyperinvconc;
     dposomhypermean = indposomhypermean;
@@ -222,9 +215,7 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
         for (int k = 0; k < ncat; k++) {
             (*sitealloc)[i] = k;
             logp[k] = phyloprocess->SiteLogLikelihood(i);
-            if ((!k) || (max < logp[k])) {
-                max = logp[k];
-            }
+            if ((!k) || (max < logp[k])) { max = logp[k]; }
         }
 
         double p = 0;
@@ -235,9 +226,7 @@ double CodonM2aModel::GetIntegratedLogLikelihood() const {
         }
         double logl = log(p) + max;
         total += logl;
-        for (int k = 0; k < ncat; k++) {
-            sitepostprobarray[i][k] /= p;
-        }
+        for (int k = 0; k < ncat; k++) { sitepostprobarray[i][k] /= p; }
 
         // (*sitealloc)[i] = bkalloc;
     }
@@ -280,21 +269,15 @@ double CodonM2aModel::OmegaPathSuffStatLogProb() const {
 double CodonM2aModel::GetLogPrior() const {
     double total = 0;
 
-    if (!FixedBranchLengths()) {
-        total += BranchLengthsLogPrior();
-    }
-    if (!FixedNucRates()) {
-        total += NucRatesLogPrior();
-    }
+    if (!FixedBranchLengths()) { total += BranchLengthsLogPrior(); }
+    if (!FixedNucRates()) { total += NucRatesLogPrior(); }
     total += OmegaLogPrior();
     return total;
 }
 
 double CodonM2aModel::BranchLengthsLogPrior() const {
     double total = 0;
-    if (blmode == 0) {
-        total += LambdaHyperLogPrior();
-    }
+    if (blmode == 0) { total += LambdaHyperLogPrior(); }
     total += branchlength->GetLogProb();
     return total;
 }
@@ -303,8 +286,8 @@ double CodonM2aModel::LambdaHyperLogPrior() const { return -lambda / 10; }
 
 double CodonM2aModel::NucRatesLogPrior() const {
     double total = 0;
-    total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                         1.0 / nucrelratehyperinvconc);
+    total += Random::logDirichletDensity(
+        nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
     total += Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
     return total;
 }
@@ -362,9 +345,7 @@ double CodonM2aModel::PosWeightLogPrior() const {
 
 // Bernoulli for whether posw == 0 or > 0
 double CodonM2aModel::PosSwitchLogPrior() const {
-    if (posw) {
-        return log(pi);
-    }
+    if (posw) { return log(pi); }
     return log(1 - pi);
 }
 
@@ -380,9 +361,7 @@ double CodonM2aModel::Move() {
 
 void CodonM2aModel::MoveParameters(int nrep) {
     for (int rep = 0; rep < nrep; rep++) {
-        if (!FixedBranchLengths()) {
-            MoveBranchLengths();
-        }
+        if (!FixedBranchLengths()) { MoveBranchLengths(); }
 
         CollectPathSuffStat();
 
@@ -406,9 +385,7 @@ void CodonM2aModel::ResampleSub(double frac) {
 
 void CodonM2aModel::MoveBranchLengths() {
     ResampleBranchLengths();
-    if (blmode == 0) {
-        MoveLambda();
-    }
+    if (blmode == 0) { MoveLambda(); }
 }
 
 void CodonM2aModel::ResampleBranchLengths() {
@@ -424,10 +401,10 @@ void CodonM2aModel::CollectLengthSuffStat() {
 void CodonM2aModel::MoveLambda() {
     hyperlengthsuffstat.Clear();
     hyperlengthsuffstat.AddSuffStat(*branchlength);
-    ScalingMove(lambda, 1.0, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate,
-                this);
-    ScalingMove(lambda, 0.3, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate,
-                this);
+    ScalingMove(
+        lambda, 1.0, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate, this);
+    ScalingMove(
+        lambda, 0.3, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate, this);
     blhypermean->SetAllBranches(1.0 / lambda);
 }
 
@@ -452,12 +429,10 @@ void CodonM2aModel::MoveOmega() {
     SlidingMove(purw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
     if (pi != 0) {
         ScalingMove(dposom, 1.0, 10, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
-        SlidingMove(posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate,
-                    this);
+        SlidingMove(
+            posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
     }
-    if ((pi != 0) && (pi != 1)) {
-        SwitchPosWeight(10);
-    }
+    if ((pi != 0) && (pi != 1)) { SwitchPosWeight(10); }
     ResampleAlloc();
 }
 
@@ -511,16 +486,16 @@ void CodonM2aModel::MoveNucRates() {
     CollectNucPathSuffStat();
 
     ProfileMove(nucrelrate, 0.1, 1, 3, &CodonM2aModel::NucRatesLogProb,
-                &CodonM2aModel::UpdateNucMatrix, this);
+        &CodonM2aModel::UpdateNucMatrix, this);
     ProfileMove(nucrelrate, 0.03, 3, 3, &CodonM2aModel::NucRatesLogProb,
-                &CodonM2aModel::UpdateNucMatrix, this);
+        &CodonM2aModel::UpdateNucMatrix, this);
     ProfileMove(nucrelrate, 0.01, 3, 3, &CodonM2aModel::NucRatesLogProb,
-                &CodonM2aModel::UpdateNucMatrix, this);
+        &CodonM2aModel::UpdateNucMatrix, this);
 
-    ProfileMove(nucstat, 0.1, 1, 3, &CodonM2aModel::NucRatesLogProb,
-                &CodonM2aModel::UpdateNucMatrix, this);
+    ProfileMove(
+        nucstat, 0.1, 1, 3, &CodonM2aModel::NucRatesLogProb, &CodonM2aModel::UpdateNucMatrix, this);
     ProfileMove(nucstat, 0.01, 1, 3, &CodonM2aModel::NucRatesLogProb,
-                &CodonM2aModel::UpdateNucMatrix, this);
+        &CodonM2aModel::UpdateNucMatrix, this);
 
     UpdateMatrices();
 }
@@ -549,9 +524,7 @@ void CodonM2aModel::Trace(ostream &os) const {
 }
 
 void CodonM2aModel::TracePostProb(ostream &os) const {
-    for (int i = 0; i < GetNsite(); i++) {
-        os << sitepostprobarray[i][2] << '\t';
-    }
+    for (int i = 0; i < GetNsite(); i++) { os << sitepostprobarray[i][2] << '\t'; }
     os << '\n';
 }
 

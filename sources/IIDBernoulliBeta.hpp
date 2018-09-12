@@ -79,7 +79,7 @@ class BernoulliBetaSuffStat : public SuffStat {
     double GetLogProb(double pi, double alpha, double beta) const {
         double logbern = n0 * log(1 - pi) + n1 * log(pi);
         double logbeta = n1 * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) -
-                               Random::logGamma(beta)) +
+                                  Random::logGamma(beta)) +
                          (alpha - 1) * sumlog0 + (beta - 1) * sumlog1;
         return logbern + logbeta;
     }
@@ -145,9 +145,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     int GetNullSet() const {
         int tot = 0;
         for (int i = 0; i < GetSize(); i++) {
-            if (!GetVal(i)) {
-                tot++;
-            }
+            if (!GetVal(i)) { tot++; }
         }
         return tot;
     }
@@ -155,9 +153,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     //! return log probability summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -194,9 +190,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
                 tot++;
             }
         }
-        if (!tot) {
-            return 0;
-        }
+        if (!tot) { return 0; }
         m1 /= tot;
         return m1;
     }

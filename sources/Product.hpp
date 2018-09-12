@@ -54,9 +54,7 @@ class ProductArray : public Array<Product> {
     }
 
     ~ProductArray() {
-        for (int gene = 0; gene < GetSize(); gene++) {
-            delete array[gene];
-        }
+        for (int gene = 0; gene < GetSize(); gene++) { delete array[gene]; }
     }
 
     //! return total number of entries (number of genes)

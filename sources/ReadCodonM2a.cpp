@@ -93,9 +93,7 @@ int main(int argc, char *argv[]) {
     string name;
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -116,16 +114,12 @@ int main(int argc, char *argv[]) {
             } else if (s == "-ppred") {
                 ppred = 1;
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if (name == "") {
-            throw(0);
-        }
+        if (name == "") { throw(0); }
     } catch (...) {
         cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
         cerr << '\n';

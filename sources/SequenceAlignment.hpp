@@ -91,9 +91,7 @@ class SequenceAlignment {
     // replace all entries by missing entries
     void Unclamp() {
         for (int i = 0; i < Ntaxa; i++) {
-            for (int j = 0; j < Nsite; j++) {
-                Data[i][j] = unknown;
-            }
+            for (int j = 0; j < Nsite; j++) { Data[i][j] = unknown; }
         }
     }
 
@@ -129,17 +127,13 @@ class SequenceAlignment {
     bool ConstantColumn(int site) const {
         bool ret = true;
         int tax = 0;
-        while ((tax < GetNtaxa()) && (Data[tax][site] == unknown)) {
-            tax++;
-        }
+        while ((tax < GetNtaxa()) && (Data[tax][site] == unknown)) { tax++; }
 
         if (tax < GetNtaxa()) {
             int refstate = Data[tax][site];
 
             while ((tax < GetNtaxa()) && ret) {
-                if (Data[tax][site] != -1) {
-                    ret &= static_cast<int>(Data[tax][site] == refstate);
-                }
+                if (Data[tax][site] != -1) { ret &= static_cast<int>(Data[tax][site] == refstate); }
                 tax++;
             }
         }

@@ -128,21 +128,21 @@ void AAMutSelM2aModel::GetBranchLengths(BranchArray<double> &inbranchlength) con
     inbranchlength.Copy(*branchlength);
 }
 
-void AAMutSelM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                                       double inblinvshape) {
+void AAMutSelM2aModel::SetBranchLengthsHyperParameters(
+    const BranchSelector<double> &inblmean, double inblinvshape) {
     blhypermean->Copy(inblmean);
     branchlength->SetShape(1.0 / blhyperinvshape);
 }
 
-void AAMutSelM2aModel::SetNucRates(const std::vector<double> &innucrelrate,
-                                   const std::vector<double> &innucstat) {
+void AAMutSelM2aModel::SetNucRates(
+    const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
     nucrelrate = innucrelrate;
     nucstat = innucstat;
     UpdateMatrices();
 }
 
-void AAMutSelM2aModel::GetNucRates(std::vector<double> &innucrelrate,
-                                   std::vector<double> &innucstat) const {
+void AAMutSelM2aModel::GetNucRates(
+    std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
     innucrelrate = nucrelrate;
     innucstat = nucstat;
 }
@@ -168,9 +168,7 @@ void AAMutSelM2aModel::GetMixtureParameters(double &indposom, double &inposw) co
 }
 
 void AAMutSelM2aModel::SetMixtureHyperParameters(double indposomhypermean,
-                                                 double indposomhyperinvshape, double inpi,
-                                                 double inposwhypermean,
-                                                 double inposwhyperinvconc) {
+    double indposomhyperinvshape, double inpi, double inposwhypermean, double inposwhyperinvconc) {
     dposomhypermean = indposomhypermean;
     dposomhyperinvshape = indposomhyperinvshape;
     pi = inpi;
@@ -249,12 +247,8 @@ double AAMutSelM2aModel::AAHyperSuffStatLogProb() const {
 double AAMutSelM2aModel::GetLogPrior() const {
     double total = 0;
 
-    if (!FixedBranchLengths()) {
-        total += BranchLengthsLogPrior();
-    }
-    if (!FixedNucRates()) {
-        total += NucRatesLogPrior();
-    }
+    if (!FixedBranchLengths()) { total += BranchLengthsLogPrior(); }
+    if (!FixedNucRates()) { total += NucRatesLogPrior(); }
     total += OmegaLogPrior();
     total += AAHyperLogPrior();
     total += AALogPrior();
@@ -263,9 +257,7 @@ double AAMutSelM2aModel::GetLogPrior() const {
 
 double AAMutSelM2aModel::BranchLengthsLogPrior() const {
     double total = 0;
-    if (blmode == 0) {
-        total += LambdaHyperLogPrior();
-    }
+    if (blmode == 0) { total += LambdaHyperLogPrior(); }
     total += branchlength->GetLogProb();
     return total;
 }
@@ -274,8 +266,8 @@ double AAMutSelM2aModel::LambdaHyperLogPrior() const { return -lambda / 10; }
 
 double AAMutSelM2aModel::NucRatesLogPrior() const {
     double total = 0;
-    total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                         1.0 / nucrelratehyperinvconc);
+    total += Random::logDirichletDensity(
+        nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
     total += Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
     return total;
 }
@@ -333,9 +325,7 @@ double AAMutSelM2aModel::PosWeightLogProb() const {
 
 // Bernoulli for whether posw == 0 or > 0
 double AAMutSelM2aModel::PosSwitchLogProb() const {
-    if (posw) {
-        return log(pi);
-    }
+    if (posw) { return log(pi); }
     return log(1 - pi);
 }
 
@@ -359,9 +349,7 @@ double AAMutSelM2aModel::Move() {
 
 void AAMutSelM2aModel::MoveParameters(int nrep) {
     for (int rep = 0; rep < nrep; rep++) {
-        if (!FixedBranchLengths()) {
-            MoveBranchLengths();
-        }
+        if (!FixedBranchLengths()) { MoveBranchLengths(); }
 
         CollectPathSuffStat();
 
@@ -387,9 +375,7 @@ void AAMutSelM2aModel::ResampleSub(double frac) {
 
 void AAMutSelM2aModel::MoveBranchLengths() {
     ResampleBranchLengths();
-    if (blmode == 0) {
-        MoveLambda();
-    }
+    if (blmode == 0) { MoveLambda(); }
 }
 
 void AAMutSelM2aModel::ResampleBranchLengths() {
@@ -406,10 +392,10 @@ void AAMutSelM2aModel::MoveLambda() {
     hyperlengthsuffstat.Clear();
     hyperlengthsuffstat.AddSuffStat(*branchlength);
 
-    ScalingMove(lambda, 1.0, 10, &AAMutSelM2aModel::LambdaHyperLogProb, &AAMutSelM2aModel::NoUpdate,
-                this);
-    ScalingMove(lambda, 0.3, 10, &AAMutSelM2aModel::LambdaHyperLogProb, &AAMutSelM2aModel::NoUpdate,
-                this);
+    ScalingMove(
+        lambda, 1.0, 10, &AAMutSelM2aModel::LambdaHyperLogProb, &AAMutSelM2aModel::NoUpdate, this);
+    ScalingMove(
+        lambda, 0.3, 10, &AAMutSelM2aModel::LambdaHyperLogProb, &AAMutSelM2aModel::NoUpdate, this);
 
     blhypermean->SetAllBranches(1.0 / lambda);
 }
@@ -429,14 +415,12 @@ void AAMutSelM2aModel::MoveOmega() {
     // SlidingMove(purom,0.1,10,0,1,&AAMutSelM2aModel::OmegaLogProb,&AAMutSelM2aModel::NoUpdate,this);
     // SlidingMove(purw,1.0,10,0,1,&AAMutSelM2aModel::OmegaLogProb,&AAMutSelM2aModel::NoUpdate,this);
     if (pi != 0) {
-        ScalingMove(dposom, 1.0, 10, &AAMutSelM2aModel::OmegaLogProb, &AAMutSelM2aModel::NoUpdate,
-                    this);
+        ScalingMove(
+            dposom, 1.0, 10, &AAMutSelM2aModel::OmegaLogProb, &AAMutSelM2aModel::NoUpdate, this);
         SlidingMove(posw, 1.0, 10, 0, 1, &AAMutSelM2aModel::OmegaLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
     }
-    if ((pi != 0) && (pi != 1)) {
-        SwitchPosWeight(10);
-    }
+    if ((pi != 0) && (pi != 1)) { SwitchPosWeight(10); }
     ResampleAlloc();
 }
 
@@ -485,15 +469,15 @@ void AAMutSelM2aModel::MoveAAHyperParameters() {
     aafitnessarray->AddSuffStat(aahypersuffstat);
     for (int rep = 0; rep < 10; rep++) {
         ProfileMove(aacenter, 0.1, 1, 10, &AAMutSelM2aModel::AAHyperLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
         ProfileMove(aacenter, 0.03, 3, 10, &AAMutSelM2aModel::AAHyperLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
         ProfileMove(aacenter, 0.01, 3, 10, &AAMutSelM2aModel::AAHyperLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
         ScalingMove(aainvconc, 1.0, 10, &AAMutSelM2aModel::AAHyperLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
         ScalingMove(aainvconc, 0.3, 10, &AAMutSelM2aModel::AAHyperLogProb,
-                    &AAMutSelM2aModel::NoUpdate, this);
+            &AAMutSelM2aModel::NoUpdate, this);
     }
     aafitnessarray->SetCenter(aacenter);
     aafitnessarray->SetConcentration(1.0 / aainvconc);
@@ -514,9 +498,7 @@ double AAMutSelM2aModel::MoveAA(double tuning, int n, int nrep) {
     for (int i = 0; i < Nsite; i++) {
         vector<double> &aa = (*aafitnessarray)[i];
         for (int rep = 0; rep < nrep; rep++) {
-            for (int l = 0; l < Naa; l++) {
-                bk[l] = aa[l];
-            }
+            for (int l = 0; l < Naa; l++) { bk[l] = aa[l]; }
             double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
             double loghastings = Random::ProfileProposeMove(aa, Naa, tuning, n);
             deltalogprob += loghastings;
@@ -526,9 +508,7 @@ double AAMutSelM2aModel::MoveAA(double tuning, int n, int nrep) {
             if (accepted) {
                 nacc++;
             } else {
-                for (int l = 0; l < Naa; l++) {
-                    aa[l] = bk[l];
-                }
+                for (int l = 0; l < Naa; l++) { aa[l] = bk[l]; }
                 UpdateCodonMatrix(i);
             }
             ntot++;
@@ -551,16 +531,16 @@ void AAMutSelM2aModel::MoveNucRates() {
     // CollectNucPathSuffStat();
 
     ProfileMove(nucrelrate, 0.1, 1, 3, &AAMutSelM2aModel::NucRatesLogProb,
-                &AAMutSelM2aModel::UpdateMatrices, this);
+        &AAMutSelM2aModel::UpdateMatrices, this);
     ProfileMove(nucrelrate, 0.03, 3, 3, &AAMutSelM2aModel::NucRatesLogProb,
-                &AAMutSelM2aModel::UpdateMatrices, this);
+        &AAMutSelM2aModel::UpdateMatrices, this);
     ProfileMove(nucrelrate, 0.01, 3, 3, &AAMutSelM2aModel::NucRatesLogProb,
-                &AAMutSelM2aModel::UpdateMatrices, this);
+        &AAMutSelM2aModel::UpdateMatrices, this);
 
     ProfileMove(nucstat, 0.1, 1, 3, &AAMutSelM2aModel::NucRatesLogProb,
-                &AAMutSelM2aModel::UpdateMatrices, this);
+        &AAMutSelM2aModel::UpdateMatrices, this);
     ProfileMove(nucstat, 0.01, 1, 3, &AAMutSelM2aModel::NucRatesLogProb,
-                &AAMutSelM2aModel::UpdateMatrices, this);
+        &AAMutSelM2aModel::UpdateMatrices, this);
 
     // UpdateMatrices();
 }
@@ -589,9 +569,7 @@ void AAMutSelM2aModel::Trace(ostream &os) const {
 }
 
 void AAMutSelM2aModel::TracePostProb(ostream &os) const {
-    for (int i = 0; i < GetNsite(); i++) {
-        os << sitepostprobarray[i][1] << '\t';
-    }
+    for (int i = 0; i < GetNsite(); i++) { os << sitepostprobarray[i][1] << '\t'; }
     os << '\n';
 }
 

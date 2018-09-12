@@ -18,8 +18,8 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
     const MultiGeneBranchOmegaModel *GetModel() const { return (MultiGeneBranchOmegaModel *)model; }
     MultiGeneBranchOmegaModel *GetModel() { return (MultiGeneBranchOmegaModel *)model; }
 
-    MultiGeneBranchOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid,
-                               int nprocs)
+    MultiGeneBranchOmegaSample(
+        string filename, int inburnin, int inevery, int inuntil, int myid, int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
         Open();
     }
@@ -91,17 +91,13 @@ class MultiGeneBranchOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
         for (int gene = 0; gene < GetNgene(); gene++) {
-            for (int j = 0; j < GetNbranch(); j++) {
-                pp[gene][j] /= size;
-            }
+            for (int j = 0; j < GetNbranch(); j++) { pp[gene][j] /= size; }
         }
 
         ofstream os((name + ".pp").c_str());
         for (int j = 0; j < GetNbranch(); j++) {
             os << j << '\t';
-            for (int gene = 0; gene < GetNgene(); gene++) {
-                os << pp[gene][j] << '\t';
-            }
+            for (int gene = 0; gene < GetNgene(); gene++) { os << pp[gene][j] << '\t'; }
             os << '\n';
         }
         cerr << "pp of positive departure in " << name << ".pp\n";
@@ -132,9 +128,7 @@ int main(int argc, char *argv[]) {
     string name;
 
     try {
-        if (argc == 1) {
-            throw(0);
-        }
+        if (argc == 1) { throw(0); }
 
         int i = 1;
         while (i < argc) {
@@ -143,9 +137,7 @@ int main(int argc, char *argv[]) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
-                if (!IsInt(s)) {
-                    throw(0);
-                }
+                if (!IsInt(s)) { throw(0); }
                 burnin = atoi(argv[i]);
                 i++;
                 if (i == argc) throw(0);
@@ -164,16 +156,12 @@ int main(int argc, char *argv[]) {
                     i--;
                 }
             } else {
-                if (i != (argc - 1)) {
-                    throw(0);
-                }
+                if (i != (argc - 1)) { throw(0); }
                 name = argv[i];
             }
             i++;
         }
-        if (name == "") {
-            throw(0);
-        }
+        if (name == "") { throw(0); }
     } catch (...) {
         cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
         cerr << '\n';
@@ -182,9 +170,7 @@ int main(int argc, char *argv[]) {
 
     MultiGeneBranchOmegaSample *sample =
         new MultiGeneBranchOmegaSample(name, burnin, every, until, myid, nprocs);
-    if (!myid) {
-        sample->Read();
-    }
+    if (!myid) { sample->Read(); }
 
     MPI_Finalize();
 }

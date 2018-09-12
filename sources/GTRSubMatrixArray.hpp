@@ -12,7 +12,7 @@
 class GTRSubMatrixArray : public Array<SubMatrix>, public Array<GTRSubMatrix> {
   public:
     GTRSubMatrixArray(const vector<double> &inrelrate,
-                      const Selector<vector<double>> *inprofilearray, int innormalise)
+        const Selector<vector<double>> *inprofilearray, int innormalise)
         : relrate(inrelrate),
           profilearray(inprofilearray),
           nstate(inprofilearray->GetVal(0).size()),
@@ -51,9 +51,7 @@ class GTRSubMatrixArray : public Array<SubMatrix>, public Array<GTRSubMatrix> {
     }
 
     void Delete() {
-        for (int i = 0; i < GetSize(); i++) {
-            delete matrixarray[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { delete matrixarray[i]; }
     }
 
     const vector<double> &relrate;

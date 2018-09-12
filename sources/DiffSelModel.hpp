@@ -195,7 +195,7 @@ class DiffSelModel : public ProbModel {
     //! mutation-selection model, 0: square-root model, see Parto and Lartillot,
     //! 2017)
     DiffSelModel(const std::string &datafile, const std::string &treefile, int inNcond,
-                 int inNlevel, int infixglob, int infixvar, int incodonmodel) {
+        int inNlevel, int infixglob, int infixvar, int incodonmodel) {
         blmode = 0;
         nucmode = 0;
 
@@ -211,9 +211,7 @@ class DiffSelModel : public ProbModel {
         Ncond = inNcond;
 
         Nlevel = inNlevel;
-        if (Ncond <= 2) {
-            Nlevel = 1;
-        }
+        if (Ncond <= 2) { Nlevel = 1; }
 
         ReadFiles(datafile, treefile);
         MakePattern();
@@ -302,9 +300,7 @@ class DiffSelModel : public ProbModel {
         double shape = 1.0;
         double scale = 1.0;
         varsel = new IIDGamma(Ncond - 1, shape, scale);
-        for (int k = 0; k < Ncond - 1; k++) {
-            (*varsel)[k] = 1.0;
-        }
+        for (int k = 0; k < Ncond - 1; k++) { (*varsel)[k] = 1.0; }
 
         // differential selection effects
         // normally distributed
@@ -368,8 +364,8 @@ class DiffSelModel : public ProbModel {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
         branchlength->SetShape(1.0 / blhyperinvshape);
@@ -377,9 +373,8 @@ class DiffSelModel : public ProbModel {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc) {
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
         nucstathypercenter = innucstathypercenter;
@@ -387,8 +382,8 @@ class DiffSelModel : public ProbModel {
     }
 
     //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(const std::vector<double> &innucrelrate,
-                     const std::vector<double> &innucstat) {
+    void SetNucRates(
+        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         CorruptMatrices();
@@ -431,9 +426,7 @@ class DiffSelModel : public ProbModel {
     }
 
     void Update() override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
+        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateAll();
         ResampleSub(1.0);
     }
@@ -467,12 +460,8 @@ class DiffSelModel : public ProbModel {
     double GetLogPrior() const {
         double total = 0;
 
-        if (blmode < 2) {
-            total += BranchLengthsLogPrior();
-        }
-        if (nucmode < 2) {
-            total += NucRatesLogPrior();
-        }
+        if (blmode < 2) { total += BranchLengthsLogPrior(); }
+        if (nucmode < 2) { total += NucRatesLogPrior(); }
 
         // branchlengths
         total += BranchLengthsHyperLogPrior();
@@ -500,17 +489,15 @@ class DiffSelModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) {
-            ret += BranchLengthsHyperLogPrior();
-        }
+        if (blmode == 0) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
     //! log prior over nuc rates rho and pi (uniform)
     double NucRatesLogPrior() const {
         double total = 0;
-        total += Random::logDirichletDensity(nucrelrate, nucrelratehypercenter,
-                                             1.0 / nucrelratehyperinvconc);
+        total += Random::logDirichletDensity(
+            nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
         total +=
             Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
@@ -638,9 +625,7 @@ class DiffSelModel : public ProbModel {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode < 2) {
-                MoveBranchLengths();
-            }
+            if (blmode < 2) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             UpdateAll();
@@ -649,14 +634,10 @@ class DiffSelModel : public ProbModel {
                 MoveBaseline();
                 UpdateAll();
                 MoveDelta();
-                if (!fixvar) {
-                    MoveVarSel();
-                }
+                if (!fixvar) { MoveVarSel(); }
             }
 
-            if (nucmode < 2) {
-                MoveNucRates();
-            }
+            if (nucmode < 2) { MoveNucRates(); }
         }
         UpdateAll();
     }
@@ -668,9 +649,7 @@ class DiffSelModel : public ProbModel {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) {
-            MoveLambda();
-        }
+        if (blmode == 0) { MoveLambda(); }
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
@@ -686,9 +665,9 @@ class DiffSelModel : public ProbModel {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         ScalingMove(lambda, 1.0, 10, &DiffSelModel::BranchLengthsHyperLogProb,
-                    &DiffSelModel::NoUpdate, this);
+            &DiffSelModel::NoUpdate, this);
         ScalingMove(lambda, 0.3, 10, &DiffSelModel::BranchLengthsHyperLogProb,
-                    &DiffSelModel::NoUpdate, this);
+            &DiffSelModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -698,16 +677,16 @@ class DiffSelModel : public ProbModel {
         CorruptMatrices();
 
         ProfileMove(nucrelrate, 0.1, 1, 10, &DiffSelModel::NucRatesLogProb,
-                    &DiffSelModel::CorruptMatrices, this);
+            &DiffSelModel::CorruptMatrices, this);
         ProfileMove(nucrelrate, 0.03, 3, 10, &DiffSelModel::NucRatesLogProb,
-                    &DiffSelModel::CorruptMatrices, this);
+            &DiffSelModel::CorruptMatrices, this);
         ProfileMove(nucrelrate, 0.01, 3, 10, &DiffSelModel::NucRatesLogProb,
-                    &DiffSelModel::CorruptMatrices, this);
+            &DiffSelModel::CorruptMatrices, this);
 
         ProfileMove(nucstat, 0.1, 1, 10, &DiffSelModel::NucRatesLogProb,
-                    &DiffSelModel::CorruptMatrices, this);
+            &DiffSelModel::CorruptMatrices, this);
         ProfileMove(nucstat, 0.01, 1, 10, &DiffSelModel::NucRatesLogProb,
-                    &DiffSelModel::CorruptMatrices, this);
+            &DiffSelModel::CorruptMatrices, this);
 
         CorruptMatrices();
     }
@@ -835,9 +814,7 @@ class DiffSelModel : public ProbModel {
     void GetBaselineArray(double *array) const {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) {
-                array[j++] = baseline->GetVal(i)[a];
-            }
+            for (int a = 0; a < Naa; a++) { array[j++] = baseline->GetVal(i)[a]; }
         }
     }
 
@@ -845,9 +822,7 @@ class DiffSelModel : public ProbModel {
     void GetDeltaArray(int k, double *array) const {
         int j = 0;
         for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) {
-                array[j++] = delta->GetVal(k - 1, i)[a];
-            }
+            for (int a = 0; a < Naa; a++) { array[j++] = delta->GetVal(k - 1, i)[a]; }
         }
     }
 
@@ -858,9 +833,7 @@ class DiffSelModel : public ProbModel {
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "globent\t";
-        for (int k = 1; k < Ncond; k++) {
-            os << "var" << k << '\t';
-        }
+        for (int k = 1; k < Ncond; k++) { os << "var" << k << '\t'; }
         os << "statent\t";
         os << "rrent\n";
     }
@@ -870,9 +843,7 @@ class DiffSelModel : public ProbModel {
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
         os << baseline->GetMeanEntropy() << '\t';
-        for (int k = 0; k < Ncond - 1; k++) {
-            os << delta->GetMeanVar(k) << '\t';
-        }
+        for (int k = 0; k < Ncond - 1; k++) { os << delta->GetMeanVar(k) << '\t'; }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
@@ -880,9 +851,7 @@ class DiffSelModel : public ProbModel {
     //! trace the current value of baselines, across all sites and all amino-acids
     void TraceBaseline(ostream &os) const {
         for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) {
-                os << baseline->GetVal(i)[a] << '\t';
-            }
+            for (int a = 0; a < Naa; a++) { os << baseline->GetVal(i)[a] << '\t'; }
         }
         os << '\n';
     }
@@ -891,9 +860,7 @@ class DiffSelModel : public ProbModel {
     //! under condition k (one single line in output stream)
     void TraceDelta(int k, ostream &os) const {
         for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) {
-                os << delta->GetVal(k - 1, i)[a] << '\t';
-            }
+            for (int a = 0; a < Naa; a++) { os << delta->GetVal(k - 1, i)[a] << '\t'; }
         }
         os << '\n';
     }
@@ -978,16 +945,10 @@ class DiffSelModel : public ProbModel {
   private:
     void MakePattern() {
         condalloc.assign(Ncond, vector<int>(Ncond, 0));
-        for (int l = 0; l < Ncond; l++) {
-            condalloc[0][l] = 1;
-        }
+        for (int l = 0; l < Ncond; l++) { condalloc[0][l] = 1; }
         if (Nlevel == 2) {
-            for (int l = 1; l < Ncond; l++) {
-                condalloc[1][l] = 1;
-            }
+            for (int l = 1; l < Ncond; l++) { condalloc[1][l] = 1; }
         }
-        for (int l = Nlevel; l < Ncond; l++) {
-            condalloc[l][l] = 1;
-        }
+        for (int l = Nlevel; l < Ncond; l++) { condalloc[l][l] = 1; }
     }
 };
