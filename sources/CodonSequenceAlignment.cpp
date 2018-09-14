@@ -120,3 +120,79 @@ void CodonSequenceAlignment::ToStream(ostream &os, int pos) {
     }
     os << '\n';
 }
+
+double CodonSequenceAlignment::GetMeanAADiversity() const   {
+
+    double meandiv = 0;
+    for (int i = 0; i < Nsite; i++) {
+        vector<int> count(Naa,0);
+        for (int j=0; j<Ntaxa; j++) {
+                if (GetState(j,i) != unknown)   {
+                    int a = GetCodonStateSpace()->Translation(GetState(j,i));
+                    count[a]++;
+                }
+        }
+        int div = 0;
+        for (int a=0; a<Naa; a++)   {
+            if (count[a])   {
+                div++;
+            }
+        }
+        meandiv += div;
+    }
+    meandiv /= Nsite;
+    return meandiv;
+}
+
+double CodonSequenceAlignment::GetMeanDiff() const   {
+
+    double meandiff = 0;
+    for (int j=0; j<Ntaxa; j++) {
+        for (int k=j+1; k<Ntaxa; k++)   {
+            double tot = 0;
+            double diff = 0;
+            for (int i=0; i<Nsite; i++) {
+                if ((GetState(k,i) != unknown) && (GetState(j,i) != unknown))   {
+                    tot++;
+                    if (GetState(k,i) != GetState(j,i)) {
+                        diff++;
+                    }
+                }
+            }
+            meandiff += diff/tot;
+        }
+    }
+    meandiff /= Ntaxa * (Ntaxa-1) / 2;
+    return meandiff;
+}
+
+double CodonSequenceAlignment::GetMeanEmpiricaldNdS() const {
+
+    double meandiff = 0;
+    double meanndiff = 0;
+    for (int j=0; j<Ntaxa; j++) {
+        for (int k=j+1; k<Ntaxa; k++)   {
+            double tot = 0;
+            double diff = 0;
+            double ndiff = 0;
+            for (int i=0; i<Nsite; i++) {
+                if ((GetState(k,i) != unknown) && (GetState(j,i) != unknown))   {
+                    tot++;
+                    if (GetState(k,i) != GetState(j,i)) {
+                        diff++;
+                        if (!GetCodonStateSpace()->Synonymous(GetState(j,i),GetState(k,i))) {
+                            ndiff++;
+                        }
+                    }
+                }
+            }
+            meandiff += diff/tot;
+            meanndiff += ndiff/tot;
+        }
+    }
+    meandiff /= Ntaxa * (Ntaxa-1) / 2;
+    meanndiff /= Ntaxa * (Ntaxa-1) / 2;
+    return meanndiff/meandiff/2.5;
+}
+
+

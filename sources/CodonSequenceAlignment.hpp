@@ -25,10 +25,14 @@ class CodonSequenceAlignment : public SequenceAlignment {
     ~CodonSequenceAlignment() /*override*/ = default;
 
     //! return the codon state space
-    CodonStateSpace *GetCodonStateSpace() { return (CodonStateSpace *)(GetStateSpace()); }
+    CodonStateSpace *GetCodonStateSpace() const { return (CodonStateSpace *)(GetStateSpace()); }
 
     //! formatted output (simply, a nucleotide alignment)
     void ToStream(std::ostream &os);
+
+    double GetMeanAADiversity() const;
+    double GetMeanDiff() const;
+    double GetMeanEmpiricaldNdS() const;
 
   private:
     void ToStream(std::ostream &os, int pos);
