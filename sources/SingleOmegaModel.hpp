@@ -335,7 +335,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update() {
+    void Update() override {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -349,7 +349,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) {
+    void PostPred(string name) override {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -382,7 +382,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
 
     // Branch lengths
 
@@ -522,7 +522,7 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move() {
+    double Move() override {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
@@ -637,16 +637,16 @@ class SingleOmegaModel : public ProbModel, public ChainComponent {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
 
-    void ToStream(ostream &os) const {
+    void ToStream(ostream &os) const override {
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
         tracer->write_line(os);
     }
 
-    void FromStream(istream &) { /* DEPRECATED */
+    void FromStream(istream &) override { /* DEPRECATED */
         // std::string model_name;
         // is >> model_name;
         // if (model_name != "SingleOmega") {
