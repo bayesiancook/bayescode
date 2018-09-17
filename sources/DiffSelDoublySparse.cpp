@@ -30,8 +30,8 @@ class DiffSelDoublySparseChain : public Chain {
 
     DiffSelDoublySparseChain(string indata, string intree, int inncond, int innlevel,
                              int incodonmodel, double infitnessshape, int infitnesscentermode,
-                             double inepsilon, double inpihypermean, double inshiftprobmean, double inshiftprobinvconc, 
-                             int inburnin, int inevery, int inuntil,
+                             double inepsilon, double inpihypermean, double inshiftprobmean,
+                             double inshiftprobinvconc, int inburnin, int inevery, int inuntil,
                              int insaveall, string inname, int force)
         : modeltype("DIFFSELSPARSE"),
           datafile(indata),
@@ -42,7 +42,9 @@ class DiffSelDoublySparseChain : public Chain {
           fitnessshape(infitnessshape),
           fitnesscentermode(infitnesscentermode),
           epsilon(inepsilon),
-          pihypermean(inpihypermean), shiftprobmean(inshiftprobmean), shiftprobinvconc(inshiftprobinvconc) {
+          pihypermean(inpihypermean),
+          shiftprobmean(inshiftprobmean),
+          shiftprobinvconc(inshiftprobinvconc) {
         burnin = inburnin;
         every = inevery;
         until = inuntil;
@@ -58,8 +60,9 @@ class DiffSelDoublySparseChain : public Chain {
     }
 
     void New(int force) override {
-        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape,
-                                             pihypermean, shiftprobmean, shiftprobinvconc);
+        model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon,
+                                             fitnessshape, pihypermean, shiftprobmean,
+                                             shiftprobinvconc);
         if (burnin) {
             GetModel()->SetWithToggles(0);
         } else {
@@ -97,7 +100,8 @@ class DiffSelDoublySparseChain : public Chain {
 
         if (modeltype == "DIFFSELSPARSE") {
             model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
-                                                 epsilon, fitnessshape, pihypermean, shiftprobmean, shiftprobinvconc);
+                                                 epsilon, fitnessshape, pihypermean, shiftprobmean,
+                                                 shiftprobinvconc);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -167,55 +171,73 @@ int main(int argc, char *argv[]) {
     string name = "";
     DiffSelDoublySparseChain *chain = 0;
 
-    if (argc == 1)  {
-
+    if (argc == 1) {
         cerr << '\n';
         cerr << "A doubly-sparse version of the differential selection model\n";
         cerr << "the model defines K conditions: background (k=0) and alternative (k=1..K-1);\n";
         cerr << "branches are a priori allocated to any one of the K conditions\n";
         cerr << "The model is based on the following system of random variables:\n";
-        cerr << " - G_kia > 0     : an array of site- and condition-specific pre-fitness parameters, for condition k=0..K-1, site i and amino-acid a;\n";
+        cerr << " - G_kia > 0     : an array of site- and condition-specific pre-fitness "
+                "parameters, for condition k=0..K-1, site i and amino-acid a;\n";
         cerr << " - m_ia =  0 or 1: an array of site-specific masks\n";
-        cerr << " - d_kia = 0 or 1: an array of site and condition-specific toggles (for conditions k=1..K-1).\n";
-        cerr << "the site-specific masks determine whether an amino-acid is or is not allowed at a given site;\n";
-        cerr << "if allowed, then the toggles determine whether the fitness for the amino-acid at that site changes upon going from condition 0 to condition k;\n";
-        cerr << "quantitatively, the fitness vector at site i under condition k F_kia is defined as:\n";
+        cerr << " - d_kia = 0 or 1: an array of site and condition-specific toggles (for "
+                "conditions k=1..K-1).\n";
+        cerr << "the site-specific masks determine whether an amino-acid is or is not allowed at a "
+                "given site;\n";
+        cerr << "if allowed, then the toggles determine whether the fitness for the amino-acid at "
+                "that site changes upon going from condition 0 to condition k;\n";
+        cerr << "quantitatively, the fitness vector at site i under condition k F_kia is defined "
+                "as:\n";
         cerr << "  F_0ia = m_ia * G_0ia + (1 - m_ia) * epsilon\n";
-        cerr << "  F_kia = m_ia * d_kia * F_kia + m_ia * (1 - m_ia * d_kia) * F_0ia, for k=1..K-1\n";
+        cerr
+            << "  F_kia = m_ia * d_kia * F_kia + m_ia * (1 - m_ia * d_kia) * F_0ia, for k=1..K-1\n";
         cerr << "where epsilon << 1 is a residual fitness for background amino-acids\n";
         cerr << '\n';
         cerr << "priors and distributions:\n";
         cerr << "G_kia ~ Exponential(1.0)\n";
-        cerr << "(m_ia)_{a=1..20} ~ IID_Bernoulli(maskprob), conditional on at least one m_ia being equal to 1\n";
+        cerr << "(m_ia)_{a=1..20} ~ IID_Bernoulli(maskprob), conditional on at least one m_ia "
+                "being equal to 1\n";
         cerr << "d_kia ~ Bernoulli(shiftprob_k)\n";
         cerr << "\n";
         cerr << "maskprob and epsilon are estimated by default (uniform prior in both cases)\n";
         cerr << "shiftprob_k is estimated and is under a mixed prior:\n";
         cerr << " - with probability 1-pi_k, shiftprob_k = 0\n";
-        cerr << " - with probability pi_k, shiftprob_k ~ Beta(shiftprobhypermean_k, shiftprobhyperinvconc_k)\n";
-        cerr << "for each condition, the model has 3 thus three key hyperparameters: pi_k, shiftprobhypermean_k and shiftprobhyperinvconc_k;\n";
-        cerr << "in single gene analyses, these parameters are always the same across conditions and can be specified by the user;\n";
-        cerr << "in multi-gene analyses, these parameters can be estimated across genes (separately for each condition, see multigenediffseldsparse).\n";
-        cerr << '\n'; 
-        cerr << "Statistical support for a differential selection effect in condition k is quantified:\n";
-        cerr << " - for a given site i and a given amino acid a, by the posterior probability that d_kia is equal to 1;\n";
-        cerr << " - for a given site i, by the posterior probability that d_kia == 1 for at least one amino-acid a;\n";
+        cerr << " - with probability pi_k, shiftprob_k ~ Beta(shiftprobhypermean_k, "
+                "shiftprobhyperinvconc_k)\n";
+        cerr << "for each condition, the model has 3 thus three key hyperparameters: pi_k, "
+                "shiftprobhypermean_k and shiftprobhyperinvconc_k;\n";
+        cerr << "in single gene analyses, these parameters are always the same across conditions "
+                "and can be specified by the user;\n";
+        cerr << "in multi-gene analyses, these parameters can be estimated across genes "
+                "(separately for each condition, see multigenediffseldsparse).\n";
+        cerr << '\n';
+        cerr << "Statistical support for a differential selection effect in condition k is "
+                "quantified:\n";
+        cerr << " - for a given site i and a given amino acid a, by the posterior probability that "
+                "d_kia is equal to 1;\n";
+        cerr << " - for a given site i, by the posterior probability that d_kia == 1 for at least "
+                "one amino-acid a;\n";
         cerr << " - for the gene: by the posterior probability that shiftprob_k > 0;\n";
-        // cerr << "of note, setting pi_k = 0.5, and noting pp_k the post prob that shiftprob_k > 0, then the Bayes factor in favor of the alternative against the null is given by BF = pp_k / (1 - pp_k)\n";
+        // cerr << "of note, setting pi_k = 0.5, and noting pp_k the post prob that shiftprob_k > 0,
+        // then the Bayes factor in favor of the alternative against the null is given by BF = pp_k
+        // / (1 - pp_k)\n";
         cerr << "\n";
         cerr << "command: diffseldsparse -d <alignment> -t <treefile> <chainname>\n";
         cerr << '\n';
         cerr << "program options:\n";
         cerr << "\t-f: force overwrite of already existing chain\n";
-        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, "
+                "until = -1)\n";
         cerr << '\n';
         cerr << "model options:\n";
         cerr << "\t-ncond <ncond>:  specify number of conditions\n";
-        cerr << "\t-pi <pi>: specify the value for pi_k (same for all k=1..K-1, default value is 0.1)\n";
-        cerr << "\t-shiftprob <mean> <invconc>: specify the values for shiftprobhypermean_k and shiftprobhyperinvconc_k (same for all k=1..K-1, default: 0.1 amd 0.1\n";
+        cerr << "\t-pi <pi>: specify the value for pi_k (same for all k=1..K-1, default value is "
+                "0.1)\n";
+        cerr << "\t-shiftprob <mean> <invconc>: specify the values for shiftprobhypermean_k and "
+                "shiftprobhyperinvconc_k (same for all k=1..K-1, default: 0.1 amd 0.1\n";
         cerr << '\n';
 
-         exit(0);
+        exit(0);
     }
 
     // this is an already existing chain on the disk; reopen and restart
@@ -298,10 +320,10 @@ int main(int argc, char *argv[]) {
                     } else {
                         epsilon = atof(argv[i]);
                     }
-                } else if (s == "-pi")  {
+                } else if (s == "-pi") {
                     i++;
                     pihypermean = atof(argv[i]);
-                } else if (s == "-shiftprob")   {
+                } else if (s == "-shiftprob") {
                     i++;
                     shiftprobmean = atof(argv[i]);
                     i++;
@@ -329,9 +351,9 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         chain = new DiffSelDoublySparseChain(datafile, treefile, ncond, nlevel, codonmodel,
-                                             fitnessshape, fitnesscentermode, epsilon,
-                                             pihypermean, shiftprobmean, shiftprobinvconc,
-                                             burnin, every, until, saveall, name, force);
+                                             fitnessshape, fitnesscentermode, epsilon, pihypermean,
+                                             shiftprobmean, shiftprobinvconc, burnin, every, until,
+                                             saveall, name, force);
     }
     cerr << "chain " << name << " started\n";
     chain->Start();

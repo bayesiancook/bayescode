@@ -12,10 +12,10 @@
  */
 class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
-
     // mode 0 : ugam
     // mode 1 : wn
-    GammaWhiteNoise(const Tree &intree, const BranchSelector<double> &inblmean, double inshape, int inmode = 0)
+    GammaWhiteNoise(const Tree &intree, const BranchSelector<double> &inblmean, double inshape,
+                    int inmode = 0)
         : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape) {
         mode = inmode;
         Sample();
@@ -23,28 +23,26 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
     ~GammaWhiteNoise() {}
 
-    void SetMode(int inmode)    {
-        mode = inmode;
-    }
+    void SetMode(int inmode) { mode = inmode; }
 
     double GetShape() const { return shape; }
 
     void SetShape(double inshape) { shape = inshape; }
 
     double GetAlpha(int i) const {
-        if (mode)   {
-            return shape*blmean.GetVal(i);
+        if (mode) {
+            return shape * blmean.GetVal(i);
         }
         return shape;
     }
 
     double GetBeta(int i) const {
-        if (mode)   {
+        if (mode) {
             return shape;
         }
         return shape / blmean.GetVal(i);
     }
-        
+
     //! sample all entries from prior
     void Sample() {
         for (int i = 0; i < GetNbranch(); i++) {
@@ -56,9 +54,11 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     void GibbsResample(const PoissonSuffStatBranchArray &suffstatarray) {
         for (int i = 0; i < GetNbranch(); i++) {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            (*this)[i] = Random::GammaSample(GetAlpha(i) + suffstat.GetCount(), GetBeta(i) + suffstat.GetBeta());
-            if ((*this)[i] == 0)    {
-                cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape << '\t' << blmean.GetVal(i) << '\n';
+            (*this)[i] = Random::GammaSample(GetAlpha(i) + suffstat.GetCount(),
+                                             GetBeta(i) + suffstat.GetBeta());
+            if ((*this)[i] == 0) {
+                cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
+                     << '\t' << blmean.GetVal(i) << '\n';
                 (*this)[i] = 0.001;
             }
         }
@@ -67,10 +67,11 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     //! resample entries based on a BranchArray of PoissonSuffStat
     void ResampleEmptyBranches(const PoissonSuffStatBranchArray &suffstatarray) {
         for (int i = 0; i < GetNbranch(); i++) {
-            if (suffstatarray.GetVal(i).GetBeta() == 0)  {
+            if (suffstatarray.GetVal(i).GetBeta() == 0) {
                 (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
-                if ((*this)[i] == 0)    {
-                    cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape << '\t' << blmean.GetVal(i) << '\n';
+                if ((*this)[i] == 0) {
+                    cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
+                         << '\t' << blmean.GetVal(i) << '\n';
                     (*this)[i] = 0.001;
                 }
             }

@@ -952,7 +952,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             tot += exp(logparray[i] - max);
             cumulprob[i] = tot;
         }
-        double logp1 = log(tot/ntry) + max;
+        double logp1 = log(tot / ntry) + max;
 
         // Multiple-Try Gibbs version
         /*
@@ -1470,11 +1470,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! return entropy of vector of equilibrium nucleotide composition
     double GetNucStatEntropy() const { return Random::GetEntropy(nucrelrate); }
 
-    double GetPredictedDNDS() const  {
-
+    double GetPredictedDNDS() const {
         double mean = 0;
-        for (int i=0; i<Ncat; i++) {
-            if (occupancy->GetVal(i))   {
+        for (int i = 0; i < Ncat; i++) {
+            if (occupancy->GetVal(i)) {
                 mean += occupancy->GetVal(i) * (*componentcodonmatrixarray)[i].GetPredictedDNDS();
             }
         }

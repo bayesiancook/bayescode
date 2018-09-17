@@ -71,8 +71,9 @@ class DiffSelDoublySparseSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "DIFFSELSPARSE") {
-            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape,
-                                                 pihypermean, shiftprobmean, shiftprobinvconc);
+            model = new DiffSelDoublySparseModel(datafile, treefile, ncond, nlevel, codonmodel,
+                                                 epsilon, fitnessshape, pihypermean, shiftprobmean,
+                                                 shiftprobinvconc);
             GetModel()->SetFitnessCenterMode(fitnesscentermode);
         } else {
             cerr << "error when opening file " << name << '\n';
@@ -241,7 +242,7 @@ int main(int argc, char *argv[]) {
     DiffSelDoublySparseSample *sample = new DiffSelDoublySparseSample(name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
-    } else  {
+    } else {
         sample->ReadPP(cutoff, siteoffset);
     }
 }

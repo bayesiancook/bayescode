@@ -99,9 +99,7 @@ void SequenceAlignment::ToStreamTriplet(ostream &os) const {
 
 FileSequenceAlignment::FileSequenceAlignment(string filename) { ReadDataFromFile(filename, 0); }
 
-FileSequenceAlignment::FileSequenceAlignment(std::istream& is)  {
-    
-}
+FileSequenceAlignment::FileSequenceAlignment(std::istream &is) {}
 
 int FileSequenceAlignment::ReadDataFromFile(string filespec, int forceinterleaved) {
     string tmp;
@@ -485,7 +483,7 @@ void FileSequenceAlignment::ReadPhylipSequential(string filespec) {
     ReadPhylipSequentialFromStream(theStream);
 }
 
-void FileSequenceAlignment::ReadPhylipSequentialFromStream(istream& theStream) {
+void FileSequenceAlignment::ReadPhylipSequentialFromStream(istream &theStream) {
     try {
         string temp;
         theStream >> temp;

@@ -16,13 +16,13 @@ class DoubleVectorTree : public Tree {
         for (std::size_t i = 0; i < input_tree.nb_nodes(); i++) {
             parent_.push_back(input_tree.parent(i));
             children_.emplace_back(input_tree.children(i).begin(), input_tree.children(i).end());
-            name_.push_back(input_tree.tag(i,"name"));
+            name_.push_back(input_tree.tag(i, "name"));
         }
     }
 
     const std::set<NodeIndex>& children(NodeIndex node) const final { return children_.at(node); }
     NodeIndex parent(NodeIndex node) const final { return parent_.at(node); }
-    std::string node_name(NodeIndex node) const final {return name_[node];}
+    std::string node_name(NodeIndex node) const final { return name_[node]; }
     NodeIndex root() const final { return root_; }
     std::size_t nb_nodes() const final { return parent_.size(); }
     bool is_root(NodeIndex i) const final { return i == root_; }
@@ -68,9 +68,10 @@ class TreeElementVector {
     std::vector<int> index_;
 
     template <class E>
-    friend TreeElementVector<E> taxa_container_from_parser(
-        TreeParser& parser, const std::vector<std::string>& taxa,
-        E (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&));
+    friend TreeElementVector<E> taxa_container_from_parser(TreeParser& parser,
+                                                           const std::vector<std::string>& taxa,
+                                                           E (*init)(AnnotatedTree::NodeIndex,
+                                                                     const AnnotatedTree&));
 
   public:
     using NodeIndex = AnnotatedTree::NodeIndex;

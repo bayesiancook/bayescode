@@ -18,7 +18,7 @@ class SiteOmegaChain : public Chain {
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
     SiteOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
-                     int force)
+                   int force)
         : modeltype("SITEOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;

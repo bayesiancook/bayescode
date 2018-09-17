@@ -46,14 +46,12 @@ class TaxonSet {
     //! formatted output to stream
     void ToStream(std::ostream &os) const;
 
-    std::vector<int> get_index_table(const Tree* tree) const;
+    std::vector<int> get_index_table(const Tree *tree) const;
 
   private:
-
     int Ntaxa;
     std::map<std::string, int> taxmap;
     std::vector<std::string> taxlist;
-
 };
 
 inline int TaxonSet::GetTaxonIndex(std::string intaxon) const {

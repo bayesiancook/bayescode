@@ -18,16 +18,14 @@
 // - master collects nuc path suffstats across genes, moves nuc rates and
 // broadcasts their new value
 
+#include "IIDDirichlet.hpp"
+#include "IIDGamma.hpp"
 #include "MultiGeneProbModel.hpp"
 #include "Parallel.hpp"
 #include "SingleOmegaModel.hpp"
-#include "IIDDirichlet.hpp"
-#include "IIDGamma.hpp"
 
 class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
-
   private:
-
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
@@ -97,10 +95,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneProbModel(inmyid, innprocs),
-          nucrelratesuffstat(Nrr),
-          nucstatsuffstat(Nnuc) {
-
+        : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
         blmode = 1;
         nucmode = 1;
         omegamode = 1;
@@ -129,7 +124,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void Allocate() {
-
         // Branch lengths
 
         lambda = 10;
@@ -140,8 +134,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
             lengthhypersuffstatarray = 0;
         } else {
             branchlength->SetAllBranches(1.0 / lambda);
-            branchlengtharray =
-                new GammaWhiteNoiseArray(GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+            branchlengtharray = new GammaWhiteNoiseArray(GetLocalNgene(), *tree, *branchlength,
+                                                         1.0 / blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -155,12 +149,13 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         nucstathyperinvconc = 0.1 / Nnuc;
 
         if (nucmode == 2) {
-            nucrelratearray = new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucrelratearray =
+                new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
-            nucrelratearray =
-                new IIDDirichlet(GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucrelratearray = new IIDDirichlet(GetLocalNgene(), nucrelratehypercenter,
+                                               1.0 / nucrelratehyperinvconc);
             nucstatarray =
                 new IIDDirichlet(GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
@@ -174,7 +169,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         */
         omegaarray = new IIDGamma(GetLocalNgene(), omegahypermean, omegahyperinvshape);
 
-        // Gene processes 
+        // Gene processes
 
         lnL = 0;
         GeneLogPrior = 0;
@@ -193,22 +188,21 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     // called upon constructing the model
-    // mode == 2: global 
+    // mode == 2: global
     // mode == 1: gene specific, with hyperparameters estimated across genes
     // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode)   {
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode) {
         blmode = inblmode;
         nucmode = innucmode;
         omegamode = inomegamode;
     }
 
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)  {
+    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
     }
 
     void FastUpdate() {
-
         branchlength->SetScale(lambda);
         if (blmode == 1) {
             branchlengtharray->SetShape(1.0 / blhyperinvshape);
@@ -223,7 +217,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void MasterUpdate() override {
-
         FastUpdate();
 
         if (nprocs > 1) {
@@ -249,7 +242,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveUpdate() override {
-
         SlaveReceiveBranchLengthsHyperParameters();
         SlaveReceiveNucRatesHyperParameters();
 
@@ -371,8 +363,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         os << '\t' << nucstatarray->GetMeanEntropy();
         os << '\t' << nucrelratearray->GetMeanEntropy();
         if (nucmode != 2) {
-            os << '\t' << sqrt(GetVarNucRelRate()) << '\t' << Random::GetEntropy(nucrelratehypercenter)
-               << '\t' << nucrelratehyperinvconc;
+            os << '\t' << sqrt(GetVarNucRelRate()) << '\t'
+               << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc;
             os << '\t' << sqrt(GetVarNucStat()) << '\t' << Random::GetEntropy(nucstathypercenter)
                << '\t' << nucstathyperinvconc;
         }
@@ -461,7 +453,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     void Monitor(ostream &os) const {}
 
     void MasterFromStream(istream &is) {
-
         if (blmode == 2) {
             is >> lambda;
             is >> *branchlength;
@@ -485,7 +476,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void MasterToStream(ostream &os) const {
-
         if (blmode == 2) {
             os << lambda << '\t';
             os << *branchlength << '\t';
@@ -743,7 +733,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-
             MoveGeneParameters(1.0);
 
             if (omegamode == 1) {
@@ -787,7 +776,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MoveGeneParameters(int nrep)   {
+    void MoveGeneParameters(int nrep) {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(nrep);
 
@@ -803,11 +792,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     // Branch lengths
 
-    void ResampleBranchLengths() {
-        branchlength->GibbsResample(*lengthpathsuffstatarray);
-    }
+    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
-    void ResampleGeneBranchLengths()   {
+    void ResampleGeneBranchLengths() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->ResampleBranchLengths();
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
@@ -825,7 +812,6 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void MoveBranchLengthsHyperParameters() {
-
         BranchLengthsHyperScalingMove(1.0, 10);
         BranchLengthsHyperScalingMove(0.3, 10);
 
@@ -870,24 +856,33 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // Nucleotide rates
 
     void MoveNucRatesHyperParameters() {
-        ProfileMove(nucrelratehypercenter, 1.0, 1, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 1.0, 1, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.3, 1, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 0.3, 1, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.1, 3, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 0.1, 3, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 1.0, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 1.0, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.3, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 0.3, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.03, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 0.03, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
 
-        ProfileMove(nucstathypercenter, 1.0, 1, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 1.0, 1, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.3, 1, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 0.3, 1, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.1, 2, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 0.1, 2, 10,
+                    &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
         ScalingMove(nucstathyperinvconc, 1.0, 10, &MultiGeneSingleOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneSingleOmegaModel::NoUpdate, this);
@@ -963,9 +958,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MasterSendGeneBranchLengths() {
-        MasterSendGeneArray(*branchlengtharray);
-    }
+    void MasterSendGeneBranchLengths() { MasterSendGeneArray(*branchlengtharray); }
 
     void SlaveReceiveGeneBranchLengths() {
         SlaveReceiveGeneArray(*branchlengtharray);
@@ -977,14 +970,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     void SlaveSendGeneBranchLengths() {
         // in principle, redundant..
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
         SlaveSendGeneArray(*branchlengtharray);
     }
 
-    void MasterReceiveGeneBranchLengths() {
-        MasterReceiveGeneArray(*branchlengtharray);
-    }
+    void MasterReceiveGeneBranchLengths() { MasterReceiveGeneArray(*branchlengtharray); }
 
     void SlaveSendBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
@@ -1025,9 +1016,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MasterSendGeneNucRates() {
-        MasterSendGeneArray(*nucrelratearray, *nucstatarray);
-    }
+    void MasterSendGeneNucRates() { MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
 
     void SlaveReceiveGeneNucRates() {
         SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
@@ -1037,13 +1026,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void SlaveSendGeneNucRates() {
-        SlaveSendGeneArray(*nucrelratearray, *nucstatarray);
-    }
+    void SlaveSendGeneNucRates() { SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
 
-    void MasterReceiveGeneNucRates() {
-        MasterReceiveGeneArray(*nucrelratearray, *nucstatarray);
-    }
+    void MasterReceiveGeneNucRates() { MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
 
     void MasterSendNucRatesHyperParameters() {
         MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
@@ -1055,7 +1040,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
 
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter, nucrelratehyperinvconc,
+            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
+                                                          nucrelratehyperinvconc,
                                                           nucstathypercenter, nucstathyperinvconc);
         }
     }

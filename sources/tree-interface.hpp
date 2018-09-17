@@ -14,7 +14,8 @@ class Tree {
     virtual std::size_t nb_nodes() const = 0;
     virtual bool is_leaf(NodeIndex) const = 0;  // (for convenience)
     virtual bool is_root(NodeIndex) const = 0;  // (for convenience)
-    // virtual const std::set<NodeIndex>& neighbors(NodeIndex) const = 0;  // for unrooted searches, non-negligible cost
+    // virtual const std::set<NodeIndex>& neighbors(NodeIndex) const = 0;  // for unrooted searches,
+    // non-negligible cost
 
     virtual ~Tree() = default;
 };

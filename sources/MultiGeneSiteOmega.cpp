@@ -21,9 +21,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
     double omegainvshapehypermean, omegainvshapehyperinvshape;
 
   public:
-    MultiGeneSiteOmegaModel *GetModel() {
-        return static_cast<MultiGeneSiteOmegaModel *>(model);
-    }
+    MultiGeneSiteOmegaModel *GetModel() { return static_cast<MultiGeneSiteOmegaModel *>(model); }
 
     string GetModelType() override { return modeltype; }
 
@@ -36,11 +34,11 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
     //! \param name: base name for all files related to this MCMC run
     //! \param force: overwrite existing files with same name
     //! \param inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneSiteOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode, int inomegamode,
-                              double inomegameanhypermean, double inomegameanhyperinvshape, 
-                              double inomegainvshapehypermean, double inomegainvshapehyperinvshape, 
-                              int inevery, int inuntil, int inwritegenedata,
-                              string inname, int force, int inmyid, int innprocs)
+    MultiGeneSiteOmegaChain(string indatafile, string intreefile, int inblmode, int innucmode,
+                            int inomegamode, double inomegameanhypermean,
+                            double inomegameanhyperinvshape, double inomegainvshapehypermean,
+                            double inomegainvshapehyperinvshape, int inevery, int inuntil,
+                            int inwritegenedata, string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENESITEOMEGA"),
           datafile(indatafile),
@@ -69,8 +67,9 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneSiteOmegaModel(datafile, treefile, myid, nprocs);
-        GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
-        GetModel()->SetOmegaHyperParameters(omegameanhypermean, omegameanhyperinvshape, omegainvshapehypermean, omegainvshapehyperinvshape);
+        GetModel()->SetAcrossGenesModes(blmode, nucmode, omegamode);
+        GetModel()->SetOmegaHyperParameters(omegameanhypermean, omegameanhyperinvshape,
+                                            omegainvshapehypermean, omegainvshapehyperinvshape);
         if (!myid) {
             cerr << "allocate\n";
         }
@@ -107,8 +106,9 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENESITEOMEGA") {
             model = new MultiGeneSiteOmegaModel(datafile, treefile, myid, nprocs);
-            GetModel()->SetAcrossGenesModes(blmode,nucmode,omegamode);
-            GetModel()->SetOmegaHyperParameters(omegameanhypermean, omegameanhyperinvshape, omegainvshapehypermean, omegainvshapehyperinvshape);
+            GetModel()->SetAcrossGenesModes(blmode, nucmode, omegamode);
+            GetModel()->SetOmegaHyperParameters(omegameanhypermean, omegameanhyperinvshape,
+                                                omegainvshapehypermean, omegainvshapehyperinvshape);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -152,7 +152,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
             exit(1);
         }
         MultiGeneChain::MakeFiles(force);
-        if (writegenedata)  {
+        if (writegenedata) {
             ofstream os((name + ".geneom").c_str());
             if (writegenedata == 2) {
                 ofstream os((name + ".siteom").c_str());
@@ -162,7 +162,7 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata == 1)  {
+        if (writegenedata == 1) {
             if (!myid) {
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 GetModel()->TraceOmega(os);
@@ -309,9 +309,9 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneSiteOmegaChain(datafile, treefile, blmode, nucmode, omegamode,
-                                              omegameanhypermean, omegameanhyperinvshape, omegainvshapehypermean, omegainvshapehyperinvshape,
-                                              every, until, writegenedata, name, force, myid,
-                                              nprocs);
+                                            omegameanhypermean, omegameanhyperinvshape,
+                                            omegainvshapehypermean, omegainvshapehyperinvshape,
+                                            every, until, writegenedata, name, force, myid, nprocs);
     }
 
     if (!myid) {

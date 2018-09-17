@@ -11,7 +11,7 @@
  *
  * In DiffSelModel and DiffSelSparseModel, the substitution process varies
  * across sites and across the k=0..K-1 conditions. In addition, each branch is
- * allocated to one of the K conditions 
+ * allocated to one of the K conditions
  * Accordingly, SubMatrixSelector returns, for a given branch and a given site,
  * a pointer to the substitution matrix corresponding to that site, and under
  * the condition being active for that branch.
@@ -22,7 +22,7 @@ class SubMatrixSelector : public BranchSiteSelector<SubMatrix> {
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
     SubMatrixSelector(const BidimSelector<SubMatrix> &inmatrixbidimarray,
-                      const BranchSelector<int>& inbranchalloc)
+                      const BranchSelector<int> &inbranchalloc)
         : matrixbidimarray(inmatrixbidimarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }

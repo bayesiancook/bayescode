@@ -315,7 +315,6 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
 };
 
 class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
-
   public:
     //! constructor, parameterized by underlying tree and size (number of genes)
     PoissonSuffStatTreeArray(const Tree &intree, int insize)

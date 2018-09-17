@@ -99,10 +99,10 @@ void PhyloProcess::Unfold() {
     for (int i = 0; i < GetNsite(); i++) {
         sitearray[i] = 1;
     }
-    statemap = new int*[GetNnode()];
-    uppercondlmap = new double*[GetNnode()];
-    lowercondlmap = new double*[GetNnode()];
-    pathmap = new BranchSitePath**[GetNnode()];
+    statemap = new int *[GetNnode()];
+    uppercondlmap = new double *[GetNnode()];
+    lowercondlmap = new double *[GetNnode()];
+    pathmap = new BranchSitePath **[GetNnode()];
 
     CreateMissingMap();
     FillMissingMap();
@@ -161,7 +161,7 @@ void PhyloProcess::BackwardFillMissingMap(Tree::NodeIndex from) {
     for (int i = 0; i < GetNsite(); i++) {
         missingmap[from][i] = 0;
     }
-    if (tree->is_leaf(from))    {
+    if (tree->is_leaf(from)) {
         for (int i = 0; i < GetNsite(); i++) {
             int state = GetData(from, i);
             if (state != -1) {
@@ -181,8 +181,7 @@ void PhyloProcess::BackwardFillMissingMap(Tree::NodeIndex from) {
 }
 
 void PhyloProcess::ForwardFillMissingMap(Tree::NodeIndex from, Tree::NodeIndex up) {
-
-    if (tree->is_root(from))    {
+    if (tree->is_root(from)) {
         for (int i = 0; i < GetNsite(); i++) {
             if (missingmap[from][i] <= 1) {
                 missingmap[from][i] = 0;
@@ -210,7 +209,7 @@ void PhyloProcess::ForwardFillMissingMap(Tree::NodeIndex from, Tree::NodeIndex u
     }
 }
 
-void PhyloProcess::RecursiveCreate(Tree::NodeIndex from)    {
+void PhyloProcess::RecursiveCreate(Tree::NodeIndex from) {
     auto state = new int[GetNsite()];
     statemap[from] = state;
 
@@ -225,7 +224,7 @@ void PhyloProcess::RecursiveCreate(Tree::NodeIndex from)    {
     }
 }
 
-void PhyloProcess::RecursiveDelete(Tree::NodeIndex from)    {
+void PhyloProcess::RecursiveDelete(Tree::NodeIndex from) {
     for (auto c : tree->children(from)) {
         RecursiveDelete(c);
     }
@@ -318,7 +317,7 @@ double PhyloProcess::GetLogLikelihood() const {
 
 void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
     double *t = uppercondlmap[from];
-    if (tree->is_leaf(from))    {
+    if (tree->is_leaf(from)) {
         int totcomp = 0;
         for (int k = 0; k < GetNstate(); k++) {
             // polyprocess here
@@ -343,7 +342,8 @@ void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
         t[GetNstate()] = 0;
         for (auto c : tree->children(from)) {
             Pruning(c, site);
-            GetSubMatrix(c, site).BackwardPropagate(uppercondlmap[c], lowercondlmap[c], GetBranchLength(c)*GetSiteRate(site));
+            GetSubMatrix(c, site).BackwardPropagate(uppercondlmap[c], lowercondlmap[c],
+                                                    GetBranchLength(c) * GetSiteRate(site));
             double *tbl = lowercondlmap[c];
             for (int k = 0; k < GetNstate(); k++) {
                 t[k] *= tbl[k];
@@ -366,7 +366,7 @@ void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
         if (max == 0) {
             cerr << "max = 0\n";
             cerr << "error in pruning: null likelihood\n";
-            if (tree->is_root(from))    {
+            if (tree->is_root(from)) {
                 cerr << "is root\n";
             }
             cerr << '\n';
@@ -381,7 +381,7 @@ void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
 }
 
 void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
-    if (tree->is_root(from))    {
+    if (tree->is_root(from)) {
         double aux[GetNstate()];
         double cumulaux[GetNstate()];
         try {
@@ -412,14 +412,15 @@ void PhyloProcess::PruningAncestral(Tree::NodeIndex from, int site) {
             throw;
         }
     }
-    for (auto c : tree->children(from))   {
+    for (auto c : tree->children(from)) {
         double aux[GetNstate()];
         double cumulaux[GetNstate()];
         try {
             for (int k = 0; k < GetNstate(); k++) {
                 aux[k] = 1;
             }
-            GetSubMatrix(c, site).GetFiniteTimeTransitionProb(statemap[from][site], aux, GetBranchLength(c)*GetSiteRate(site));
+            GetSubMatrix(c, site).GetFiniteTimeTransitionProb(
+                statemap[from][site], aux, GetBranchLength(c) * GetSiteRate(site));
             double *tbl = uppercondlmap[c];
             for (int k = 0; k < GetNstate(); k++) {
                 aux[k] *= tbl[k];
@@ -482,7 +483,7 @@ void PhyloProcess::RootPosteriorDraw(int site) {
 
 void PhyloProcess::PriorSample(Tree::NodeIndex from, int site, bool rootprior) {
     int &state = statemap[from][site];
-    if (tree->is_root(from))    {
+    if (tree->is_root(from)) {
         if (rootprior) {
             state = Random::DrawFromDiscreteDistribution(GetRootFreq(site), GetNstate());
         } else {
@@ -490,7 +491,8 @@ void PhyloProcess::PriorSample(Tree::NodeIndex from, int site, bool rootprior) {
         }
     }
     for (auto c : tree->children(from)) {
-        statemap[c][site] = GetSubMatrix(c, site).DrawFiniteTime(state, GetBranchLength(c) * GetSiteRate(site));
+        statemap[c][site] =
+            GetSubMatrix(c, site).DrawFiniteTime(state, GetBranchLength(c) * GetSiteRate(site));
         PriorSample(c, site, rootprior);
     }
 }
@@ -552,14 +554,14 @@ void PhyloProcess::ResampleSub(int site) {
 }
 
 void PhyloProcess::ResampleSub(Tree::NodeIndex from, int site) {
-
-    if (tree->is_root(from))    {
+    if (tree->is_root(from)) {
         delete pathmap[from][site];
         pathmap[from][site] = SampleRootPath(statemap[from][site]);
     }
     for (auto c : tree->children(from)) {
         delete pathmap[c][site];
-        pathmap[c][site] = SamplePath(statemap[from][site], statemap[c][site], GetBranchLength(c), GetSiteRate(site), GetSubMatrix(c, site));
+        pathmap[c][site] = SamplePath(statemap[from][site], statemap[c][site], GetBranchLength(c),
+                                      GetSiteRate(site), GetSubMatrix(c, site));
         ResampleSub(c, site);
     }
 }
@@ -582,9 +584,9 @@ void PhyloProcess::PostPredSample(int site, bool rootprior) {
     PriorSample(GetRoot(), site, rootprior);
 }
 
-void PhyloProcess::GetLeafData(SequenceAlignment *data) { 
-    for (size_t node=0; node<tree->nb_nodes(); node++) {
-        if (tree->is_leaf(node))    {
+void PhyloProcess::GetLeafData(SequenceAlignment *data) {
+    for (size_t node = 0; node < tree->nb_nodes(); node++) {
+        if (tree->is_leaf(node)) {
             int tax = taxon_table[node];
             for (int site = 0; site < GetNsite(); site++) {
                 int state = statemap[tax][site];
@@ -738,7 +740,7 @@ void PhyloProcess::AddPathSuffStat(PathSuffStat &suffstat) const {
 
 void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suffstat) const {
     LocalAddPathSuffStat(from, suffstat);
-    for (auto c : tree->children(from))   {
+    for (auto c : tree->children(from)) {
         RecursiveAddPathSuffStat(c, suffstat);
     }
 }
@@ -748,7 +750,7 @@ void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suff
         if (missingmap[from][i] == 2) {
             suffstat.IncrementRootCount(statemap[from][i]);
         } else if (missingmap[from][i] == 1) {
-            if (tree->is_root(from))    {
+            if (tree->is_root(from)) {
                 cerr << "error in missing map\n";
                 exit(1);
             }
@@ -765,28 +767,28 @@ void PhyloProcess::AddPathSuffStat(BidimArray<PathSuffStat> &suffstatarray,
 void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from,
                                             BidimArray<PathSuffStat> &suffstatarray,
                                             const BranchSelector<int> &branchalloc) const {
-    if (tree->is_root(from))    {
+    if (tree->is_root(from)) {
         LocalAddPathSuffStat(from, suffstatarray, 0);
     } else {
-        LocalAddPathSuffStat(from, suffstatarray,
-                             branchalloc.GetVal(GetBranchIndex(from)));
+        LocalAddPathSuffStat(from, suffstatarray, branchalloc.GetVal(GetBranchIndex(from)));
     }
     for (auto c : tree->children(from)) {
         RecursiveAddPathSuffStat(c, suffstatarray, branchalloc);
     }
 }
 
-void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray,
-                                        int cond) const {
+void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from,
+                                        BidimArray<PathSuffStat> &suffstatarray, int cond) const {
     for (int i = 0; i < GetNsite(); i++) {
         if (missingmap[from][i] == 2) {
             suffstatarray(cond, i).IncrementRootCount(statemap[from][i]);
         } else if (missingmap[from][i] == 1) {
-            if (tree->is_root(from))    {
+            if (tree->is_root(from)) {
                 cerr << "error in missing map\n";
                 exit(1);
             }
-            pathmap[from][i]->AddPathSuffStat(suffstatarray(cond, i), GetBranchLength(from) * GetSiteRate(i));
+            pathmap[from][i]->AddPathSuffStat(suffstatarray(cond, i),
+                                              GetBranchLength(from) * GetSiteRate(i));
         }
     }
 }
@@ -803,16 +805,18 @@ void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from,
     }
 }
 
-void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const {
+void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from,
+                                        Array<PathSuffStat> &suffstatarray) const {
     for (int i = 0; i < GetNsite(); i++) {
         if (missingmap[from][i] == 2) {
             suffstatarray[i].IncrementRootCount(statemap[from][i]);
         } else if (missingmap[from][i] == 1) {
-            if (tree->is_root(from))    {
+            if (tree->is_root(from)) {
                 cerr << "error in missing map\n";
                 exit(1);
             }
-            pathmap[from][i]->AddPathSuffStat(suffstatarray[i], GetBranchLength(from) * GetSiteRate(i));
+            pathmap[from][i]->AddPathSuffStat(suffstatarray[i],
+                                              GetBranchLength(from) * GetSiteRate(i));
         }
     }
 }
@@ -821,23 +825,26 @@ void PhyloProcess::AddPathSuffStat(NodeArray<PathSuffStat> &suffstatarray) const
     RecursiveAddPathSuffStat(GetRoot(), suffstatarray);
 }
 
-void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const {
+void PhyloProcess::RecursiveAddPathSuffStat(Tree::NodeIndex from,
+                                            NodeArray<PathSuffStat> &suffstatarray) const {
     LocalAddPathSuffStat(from, suffstatarray);
     for (auto c : tree->children(from)) {
         RecursiveAddPathSuffStat(c, suffstatarray);
     }
 }
 
-void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const {
+void PhyloProcess::LocalAddPathSuffStat(Tree::NodeIndex from,
+                                        NodeArray<PathSuffStat> &suffstatarray) const {
     for (int i = 0; i < GetNsite(); i++) {
         if (missingmap[from][i] == 2) {
             suffstatarray[from].IncrementRootCount(statemap[from][i]);
         } else if (missingmap[from][i] == 1) {
-            if (tree->is_root(from))    {
+            if (tree->is_root(from)) {
                 cerr << "error in missing map\n";
                 exit(1);
             }
-            pathmap[from][i]->AddPathSuffStat(suffstatarray[from], GetBranchLength(from) * GetSiteRate(i));
+            pathmap[from][i]->AddPathSuffStat(suffstatarray[from],
+                                              GetBranchLength(from) * GetSiteRate(i));
         }
     }
 }
@@ -847,8 +854,9 @@ void PhyloProcess::AddLengthSuffStat(
     RecursiveAddLengthSuffStat(GetRoot(), branchlengthpathsuffstatarray);
 }
 
-void PhyloProcess::RecursiveAddLengthSuffStat(Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const {
-    if (! tree->is_root(from))  {
+void PhyloProcess::RecursiveAddLengthSuffStat(
+    Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const {
+    if (!tree->is_root(from)) {
         LocalAddLengthSuffStat(from, branchlengthpathsuffstatarray[GetBranchIndex(from)]);
     }
     for (auto c : tree->children(from)) {
@@ -868,8 +876,9 @@ void PhyloProcess::AddRateSuffStat(Array<PoissonSuffStat> &siteratepathsuffstata
     RecursiveAddRateSuffStat(GetRoot(), siteratepathsuffstatarray);
 }
 
-void PhyloProcess::RecursiveAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const {
-    if (! tree->is_root(from))  {
+void PhyloProcess::RecursiveAddRateSuffStat(
+    Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const {
+    if (!tree->is_root(from)) {
         LocalAddRateSuffStat(from, siteratepathsuffstatarray);
     }
     for (auto c : tree->children(from)) {
@@ -877,11 +886,13 @@ void PhyloProcess::RecursiveAddRateSuffStat(Tree::NodeIndex from, Array<PoissonS
     }
 }
 
-void PhyloProcess::LocalAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const {
+void PhyloProcess::LocalAddRateSuffStat(Tree::NodeIndex from,
+                                        Array<PoissonSuffStat> &siteratepathsuffstatarray) const {
     double length = GetBranchLength(from);
     for (int i = 0; i < GetNsite(); i++) {
         if (missingmap[from][i] == 1) {
-            pathmap[from][i]->AddLengthSuffStat(siteratepathsuffstatarray[i], length, GetSubMatrix(from, i));
+            pathmap[from][i]->AddLengthSuffStat(siteratepathsuffstatarray[i], length,
+                                                GetSubMatrix(from, i));
         }
     }
 }

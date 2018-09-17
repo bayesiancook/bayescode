@@ -178,7 +178,7 @@ class FileSequenceAlignment : public SequenceAlignment {
     int ReadSpecial(std::string filename);
     int TestPhylipSequential(std::string filespec);
     void ReadPhylipSequential(std::string filespec);
-    void ReadPhylipSequentialFromStream(std::istream& is);
+    void ReadPhylipSequentialFromStream(std::istream &is);
     int TestPhylip(std::string filespec, int repeattaxa);
     void ReadPhylip(std::string filespec, int repeattaxa);
 };

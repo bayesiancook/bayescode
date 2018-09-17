@@ -22,11 +22,11 @@ TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxl
     }
 }
 
-std::vector<int> TaxonSet::get_index_table(const Tree* tree) const {
-    std::vector<int> ret(tree->nb_nodes(),-1);
-    for (size_t node=0; node<tree->nb_nodes(); node++)   {
-        if (tree->is_leaf(node))    {
-            if (tree->node_name(node) == "")   {
+std::vector<int> TaxonSet::get_index_table(const Tree *tree) const {
+    std::vector<int> ret(tree->nb_nodes(), -1);
+    for (size_t node = 0; node < tree->nb_nodes(); node++) {
+        if (tree->is_leaf(node)) {
+            if (tree->node_name(node) == "") {
                 cerr << "error: leaf has no name\n";
                 exit(1);
             }

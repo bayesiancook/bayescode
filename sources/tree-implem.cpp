@@ -1,6 +1,6 @@
 
-#include <map>
 #include "tree-implem.hpp"
+#include <map>
 
 std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<std::string>& taxa) {
     using NodeIndex = AnnotatedTree::NodeIndex;
@@ -29,4 +29,3 @@ std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<st
 std::unique_ptr<const Tree> make_from_parser(TreeParser& parser) {
     return std::unique_ptr<Tree>(new DoubleVectorTree(parser.get_tree()));
 }
-

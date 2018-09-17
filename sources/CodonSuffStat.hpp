@@ -113,26 +113,25 @@ class NucPathSuffStat : public SuffStat {
         // void AddSuffStat(const MGOmegaCodonSubMatrixBranchArray& codonmatrixtree,
         // const MGOmegaCodonSubMatrix& rootcodonmatrix, const
         // PathSuffStatNodeArray& codonpathsuffstatnodearray)    {
-        RecursiveAddSuffStat(codonmatrixtree.GetTree(), codonmatrixtree.GetTree().root(), codonmatrixtree, rootcodonmatrix,
-                             codonpathsuffstatnodearray);
+        RecursiveAddSuffStat(codonmatrixtree.GetTree(), codonmatrixtree.GetTree().root(),
+                             codonmatrixtree, rootcodonmatrix, codonpathsuffstatnodearray);
     }
 
-    int GetBranchIndex(int index) const     {
-        return index-1;
-    }
+    int GetBranchIndex(int index) const { return index - 1; }
 
-    void RecursiveAddSuffStat(const Tree& tree, Tree::NodeIndex from, 
+    void RecursiveAddSuffStat(const Tree &tree, Tree::NodeIndex from,
                               const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
                               const MGOmegaCodonSubMatrix &rootcodonmatrix,
                               const PathSuffStatNodeArray &codonpathsuffstatnodearray) {
-
         if (tree.is_root(from)) {
             AddSuffStat(rootcodonmatrix, codonpathsuffstatnodearray.GetVal(from));
         } else {
-            AddSuffStat(codonmatrixtree.GetVal(GetBranchIndex(from)), codonpathsuffstatnodearray.GetVal(from));
+            AddSuffStat(codonmatrixtree.GetVal(GetBranchIndex(from)),
+                        codonpathsuffstatnodearray.GetVal(from));
         }
-        for (auto c : tree.children(from))  {
-            RecursiveAddSuffStat(tree, c, codonmatrixtree, rootcodonmatrix, codonpathsuffstatnodearray);
+        for (auto c : tree.children(from)) {
+            RecursiveAddSuffStat(tree, c, codonmatrixtree, rootcodonmatrix,
+                                 codonpathsuffstatnodearray);
         }
     }
 
@@ -369,26 +368,28 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
     void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                      const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
                      const BranchSelector<int> &alloc) {
-        RecursiveAddSuffStat(alloc.GetTree(), alloc.GetTree().root(), codonsubmatrixarray, pathsuffstatnodearray,
-                             alloc);
+        RecursiveAddSuffStat(alloc.GetTree(), alloc.GetTree().root(), codonsubmatrixarray,
+                             pathsuffstatnodearray, alloc);
     }
 
-    void RecursiveAddSuffStat(const Tree& tree, Tree::NodeIndex from,
+    void RecursiveAddSuffStat(const Tree &tree, Tree::NodeIndex from,
                               const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                               const NodeSelector<PathSuffStat> &pathsuffstatnodearray,
                               const BranchSelector<int> &alloc) {
-        if (! tree.is_root(from))   {
+        if (!tree.is_root(from)) {
             int i = alloc.GetVal(from);
-            (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatnodearray.GetVal(from));
+            (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i),
+                                   pathsuffstatnodearray.GetVal(from));
         }
-        for (auto c : tree.children(from))  {
+        for (auto c : tree.children(from)) {
             RecursiveAddSuffStat(tree, c, codonsubmatrixarray, pathsuffstatnodearray, alloc);
         }
     }
 
     //! compute omega suff stats and do a member-wise addition -- for
     //! mutation-selection codon matrices
-    void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix> &codonsubmatrixarray, const Selector<PathSuffStat> &pathsuffstatarray) {
+    void AddSuffStat(const Selector<AAMutSelOmegaCodonSubMatrix> &codonsubmatrixarray,
+                     const Selector<PathSuffStat> &pathsuffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             (*this)[i].AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
@@ -495,20 +496,18 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
                              pathsuffstatarray);
     }
 
-    int GetBranchIndex(int index) const {
-        return index-1;
-    }
+    int GetBranchIndex(int index) const { return index - 1; }
 
-    void RecursiveAddSuffStat(Tree::NodeIndex from, 
+    void RecursiveAddSuffStat(Tree::NodeIndex from,
                               const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                               const MGOmegaCodonSubMatrix &rootcodonsubmatrix,
                               const NodeSelector<PathSuffStat> &pathsuffstatarray) {
-        if (! GetTree().is_root(from))    {
-            (*this)[GetBranchIndex(from)].AddSuffStat(codonsubmatrixarray.GetVal(GetBranchIndex(from)),pathsuffstatarray.GetVal(from));
+        if (!GetTree().is_root(from)) {
+            (*this)[GetBranchIndex(from)].AddSuffStat(
+                codonsubmatrixarray.GetVal(GetBranchIndex(from)), pathsuffstatarray.GetVal(from));
         }
         for (auto c : GetTree().children(from)) {
-            RecursiveAddSuffStat(c, codonsubmatrixarray, rootcodonsubmatrix,
-                                 pathsuffstatarray);
+            RecursiveAddSuffStat(c, codonsubmatrixarray, rootcodonsubmatrix, pathsuffstatarray);
         }
     }
 

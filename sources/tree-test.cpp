@@ -2,14 +2,13 @@
 #include <map>
 #include "tree-implem.hpp"
 
-int tree_size(const Tree* tree, Tree::NodeIndex from)  {
-
-    if (tree->is_leaf(from))    {
+int tree_size(const Tree* tree, Tree::NodeIndex from) {
+    if (tree->is_leaf(from)) {
         return 1;
     }
     int tot = 0;
     for (auto c : tree->children(from)) {
-        tot += tree_size(tree,c);
+        tot += tree_size(tree, c);
     }
     return tot;
 }
@@ -26,10 +25,10 @@ int main() {
 
     const Tree* tree2 = tree.get();
 
-    std::cout << "tree size : " << tree_size(tree2,tree2->root()) << '\n';
+    std::cout << "tree size : " << tree_size(tree2, tree2->root()) << '\n';
     exit(1);
 
-    for (size_t i=0; i<tree->nb_nodes(); i++)   {
+    for (size_t i = 0; i < tree->nb_nodes(); i++) {
         std::cout << i << '\t' << tree->node_name(i) << '\n';
     }
     exit(1);

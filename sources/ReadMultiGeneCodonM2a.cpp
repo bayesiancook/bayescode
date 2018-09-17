@@ -53,7 +53,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
 
         int check;
         is >> check;
-        if (check)  {
+        if (check) {
             cerr << "Error when reading model\n";
             exit(1);
         }

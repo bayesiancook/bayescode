@@ -19,8 +19,8 @@ class DiffSelChain : public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery,
-                 int inuntil, int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
+    DiffSelChain(string indata, string intree, int inncond, int innlevel, int inevery, int inuntil,
+                 int insaveall, int infixglob, int infixvar, int incodonmodel, string inname,
                  int force)
         : modeltype("DIFFSEL"),
           datafile(indata),
@@ -120,16 +120,16 @@ class DiffSelChain : public Chain {
 };
 
 int main(int argc, char *argv[]) {
-
     string name = "";
     DiffSelChain *chain = 0;
 
-    if (argc == 1)  {
+    if (argc == 1) {
         cerr << "command: diffsel -d <alignment> -t <treefile> <chainname>\n";
         cerr << '\n';
         cerr << "program options:\n";
         cerr << "\t-f: force overwrite of already existing chain\n";
-        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, until = -1)\n";
+        cerr << "\t-x <every> <until>: saving frequency and stopping time (default: every = 1, "
+                "until = -1)\n";
         cerr << "\t-ncond <ncond>:  specify number of conditions\n";
         cerr << '\n';
         exit(0);
@@ -202,8 +202,8 @@ int main(int argc, char *argv[]) {
             cerr << "error in command\n";
             exit(0);
         }
-        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob, fixvar,
-                                 codonmodel, name, force);
+        chain = new DiffSelChain(datafile, treefile, ncond, nlevel, every, until, saveall, fixglob,
+                                 fixvar, codonmodel, name, force);
     }
 
     cerr << "chain " << name << " started\n";

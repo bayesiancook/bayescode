@@ -26,9 +26,7 @@ class BranchMixtureSelector : public BranchSelector<T> {
 
     const Tree &GetTree() const override { return alloc.GetTree(); }
     T &operator[](int index) override { return components[alloc.GetVal(index)]; }
-    const T &GetVal(int index) const override {
-        return components.GetVal(alloc.GetVal(index));
-    }
+    const T &GetVal(int index) const override { return components.GetVal(alloc.GetVal(index)); }
 
   private:
     const Selector<T> &components;

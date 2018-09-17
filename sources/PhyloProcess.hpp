@@ -123,13 +123,12 @@ class PhyloProcess {
     void GetLeafData(SequenceAlignment *data);
 
   private:
-
     int GetBranchIndex(int index) const {
         if (index <= 0) {
             cerr << "error in PhyloProcess::GetBranchIndex\n";
             exit(1);
         }
-        return index-1;
+        return index - 1;
     }
 
     double GetFastLogProb() const;
@@ -167,15 +166,15 @@ class PhyloProcess {
 
     const SequenceAlignment *GetData() const { return data; }
     int GetData(int taxon, int site) const {
-        if (taxon_table[taxon] == -1)	{
+        if (taxon_table[taxon] == -1) {
             cerr << "error in taxon correspondance table\n";
             exit(1);
         }
-        return data->GetState(taxon_table[taxon], site); 
+        return data->GetState(taxon_table[taxon], site);
     }
 
     const Tree *GetTree() const { return tree; }
-    Tree::NodeIndex GetRoot() const {return GetTree()->root();}
+    Tree::NodeIndex GetRoot() const { return GetTree()->root(); }
 
     int GetMaxTrial() const { return maxtrial; }
     void SetMaxTrial(int i) { maxtrial = i; }
@@ -218,20 +217,26 @@ class PhyloProcess {
     void RecursiveAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suffstat) const;
     void LocalAddPathSuffStat(Tree::NodeIndex from, PathSuffStat &suffstat) const;
 
-    void RecursiveAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from,
+                                  NodeArray<PathSuffStat> &suffstatarray) const;
     void LocalAddPathSuffStat(Tree::NodeIndex from, NodeArray<PathSuffStat> &suffstatarray) const;
 
     void RecursiveAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
     void LocalAddPathSuffStat(Tree::NodeIndex from, Array<PathSuffStat> &suffstatarray) const;
 
-    void RecursiveAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, const BranchSelector<int> &branchalloc) const;
-    void LocalAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray, int cond) const;
+    void RecursiveAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray,
+                                  const BranchSelector<int> &branchalloc) const;
+    void LocalAddPathSuffStat(Tree::NodeIndex from, BidimArray<PathSuffStat> &suffstatarray,
+                              int cond) const;
 
-    void RecursiveAddLengthSuffStat(Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;
+    void RecursiveAddLengthSuffStat(
+        Tree::NodeIndex from, BranchArray<PoissonSuffStat> &branchlengthpathsuffstatarray) const;
     void LocalAddLengthSuffStat(Tree::NodeIndex from, PoissonSuffStat &branchlengthsuffstat) const;
 
-    void RecursiveAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
-    void LocalAddRateSuffStat(Tree::NodeIndex from, Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void RecursiveAddRateSuffStat(Tree::NodeIndex from,
+                                  Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+    void LocalAddRateSuffStat(Tree::NodeIndex from,
+                              Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
 
     void PostPredSample(int site, bool rootprior = false);
     // rootprior == true : root state drawn from stationary probability of the
@@ -302,10 +307,10 @@ class PhyloProcess {
 
     bool clampdata;
 
-    mutable double** uppercondlmap;
-    mutable double** lowercondlmap;
-    mutable BranchSitePath*** pathmap;
-    int** statemap;
+    mutable double **uppercondlmap;
+    mutable double **lowercondlmap;
+    mutable BranchSitePath ***pathmap;
+    int **statemap;
     int **missingmap;
 
     int maxtrial;

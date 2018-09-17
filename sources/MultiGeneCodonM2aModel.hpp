@@ -83,13 +83,9 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode, int inpurommode, int indposommode,
                              int inpurwmode, int inposwmode);
 
-    void SetBLSamplingMode(int inmode)  {
-        blsamplemode = inmode;
-    }
+    void SetBLSamplingMode(int inmode) { blsamplemode = inmode; }
 
-    void SetModalMixturePrior(int in)  {
-        modalprior = in;
-    }
+    void SetModalMixturePrior(int in) { modalprior = in; }
 
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
                                    double indposomhypermean, double indposomhyperinvshape,
@@ -257,13 +253,16 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
         return BranchLengthsHyperInvShapeLogPrior() + GeneBranchLengthsHyperSuffStatLogProb();
     }
 
-    // log prob of substitution mappings across genes and branches analytically integrated over branch lengths
+    // log prob of substitution mappings across genes and branches analytically integrated over
+    // branch lengths
     double GeneBranchLengthsHyperSuffStatLogProb() const;
 
-    // log prob of substitution mappings across genes for a given branch analytically integrated over branch length
+    // log prob of substitution mappings across genes for a given branch analytically integrated
+    // over branch length
     double GeneBranchLengthsHyperSuffStatLogProb(int branch) const;
 
-    // log prob of substitution mapping for a given gene and over a given branch analytically integrated over branch length
+    // log prob of substitution mapping for a given gene and over a given branch analytically
+    // integrated over branch length
     double GeneBranchLengthsHyperSuffStatLogProb(int gene, int branch) const;
 
     // log prob for moving mixture hyper params
@@ -421,7 +420,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
     GammaSuffStatBranchArray *lengthhypersuffstatarray;
 
-    PoissonSuffStatTreeArray* lengthpathsuffstattreearray;
+    PoissonSuffStatTreeArray *lengthpathsuffstattreearray;
 
     vector<double> mixhyperparam;
 

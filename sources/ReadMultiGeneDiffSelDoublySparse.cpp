@@ -24,11 +24,15 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
   public:
     string GetModelType() { return modeltype; }
 
-    const MultiGeneDiffSelDoublySparseModel *GetModel() const { return (MultiGeneDiffSelDoublySparseModel *)model; }
-    MultiGeneDiffSelDoublySparseModel *GetModel() { return (MultiGeneDiffSelDoublySparseModel *)model; }
+    const MultiGeneDiffSelDoublySparseModel *GetModel() const {
+        return (MultiGeneDiffSelDoublySparseModel *)model;
+    }
+    MultiGeneDiffSelDoublySparseModel *GetModel() {
+        return (MultiGeneDiffSelDoublySparseModel *)model;
+    }
 
-    MultiGeneDiffSelDoublySparseSample(string filename, int inburnin, int inevery, int inuntil, int myid,
-                            int nprocs)
+    MultiGeneDiffSelDoublySparseSample(string filename, int inburnin, int inevery, int inuntil,
+                                       int myid, int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
         Open();
     }
@@ -62,8 +66,9 @@ class MultiGeneDiffSelDoublySparseSample : public MultiGeneSample {
 
         if (modeltype == "MULTIGENEDIFFSELDSPARSE") {
             model = new MultiGeneDiffSelDoublySparseModel(
-                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode, nucmode, shiftmode,
-                pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc, myid, nprocs);
+                datafile, treefile, ncond, nlevel, codonmodel, epsilon, fitnessshape, blmode,
+                nucmode, shiftmode, pihypermean, pihyperinvconc, shiftprobmean, shiftprobinvconc,
+                myid, nprocs);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

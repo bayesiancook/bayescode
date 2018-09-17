@@ -18,11 +18,15 @@ class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
   public:
     string GetModelType() { return modeltype; }
 
-    const MultiGeneAAMutSelDSBDPOmegaModel *GetModel() const { return (MultiGeneAAMutSelDSBDPOmegaModel *)model; }
-    MultiGeneAAMutSelDSBDPOmegaModel *GetModel() { return (MultiGeneAAMutSelDSBDPOmegaModel *)model; }
+    const MultiGeneAAMutSelDSBDPOmegaModel *GetModel() const {
+        return (MultiGeneAAMutSelDSBDPOmegaModel *)model;
+    }
+    MultiGeneAAMutSelDSBDPOmegaModel *GetModel() {
+        return (MultiGeneAAMutSelDSBDPOmegaModel *)model;
+    }
 
-    MultiGeneAAMutSelDSBDPOmegaSample(string filename, int inburnin, int inevery, int inuntil, int myid,
-                            int nprocs)
+    MultiGeneAAMutSelDSBDPOmegaSample(string filename, int inburnin, int inevery, int inuntil,
+                                      int myid, int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
         Open();
     }
@@ -52,9 +56,9 @@ class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
         is >> chainevery >> chainuntil >> chainsize;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
-                                                         nucmode, basemode, omegamode, omegaprior, modalprior,
-                                                         pihypermean, pihyperinvconc, myid, nprocs);
+            model = new MultiGeneAAMutSelDSBDPOmegaModel(
+                datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode,
+                omegaprior, modalprior, pihypermean, pihyperinvconc, myid, nprocs);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

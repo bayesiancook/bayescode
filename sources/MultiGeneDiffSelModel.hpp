@@ -65,9 +65,8 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     //-------------------
 
     MultiGeneDiffSelModel(string datafile, string intreefile, int inNcond, int inNlevel,
-                                int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
+                          int incodonmodel, int inblmode, int innucmode, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
-
         codonmodel = incodonmodel;
         blmode = inblmode;
         nucmode = innucmode;
@@ -131,7 +130,7 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
                 int fixglob = 1;
                 int fixvar = 1;
                 geneprocess[gene] = new DiffSelModel(GetLocalGeneName(gene), treefile, Ncond,
-                                                           Nlevel, fixglob, fixvar, codonmodel);
+                                                     Nlevel, fixglob, fixvar, codonmodel);
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->Allocate();
@@ -396,7 +395,6 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
         // int nrep = 3;
 
         for (int rep = 0; rep < nrep; rep++) {
-
             if (blmode == 1) {
                 MasterReceiveBranchLengthsHyperSuffStat();
                 movechrono.Start();
@@ -480,11 +478,9 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
             BranchLengthsHyperScalingMove(0.3, 10);
         }
 
-        ScalingMove(blhyperinvshape, 1.0, 10,
-                    &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
+        ScalingMove(blhyperinvshape, 1.0, 10, &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(blhyperinvshape, 0.3, 10,
-                    &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
+        ScalingMove(blhyperinvshape, 0.3, 10, &MultiGeneDiffSelModel::BranchLengthsHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
 
         branchlengtharray->SetShape(1.0 / blhyperinvshape);
@@ -521,42 +517,30 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     }
 
     void MoveNucRatesHyperParameters() {
-        ProfileMove(nucrelratehypercenter, 1.0, 1, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 1.0, 1, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.3, 1, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 0.3, 1, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.1, 3, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucrelratehypercenter, 0.1, 3, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 1.0, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 1.0, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.3, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 0.3, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.03, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucrelratehyperinvconc, 0.03, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
 
-        ProfileMove(nucstathypercenter, 1.0, 1, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 1.0, 1, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.3, 1, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 0.3, 1, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.1, 2, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ProfileMove(nucstathypercenter, 0.1, 2, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 1.0, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucstathyperinvconc, 1.0, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.3, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucstathyperinvconc, 0.3, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.03, 10,
-                    &MultiGeneDiffSelModel::NucRatesHyperLogProb,
+        ScalingMove(nucstathyperinvconc, 0.03, 10, &MultiGeneDiffSelModel::NucRatesHyperLogProb,
                     &MultiGeneDiffSelModel::NoUpdate, this);
 
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
@@ -693,10 +677,9 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     void MasterTraceSiteStats(string name, int mode) {
         for (int k = 0; k < Ncond; k++) {
             ostringstream s;
-            if (! k)    {
+            if (!k) {
                 s << name << ".fitness";
-            }
-            else    {
+            } else {
                 s << name << "_" << k << ".delta";
             }
             ofstream os(s.str().c_str(), ios_base::app);
@@ -738,10 +721,9 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
             double *array = new double[totnsite * Naa];
             int i = 0;
             for (int gene = 0; gene < ngene; gene++) {
-                if (! k)    {
+                if (!k) {
                     geneprocess[gene]->GetBaselineArray(array + i);
-                }
-                else    {
+                } else {
                     geneprocess[gene]->GetDeltaArray(k, array + i);
                 }
                 i += GetLocalGeneNsite(gene) * Naa;

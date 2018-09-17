@@ -46,7 +46,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     double omegahyperinvshape;
     IIDGamma *omegaarray;
     GammaSuffStat omegahypersuffstat;
-    SimpleArray<double>* genednds;
+    SimpleArray<double> *genednds;
 
     double dposompihypermean;
     double dposompihyperinvconc;
@@ -400,16 +400,14 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void TracePredictedDNDS(ostream& os) const   {
+    void TracePredictedDNDS(ostream &os) const {
         for (int gene = 0; gene < Ngene; gene++) {
             os << genednds->GetVal(gene) << '\t';
         }
         os << '\n';
     }
 
-    void MasterReceivePredictedDNDS() {
-        MasterReceiveGeneArray(*genednds);
-    }
+    void MasterReceivePredictedDNDS() { MasterReceiveGeneArray(*genednds); }
 
     void SlaveSendPredictedDNDS() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
@@ -777,7 +775,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             total += (pialpha - 1) * log(1.0 - dposompi) + (pibeta - 1) * log(dposompi);
             total -= dposomhypermean;
             total -= dposomhyperinvshape;
-            if (modalprior && (dposomhyperinvshape > 1.0))  {
+            if (modalprior && (dposomhyperinvshape > 1.0)) {
                 total += Random::INFPROB;
             }
         }
@@ -972,7 +970,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         MasterReceiveOmega();
         MasterReceiveLogProbs();
         MasterReceivePredictedDNDS();
-        
+
         totchrono.Stop();
 
         burnin++;
@@ -1338,10 +1336,16 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                         &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
 
             if (modalprior) {
-                SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-                SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-                SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
-            } else  {
+                SlidingMove(dposomhyperinvshape, 1.0, 10, 0, 1.0,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+                SlidingMove(dposomhyperinvshape, 0.3, 10, 0, 1.0,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+                SlidingMove(dposomhyperinvshape, 0.1, 10, 0, 1.0,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+            } else {
                 ScalingMove(dposomhyperinvshape, 1.0, 10,
                             &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
                             &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
