@@ -1,11 +1,15 @@
+#include "ChainComponent.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrix.hpp"
 #include "CodonSuffStat.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDGamma.hpp"
+#include "Move.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
+#include "Tracer.hpp"
+#include "Tree.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -24,10 +28,13 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
-class SingleOmegaModel : public ProbModel {
+class SingleOmegaModel : public ProbModel, public ChainComponent {
     // tree and data
-    unique_ptr<const Tree> tree;
+    std::string datafile, treefile;
+    std::unique_ptr<Tracer> tracer;
+    std::unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
+    const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
 
     int Nsite;
@@ -98,15 +105,55 @@ class SingleOmegaModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, TreeParser &parser)
-        : tree(make_from_parser(parser)),
-          data(new FileSequenceAlignment(datafile)),
-          codondata(new CodonSequenceAlignment(data, true)),
-          Nsite(codondata->GetNsite()),
-          Ntaxa(codondata->GetNtaxa()),
-          Nbranch(tree->nb_nodes() - 1),
-          blmode(0),
-          nucmode(0) {}
+    SingleOmegaModel(string datafile, string treefile) : datafile(datafile), treefile(treefile) {
+        init();
+        Update();
+    }
+
+    virtual ~SingleOmegaModel() = default;
+
+    void init() {
+        blmode = 0;
+        nucmode = 0;
+
+        data = new FileSequenceAlignment(datafile);
+        codondata = new CodonSequenceAlignment(data, true);
+
+        Nsite = codondata->GetNsite();  // # columns
+        Ntaxa = codondata->GetNtaxa();
+
+        taxonset = codondata->GetTaxonSet();
+
+        // get tree from file (newick format)
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
+
+        Nbranch = tree->nb_nodes() - 1;
+        Allocate();
+        tracer = unique_ptr<Tracer>(new Tracer(*this, &SingleOmegaModel::declare_model));
+    }
+
+    void move(int it) override { Move(); }
+
+    template <class C>
+    void declare_model(C &t) {
+        t.add("omega", omega);
+        t.add("nucstat", nucstat);
+        t.add("nucrelrate", nucrelrate);
+        t.add("lambda", lambda);
+        t.add("branchlength", *branchlength);
+    }
+
+    template <class C>
+    void declare_stats(C &t) {
+        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
+        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
+        t.add("length", [this]() { return branchlength->GetTotalLength(); });
+        t.add("omega", omega);
+        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
+        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+    }
 
     //! model allocation
     void Allocate() {
@@ -142,11 +189,8 @@ class SingleOmegaModel : public ProbModel {
         omega = 1.0;
         codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
-        cerr << "create phyloprocess\n";
         phyloprocess = new PhyloProcess(tree.get(), codondata, branchlength, 0, codonmatrix);
-        cerr << "unfold phyloprocess\n";
         phyloprocess->Unfold();
-        cerr << "ok\n";
     }
 
     //-------------------
@@ -291,7 +335,7 @@ class SingleOmegaModel : public ProbModel {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update() override {
+    void Update() {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -305,7 +349,7 @@ class SingleOmegaModel : public ProbModel {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) override {
+    void PostPred(string name) {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -338,7 +382,7 @@ class SingleOmegaModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
     // Branch lengths
 
@@ -478,7 +522,7 @@ class SingleOmegaModel : public ProbModel {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move() override {
+    double Move() {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
@@ -530,10 +574,10 @@ class SingleOmegaModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                    &SingleOmegaModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
-                    &SingleOmegaModel::NoUpdate, this);
+        Move::Scaling(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                      &SingleOmegaModel::NoUpdate, this);
+        Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
+                      &SingleOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -544,17 +588,17 @@ class SingleOmegaModel : public ProbModel {
     void MoveNucRates() {
         CollectNucPathSuffStat();
 
-        ProfileMove(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+        Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                      &SingleOmegaModel::TouchNucMatrix, this);
+        Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+                      &SingleOmegaModel::TouchNucMatrix, this);
+        Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+                      &SingleOmegaModel::TouchNucMatrix, this);
 
-        ProfileMove(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                    &SingleOmegaModel::TouchNucMatrix, this);
+        Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                      &SingleOmegaModel::TouchNucMatrix, this);
+        Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                      &SingleOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }
@@ -593,21 +637,38 @@ class SingleOmegaModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void Monitor(ostream &os) const override {}
+    void Monitor(ostream &os) const {}
 
-    void ToStream(ostream &os) const override {
-        os << omega << '\t';
-        os << nucstat << '\t';
-        os << nucrelrate << '\t';
-        os << lambda << '\t';
-        os << *branchlength << '\n';
+    void ToStream(ostream &os) const {
+        os << "SingleOmega" << '\t';
+        os << datafile << '\t';
+        os << treefile << '\t';
+        tracer->write_line(os);
     }
 
-    void FromStream(istream &is) override {
-        is >> omega;
-        is >> nucstat;
-        is >> nucrelrate;
-        is >> lambda;
-        is >> *branchlength;
+    void FromStream(istream &) { /* DEPRECATED */
+        // std::string model_name;
+        // is >> model_name;
+        // if (model_name != "SingleOmega") {
+        //     std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+        //     exit(1);
+        // }
+        // is >> datafile;
+        // is >> treefile;
+        // tracer.read_line(is);
+    }
+
+    SingleOmegaModel(istream &is) {
+        std::string model_name;
+        is >> model_name;
+        if (model_name != "SingleOmega") {
+            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+            exit(1);
+        }
+        is >> datafile;
+        is >> treefile;
+        init();
+        tracer->read_line(is);
+        Update();
     }
 };
