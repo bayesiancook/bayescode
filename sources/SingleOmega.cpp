@@ -37,7 +37,7 @@ class SingleOmegaChain : public Chain {
     void New(int force) override {
         ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
-        model = new SingleOmegaModel(datafile, make_from_parser(parser));
+        model = new SingleOmegaModel(datafile, parser);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -65,7 +65,7 @@ class SingleOmegaChain : public Chain {
         if (modeltype == "SINGLEOMEGA") {
             ifstream tree_stream{treefile};
             NHXParser parser{tree_stream};
-            model = new SingleOmegaModel(datafile, make_from_parser(parser));
+            model = new SingleOmegaModel(datafile, parser);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
