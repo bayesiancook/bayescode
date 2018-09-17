@@ -101,21 +101,15 @@ class SingleOmegaModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, string treefile) {
-        blmode = 0;
-        nucmode = 0;
-
-        data = new FileSequenceAlignment(datafile);
-        codondata = new CodonSequenceAlignment(data, true);
-
-        Nsite = codondata->GetNsite();  // # columns
-        Ntaxa = codondata->GetNtaxa();
-
-        std::ifstream file(treefile);
-        NHXParser parser{file};
-        tree = make_from_parser(parser);
-        Nbranch = tree->nb_nodes() - 1;
-    }
+    SingleOmegaModel(string datafile, TreeParser &parser)
+        : tree(make_from_parser(parser)),
+          data(new FileSequenceAlignment(datafile)),
+          codondata(new CodonSequenceAlignment(data, true)),
+          Nsite(codondata->GetNsite()),
+          Ntaxa(codondata->GetNtaxa()),
+          Nbranch(tree->nb_nodes() - 1),
+          blmode(0),
+          nucmode(0) {}
 
     //! model allocation
     void Allocate() {
