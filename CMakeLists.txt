@@ -11,7 +11,6 @@ set(BAYESCODE_LIB
     sources/AAMutSelOmegaCodonSubMatrix.cpp
     sources/BranchSitePath.cpp
     sources/Chain.cpp
-    sources/Chi2.cpp
     sources/Chrono.cpp
     sources/CodonSequenceAlignment.cpp
     sources/CodonStateSpace.cpp
@@ -26,7 +25,6 @@ set(BAYESCODE_LIB
     sources/SequenceAlignment.cpp
     sources/StateSpace.cpp
     sources/SubMatrix.cpp
-    sources/T92SubMatrix.cpp
     sources/TaxonSet.cpp
     sources/tree-implem.cpp
   )
