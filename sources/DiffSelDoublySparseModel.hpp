@@ -112,8 +112,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     // external parameters
     // -----
 
-    unique_ptr<const Tree> treeptr;
-    const Tree* tree;
+    unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
     CodonSequenceAlignment *codondata;
 
@@ -294,8 +293,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         std::ifstream file(treefile);
         NHXParser parser{file};
-        treeptr = make_from_parser(parser);
-        tree = treeptr.get();
+        tree = make_from_parser(parser);
         Nbranch = tree->nb_nodes() - 1;
 
         auto v = branch_container_from_parser<std::string>(parser, [](int i, const AnnotatedTree& t) { return t.tag(i, "Condition"); });
@@ -395,7 +393,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         // create phyloprocess
         phyloprocess =
-            new PhyloProcess(tree, codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
+            new PhyloProcess(tree.get(), codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
         phyloprocess->Unfold();
 
         // create suffstat arrays

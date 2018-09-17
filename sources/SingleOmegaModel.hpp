@@ -30,8 +30,7 @@
 class SingleOmegaModel : public ProbModel {
 
     // tree and data
-    unique_ptr<const Tree> treeptr;
-    const Tree* tree;
+    unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
     CodonSequenceAlignment *codondata;
 
@@ -116,8 +115,7 @@ class SingleOmegaModel : public ProbModel {
 
         std::ifstream file(treefile);
         NHXParser parser{file};
-        treeptr = make_from_parser(parser);
-        tree = treeptr.get();
+        tree = make_from_parser(parser);
         Nbranch = tree->nb_nodes() - 1;
     }
 
@@ -157,7 +155,7 @@ class SingleOmegaModel : public ProbModel {
         codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
 
         cerr << "create phyloprocess\n";
-        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrix);
+        phyloprocess = new PhyloProcess(tree.get(), codondata, branchlength, 0, codonmatrix);
         cerr << "unfold phyloprocess\n";
         phyloprocess->Unfold();
         cerr << "ok\n";
