@@ -6,3 +6,4 @@ tmp*
 *_bin
 *.json
 *.d.*
+_build/

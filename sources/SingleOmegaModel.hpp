@@ -101,7 +101,7 @@ class SingleOmegaModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, unique_ptr<const Tree>&& tree)
+    SingleOmegaModel(string datafile, unique_ptr<const Tree> &&tree)
         : tree(move(tree)),
           data(new FileSequenceAlignment(datafile)),
           codondata(new CodonSequenceAlignment(data, true)),

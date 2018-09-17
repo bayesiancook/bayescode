@@ -25,6 +25,7 @@ copy of the GNU General Public License along with PhyloBayes. If not, see
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include "Random.hpp"
 
 using namespace std;
 

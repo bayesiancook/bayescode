@@ -1,6 +1,4 @@
-
-#ifndef ARRAY_H
-#define ARRAY_H
+#pragma once
 
 #include <vector>
 #include "MPIBuffer.hpp"
@@ -23,6 +21,19 @@
  * and explicit that no non-const access is intended, by the class receiving the
  * Selector object).
  */
+
+template <class T>
+class Selector;
+template <class T>
+class Array;
+template <class T>
+ostream &operator<<(ostream &os, const vector<T> &array);
+template <class T>
+istream &operator>>(istream &is, vector<T> &array);
+template <class T>
+ostream &operator<<(ostream &os, const Selector<T> &array);
+template <class T>
+istream &operator>>(istream &is, Array<T> &array);
 
 template <class T>
 class Selector {
@@ -101,11 +112,32 @@ class Array : public Selector<T> {
 };
 
 /**
+ * \brief template for output stream operator for a std::vector<T>
+ */
+template <class T>
+ostream &operator<<(ostream &os, const vector<T> &array) {
+    for (unsigned int i = 0; i < array.size(); i++) {
+        os << array[i] << '\t';
+    }
+    return os;
+}
+
+/**
+ * \brief template for input stream operator for a std::vector<T>
+ */
+template <class T>
+istream &operator>>(istream &is, vector<T> &array) {
+    for (unsigned int i = 0; i < array.size(); i++) {
+        is >> array[i];
+    }
+    return is;
+}
+
+/**
  * \brief output stream operator for a Selector<T>
  *
  * in practice, calls the ToStream method of Selector<T>
  */
-
 template <class T>
 ostream &operator<<(ostream &os, const Selector<T> &array) {
     array.ToStream(os);
@@ -121,30 +153,6 @@ ostream &operator<<(ostream &os, const Selector<T> &array) {
 template <class T>
 istream &operator>>(istream &is, Array<T> &array) {
     array.FromStream(is);
-    return is;
-}
-
-/**
- * \brief template for output stream operator for a std::vector<T>
- */
-
-template <class T>
-ostream &operator<<(ostream &os, const vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        os << array[i] << '\t';
-    }
-    return os;
-}
-
-/**
- * \brief template for input stream operator for a std::vector<T>
- */
-
-template <class T>
-istream &operator>>(istream &is, vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        is >> array[i];
-    }
     return is;
 }
 
@@ -262,5 +270,3 @@ class MixtureSelector : public Selector<T> {
     const Selector<T> *components;
     const Selector<int> *alloc;
 };
-
-#endif

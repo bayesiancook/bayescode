@@ -133,7 +133,7 @@ class NodeHomogeneousSelector : public NodeSelector<T> {
   public:
     //! \brief Constructor, taking as its arguments the tree and the value to be
     //! returned for any branch
-    NodeHomogeneousSelector(const Tree *intree, const T &invalue) : tree(intree), value(invalue) {}
+    NodeHomogeneousSelector(const Tree *intree, const T &invalue) : tree(*intree), value(invalue) {}
     ~NodeHomogeneousSelector() {}
 
     const Tree &GetTree() const /*override*/ { return tree; }
