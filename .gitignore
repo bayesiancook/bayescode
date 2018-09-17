@@ -2,3 +2,6 @@ sources*/*.o
 sources*/*.d
 data/*
 *~
+tmp*
+*_bin
+*.json
