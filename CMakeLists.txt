@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 project(bayescode CXX)
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wno-inconsistent-missing-override") # normal mode
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter") # normal mode
 set(CXX_FEATURES cxx_auto_type cxx_nullptr cxx_final cxx_override cxx_range_for)
 include_directories("sources")
 
-# static lib
+# Static lib
 set(BAYESCODE_LIB
     sources/AAMutSelOmegaCodonSubMatrix.cpp
     sources/BranchSitePath.cpp
@@ -36,7 +36,7 @@ add_executable(globom "sources/SingleOmega.cpp")
 target_link_libraries(globom bayescode_lib)
 target_compile_features(globom PRIVATE ${CXX_FEATURES})
 
-# Globom
+# Diffsel double sparse
 add_executable(diffseldsparse "sources/DiffSelDoublySparse.cpp")
 target_link_libraries(diffseldsparse bayescode_lib)
 target_compile_features(diffseldsparse PRIVATE ${CXX_FEATURES})

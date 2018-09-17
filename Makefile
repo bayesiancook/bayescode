@@ -18,5 +18,6 @@ clean:
 
 # CODE QUALITY
 # Requires: clang-format
+.PHONY: format
 format:
 	@clang-format -i sources/*.cpp sources/*.hpp
