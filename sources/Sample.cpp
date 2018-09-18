@@ -30,6 +30,7 @@ void Sample::OpenChainFile() {
     size = (until - burnin) / every;
     if (size <= 0) {
         cerr << "error : chain not long enough\n";
+        cerr << burnin << '\t' << every << '\t' << until << '\n';
         exit(1);
     }
     currentpoint = 0;

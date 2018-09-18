@@ -53,7 +53,7 @@ class AAMutSelDSBDPOmegaSample : public Sample {
             cerr << "-- Error when reading model\n";
             exit(1);
         }
-        is >> chainevery >> chainuntil >> chainsaveall >> chainsize;
+        is >> chainevery >> chainuntil >> chainsize;
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
