@@ -2,8 +2,8 @@
 #include <fstream>
 #include "SingleOmegaModel.hpp"
 #include "tclap/CmdLine.h"
-#include "ChainReader.hpp"
-#include "ChainDriver.hpp"
+#include "components/ChainReader.hpp"
+#include "components/ChainDriver.hpp"
 using namespace std;
 using namespace TCLAP;
 

@@ -43,4 +43,9 @@ add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
 target_link_libraries(diffseldsparse bayescode_lib)
 target_compile_features(diffseldsparse PRIVATE ${CXX_FEATURES})
 
+# Diffsel double sparse
+add_executable(readglobom "src/ReadSingleOmega.cpp")
+target_link_libraries(readglobom bayescode_lib)
+target_compile_features(readglobom PRIVATE ${CXX_FEATURES})
+
 #TODO readsingleomega and readdiffseldoublesparse
