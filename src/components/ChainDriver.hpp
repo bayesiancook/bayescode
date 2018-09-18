@@ -44,7 +44,7 @@ class ChainDriver {
         is >> tmp >> tmp >> tmp >> tmp;
     }
 
-private:
+  private:
     std::string name;
     std::vector<ChainComponent*> components;
     RunToggle toggle;

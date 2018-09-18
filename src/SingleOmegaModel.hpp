@@ -1,4 +1,3 @@
-#include "components/ChainComponent.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrix.hpp"
 #include "CodonSuffStat.hpp"
@@ -8,6 +7,7 @@
 #include "Move.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
+#include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 
 /**

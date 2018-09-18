@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <fstream>
 #include <map>
 #include "BidimArray.hpp"
 #include "BranchSitePath.hpp"
@@ -9,7 +10,6 @@
 #include "NodeArray.hpp"
 #include "SequenceAlignment.hpp"
 #include "SubMatrix.hpp"
-#include <fstream>
 #include "tree/implem.hpp"
 
 // PhyloProcess is a dispatcher:

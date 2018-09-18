@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "nhx-parser.hpp"
 #include "interface.hpp"
+#include "nhx-parser.hpp"
 
 // a tree with both a vector of parents and a vector of children
 class DoubleVectorTree : public Tree {

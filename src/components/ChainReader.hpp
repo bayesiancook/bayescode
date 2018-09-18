@@ -13,5 +13,7 @@ class ChainReader {
     }
 
     void next() { tracer.read_line(is); }
-    void skip(int n) { for(int i = 0; i < n; i++) next(); }
+    void skip(int n) {
+        for (int i = 0; i < n; i++) next();
+    }
 };
