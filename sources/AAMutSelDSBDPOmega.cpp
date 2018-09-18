@@ -72,8 +72,8 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >>
-            Ncat >> baseNcat;
+        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape;
+        is >> Ncat >> baseNcat;
         int tmp;
         is >> tmp;
         if (tmp) {
