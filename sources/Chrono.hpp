@@ -64,9 +64,7 @@ class MeasureTime : public std::stringstream {
 
     template <int i>
     void print(std::string message) {
-        if (!stopped) {
-            stop();
-        }
+        if (!stopped) { stop(); }
         std::string left(2 * i, ' ');
         std::cout << left << "* " << message << str() << "Time: " << duration.count()  //  << "ms."
                   << std::endl;

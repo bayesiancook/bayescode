@@ -93,15 +93,10 @@ class NHXParser : public TreeParser {
         Invalid
     };
     std::map<TokenType, std::regex> token_regexes{{OpenParenthesis, std::regex("\\(")},
-                                                  {CloseParenthesis, std::regex("\\)")},
-                                                  {Colon, std::regex(":")},
-                                                  {Semicolon, std::regex(";")},
-                                                  {Comma, std::regex(",")},
-                                                  {Equal, std::regex("=")},
-                                                  {NHXOpen, std::regex("\\[&&NHX:")},
-                                                  {CommentOpen, std::regex("\\[")},
-                                                  {BracketClose, std::regex("\\]")},
-                                                  {Identifier, std::regex("[a-zA-Z0-9._-]+")}};
+        {CloseParenthesis, std::regex("\\)")}, {Colon, std::regex(":")},
+        {Semicolon, std::regex(";")}, {Comma, std::regex(",")}, {Equal, std::regex("=")},
+        {NHXOpen, std::regex("\\[&&NHX:")}, {CommentOpen, std::regex("\\[")},
+        {BracketClose, std::regex("\\]")}, {Identifier, std::regex("[a-zA-Z0-9._-]+")}};
     using Token = std::pair<TokenType, std::string>;  // first: index of token, second: token value
 
     // input/output
@@ -140,17 +135,15 @@ class NHXParser : public TreeParser {
 
     // lexer
     void find_token() {
-        while (std::isspace(*it)) {
-            it++;
-        }
+        while (std::isspace(*it)) { it++; }
         int token_number{0};
         for (auto token_regex : token_regexes) {
             std::smatch m;
             if (std::regex_search(it, it + 64, m, token_regex.second) and m.prefix() == "") {
                 if (token_regex.first == CommentOpen) {  // support of comments
                     std::string comment_close{"]"};
-                    it = std::search(it, scit(input.end()), comment_close.begin(),
-                                     comment_close.end()) +
+                    it = std::search(
+                             it, scit(input.end()), comment_close.begin(), comment_close.end()) +
                          1;
                     find_token();
                     return;
@@ -170,9 +163,7 @@ class NHXParser : public TreeParser {
         tree.nodes_.emplace_back();
         tree.parent_.push_back(parent);
         tree.children_.emplace_back();
-        if (parent != -1) {
-            tree.children_.at(parent).push_back(number);
-        }
+        if (parent != -1) { tree.children_.at(parent).push_back(number); }
 
         find_token();
         switch (next_token.first) {
@@ -180,32 +171,22 @@ class NHXParser : public TreeParser {
                 tree.nodes_[number]["name"] = next_token.second;
                 node_name(number, parent);
                 break;
-            case Colon:
-                node_length(number, parent);
-                break;
-            case NHXOpen:
-                data(number, parent);
-                break;
+            case Colon: node_length(number, parent); break;
+            case NHXOpen: data(number, parent); break;
             case OpenParenthesis:
                 next_node++;
                 node_nothing(next_node, number);
                 break;
-            default:
-                node_end(parent);
+            default: node_end(parent);
         }
     }
 
     void node_name(int number, int parent) {
         find_token();
         switch (next_token.first) {
-            case Colon:
-                node_length(number, parent);
-                break;
-            case NHXOpen:
-                data(number, parent);
-                break;
-            default:
-                node_end(parent);
+            case Colon: node_length(number, parent); break;
+            case NHXOpen: data(number, parent); break;
+            default: node_end(parent);
         }
     }
 
@@ -214,11 +195,8 @@ class NHXParser : public TreeParser {
 
         find_token();
         switch (next_token.first) {
-            case NHXOpen:
-                data(number, parent);
-                break;
-            default:
-                node_end(parent);
+            case NHXOpen: data(number, parent); break;
+            default: node_end(parent);
         }
     }
 
@@ -229,15 +207,11 @@ class NHXParser : public TreeParser {
                 node_nothing(next_node, parent);
                 break;
             case CloseParenthesis: {
-                if (parent != -1) {
-                    node_name(parent, tree.parent_.at(parent));
-                }
+                if (parent != -1) { node_name(parent, tree.parent_.at(parent)); }
                 break;
             }
-            case Semicolon:
-                break;
-            default:
-                error("Error: unexpected token " + next_token.second + '\n');
+            case Semicolon: break;
+            default: error("Error: unexpected token " + next_token.second + '\n');
         }
     }
 

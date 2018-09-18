@@ -25,8 +25,7 @@ class LinAlg {
     // first transforms reversible matrix into a symmetric matrix
     // then calls DiagonalizeSymmetricMatrix
     static int DiagonalizeRateMatrix(double **u, double *pi, int dim, double *eigenval,
-                                     double **eigenvect, double **inveigenvect, int nmax = 1000,
-                                     double epsilon = 1e-10);
+        double **eigenvect, double **inveigenvect, int nmax = 1000, double epsilon = 1e-10);
 
     // diagonalize a symmetric matrix
     // first applying Householder transformation (tri-diagonal)
@@ -36,8 +35,8 @@ class LinAlg {
     // epsilon : loops until non-diagonal elements are < epsilon in absolute value
     // returns number of iterations
     // eigenvect matrix is orthonormal (its transpose is its inverse)
-    static int DiagonalizeSymmetricMatrix(double **u, int dim, int nmax, double epsilon,
-                                          double *eigenval, double **eigenvect);
+    static int DiagonalizeSymmetricMatrix(
+        double **u, int dim, int nmax, double epsilon, double *eigenval, double **eigenvect);
 
     // computes inverse of matrix given as an input (a)
     // by Gauss elimination

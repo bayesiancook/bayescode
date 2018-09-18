@@ -33,22 +33,18 @@ std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<st
 std::unique_ptr<const Tree> make_from_parser(TreeParser& parser);
 
 template <class Element>
-std::vector<Element> node_container_from_parser(TreeParser& parser,
-                                                Element (*init)(AnnotatedTree::NodeIndex,
-                                                                const AnnotatedTree&)) {
+std::vector<Element> node_container_from_parser(
+    TreeParser& parser, Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&)) {
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
     std::vector<Element> result;
-    for (NodeIndex i = 0; i < NodeIndex(tree.nb_nodes()); i++) {
-        result.push_back(init(i, tree));
-    }
+    for (NodeIndex i = 0; i < NodeIndex(tree.nb_nodes()); i++) { result.push_back(init(i, tree)); }
     return result;
 }
 
 template <class Element>
-std::vector<Element> branch_container_from_parser(TreeParser& parser,
-                                                  Element (*init)(AnnotatedTree::NodeIndex,
-                                                                  const AnnotatedTree&)) {
+std::vector<Element> branch_container_from_parser(
+    TreeParser& parser, Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&)) {
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
     std::vector<Element> result;
@@ -69,9 +65,8 @@ class TreeElementVector {
 
     template <class E>
     friend TreeElementVector<E> taxa_container_from_parser(TreeParser& parser,
-                                                           const std::vector<std::string>& taxa,
-                                                           E (*init)(AnnotatedTree::NodeIndex,
-                                                                     const AnnotatedTree&));
+        const std::vector<std::string>& taxa,
+        E (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&));
 
   public:
     using NodeIndex = AnnotatedTree::NodeIndex;
@@ -83,9 +78,8 @@ class TreeElementVector {
 
 template <class Element>
 TreeElementVector<Element> taxa_container_from_parser(TreeParser& parser,
-                                                      const std::vector<std::string>& taxa,
-                                                      Element (*init)(AnnotatedTree::NodeIndex,
-                                                                      const AnnotatedTree&)) {
+    const std::vector<std::string>& taxa,
+    Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&)) {
     TreeElementVector<Element> result;
     result.index_ = taxa_index_from_parser(parser, taxa);
     using NodeIndex = AnnotatedTree::NodeIndex;

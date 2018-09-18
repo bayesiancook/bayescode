@@ -41,9 +41,7 @@ class IIDGamma : public SimpleArray<double> {
 
     //! sample all entries, given current shape and scale params
     void Sample() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = Random::GammaSample(shape, scale);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = Random::GammaSample(shape, scale); }
     }
 
     //! resample all entries, given current shape and scale parameters and given
@@ -60,9 +58,7 @@ class IIDGamma : public SimpleArray<double> {
     //! scale params
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -78,14 +74,12 @@ class IIDGamma : public SimpleArray<double> {
     //! summarized by S have been produced by a process of rate (*this)[i], for
     //! i=0..GetSize()-1
     void GetAllocPostProb(const PoissonSuffStat &suffstat, const vector<double> &weight,
-                          vector<double> &postprob) const {
+        vector<double> &postprob) const {
         double max = 0;
         for (int i = 0; i < GetSize(); i++) {
             double tmp = suffstat.GetLogProb(GetVal(i));
             postprob[i] = tmp;
-            if ((!i) || (max < tmp)) {
-                max = tmp;
-            }
+            if ((!i) || (max < tmp)) { max = tmp; }
         }
 
         double total = 0;
@@ -94,18 +88,14 @@ class IIDGamma : public SimpleArray<double> {
             total += postprob[i];
         }
 
-        for (int i = 0; i < GetSize(); i++) {
-            postprob[i] /= total;
-        }
+        for (int i = 0; i < GetSize(); i++) { postprob[i] /= total; }
     }
 
     //! resample all entries for which occupancy[i] == 0 from the prior (from a
     //! Gamma(shape,scale))
     void PriorResample(const Selector<int> &occupancy) {
         for (int i = 0; i < GetSize(); i++) {
-            if (!occupancy.GetVal(i)) {
-                (*this)[i] = Random::GammaSample(shape, scale);
-            }
+            if (!occupancy.GetVal(i)) { (*this)[i] = Random::GammaSample(shape, scale); }
         }
     }
 
@@ -113,18 +103,14 @@ class IIDGamma : public SimpleArray<double> {
     //! Gamma(shape,scale))
     void PriorResample(const Selector<double> &poswarray) {
         for (int i = 0; i < GetSize(); i++) {
-            if (!poswarray.GetVal(i)) {
-                (*this)[i] = Random::GammaSample(shape, scale);
-            }
+            if (!poswarray.GetVal(i)) { (*this)[i] = Random::GammaSample(shape, scale); }
         }
     }
 
     //! get mean over the array
     double GetMean() const {
         double m1 = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            m1 += GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { m1 += GetVal(i); }
         m1 /= GetSize();
         return m1;
     }
@@ -176,16 +162,12 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
 
     //! set all entries equal to inval
     void SetAllBranches(double inval) {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i] = inval;
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] = inval; }
     }
 
     //! sample all entries from prior
     void Sample() {
-        for (int i = 0; i < GetNbranch(); i++) {
-            (*this)[i] = Random::GammaSample(shape, scale);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] = Random::GammaSample(shape, scale); }
     }
 
     //! resample all entries from posterior, conditional on BranchArray of
@@ -203,9 +185,7 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     //! get total log prob summed over all branches
     double GetLogProb() {
         double total = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -215,18 +195,14 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     //! get sum over all entries (name is rather specialized... could change..)
     double GetTotalLength() const {
         double m1 = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
-            m1 += GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { m1 += GetVal(i); }
         return m1;
     }
 
     //! get mean over the array
     double GetMean() const {
         double m1 = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
-            m1 += GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { m1 += GetVal(i); }
         m1 /= GetNbranch();
         return m1;
     }

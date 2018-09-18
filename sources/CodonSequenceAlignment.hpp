@@ -19,8 +19,8 @@ class CodonSequenceAlignment : public SequenceAlignment {
     //! codons -- otherwise, replace stop codons by missing entries. If any codon
     //! has any missing entry in the three nucleotide positions, then the whole
     //! codon is considered missing.
-    CodonSequenceAlignment(SequenceAlignment *from, bool force_stops = false,
-                           GeneticCodeType type = Universal);
+    CodonSequenceAlignment(
+        SequenceAlignment *from, bool force_stops = false, GeneticCodeType type = Universal);
 
     ~CodonSequenceAlignment() /*override*/ = default;
 

@@ -17,9 +17,9 @@
 // #define SAFE_EXP(x) ((x)<-200.0 ? 0.0 : exp(x))
 #define SAFE_EXP(x) exp(x)
 
-const double gammacoefs[] = {0.9999999999995183,  676.5203681218835,      -1259.139216722289,
-                             771.3234287757674,   -176.6150291498386,     12.50734324009056,
-                             -0.1385710331296526, 0.9934937113930748e-05, 0.1659470187408462e-06};
+const double gammacoefs[] = {0.9999999999995183, 676.5203681218835, -1259.139216722289,
+    771.3234287757674, -176.6150291498386, 12.50734324009056, -0.1385710331296526,
+    0.9934937113930748e-05, 0.1659470187408462e-06};
 // const double Logroot2pi = 0.918938533204673;
 
 // -------------------------------------------------
@@ -56,13 +56,9 @@ void Random::InitRandom(int seed) {
     int i;
 
     if (RAND_MAX == 32767) {
-        for (i = 0; i < MT_LEN; i++) {
-            mt_buffer[i] = rand() * 32768 + rand();
-        }
+        for (i = 0; i < MT_LEN; i++) { mt_buffer[i] = rand() * 32768 + rand(); }
     } else {
-        for (i = 0; i < MT_LEN; i++) {
-            mt_buffer[i] = rand();
-        }
+        for (i = 0; i < MT_LEN; i++) { mt_buffer[i] = rand(); }
     }
     mt_index = 0;
 }
@@ -163,9 +159,7 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
     try {
         int nstate = prob.size();
         double total = 0;
-        for (int k = 0; k < nstate; k++) {
-            total += prob[k];
-        }
+        for (int k = 0; k < nstate; k++) { total += prob[k]; }
         double p = total * Random::Uniform();
         double tot = 0;
         int k = -1;
@@ -175,9 +169,7 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
             std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) {
-                std::cerr << prob[k] << '\n';
-            }
+            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
@@ -193,9 +185,7 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
 int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
     try {
         double total = 0;
-        for (int k = 0; k < nstate; k++) {
-            total += prob[k];
-        }
+        for (int k = 0; k < nstate; k++) { total += prob[k]; }
         double p = total * Random::Uniform();
         double tot = 0;
         int k = -1;
@@ -205,9 +195,7 @@ int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
             std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) {
-                std::cerr << prob[k] << '\n';
-            }
+            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
@@ -223,9 +211,7 @@ int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
 int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
     try {
         double total = 0;
-        for (int k = 0; k < nstate; k++) {
-            total += prob[k];
-        }
+        for (int k = 0; k < nstate; k++) { total += prob[k]; }
         double p = total * Random::Uniform();
         double tot = 0;
         int k = -1;
@@ -235,9 +221,7 @@ int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
             std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) {
-                std::cerr << prob[k] << '\n';
-            }
+            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
@@ -252,20 +236,14 @@ int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
 // ---------------------------------------------------------------------------------
 void Random::DrawFromUrn(int *tab, int n, int N) {  // draw n out of N
     // assumes that tab is an Int16[n]
-    for (int i = 0; i < n; i++) {
-        tab[i] = 0;
-    }
+    for (int i = 0; i < n; i++) { tab[i] = 0; }
     auto index = new int[N];
-    for (int i = 0; i < N; i++) {
-        index[i] = 0;
-    }
+    for (int i = 0; i < N; i++) { index[i] = 0; }
     for (int i = 0; i < n; i++) {
         int trial = (int)(Random::Uniform() * (N - i));
         for (int k = 0; k < N; k++) {
             if (index[k] != 0) {
-                if (trial >= k) {
-                    trial++;
-                }
+                if (trial >= k) { trial++; }
             }
         }
         if (trial == N) {
@@ -296,9 +274,7 @@ int Random::FiniteDiscrete(int n, const double *probarray) {
     }
     double u = total * Random::Uniform();
     int k = 0;
-    while ((k < n) && (u > cumul[k])) {
-        k++;
-    }
+    while ((k < n) && (u > cumul[k])) { k++; }
     if (k == n) {
         std::cerr << "error in Random::FiniteDiscrete\n";
         exit(1);
@@ -329,9 +305,7 @@ double Random::sNormal() {
         } while (x * v * v > 4.5);
         // double ret = (u - 0.9986501) > 0 ? sqrt(2 * x) : - sqrt(2 * x);
         double ret = sqrt(2 * x);
-        if (u - 0.9986501 > 0) {
-            ret = -ret;
-        }
+        if (u - 0.9986501 > 0) { ret = -ret; }
         return ret;
     }
     double x, v, w, tot;
@@ -341,12 +315,8 @@ double Random::sNormal() {
         v = (x > 0) ? x : -x;
         w = 6.6313339 * (3 - v) * (3 - v);
         tot = 0;
-        if (v < 1.5) {
-            tot += 6.0432809 * (1.5 - v);
-        }
-        if (v < 1) {
-            tot += 13.2626678 * (3 - v * v) - w;
-        }
+        if (v < 1.5) { tot += 6.0432809 * (1.5 - v); }
+        if (v < 1) { tot += 13.2626678 * (3 - v * v) - w; }
     } while (u > 49.0024445 * SAFE_EXP(-0.5 * v * v) - tot - w);
     return x;
 }
@@ -388,18 +358,14 @@ double Random::sGamma(double a) {
         t = sNormal();
         x = s + 0.5 * t;
         if (t > 0) {
-            if (x == 0.0) {
-                std::cerr << "1\n";
-            }
+            if (x == 0.0) { std::cerr << "1\n"; }
             return x * x;
         }
 
         // step 3
         u = Uniform();
         if (d * u < t * t * t) {
-            if (x == 0.0) {
-                std::cerr << "2\n";
-            }
+            if (x == 0.0) { std::cerr << "2\n"; }
             return x * x;
         }
 
@@ -427,9 +393,7 @@ double Random::sGamma(double a) {
             v = 0.5 * t / s;
             q = q0 - s * t + 0.25 * t * t + 2 * s2 * log(1.0 + v);
             if (log(1 - u) < q) {
-                if (x == 0.0) {
-                    std::cerr << "3\n";
-                }
+                if (x == 0.0) { std::cerr << "3\n"; }
                 return x * x;
             }
         }
@@ -440,9 +404,7 @@ double Random::sGamma(double a) {
                 u = Uniform();
                 u = u + u - 1;
                 t = fabs(e * sigma);
-                if (u < 0) {
-                    t = -t;
-                }
+                if (u < 0) { t = -t; }
                 t += b;
             } while (t <= -0.71874483771719);
 
@@ -489,9 +451,7 @@ double Random::logGamma(double alpha) {
 
     double tot = gammacoefs[0];
     double f = alpha;
-    for (int i = 1; i < 8; i++) {
-        tot += gammacoefs[i] / (f++);
-    }
+    for (int i = 1; i < 8; i++) { tot += gammacoefs[i] / (f++); }
     return log(tot * sqrt(2 * Pi)) - alpha - 6.5 + (alpha - 0.5) * log(alpha + 6.5);
 }
 
@@ -502,22 +462,17 @@ double Random::logMultivariateGamma(double a, int p) {
         exit(1);
     }
     double ret = p * (p - 1) / 4 * log(Pi);
-    for (int j = 1; j <= p; j++) {
-        ret += logGamma(a + (1 - j) / 2);
-    }
+    for (int j = 1; j <= p; j++) { ret += logGamma(a + (1 - j) / 2); }
     return ret;
 }
 
-double Random::ProfileProposeMove(
-    std::vector<double> &profile, int dim, double tuning,
+double Random::ProfileProposeMove(std::vector<double> &profile, int dim, double tuning,
     int n) {  // n==0dirichlet resampling, otherwise, vase communiquants
 
     double ret = 0;
     if (n == 0) {  // dirichlet
         double oldprofile[dim];
-        for (int i = 0; i < dim; i++) {
-            oldprofile[i] = profile[i];
-        }
+        for (int i = 0; i < dim; i++) { oldprofile[i] = profile[i]; }
         double total = 0;
         for (int i = 0; i < dim; i++) {
             profile[i] = Random::sGamma(tuning * oldprofile[i]);
@@ -537,9 +492,7 @@ double Random::ProfileProposeMove(
         }
         return logHastings;
     }
-    if (2 * n > dim) {
-        n = dim / 2;
-    }
+    if (2 * n > dim) { n = dim / 2; }
     auto indices = new int[2 * n];
     Random::DrawFromUrn(indices, 2 * n, dim);
     for (int i = 0; i < n; i++) {
@@ -551,21 +504,13 @@ double Random::ProfileProposeMove(
         double h = tot * tuning * (Random::Uniform() - 0.5);
         x += h;
         while ((x < 0) || (x > tot)) {
-            if (x < 0) {
-                x = -x;
-            }
-            if (x > tot) {
-                x = 2 * tot - x;
-            }
+            if (x < 0) { x = -x; }
+            if (x > tot) { x = 2 * tot - x; }
         }
         profile[i1] = x;
         profile[i2] = tot - x;
-        if (!profile[i1]) {
-            profile[i1] = 1e-50;
-        }
-        if (!profile[i2]) {
-            profile[i2] = 1e-50;
-        }
+        if (!profile[i1]) { profile[i1] = 1e-50; }
+        if (!profile[i2]) { profile[i2] = 1e-50; }
     }
     delete[] indices;
 
@@ -596,8 +541,8 @@ double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double 
     return logh;
 }
 
-double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning,
-                                        const vector<int> &toggle) {
+double Random::PosRealVectorProposeMove(
+    std::vector<double> &x, int dim, double tuning, const vector<int> &toggle) {
     double logh = 0;
     for (int i = 0; i < dim; i++) {
         if (toggle[i]) {
@@ -626,8 +571,8 @@ double Random::BetaSample(double alpha, double beta) {
 
 double Random::GammaSample(double alpha, double beta) { return Gamma(alpha, beta); }
 
-void Random::DirichletSample(vector<double> &x, const vector<double> &center,
-                             double concentration) {
+void Random::DirichletSample(
+    vector<double> &x, const vector<double> &center, double concentration) {
     if (x.size() != center.size()) {
         cerr << "error in Random::DirichletSample: non matching vector size\n";
         exit(1);
@@ -640,14 +585,10 @@ void Random::DirichletSample(vector<double> &x, const vector<double> &center,
     double tot2 = 0;
     for (unsigned int k = 0; k < x.size(); k++) {
         x[k] /= tot;
-        if (!x[k]) {
-            x[k] = 1e-50;
-        }
+        if (!x[k]) { x[k] = 1e-50; }
         tot2 += x[k];
     }
-    for (unsigned int k = 0; k < x.size(); k++) {
-        x[k] /= tot2;
-    }
+    for (unsigned int k = 0; k < x.size(); k++) { x[k] /= tot2; }
 }
 
 double Random::logBetaDensity(double x, double alpha, double beta) {
@@ -659,8 +600,8 @@ double Random::logGammaDensity(double x, double alpha, double beta) {
     return alpha * log(beta) - logGamma(alpha) + (alpha - 1) * log(x) - beta * x;
 }
 
-double Random::logDirichletDensity(const vector<double> &x, const vector<double> &center,
-                                   double concentration) {
+double Random::logDirichletDensity(
+    const vector<double> &x, const vector<double> &center, double concentration) {
     if (x.size() != center.size()) {
         cerr << "error in Random::logDirichletDensity: non matching vector size\n";
         exit(1);

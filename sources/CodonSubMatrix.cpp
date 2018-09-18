@@ -30,9 +30,7 @@ void MGCodonSubMatrix::ComputeStationary() const {
     }
 
     // renormalize stationary probabilities
-    for (int i = 0; i < GetNstate(); i++) {
-        mStationary[i] /= total;
-    }
+    for (int i = 0; i < GetNstate(); i++) { mStationary[i] /= total; }
 }
 
 /*
@@ -73,9 +71,7 @@ void MGOmegaCodonSubMatrix::ComputeArray(int i) const {
                     exit(1);
                 }
                 Q(i, j) = (*NucMatrix)(a, b);
-                if (!Synonymous(i, j)) {
-                    Q(i, j) *= GetOmega();
-                }
+                if (!Synonymous(i, j)) { Q(i, j) *= GetOmega(); }
             } else {
                 Q(i, j) = 0;
             }

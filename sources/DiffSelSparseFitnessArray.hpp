@@ -35,9 +35,9 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
   public:
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
     DiffSelSparseFitnessArray(const BidimSelector<vector<double>> &infitness,
-                              const BidimSelector<vector<int>> &intoggle, int inNlevel)
+        const BidimSelector<vector<int>> &intoggle, int inNlevel)
         : SimpleBidimArray<vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-                                           vector<double>(infitness.GetVal(0, 0).size(), 0)),
+              vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           toggle(intoggle),
           Nlevel(inNlevel) {
@@ -50,17 +50,13 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
     //! full update of the array
     void Update() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Update(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Update(i, j); }
         }
     }
 
     //! update of column j (i.e. site j)
     void UpdateColumn(int j) {
-        for (int i = 0; i < GetNrow(); i++) {
-            Update(i, j);
-        }
+        for (int i = 0; i < GetNrow(); i++) { Update(i, j); }
     }
 
     //! update of column j (i.e. site j) and condition i
@@ -73,17 +69,13 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
                 if (toggle.GetVal(i - 1, j)[k]) {
                     l = i;
                 } else {
-                    if ((Nlevel == 2) && (toggle.GetVal(0, j)[k])) {
-                        l = 1;
-                    }
+                    if ((Nlevel == 2) && (toggle.GetVal(0, j)[k])) { l = 1; }
                 }
             }
             x[k] = fitness.GetVal(l, j)[k];
             total += x[k];
         }
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] /= total;
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] /= total; }
     }
 
   protected:
@@ -128,11 +120,10 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
   public:
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
     DiffSelDoublySparseFitnessArray(const BidimSelector<vector<double>> &infitness,
-                                    const Selector<vector<int>> &inmask,
-                                    const BidimSelector<vector<int>> &intoggle, int inNlevel,
-                                    double inepsilon)
+        const Selector<vector<int>> &inmask, const BidimSelector<vector<int>> &intoggle,
+        int inNlevel, double inepsilon)
         : SimpleBidimArray<vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-                                           vector<double>(infitness.GetVal(0, 0).size(), 0)),
+              vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           toggle(intoggle),
@@ -150,17 +141,13 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
     //! full update of the array
     void Update() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Update(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Update(i, j); }
         }
     }
 
     //! update of column j (i.e. site j)
     void UpdateColumn(int j) {
-        for (int i = 0; i < GetNrow(); i++) {
-            Update(i, j);
-        }
+        for (int i = 0; i < GetNrow(); i++) { Update(i, j); }
     }
 
     //! update of column j (i.e. site j) and condition i
@@ -174,9 +161,7 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
                     if (toggle.GetVal(i - 1, j)[k]) {
                         l = i;
                     } else {
-                        if ((Nlevel == 2) && (toggle.GetVal(0, j)[k])) {
-                            l = 1;
-                        }
+                        if ((Nlevel == 2) && (toggle.GetVal(0, j)[k])) { l = 1; }
                     }
                 }
                 x[k] = fitness.GetVal(l, j)[k];
@@ -185,9 +170,7 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
             }
             total += x[k];
         }
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] /= total;
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] /= total; }
     }
 
   protected:
@@ -218,9 +201,9 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
     //! constructor, parameterized by input fitness array, mask array and epsilon
     //! (background fitness of low-fitness amino-acids)
     MutSelSparseFitnessArray(const Selector<vector<double>> &infitness,
-                             const Selector<vector<int>> &inmask, double inepsilon)
-        : SimpleArray<vector<double>>(infitness.GetSize(),
-                                      vector<double>(infitness.GetVal(0).size(), 0)),
+        const Selector<vector<int>> &inmask, double inepsilon)
+        : SimpleArray<vector<double>>(
+              infitness.GetSize(), vector<double>(infitness.GetVal(0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           epsilon(inepsilon) {
@@ -235,9 +218,7 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
 
     //! full update of the array
     void Update() {
-        for (int i = 0; i < GetSize(); i++) {
-            Update(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { Update(i); }
     }
 
     //! update site i
@@ -252,16 +233,12 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
             }
             total += x[k];
         }
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] /= total;
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] /= total; }
     }
 
     double GetMeanEntropy() const {
         double mean = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            mean += Random::GetEntropy(GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { mean += Random::GetEntropy(GetVal(i)); }
         mean /= GetSize();
         return mean;
     }

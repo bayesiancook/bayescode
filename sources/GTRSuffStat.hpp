@@ -30,16 +30,14 @@ class RelRateSuffStat : public SuffStat {
         }
     }
 
-    void AddSuffStat(const GTRSubMatrix &matrix, const PathSuffStat &pathsuffstat,
-                     double rate = 1) {
+    void AddSuffStat(
+        const GTRSubMatrix &matrix, const PathSuffStat &pathsuffstat, double rate = 1) {
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
         for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
             int a = i->first;
             for (int b = 0; b < nstate; b++) {
-                if (b != a) {
-                    rrbeta[rrindex(a, b)] += matrix.Stationary(b) * i->second * rate;
-                }
+                if (b != a) { rrbeta[rrindex(a, b)] += matrix.Stationary(b) * i->second * rate; }
             }
         }
 
@@ -50,22 +48,22 @@ class RelRateSuffStat : public SuffStat {
         }
     }
 
-    void AddSuffStat(const GTRSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray) {
+    void AddSuffStat(
+        const GTRSubMatrixArray &matrixarray, const PathSuffStatArray &pathsuffstatarray) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const GTRSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
+        const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i), rate.GetVal(i));
         }
     }
 
-    void AddSuffStat(const AASubSelSubMatrix &matrix, const PathSuffStat &pathsuffstat,
-                     double rate = 1) {
+    void AddSuffStat(
+        const AASubSelSubMatrix &matrix, const PathSuffStat &pathsuffstat, double rate = 1) {
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
         for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
@@ -85,15 +83,15 @@ class RelRateSuffStat : public SuffStat {
         }
     }
 
-    void AddSuffStat(const AASubSelSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray) {
+    void AddSuffStat(
+        const AASubSelSubMatrixArray &matrixarray, const PathSuffStatArray &pathsuffstatarray) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const AASubSelSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
+        const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i), rate.GetVal(i));
         }
@@ -101,9 +99,7 @@ class RelRateSuffStat : public SuffStat {
 
     double GetLogProb(const vector<double> &rr) const {
         double total = 0;
-        for (int i = 0; i < nrr; i++) {
-            total += rrcount[i] * log(rr[i]) - rrbeta[i] * rr[i];
-        }
+        for (int i = 0; i < nrr; i++) { total += rrcount[i] * log(rr[i]) - rrbeta[i] * rr[i]; }
         return total;
     }
 
@@ -122,21 +118,13 @@ class RelRateSuffStat : public SuffStat {
     unsigned int GetMPISize() const { return 2 * nrr; }
 
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < nrr; i++) {
-            buffer << rrcount[i];
-        }
-        for (int i = 0; i < nrr; i++) {
-            buffer << rrbeta[i];
-        }
+        for (int i = 0; i < nrr; i++) { buffer << rrcount[i]; }
+        for (int i = 0; i < nrr; i++) { buffer << rrbeta[i]; }
     }
 
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < nrr; i++) {
-            buffer >> rrcount[i];
-        }
-        for (int i = 0; i < nrr; i++) {
-            buffer >> rrbeta[i];
-        }
+        for (int i = 0; i < nrr; i++) { buffer >> rrcount[i]; }
+        for (int i = 0; i < nrr; i++) { buffer >> rrbeta[i]; }
     }
 
     void Add(const MPIBuffer &buffer) {
@@ -178,8 +166,8 @@ class ProfileSuffStat : public SuffStat {
         }
     }
 
-    void AddSuffStat(const GTRSubMatrix &matrix, const PathSuffStat &pathsuffstat,
-                     double rate = 1) {
+    void AddSuffStat(
+        const GTRSubMatrix &matrix, const PathSuffStat &pathsuffstat, double rate = 1) {
         const std::map<int, int> &rootcount = pathsuffstat.GetRootCountMap();
         for (std::map<int, int>::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
             profilecount[i->first] += i->second;
@@ -190,9 +178,7 @@ class ProfileSuffStat : public SuffStat {
              i++) {
             int a = i->first;
             for (int b = 0; b < nstate; b++) {
-                if (b != a) {
-                    profilebeta[b] += matrix.RelativeRate(a, b) * i->second * rate;
-                }
+                if (b != a) { profilebeta[b] += matrix.RelativeRate(a, b) * i->second * rate; }
             }
         }
 
@@ -203,15 +189,15 @@ class ProfileSuffStat : public SuffStat {
         }
     }
 
-    void AddSuffStat(const GTRSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray) {
+    void AddSuffStat(
+        const GTRSubMatrixArray &matrixarray, const PathSuffStatArray &pathsuffstatarray) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const GTRSubMatrixArray &matrixarray,
-                     const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
+        const PathSuffStatArray &pathsuffstatarray, const Selector<double> &rate) {
         for (int i = 0; i < matrixarray.GetSize(); i++) {
             AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i), rate.GetVal(i));
         }
@@ -240,21 +226,13 @@ class ProfileSuffStat : public SuffStat {
     unsigned int GetMPISize() const { return 2 * nstate; }
 
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < nstate; i++) {
-            buffer << profilecount[i];
-        }
-        for (int i = 0; i < nstate; i++) {
-            buffer << profilebeta[i];
-        }
+        for (int i = 0; i < nstate; i++) { buffer << profilecount[i]; }
+        for (int i = 0; i < nstate; i++) { buffer << profilebeta[i]; }
     }
 
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < nstate; i++) {
-            buffer >> profilecount[i];
-        }
-        for (int i = 0; i < nstate; i++) {
-            buffer >> profilebeta[i];
-        }
+        for (int i = 0; i < nstate; i++) { buffer >> profilecount[i]; }
+        for (int i = 0; i < nstate; i++) { buffer >> profilebeta[i]; }
     }
 
     void Add(const MPIBuffer &buffer) {
@@ -284,24 +262,21 @@ class ProfileSuffStatArray : public SimpleArray<ProfileSuffStat> {
     ~ProfileSuffStatArray() {}
 
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Clear(); }
     }
 
     void AddSuffStat(const Selector<GTRSubMatrix> &matrixarray,
-                     const Selector<PathSuffStat> &pathsuffstatarray) {
+        const Selector<PathSuffStat> &pathsuffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             (*this)[i].AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
         }
     }
 
     void AddSuffStat(const Selector<GTRSubMatrix> &matrixarray,
-                     const Selector<PathSuffStat> &pathsuffstatarray,
-                     const Selector<double> &rate) {
+        const Selector<PathSuffStat> &pathsuffstatarray, const Selector<double> &rate) {
         for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].AddSuffStat(matrixarray.GetVal(i), pathsuffstatarray.GetVal(i),
-                                   rate.GetVal(i));
+            (*this)[i].AddSuffStat(
+                matrixarray.GetVal(i), pathsuffstatarray.GetVal(i), rate.GetVal(i));
         }
     }
 
@@ -318,23 +293,17 @@ class ProfileSuffStatArray : public SimpleArray<ProfileSuffStat> {
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get an array from MPI buffer and then add it to this array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 };
 

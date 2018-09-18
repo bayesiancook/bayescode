@@ -20,9 +20,7 @@ std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<st
         exit(1);
     }
     std::vector<int> result(taxa.size(), -1);
-    for (size_t i = 0; i < taxa.size(); i++) {
-        result.at(i) = mapping.at(taxa.at(i));
-    }
+    for (size_t i = 0; i < taxa.size(); i++) { result.at(i) = mapping.at(taxa.at(i)); }
     return result;
 }
 

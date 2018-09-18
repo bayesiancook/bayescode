@@ -20,7 +20,7 @@ class Move {
     //! success rate.
     template <class C>
     static double Sliding(double &x, double tuning, int nrep, double min, double max,
-                          LogProbF<C> logprobf, UpdateF<C> updatef, C *This) {
+        LogProbF<C> logprobf, UpdateF<C> updatef, C *This) {
         // C* This = dynamic_cast<C*>(this);
 
         double nacc = 0;
@@ -32,12 +32,8 @@ class Move {
             x += m;
             if (max > min) {
                 while ((x < min) || (x > max)) {
-                    if (x < min) {
-                        x = 2 * min - x;
-                    }
-                    if (x > max) {
-                        x = 2 * max - x;
-                    }
+                    if (x < min) { x = 2 * min - x; }
+                    if (x > max) { x = 2 * max - x; }
                 }
             }
             (This->*updatef)();
@@ -62,8 +58,8 @@ class Move {
     //! update functions, as well as a pointer to the model itself. Returns
     //! success rate.
     template <class C>
-    static double Scaling(double &x, double tuning, int nrep, LogProbF<C> logprobf,
-                          UpdateF<C> updatef, C *This) {
+    static double Scaling(
+        double &x, double tuning, int nrep, LogProbF<C> logprobf, UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
@@ -96,7 +92,7 @@ class Move {
     //! itself. Returns success rate.
     template <class C>
     static double Profile(vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
-                          UpdateF<C> updatef, C *This) {
+        UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         vector<double> bk(x.size(), 0);

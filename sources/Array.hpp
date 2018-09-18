@@ -50,16 +50,12 @@ class Selector {
 
     //! write array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetSize(); i++) {
-            buffer << this->GetVal(i);
-        }
+        for (int i = 0; i < this->GetSize(); i++) { buffer << this->GetVal(i); }
     }
 
     //! write array into generic output stream
     void ToStream(ostream &os) const {
-        for (int i = 0; i < this->GetSize(); i++) {
-            os << this->GetVal(i) << '\t';
-        }
+        for (int i = 0; i < this->GetSize(); i++) { os << this->GetVal(i) << '\t'; }
     }
 };
 
@@ -91,23 +87,17 @@ class Array : public Selector<T> {
             cerr << "error: arrays do not have same size\n";
             exit(1);
         }
-        for (int i = 0; i < this->GetSize(); i++) {
-            (*this)[i] = from.GetVal(i);
-        }
+        for (int i = 0; i < this->GetSize(); i++) { (*this)[i] = from.GetVal(i); }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < this->GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get array from generic input stream
     void FromStream(istream &is) {
-        for (int i = 0; i < this->GetSize(); i++) {
-            is >> (*this)[i];
-        }
+        for (int i = 0; i < this->GetSize(); i++) { is >> (*this)[i]; }
     }
 };
 
@@ -116,9 +106,7 @@ class Array : public Selector<T> {
  */
 template <class T>
 ostream &operator<<(ostream &os, const vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        os << array[i] << '\t';
-    }
+    for (unsigned int i = 0; i < array.size(); i++) { os << array[i] << '\t'; }
     return os;
 }
 
@@ -127,9 +115,7 @@ ostream &operator<<(ostream &os, const vector<T> &array) {
  */
 template <class T>
 istream &operator>>(istream &is, vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        is >> array[i];
-    }
+    for (unsigned int i = 0; i < array.size(); i++) { is >> array[i]; }
     return is;
 }
 
@@ -222,12 +208,8 @@ class SimpleArray : public Array<T> {
         }
 
         vector<T> tmp(GetSize(), GetVal(0));
-        for (int i = 0; i < GetSize(); i++) {
-            tmp[i] = GetVal(permut.GetVal(i));
-        }
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = tmp[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { tmp[i] = GetVal(permut.GetVal(i)); }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = tmp[i]; }
     }
 
     //! Swap two entries

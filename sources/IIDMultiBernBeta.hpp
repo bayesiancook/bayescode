@@ -8,7 +8,7 @@
 class IIDMultiBernBeta : public SimpleArray<vector<double>> {
   public:
     IIDMultiBernBeta(int insize, const vector<double> &inpi, const vector<double> &inmean,
-                     const vector<double> &ininvconc)
+        const vector<double> &ininvconc)
         : SimpleArray<vector<double>>(insize, vector<double>(inpi.size(), 0)),
           pi(inpi),
           mean(inmean),
@@ -35,24 +35,20 @@ class IIDMultiBernBeta : public SimpleArray<vector<double>> {
 
     double GetLogProb() {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
     double GetLogProb(int i) {
         double total = 0;
-        for (int k = 0; k < GetDim(); k++) {
-            total += GetLogProb(i, k);
-        }
+        for (int k = 0; k < GetDim(); k++) { total += GetLogProb(i, k); }
         return total;
     }
 
     double GetLogProb(int i, int k) {
         if (GetVal(i)[k]) {
-            return log(pi[k]) + Random::logBetaDensity(GetVal(i)[k], mean[k] / invconc[k],
-                                                       (1 - mean[k]) / invconc[k]);
+            return log(pi[k]) + Random::logBetaDensity(
+                                    GetVal(i)[k], mean[k] / invconc[k], (1 - mean[k]) / invconc[k]);
         }
         return log(1 - pi[k]);
     }
@@ -66,7 +62,7 @@ class IIDMultiBernBeta : public SimpleArray<vector<double>> {
 class IIDMultiCount : public SimpleArray<vector<int>> {
   public:
     IIDMultiCount(const vector<int> &intotcount, const vector<double> &inpi,
-                  const vector<double> &inmean, const vector<double> &ininvconc)
+        const vector<double> &inmean, const vector<double> &ininvconc)
         : SimpleArray<vector<int>>(intotcount.size(), vector<int>(inpi.size(), 0)),
           totcount(intotcount),
           pi(inpi),
@@ -77,9 +73,7 @@ class IIDMultiCount : public SimpleArray<vector<int>> {
 
     void Clear() {
         for (int i = 0; i < GetSize(); i++) {
-            for (int k = 0; k < GetDim(); k++) {
-                (*this)[i][k] = 0;
-            }
+            for (int k = 0; k < GetDim(); k++) { (*this)[i][k] = 0; }
         }
     }
 
@@ -89,17 +83,13 @@ class IIDMultiCount : public SimpleArray<vector<int>> {
 
     double GetMarginalLogProb() const {
         double total = 0;
-        for (int k = 0; k < GetDim(); k++) {
-            total += GetMarginalLogProb(k);
-        }
+        for (int k = 0; k < GetDim(); k++) { total += GetMarginalLogProb(k); }
         return total;
     }
 
     double GetMarginalLogProb(int k) const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetMarginalLogProb(i, k);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetMarginalLogProb(i, k); }
         return total;
     }
 

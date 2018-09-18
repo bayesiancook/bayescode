@@ -50,9 +50,7 @@ class M2aMix : public SimpleArray<double> {
             }
             tot += postprob[cat];
         }
-        for (int cat = 0; cat < GetSize(); cat++) {
-            postprob[cat] /= tot;
-        }
+        for (int cat = 0; cat < GetSize(); cat++) { postprob[cat] /= tot; }
         double ret = log(tot) + max;
         if (std::isinf(ret)) {
             cerr << "in M2aMix::GetPostProbArray\n";
@@ -78,8 +76,8 @@ class M2aMix : public SimpleArray<double> {
         return ret;
     }
 
-    double GetPostProbArray(const OmegaPathSuffStatArray &suffstatarray,
-                            vector<vector<double>> &postprobarray) const {
+    double GetPostProbArray(
+        const OmegaPathSuffStatArray &suffstatarray, vector<vector<double>> &postprobarray) const {
         double total = 0;
         for (int i = 0; i < suffstatarray.GetSize(); i++) {
             total += GetPostProbArray(suffstatarray.GetVal(i), postprobarray[i]);

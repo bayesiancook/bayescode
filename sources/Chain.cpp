@@ -23,9 +23,7 @@ void Chain::MakeFiles(int force) {
         exit(1);
     }
     ofstream param_os((name + ".param").c_str());
-    if (saveall) {
-        ofstream chain_os((name + ".chain").c_str());
-    }
+    if (saveall) { ofstream chain_os((name + ".chain").c_str()); }
     ofstream mon_os((name + ".monitor").c_str());
     ofstream trace_os((name + ".trace").c_str());
     model->TraceHeader(trace_os);
@@ -54,9 +52,7 @@ void Chain::Reset(int force) {
 }
 
 void Chain::Move() {
-    for (int i = 0; i < every; i++) {
-        model->Move();
-    }
+    for (int i = 0; i < every; i++) { model->Move(); }
     SavePoint();
     Save();
     Monitor();

@@ -27,18 +27,14 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
     int GetNcluster() const {
         int n = 0;
         for (int i = 0; i < GetSize(); i++) {
-            if (GetVal(i)) {
-                n++;
-            }
+            if (GetVal(i)) { n++; }
         }
         return n;
     }
 
     //! reset count vector
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = 0;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = 0; }
     }
 
     //! implement additive behavior of OccupancySuffStat
@@ -47,9 +43,7 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
             cerr << "error in OccupancySuffStat::Add: non matching array size\n";
             exit(1);
         }
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] += from.GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] += from.GetVal(i); }
     }
 
     //! implement additive behavior of OccupancySuffStat
@@ -63,9 +57,7 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
 
     //! add suff stat based on an allocation vector
     void AddSuffStat(const Selector<int> &alloc) {
-        for (int i = 0; i < alloc.GetSize(); i++) {
-            (*this)[alloc.GetVal(i)]++;
-        }
+        for (int i = 0; i < alloc.GetSize(); i++) { (*this)[alloc.GetVal(i)]++; }
     }
 
     //! return size when put into an MPI buffer
@@ -73,16 +65,12 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
 
     //! put current value of count and beta into an MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! get value from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get an OccupancySuffStat from MPI buffer and then add it to this object

@@ -50,8 +50,8 @@ class CodonSubMatrix : public virtual SubMatrix {
  */
 class NucCodonSubMatrix : public virtual CodonSubMatrix {
   public:
-    NucCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
-                      bool innormalise)
+    NucCodonSubMatrix(
+        const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, bool innormalise)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise) {
         SetNucMatrix(inNucMatrix);
@@ -103,8 +103,8 @@ class OmegaCodonSubMatrix : public virtual CodonSubMatrix {
 
 class MGCodonSubMatrix : public NucCodonSubMatrix {
   public:
-    MGCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
-                     bool innormalise = false)
+    MGCodonSubMatrix(
+        const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix, bool innormalise = false)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           NucCodonSubMatrix(instatespace, inNucMatrix, innormalise) {}
@@ -124,7 +124,7 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatrix {
   public:
     MGOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
-                          double inomega, bool innormalise = false)
+        double inomega, bool innormalise = false)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           MGCodonSubMatrix(instatespace, inNucMatrix, innormalise),

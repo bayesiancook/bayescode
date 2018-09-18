@@ -24,16 +24,12 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
 
     //! sample all entries from prior distribution
     void Sample() {
-        for (int i = 0; i < GetSize(); i++) {
-            Sample(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { Sample(i); }
     }
 
     void Sample(int i) {
         vector<double> &x = (*this)[i];
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] = Random::sGamma(shape * center[k]);
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] = Random::sGamma(shape * center[k]); }
     }
 
     void PriorResample(const Selector<vector<int>> &mask, double min = 0) {
@@ -43,9 +39,7 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
             for (int k = 0; k < GetDim(); k++) {
                 if (!s[k]) {
                     x[k] = Random::sGamma(shape * center[k]);
-                    if (x[k] < min) {
-                        x[k] = min;
-                    }
+                    if (x[k] < min) { x[k] = min; }
                 }
             }
         }
@@ -54,18 +48,14 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
     void SetUniform() {
         for (int i = 0; i < GetSize(); i++) {
             vector<double> &x = (*this)[i];
-            for (int k = 0; k < GetDim(); k++) {
-                x[k] = 1.0;
-            }
+            for (int k = 0; k < GetDim(); k++) { x[k] = 1.0; }
         }
     }
 
     //! return total log prob, summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -133,8 +123,8 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
   public:
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, shape parameter and center (frequency vector)
-    BidimIIDMultiGamma(int innrow, int inncol, int indim, double inshape,
-                       const vector<double> &incenter)
+    BidimIIDMultiGamma(
+        int innrow, int inncol, int indim, double inshape, const vector<double> &incenter)
         : SimpleBidimArray(innrow, inncol, vector<double>(indim, 1.0 / indim)),
           dim(indim),
           shape(inshape),
@@ -151,9 +141,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
     //! sample all entries from prior distribution
     void Sample() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Sample(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Sample(i, j); }
         }
     }
 
@@ -170,9 +158,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
     //! columns j=0..Ncol-1)
     double GetMeanRelVar(int k) const {
         double mean = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            mean += GetRelVar(k, j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { mean += GetRelVar(k, j); }
         mean /= GetNcol();
         return mean;
     }
@@ -197,27 +183,21 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
     //! return total log prob, summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            total += GetColumnLogProb(j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { total += GetColumnLogProb(j); }
         return total;
     }
 
     //! return total log prob for row i
     double GetRowLogProb(int i) const {
         double total = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            total += GetLogProb(i, j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { total += GetLogProb(i, j); }
         return total;
     }
 
     //! return total log prob for column j
     double GetColumnLogProb(int j) const {
         double total = 0;
-        for (int i = 0; i < GetNrow(); i++) {
-            total += GetLogProb(i, j);
-        }
+        for (int i = 0; i < GetNrow(); i++) { total += GetLogProb(i, j); }
         return total;
     }
 
@@ -226,9 +206,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
     double GetColumnLogProb(int j, const vector<int> &flag) const {
         double total = 0;
         for (int i = 0; i < GetNrow(); i++) {
-            if (flag[i]) {
-                total += GetLogProb(i, j);
-            }
+            if (flag[i]) { total += GetLogProb(i, j); }
         }
         return total;
     }

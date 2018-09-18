@@ -3,13 +3,9 @@
 #include "tree-implem.hpp"
 
 int tree_size(const Tree* tree, Tree::NodeIndex from) {
-    if (tree->is_leaf(from)) {
-        return 1;
-    }
+    if (tree->is_leaf(from)) { return 1; }
     int tot = 0;
-    for (auto c : tree->children(from)) {
-        tot += tree_size(tree, c);
-    }
+    for (auto c : tree->children(from)) { tot += tree_size(tree, c); }
     return tot;
 }
 
@@ -41,23 +37,20 @@ int main() {
     }
 
     // slightly shuffled taxa list for example tree
-    std::vector<std::string> taxa = {
-        "Ele.bald",  "Ele.bal2",  "Ele.bal4", "Ele.vivi", "Ele.vivA", "Ele.bal3",  "Ele.viv2",
-        "Ele.fici",  "Ele.grac",  "Ele.lim2", "Ele.rost", "Ele.limo", "Ele.pal2",  "Ele.acut",
-        "Ele.palu",  "Ele.gra2",  "Ele.lim3", "Ele.geni", "Ele.quan", "Abildgaar", "Bulbostyl",
-        "Bolboscho", "Fuir.abn",  "Fuir.umb", "Scho.lac", "Scho.val", "Scho.muc",  "Hellmut1",
-        "Actinosch", "Fimb.lit",  "Fimb.dic", "Fimb.fe2", "Fimb.li2", "Fimb.di2",  "Fimb.fer",
-        "Isolepis",  "Hellmut2",  "Scirpoid", "Cyp.spha", "Cyp.alt3", "Cyp.era6",  "Cyp.era1",
-        "Eriophor",  "Scirpus",   "Schoenox", "Uncin.un", "Uncin.ph", "Carex.com", "Carex.hal",
-        "Cyp.fusc",  "Cyp.pulc",  "Cyp.capi", "Volkiell", "Cyp.ust2", "Remirea",   "Cyp.iria",
-        "Killinga",  "Pycreus",   "Cyp.long", "Cyp.rotu", "Cyp.papy", "Cyp.ustu",  "Blysmus",
-        "Carex.ber", "Carex.pen", "Rhy.alba", "Rhy.grac", "Rhy.albi", "Rhy.rubr",  "Rhy.glob",
-        "Rhy.glo2",  "Carpha",    "Schoenus", "Baumea",   "Machaeri", "Cladium",   "Coleochlo",
-        "Microdra",  "Chrysithr"};
+    std::vector<std::string> taxa = {"Ele.bald", "Ele.bal2", "Ele.bal4", "Ele.vivi", "Ele.vivA",
+        "Ele.bal3", "Ele.viv2", "Ele.fici", "Ele.grac", "Ele.lim2", "Ele.rost", "Ele.limo",
+        "Ele.pal2", "Ele.acut", "Ele.palu", "Ele.gra2", "Ele.lim3", "Ele.geni", "Ele.quan",
+        "Abildgaar", "Bulbostyl", "Bolboscho", "Fuir.abn", "Fuir.umb", "Scho.lac", "Scho.val",
+        "Scho.muc", "Hellmut1", "Actinosch", "Fimb.lit", "Fimb.dic", "Fimb.fe2", "Fimb.li2",
+        "Fimb.di2", "Fimb.fer", "Isolepis", "Hellmut2", "Scirpoid", "Cyp.spha", "Cyp.alt3",
+        "Cyp.era6", "Cyp.era1", "Eriophor", "Scirpus", "Schoenox", "Uncin.un", "Uncin.ph",
+        "Carex.com", "Carex.hal", "Cyp.fusc", "Cyp.pulc", "Cyp.capi", "Volkiell", "Cyp.ust2",
+        "Remirea", "Cyp.iria", "Killinga", "Pycreus", "Cyp.long", "Cyp.rotu", "Cyp.papy",
+        "Cyp.ustu", "Blysmus", "Carex.ber", "Carex.pen", "Rhy.alba", "Rhy.grac", "Rhy.albi",
+        "Rhy.rubr", "Rhy.glob", "Rhy.glo2", "Carpha", "Schoenus", "Baumea", "Machaeri", "Cladium",
+        "Coleochlo", "Microdra", "Chrysithr"};
     auto taxa_index = taxa_index_from_parser(parser, taxa);
-    for (auto i : taxa_index) {
-        std::cout << i << " ";
-    }
+    for (auto i : taxa_index) { std::cout << i << " "; }
     std::cout << "\n";
 
     auto taxa_conditions = taxa_container_from_parser<int>(

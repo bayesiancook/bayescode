@@ -52,12 +52,8 @@ class MultinomialAllocationVector : public SimpleArray<int> {
             exit(1);
         }
         vector<int> invpermut(permut.GetSize(), 0);
-        for (int k = 0; k < permut.GetSize(); k++) {
-            invpermut[permut.GetVal(k)] = k;
-        }
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = invpermut[(*this)[i]];
-        }
+        for (int k = 0; k < permut.GetSize(); k++) { invpermut[permut.GetVal(k)] = k; }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = invpermut[(*this)[i]]; }
     }
 
     //! apply single-exchange permutation to allocation vector

@@ -22,7 +22,7 @@ class SubMatrixSelector : public BranchSiteSelector<SubMatrix> {
     //! constructor, parameterized by bidim array of substitution matrices and
     //! branch allocation system
     SubMatrixSelector(const BidimSelector<SubMatrix> &inmatrixbidimarray,
-                      const BranchSelector<int> &inbranchalloc)
+        const BranchSelector<int> &inbranchalloc)
         : matrixbidimarray(inmatrixbidimarray), branchalloc(inbranchalloc) {}
 
     virtual const Tree &GetTree() const override { return branchalloc.GetTree(); }

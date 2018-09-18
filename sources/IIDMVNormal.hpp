@@ -41,9 +41,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
     //! sample all entries from prior distribution
     void Sample() {
         for (int i = 0; i < GetNrow(); i++) {
-            for (int j = 0; j < GetNcol(); j++) {
-                Sample(i, j);
-            }
+            for (int j = 0; j < GetNcol(); j++) { Sample(i, j); }
         }
     }
 
@@ -52,9 +50,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
                 vector<double> &x = (*this)(i, j);
-                for (int k = 0; k < GetDim(); k++) {
-                    x[k] = 0;
-                }
+                for (int k = 0; k < GetDim(); k++) { x[k] = 0; }
             }
         }
     }
@@ -63,18 +59,14 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
     void Sample(int i, int j) {
         vector<double> &x = (*this)(i, j);
         double v = var.GetVal(i);
-        for (int k = 0; k < GetDim(); k++) {
-            x[k] = sqrt(v) * Random::sNormal();
-        }
+        for (int k = 0; k < GetDim(); k++) { x[k] = sqrt(v) * Random::sNormal(); }
     }
 
     //! return mean (over columns, or sites) of variance (across rows, or
     //! conditions) for component (or amino-acid) k.
     double GetMeanVar(int k) const {
         double mean = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            mean += GetVar(k, j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { mean += GetVar(k, j); }
         mean /= GetNcol();
         return mean;
     }
@@ -98,27 +90,21 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
     //! return total log prob over array
     double GetLogProb() const {
         double total = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            total += GetColumnLogProb(j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { total += GetColumnLogProb(j); }
         return total;
     }
 
     //! return total log prob over row i
     double GetRowLogProb(int i) const {
         double total = 0;
-        for (int j = 0; j < GetNcol(); j++) {
-            total += GetLogProb(i, j);
-        }
+        for (int j = 0; j < GetNcol(); j++) { total += GetLogProb(i, j); }
         return total;
     }
 
     //! return total log prob over column j
     double GetColumnLogProb(int j) const {
         double total = 0;
-        for (int i = 0; i < GetNrow(); i++) {
-            total += GetLogProb(i, j);
-        }
+        for (int i = 0; i < GetNrow(); i++) { total += GetLogProb(i, j); }
         return total;
     }
 
@@ -127,9 +113,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
     double GetColumnLogProb(int j, const vector<int> &flag) const {
         double total = 0;
         for (int i = 0; i < GetNrow(); i++) {
-            if (flag[i]) {
-                total += GetLogProb(i, j);
-            }
+            if (flag[i]) { total += GetLogProb(i, j); }
         }
         return total;
     }
@@ -139,9 +123,7 @@ class BidimIIDMVNormal : public SimpleBidimArray<vector<double>> {
         double total = 0;
         const vector<double> &x = GetVal(i, j);
         double v = var.GetVal(i);
-        for (int k = 0; k < GetDim(); k++) {
-            total += x[k] * x[k];
-        }
+        for (int k = 0; k < GetDim(); k++) { total += x[k] * x[k]; }
         return -0.5 * (total / v + GetDim() * log(2 * Pi * v));
     }
 

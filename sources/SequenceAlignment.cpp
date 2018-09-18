@@ -26,9 +26,7 @@ vector<double> SequenceAlignment::GetEmpiricalFreq() const {
             }
         }
     }
-    for (int i = 0; i < GetNstate(); i++) {
-        in[i] /= n;
-    }
+    for (int i = 0; i < GetNstate(); i++) { in[i] /= n; }
     return in;
 }
 
@@ -36,9 +34,7 @@ void SequenceAlignment::ToStream(ostream &os) const {
     os << Ntaxa << '\t' << GetPrintNsite() << '\n';
     for (int i = 0; i < Ntaxa; i++) {
         os << taxset->GetTaxon(i) << '\t';
-        for (int j = 0; j < Nsite; j++) {
-            os << statespace->GetState(GetState(i, j));
-        }
+        for (int j = 0; j < Nsite; j++) { os << statespace->GetState(GetState(i, j)); }
         os << '\n';
     }
 }
@@ -46,9 +42,7 @@ void SequenceAlignment::ToStream(ostream &os) const {
 void SequenceAlignment::ToFasta(ostream &os) const {
     for (int i = 0; i < Ntaxa; i++) {
         os << '>' << taxset->GetTaxon(i) << '\n';
-        for (int j = 0; j < GetPrintNsite(); j++) {
-            os << statespace->GetState(GetState(i, j));
-        }
+        for (int j = 0; j < GetPrintNsite(); j++) { os << statespace->GetState(GetState(i, j)); }
         os << '\n';
     }
 }
@@ -56,9 +50,7 @@ void SequenceAlignment::ToFasta(ostream &os) const {
 int SequenceAlignment::GetNonMissingTriplet() const {
     int nsite = 0;
     for (int j = 2; j < Nsite - 3; j += 3) {
-        if (NoMissingColumn(j - 1) && NoMissingColumn(j) && NoMissingColumn(j + 1)) {
-            nsite++;
-        }
+        if (NoMissingColumn(j - 1) && NoMissingColumn(j) && NoMissingColumn(j + 1)) { nsite++; }
     }
     return nsite;
 }
@@ -66,25 +58,19 @@ int SequenceAlignment::GetNonMissingTriplet() const {
 void SequenceAlignment::ToStreamTriplet(ostream &os) const {
     int nsite = 0;
     for (int j = 2; j < Nsite - 3; j += 3) {
-        if (NoMissingColumn(j - 1) && NoMissingColumn(j) && NoMissingColumn(j + 1)) {
-            nsite++;
-        }
+        if (NoMissingColumn(j - 1) && NoMissingColumn(j) && NoMissingColumn(j + 1)) { nsite++; }
     }
 
     os << Ntaxa << '\t' << 3 * nsite << '\n';
     int max = 0;
     for (int i = 0; i < Ntaxa; i++) {
         int l = taxset->GetTaxon(i).length();
-        if (max < l) {
-            max = l;
-        }
+        if (max < l) { max = l; }
     }
 
     for (int i = 0; i < Ntaxa; i++) {
         os << taxset->GetTaxon(i);
-        for (unsigned int j = 0; j < 5 + max - taxset->GetTaxon(i).length(); j++) {
-            os << ' ';
-        }
+        for (unsigned int j = 0; j < 5 + max - taxset->GetTaxon(i).length(); j++) { os << ' '; }
         for (int j = 2; j < Nsite - 3; j += 3) {
             if (NoMissingColumn(j - 1) && NoMissingColumn(j) && NoMissingColumn(j + 1)) {
                 os << statespace->GetState(GetState(i, j - 1));
@@ -189,9 +175,7 @@ int FileSequenceAlignment::ReadNexus(string filespec) {
                 while (temp == "[") {
                     unsigned char c;
                     c = 'i';
-                    while (c != ']') {
-                        c = theStream.get();
-                    }
+                    while (c != ']') { c = theStream.get(); }
                     theStream >> temp;
                 }
 
@@ -210,22 +194,16 @@ int FileSequenceAlignment::ReadNexus(string filespec) {
                 do {
                     c = theStream.get();
                     if (c == '[') {
-                        while (c != ']') {
-                            c = theStream.get();
-                        }
+                        while (c != ']') { c = theStream.get(); }
                         c = theStream.get();
                     }
                     if ((c != ' ') && (c != '\t') && (c != '\n') && (c != 13)) {
                         if (c == '(') {
                             Data[i][k] = unknown;
-                            while (c != ')') {
-                                theStream >> c;
-                            }
+                            while (c != ')') { theStream >> c; }
                         } else if (c == '{') {
                             Data[i][k] = unknown;
-                            while (c != '}') {
-                                theStream >> c;
-                            }
+                            while (c != '}') { theStream >> c; }
                         } else {
                             ostringstream s;
                             s << c;
@@ -321,19 +299,13 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
                 if ((!theStream.eof()) && (c != ' ') && (c != '\n') && (c != '\t') && (c != 13)) {
                     if (c == '(') {
                         Data[ntaxa][nsite] = unknown;
-                        while (c != ')') {
-                            theStream >> c;
-                        }
+                        while (c != ')') { theStream >> c; }
                     } else if (c == '{') {
                         Data[ntaxa][nsite] = unknown;
-                        while (c != '}') {
-                            theStream >> c;
-                        }
+                        while (c != '}') { theStream >> c; }
                     } else {
                         int p = 0;
-                        while ((p < NAlphabetSet) && (c != AlphabetSet[p])) {
-                            p++;
-                        }
+                        while ((p < NAlphabetSet) && (c != AlphabetSet[p])) { p++; }
                         if (p == NAlphabetSet) {
                             cout << "error: does not recognise character. taxon " << ntaxa << '\t'
                                  << SpeciesNames[ntaxa] << "  site  " << nsite << '\t' << c << '\n';
@@ -343,9 +315,7 @@ int FileSequenceAlignment::ReadSpecial(string filename) {
                             Data[ntaxa][nsite] = unknown;
                         } else {
                             for (int l = 0; l < Nstate; l++) {
-                                if (c == Alphabet[l]) {
-                                    Data[ntaxa][nsite] = l;
-                                }
+                                if (c == Alphabet[l]) { Data[ntaxa][nsite] = l; }
                             }
                         }
                     }
@@ -412,56 +382,36 @@ int FileSequenceAlignment::TestPhylipSequential(string filespec) {
                 c = theStream.get();
                 if ((!theStream.eof()) && (c != ' ') && (c != '\n') && (c != '\t') && (c != 13)) {
                     if (c == '(') {
-                        while (c != ')') {
-                            theStream >> c;
-                        }
+                        while (c != ')') { theStream >> c; }
                     } else if (c == '{') {
-                        while (c != '}') {
-                            theStream >> c;
-                        }
+                        while (c != '}') { theStream >> c; }
                     } else {
                         int p = 0;
                         if (DNAcomp != 0) {
-                            while ((p < DNAN) && (c != DNAset[p])) {
-                                p++;
-                            }
-                            if (p == DNAN) {
-                                DNAcomp = 0;
-                            }
+                            while ((p < DNAN) && (c != DNAset[p])) { p++; }
+                            if (p == DNAN) { DNAcomp = 0; }
                         }
                         p = 0;
                         if (RNAcomp != 0) {
-                            while ((p < RNAN) && (c != RNAset[p])) {
-                                p++;
-                            }
-                            if (p == RNAN) {
-                                RNAcomp = 0;
-                            }
+                            while ((p < RNAN) && (c != RNAset[p])) { p++; }
+                            if (p == RNAN) { RNAcomp = 0; }
                         }
                         p = 0;
                         if (AAcomp != 0) {
-                            while ((p < AAN) && (c != AAset[p])) {
-                                p++;
-                            }
-                            if (p == AAN) {
-                                AAcomp = 0;
-                            }
+                            while ((p < AAN) && (c != AAset[p])) { p++; }
+                            if (p == AAN) { AAcomp = 0; }
                         }
                     }
                     nsite++;
                 }
             } while ((!theStream.eof()) && (nsite < Nsite));
             if (theStream.eof()) {
-                if (nsite < Nsite) {
-                    return 0;
-                }
+                if (nsite < Nsite) { return 0; }
             }
             ntaxa++;
         }
         if (theStream.eof()) {
-            if (ntaxa < Ntaxa) {
-                return 0;
-            }
+            if (ntaxa < Ntaxa) { return 0; }
         }
         if (DNAcomp != 0) {
             statespace = new DNAStateSpace;
@@ -472,9 +422,7 @@ int FileSequenceAlignment::TestPhylipSequential(string filespec) {
         } else {
             return 0;
         }
-    } catch (...) {
-        return 0;
-    }
+    } catch (...) { return 0; }
     return 1;
 }
 
@@ -526,14 +474,10 @@ void FileSequenceAlignment::ReadPhylipSequentialFromStream(istream &theStream) {
                 if ((!theStream.eof()) && (c != ' ') && (c != '\n') && (c != '\t') && (c != 13)) {
                     if (c == '(') {
                         Data[ntaxa][nsite] = unknown;
-                        while (c != ')') {
-                            theStream >> c;
-                        }
+                        while (c != ')') { theStream >> c; }
                     } else if (c == '{') {
                         Data[ntaxa][nsite] = unknown;
-                        while (c != '}') {
-                            theStream >> c;
-                        }
+                        while (c != '}') { theStream >> c; }
                     } else {
                         ostringstream s;
                         s << c;
@@ -598,9 +542,7 @@ int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
                     if (l == 0) {
                         SpeciesNames[i] = temp;
                     } else {
-                        if (temp != SpeciesNames[i]) {
-                            return 0;
-                        }
+                        if (temp != SpeciesNames[i]) { return 0; }
                     }
                 }
 
@@ -611,40 +553,24 @@ int FileSequenceAlignment::TestPhylip(string filespec, int repeattaxa) {
                     if ((!theStream.eof()) && (c != ' ') && (c != '\n') && (c != '\t') &&
                         (c != 13)) {
                         if (c == '(') {
-                            while (c != ')') {
-                                theStream >> c;
-                            }
+                            while (c != ')') { theStream >> c; }
                         } else if (c == '{') {
-                            while (c != '}') {
-                                theStream >> c;
-                            }
+                            while (c != '}') { theStream >> c; }
                         } else {
                             int p = 0;
                             if (DNAcomp != 0) {
-                                while ((p < DNAN) && (c != DNAset[p])) {
-                                    p++;
-                                }
-                                if (p == DNAN) {
-                                    DNAcomp = 0;
-                                }
+                                while ((p < DNAN) && (c != DNAset[p])) { p++; }
+                                if (p == DNAN) { DNAcomp = 0; }
                             }
                             p = 0;
                             if (RNAcomp != 0) {
-                                while ((p < RNAN) && (c != RNAset[p])) {
-                                    p++;
-                                }
-                                if (p == RNAN) {
-                                    RNAcomp = 0;
-                                }
+                                while ((p < RNAN) && (c != RNAset[p])) { p++; }
+                                if (p == RNAN) { RNAcomp = 0; }
                             }
                             p = 0;
                             if (AAcomp != 0) {
-                                while ((p < AAN) && (c != AAset[p])) {
-                                    p++;
-                                }
-                                if (p == AAN) {
-                                    AAcomp = 0;
-                                }
+                                while ((p < AAN) && (c != AAset[p])) { p++; }
+                                if (p == AAN) { AAcomp = 0; }
                             }
                         }
                         k++;
@@ -770,14 +696,10 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
                         (c != 13)) {
                         if (c == '(') {
                             Data[i][k] = unknown;
-                            while (c != ')') {
-                                theStream >> c;
-                            }
+                            while (c != ')') { theStream >> c; }
                         } else if (c == '{') {
                             Data[i][k] = unknown;
-                            while (c != '}') {
-                                theStream >> c;
-                            }
+                            while (c != '}') { theStream >> c; }
                         } else {
                             ostringstream s;
                             s << c;
@@ -826,7 +748,5 @@ void FileSequenceAlignment::ReadPhylip(string filespec, int repeattaxa) {
             exit(1);
         }
         taxset = new TaxonSet(SpeciesNames);
-    } catch (...) {
-        cerr << "error while reading data file\n";
-    }
+    } catch (...) { cerr << "error while reading data file\n"; }
 }

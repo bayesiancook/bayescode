@@ -84,7 +84,7 @@ class BetaSuffStat : public SuffStat {
     //! return log prob of suff stats, as a function of alpha and beta parameters
     double GetLogProb(double alpha, double beta) const {
         return n * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) -
-                    Random::logGamma(beta)) +
+                       Random::logGamma(beta)) +
                (alpha - 1) * sumlog0 + (beta - 1) * sumlog1;
     }
 
@@ -146,17 +146,13 @@ class IIDBeta : public SimpleArray<double> {
 
     //! sample from prior
     void Sample() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] = Random::BetaSample(alpha, beta);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] = Random::BetaSample(alpha, beta); }
     }
 
     //! return log prior density of current values across array
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 

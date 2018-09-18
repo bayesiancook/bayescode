@@ -34,9 +34,7 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
     //! return total log probability over entire array
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -44,9 +42,7 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
     double GetLogProb(int i) const {
         int naa = 0;
         const vector<int> &x = GetVal(i);
-        for (int k = 0; k < GetDim(); k++) {
-            naa += x[k];
-        }
+        for (int k = 0; k < GetDim(); k++) { naa += x[k]; }
         if (!naa) {
             cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
@@ -62,9 +58,7 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
         double mean = 0;
         for (int i = 0; i < GetSize(); i++) {
             const vector<int> &x = GetVal(i);
-            for (int k = 0; k < GetDim(); k++) {
-                mean += x[k];
-            }
+            for (int k = 0; k < GetDim(); k++) { mean += x[k]; }
         }
         mean /= GetSize();
         return mean;
@@ -88,9 +82,7 @@ class ProfileMask : public SimpleArray<vector<int>> {
     //! return total log probability over entire array
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -124,9 +116,7 @@ class ProfileMask : public SimpleArray<vector<int>> {
         double mean = 0;
         for (int i = 0; i < GetSize(); i++) {
             const vector<int> &x = GetVal(i);
-            for (int k = 0; k < GetDim(); k++) {
-                mean += x[k];
-            }
+            for (int k = 0; k < GetDim(); k++) { mean += x[k]; }
         }
         mean /= GetSize();
         return mean;

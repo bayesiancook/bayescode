@@ -62,20 +62,20 @@ class Random {
     static double ProfileProposeMove(std::vector<double> &profile, int dim, double tuning, int n);
     static double RealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n);
     static double PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n);
-    static double PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning,
-                                           const vector<int> &toggle);
+    static double PosRealVectorProposeMove(
+        std::vector<double> &x, int dim, double tuning, const vector<int> &toggle);
 
     static double GetEntropy(const std::vector<double> &profile);
 
     static double GammaSample(double alpha, double beta);
     static double BetaSample(double alpha, double beta);
-    static void DirichletSample(vector<double> &x, const vector<double> &center,
-                                double concentration = 1);
+    static void DirichletSample(
+        vector<double> &x, const vector<double> &center, double concentration = 1);
 
     static double logGammaDensity(double x, double alpha, double beta);
     static double logBetaDensity(double x, double alpha, double beta);
-    static double logDirichletDensity(const vector<double> &x, const vector<double> &center,
-                                      double concentration = 1);
+    static double logDirichletDensity(
+        const vector<double> &x, const vector<double> &center, double concentration = 1);
 
   private:
     static int Seed;

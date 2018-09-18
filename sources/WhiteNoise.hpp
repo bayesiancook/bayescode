@@ -14,8 +14,8 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
     // mode 0 : ugam
     // mode 1 : wn
-    GammaWhiteNoise(const Tree &intree, const BranchSelector<double> &inblmean, double inshape,
-                    int inmode = 0)
+    GammaWhiteNoise(
+        const Tree &intree, const BranchSelector<double> &inblmean, double inshape, int inmode = 0)
         : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape) {
         mode = inmode;
         Sample();
@@ -30,16 +30,12 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     void SetShape(double inshape) { shape = inshape; }
 
     double GetAlpha(int i) const {
-        if (mode) {
-            return shape * blmean.GetVal(i);
-        }
+        if (mode) { return shape * blmean.GetVal(i); }
         return shape;
     }
 
     double GetBeta(int i) const {
-        if (mode) {
-            return shape;
-        }
+        if (mode) { return shape; }
         return shape / blmean.GetVal(i);
     }
 
@@ -54,8 +50,8 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     void GibbsResample(const PoissonSuffStatBranchArray &suffstatarray) {
         for (int i = 0; i < GetNbranch(); i++) {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            (*this)[i] = Random::GammaSample(GetAlpha(i) + suffstat.GetCount(),
-                                             GetBeta(i) + suffstat.GetBeta());
+            (*this)[i] = Random::GammaSample(
+                GetAlpha(i) + suffstat.GetCount(), GetBeta(i) + suffstat.GetBeta());
             if ((*this)[i] == 0) {
                 cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
                      << '\t' << blmean.GetVal(i) << '\n';
@@ -81,9 +77,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     //! return total log prob summed over all entries
     double GetLogProb() {
         double total = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -94,9 +88,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
     double GetTotalLength() const {
         double m1 = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
-            m1 += GetVal(i);
-        }
+        for (int i = 0; i < GetNbranch(); i++) { m1 += GetVal(i); }
         return m1;
     }
 
@@ -120,8 +112,8 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
-    GammaWhiteNoiseArray(int inNgene, const Tree &intree, const BranchSelector<double> &inblmean,
-                         double inshape)
+    GammaWhiteNoiseArray(
+        int inNgene, const Tree &intree, const BranchSelector<double> &inblmean, double inshape)
         : Ngene(inNgene),
           tree(intree),
           blmean(inblmean),
@@ -133,18 +125,14 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     }
 
     ~GammaWhiteNoiseArray() {
-        for (int gene = 0; gene < Ngene; gene++) {
-            delete blarray[gene];
-        }
+        for (int gene = 0; gene < Ngene; gene++) { delete blarray[gene]; }
     }
 
     //! set the shape parameter (should be called whenever the shape parameter has
     //! changed during the MCMC)
     void SetShape(double inshape) {
         shape = inshape;
-        for (int gene = 0; gene < Ngene; gene++) {
-            blarray[gene]->SetShape(shape);
-        }
+        for (int gene = 0; gene < Ngene; gene++) { blarray[gene]->SetShape(shape); }
     }
 
     //! return total number of entries (number of genes)
@@ -200,9 +188,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     //! return total log prob (over all genes and over all branches)
     double GetLogProb() const {
         double total = 0;
-        for (int gene = 0; gene < GetNgene(); gene++) {
-            total += blarray[gene]->GetLogProb();
-        }
+        for (int gene = 0; gene < GetNgene(); gene++) { total += blarray[gene]->GetLogProb(); }
         return total;
     }
 

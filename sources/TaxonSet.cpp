@@ -42,9 +42,7 @@ TaxonSet::TaxonSet(const TaxonSet &from)
 
 void TaxonSet::ToStream(ostream &os) const {
     os << Ntaxa << '\n';
-    for (int i = 0; i < Ntaxa; i++) {
-        os << taxlist[i] << '\n';
-    }
+    for (int i = 0; i < Ntaxa; i++) { os << taxlist[i] << '\n'; }
 }
 
 int TaxonSet::GetTaxonIndexWithIncompleteName(string taxname) const {

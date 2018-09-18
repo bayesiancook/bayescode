@@ -80,9 +80,7 @@ class MultiGammaSuffStat : public SuffStat {
     void AddSuffStat(const BidimIIDMultiGamma &array, const BidimSelector<vector<int>> &toggle) {
         for (int i = 0; i < array.GetNrow(); i++) {
             if (!i) {
-                for (int j = 0; j < array.GetNcol(); j++) {
-                    AddSuffStat(array.GetVal(i, j));
-                }
+                for (int j = 0; j < array.GetNcol(); j++) { AddSuffStat(array.GetVal(i, j)); }
             } else {
                 for (int j = 0; j < array.GetNcol(); j++) {
                     AddSuffStat(array.GetVal(i, j), toggle.GetVal(i - 1, j));
@@ -93,7 +91,7 @@ class MultiGammaSuffStat : public SuffStat {
 
     //! get suff stats from an IIDGamma array, with a double system of masks
     void AddSuffStat(const BidimIIDMultiGamma &array, const Selector<vector<int>> &mask,
-                     const BidimSelector<vector<int>> &toggle) {
+        const BidimSelector<vector<int>> &toggle) {
         for (int i = 0; i < array.GetNrow(); i++) {
             if (!i) {
                 for (int j = 0; j < array.GetNcol(); j++) {
@@ -108,15 +106,11 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     void AddSuffStat(const IIDMultiGamma &array) {
-        for (int i = 0; i < array.GetSize(); i++) {
-            AddSuffStat(array.GetVal(i));
-        }
+        for (int i = 0; i < array.GetSize(); i++) { AddSuffStat(array.GetVal(i)); }
     }
 
     void AddSuffStat(const IIDMultiGamma &array, const Selector<vector<int>> &mask) {
-        for (int i = 0; i < array.GetSize(); i++) {
-            AddSuffStat(array.GetVal(i), mask.GetVal(i));
-        }
+        for (int i = 0; i < array.GetSize(); i++) { AddSuffStat(array.GetVal(i), mask.GetVal(i)); }
     }
 
     //! return object size, when put into an MPI buffer
@@ -124,16 +118,12 @@ class MultiGammaSuffStat : public SuffStat {
 
     //! put object into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int k = 0; k < GetDim(); k++) {
-            buffer << sum[k] << sumlog[k] << n[k];
-        }
+        for (int k = 0; k < GetDim(); k++) { buffer << sum[k] << sumlog[k] << n[k]; }
     }
 
     //! read object from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int k = 0; k < GetDim(); k++) {
-            buffer >> sum[k] >> sumlog[k] >> n[k];
-        }
+        for (int k = 0; k < GetDim(); k++) { buffer >> sum[k] >> sumlog[k] >> n[k]; }
     }
 
     //! read a MultiGammaSuffStat from MPI buffer and add it to this

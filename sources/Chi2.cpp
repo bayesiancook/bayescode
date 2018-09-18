@@ -31,9 +31,7 @@ int main(int argc, char *argv[]) {
         } else {
             double p = 0.25 * Chi2Pval(x, df);
             double q = (int)(100 * Ngene * p / (i + 1));
-            if (q > 100) {
-                q = 100;
-            }
+            if (q > 100) { q = 100; }
             os << name << '\t' << x << '\t' << p << '\t' << q << '\n';
         }
     }

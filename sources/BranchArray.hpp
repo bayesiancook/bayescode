@@ -38,16 +38,12 @@ class BranchSelector {
 
     //! write array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetNbranch(); i++) {
-            buffer << this->GetVal(i);
-        }
+        for (int i = 0; i < this->GetNbranch(); i++) { buffer << this->GetVal(i); }
     }
 
     //! write array into generic output stream
     void ToStream(ostream &os) const {
-        for (int i = 0; i < this->GetNbranch(); i++) {
-            os << this->GetVal(i) << '\t';
-        }
+        for (int i = 0; i < this->GetNbranch(); i++) { os << this->GetVal(i) << '\t'; }
     }
 };
 
@@ -73,9 +69,7 @@ class BranchArray : public BranchSelector<T> {
             cerr << "error: branch arrays do not have same size\n";
             exit(1);
         }
-        for (int i = 0; i < this->GetNbranch(); i++) {
-            (*this)[i] = from.GetVal(i);
-        }
+        for (int i = 0; i < this->GetNbranch(); i++) { (*this)[i] = from.GetVal(i); }
     }
 
     //! non-const access to array element by index
@@ -83,16 +77,12 @@ class BranchArray : public BranchSelector<T> {
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetNbranch(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < this->GetNbranch(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get array from generic input stream
     void FromStream(istream &is) {
-        for (int i = 0; i < this->GetNbranch(); i++) {
-            is >> (*this)[i];
-        }
+        for (int i = 0; i < this->GetNbranch(); i++) { is >> (*this)[i]; }
     }
 };
 
