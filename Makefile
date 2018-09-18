@@ -20,4 +20,4 @@ clean:
 # Requires: clang-format
 .PHONY: format
 format:
-	@clang-format -i sources/*.cpp sources/*.hpp
+	@clang-format -i `find -name *.*pp`
