@@ -5,8 +5,6 @@ project(bayescode CXX)
 set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter") # normal mode
 set(CXX_FEATURES cxx_auto_type cxx_nullptr cxx_final cxx_override cxx_range_for)
 include_directories("src")
-include_directories("src/components")
-include_directories("src/tree")
 include_directories("src/lib")
 include_directories("utils")
 
@@ -30,7 +28,7 @@ set(BAYESCODE_LIB
     src/lib/StateSpace.cpp
     src/lib/SubMatrix.cpp
     src/lib/TaxonSet.cpp
-    src/tree/tree-implem.cpp
+    src/tree/implem.cpp
   )
 add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
 target_compile_features(bayescode_lib PUBLIC ${CXX_FEATURES})

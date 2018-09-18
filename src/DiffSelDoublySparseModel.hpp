@@ -43,7 +43,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
-#include "Tree.hpp"
+#include "tree/implem.hpp"
 
 /**
  * \brief A doubly-sparse version of the differential selection model (see also

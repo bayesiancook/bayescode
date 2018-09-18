@@ -1,4 +1,4 @@
-#include "ChainComponent.hpp"
+#include "components/ChainComponent.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrix.hpp"
 #include "CodonSuffStat.hpp"
@@ -8,8 +8,7 @@
 #include "Move.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
-#include "Tracer.hpp"
-#include "Tree.hpp"
+#include "components/Tracer.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon

@@ -1,12 +1,11 @@
 #include <cmath>
 #include <fstream>
-#include "BaseArgParse.hpp"
-#include "Chain.hpp"
-#include "ChainCheckpoint.hpp"
-#include "ChainDriver.hpp"
-#include "ConsoleLogger.hpp"
+#include "components/BaseArgParse.hpp"
+#include "components/ChainCheckpoint.hpp"
+#include "components/ChainDriver.hpp"
+#include "components/ConsoleLogger.hpp"
 #include "SingleOmegaModel.hpp"
-#include "StandardTracer.hpp"
+#include "components/StandardTracer.hpp"
 
 using namespace std;
 

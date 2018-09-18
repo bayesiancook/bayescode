@@ -1,10 +1,8 @@
-
-#ifndef BRANCHARRAY_H
-#define BRANCHARRAY_H
+#pragma once
 
 #include <vector>
 #include "MPIBuffer.hpp"
-#include "Tree.hpp"
+#include "tree/implem.hpp"
 
 /**
  * \brief An interface for an abstract tree-structured array (indexed by
@@ -167,5 +165,3 @@ class SimpleBranchArray : public BranchArray<T> {
     const Tree &tree;
     vector<T> array;
 };
-
-#endif

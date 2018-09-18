@@ -4,7 +4,7 @@ using namespace std;
 
 #include "BiologicalSequences.hpp"
 #include "TaxonSet.hpp"
-#include "Tree.hpp"
+#include "tree/implem.hpp"
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

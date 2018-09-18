@@ -1,6 +1,5 @@
 
-#ifndef PHYLOPROCESS_H
-#define PHYLOPROCESS_H
+#pragma once
 
 #include <map>
 #include "BidimArray.hpp"
@@ -10,7 +9,8 @@
 #include "NodeArray.hpp"
 #include "SequenceAlignment.hpp"
 #include "SubMatrix.hpp"
-#include "Tree.hpp"
+#include <fstream>
+#include "tree/implem.hpp"
 
 // PhyloProcess is a dispatcher:
 // its responsibility is to create a random branch/site path
@@ -318,5 +318,3 @@ class PhyloProcess {
     mutable Chrono pruningchrono;
     mutable Chrono resamplechrono;
 };
-
-#endif  // PHYLOPROCESS_H

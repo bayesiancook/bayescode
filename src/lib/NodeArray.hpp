@@ -4,7 +4,7 @@
 
 #include <vector>
 #include "MPIBuffer.hpp"
-#include "Tree.hpp"
+#include "tree/implem.hpp"
 
 /**
  * \brief An interface for an abstract tree-structured array (indexed by
