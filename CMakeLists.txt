@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 project(bayescode CXX)
 
+# MPI
+find_package(MPI REQUIRED)
+include_directories(${MPI_INCLUDE_PATH})
+
 # Compilation options
 set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter") # normal mode
 set(CXX_FEATURES cxx_auto_type cxx_nullptr cxx_final cxx_override cxx_range_for)
@@ -47,5 +51,10 @@ target_compile_features(diffseldsparse PRIVATE ${CXX_FEATURES})
 add_executable(readglobom "src/ReadSingleOmega.cpp")
 target_link_libraries(readglobom bayescode_lib)
 target_compile_features(readglobom PRIVATE ${CXX_FEATURES})
+
+# Multi gene single omega
+add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
+target_link_libraries(multigeneglobom bayescode_lib)
+target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 
 #TODO readsingleomega and readdiffseldoublesparse
