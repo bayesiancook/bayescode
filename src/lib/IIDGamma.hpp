@@ -1,10 +1,7 @@
-
-#ifndef IIDGAMMA_H
-#define IIDGAMMA_H
+#pragma once
 
 #include "Array.hpp"
 #include "BranchArray.hpp"
-#include "MPIBuffer.hpp"
 #include "PoissonSuffStat.hpp"
 #include "Random.hpp"
 
@@ -225,5 +222,3 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     double shape;
     double scale;
 };
-
-#endif

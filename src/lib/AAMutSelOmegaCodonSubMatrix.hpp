@@ -1,11 +1,6 @@
-
-#ifndef AAMUTSELCODONMATRIX_H
-#define AAMUTSELCODONMATRIX_H
+#pragma once
 
 #include "CodonSubMatrix.hpp"
-#include "Random.hpp"
-
-using namespace std;
 
 /**
  * \brief A mutation-selection codon substitution process.
@@ -61,5 +56,3 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix,
     const vector<double> &aa;
     double Ne;
 };
-
-#endif

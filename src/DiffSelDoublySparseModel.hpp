@@ -33,7 +33,6 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "DiffSelSparseFitnessArray.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
-#include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
 #include "IIDMultiBernoulli.hpp"
 #include "IIDMultiGamma.hpp"

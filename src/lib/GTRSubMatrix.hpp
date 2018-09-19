@@ -1,7 +1,6 @@
 #ifndef GTRSUBMATRIX_H
 #define GTRSUBMATRIX_H
 
-#include "BiologicalSequences.hpp"  //FIXME only used for Naa (const int)
 #include "SubMatrix.hpp"
 
 /**

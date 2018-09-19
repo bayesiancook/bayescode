@@ -1,9 +1,6 @@
+#pragma once
 
 #include "Array.hpp"
-#include "Random.hpp"
-
-#ifndef IIDPROFILEMASK_H
-#define IIDPROFILEMASK_H
 
 /**
  * \brief An array of IID 0/1 masks of a fixed dimension
@@ -126,5 +123,3 @@ class ProfileMask : public SimpleArray<vector<int>> {
     int dim;
     const vector<double> &pi;
 };
-
-#endif

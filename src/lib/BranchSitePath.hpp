@@ -3,8 +3,6 @@
 
 #include <map>
 #include <string>
-#include "StateSpace.hpp"
-using namespace std;
 
 class SuffStat;
 class PoissonSuffStat;

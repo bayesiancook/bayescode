@@ -1,8 +1,8 @@
 #pragma once
+
 #include "tclap/CmdLine.h"
 
 using namespace TCLAP;
-
 
 class ChainCmdLine {
     CmdLine cmd;

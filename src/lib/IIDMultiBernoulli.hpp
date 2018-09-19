@@ -1,8 +1,5 @@
+#pragma once
 
-#ifndef IIDMULTIBERN_H
-#define IIDMULTIBERN_H
-
-#include "Array.hpp"
 #include "BidimArray.hpp"
 
 /**
@@ -80,5 +77,3 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     int dim;
     const vector<double> &prob;
 };
-
-#endif

@@ -1,6 +1,4 @@
-
-#ifndef POISSONSUFFSTAT_H
-#define POISSONSUFFSTAT_H
+#pragma once
 
 #include <cmath>
 #include "Array.hpp"
@@ -320,5 +318,3 @@ class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
     int size;
     vector<PoissonSuffStatBranchArray *> array;
 };
-
-#endif

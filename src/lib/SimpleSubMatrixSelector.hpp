@@ -3,7 +3,6 @@
 #define MATRIXSELECTOR_H
 
 #include "Array.hpp"
-#include "BidimArray.hpp"
 #include "CodonSubMatrix.hpp"
 
 /**

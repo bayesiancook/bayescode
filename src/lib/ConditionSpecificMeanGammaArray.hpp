@@ -1,8 +1,5 @@
+#pragma once
 
-#ifndef CSMEANGAMMATREE_H
-#define CSMEANGAMMATREE_H
-
-#include "MPIBuffer.hpp"
 #include "PoissonSuffStat.hpp"
 #include "Product.hpp"
 #include "Random.hpp"
@@ -161,5 +158,3 @@ class ConditionSpecificMeanGammaBidimArray : public Array<ConditionSpecificMeanG
     double invshape;
     vector<ConditionSpecificMeanGammaArray *> array;
 };
-
-#endif

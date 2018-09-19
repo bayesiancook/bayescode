@@ -1,9 +1,6 @@
-
-#ifndef BSMEANGAMMATREE_H
-#define BSMEANGAMMATREE_H
+#pragma once
 
 #include "BranchProduct.hpp"
-#include "MPIBuffer.hpp"
 #include "PoissonSuffStat.hpp"
 #include "Random.hpp"
 
@@ -161,5 +158,3 @@ class BranchSpecificMeanGammaTreeArray : public Array<BranchSpecificMeanGammaTre
     double invshape;
     vector<BranchSpecificMeanGammaTree *> array;
 };
-
-#endif

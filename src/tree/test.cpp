@@ -1,6 +1,6 @@
 #include <fstream>
 #include <map>
-#include "tree-implem.hpp"
+#include "implem.hpp"
 
 int tree_size(const Tree* tree, Tree::NodeIndex from) {
     if (tree->is_leaf(from)) { return 1; }

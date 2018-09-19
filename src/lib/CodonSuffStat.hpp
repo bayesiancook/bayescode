@@ -1,10 +1,7 @@
-
-#ifndef CODONSUFFSTAT_H
-#define CODONSUFFSTAT_H
+#pragma once
 
 #include <typeinfo>
 #include "CodonSubMatrixArray.hpp"
-#include "CodonSubMatrixBranchArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
 #include "PoissonSuffStat.hpp"
@@ -319,7 +316,6 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
   public:
     //! constructor (param: array size)
     OmegaPathSuffStatArray(int insize) : SimpleArray<OmegaPathSuffStat>(insize) {}
-    ~OmegaPathSuffStatArray() {}
 
     //! need to redefine GetSize(), because of mutiple inheritance, as an array of
     //! PoissonSuffstat and OmegaPathSuffStat
@@ -527,5 +523,3 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
   private:
     const Tree &tree;
 };
-
-#endif

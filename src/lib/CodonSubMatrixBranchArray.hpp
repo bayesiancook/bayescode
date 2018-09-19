@@ -1,8 +1,5 @@
+#pragma once
 
-#ifndef CODONMATRIXBRANCHARRAY_H
-#define CODONMATRIXBRANCHARRAY_H
-
-#include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "BranchArray.hpp"
 #include "CodonSubMatrix.hpp"
 #include "SubMatrix.hpp"
@@ -72,5 +69,3 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     const BranchSelector<double> *omegaarray;
     vector<MGOmegaCodonSubMatrix *> matrixarray;
 };
-
-#endif
