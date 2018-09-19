@@ -1,4 +1,5 @@
 #include <set>
+#include <string>
 
 class Tree {
   public:
