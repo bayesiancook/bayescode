@@ -53,8 +53,8 @@ target_link_libraries(readglobom bayescode_lib)
 target_compile_features(readglobom PRIVATE ${CXX_FEATURES})
 
 # Multi gene single omega
-add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
-target_link_libraries(multigeneglobom bayescode_lib)
-target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
+# add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
+# target_link_libraries(multigeneglobom bayescode_lib)
+# target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 
 #TODO readsingleomega and readdiffseldoublesparse
