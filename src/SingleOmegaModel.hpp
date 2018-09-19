@@ -1,3 +1,5 @@
+#pragma once
+
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrix.hpp"
 #include "CodonSuffStat.hpp"
