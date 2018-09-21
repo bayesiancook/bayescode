@@ -12,6 +12,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel;
+    int blmode, nucmode;
 
   public:
     MultiGeneConditionOmegaModel *GetModel() {
@@ -21,6 +22,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     string GetModelType() override { return modeltype; }
 
     MultiGeneConditionOmegaChain(string indatafile, string intreefile, int inncond, int innlevel,
+		    		 int inblmode, int innucmode,
                                  int inevery, int inuntil, string inname, int force, int inmyid,
                                  int innprocs)
         : MultiGeneChain(inmyid, innprocs),
@@ -29,6 +31,8 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
           treefile(intreefile),
           ncond(inncond),
           nlevel(innlevel) {
+	blmode = inblmode;
+	nucmode = innucmode;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -44,6 +48,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
 
     void New(int force) override {
         model = new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
+        GetModel()->SetAcrossGenesModes(blmode,nucmode);
         if (!myid) {
             cerr << "allocate\n";
         }
@@ -65,17 +70,19 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel;
+	is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "error when reading model\n";
-            exit(1);
+	    cerr << "error when reading model\n";
+	    exit(1);
         }
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENECONDOMEGA") {
             model =
                 new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
+		GetModel()->SetAcrossGenesModes(blmode,nucmode);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -97,6 +104,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\n';
+	    param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -110,7 +118,6 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         ofstream gos((name + ".gene").c_str());
         ofstream bos((name + ".cond").c_str());
         ofstream bgos((name + ".condgene").c_str());
-
         ofstream nameos((name + ".genelist").c_str());
         GetModel()->PrintGeneList(nameos);
         nameos.close();
@@ -170,6 +177,8 @@ int main(int argc, char *argv[]) {
         int force = 1;
         int every = 1;
         int until = -1;
+        int blmode = 1;
+        int nucmode = 1;
 
         try {
             if (argc == 1) {
@@ -191,6 +200,32 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
+                } else if (s == "-nucrates") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared") {
+                        nucmode = 2;
+                    } else if (tmp == "shrunken") {
+                        nucmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        nucmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -nucrates\n";
+                        exit(1);
+                    }
+                } else if (s == "-bl") {
+                    i++;
+                    string tmp = argv[i];
+                    if (tmp == "shared") {
+                        blmode = 2;
+                    } else if (tmp == "shrunken") {
+                        blmode = 1;
+                    } else if ((tmp == "ind") || (tmp == "independent")) {
+                        blmode = 0;
+                    } else {
+                        cerr << "error: does not recongnize command after -bl\n";
+                        exit(1);
+                    }
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -215,8 +250,8 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneConditionOmegaChain(datafile, treefile, ncond, nlevel, every, until,
-                                                 name, force, myid, nprocs);
+        chain = new MultiGeneConditionOmegaChain(datafile, treefile, ncond, nlevel, blmode, nucmode, 
+						every, until, name, force, myid, nprocs);
     }
 
     if (!myid) {
