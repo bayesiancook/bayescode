@@ -70,7 +70,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel;
-	is >> blmode >> nucmode;
+        is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -82,7 +82,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         if (modeltype == "MULTIGENECONDOMEGA") {
             model =
                 new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
-		GetModel()->SetAcrossGenesModes(blmode,nucmode);
+                GetModel()->SetAcrossGenesModes(blmode,nucmode);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

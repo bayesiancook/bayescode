@@ -364,6 +364,22 @@ class ConditionOmegaModel : public ProbModel {
         ResampleSub(1.0);
     }
 
+    //! \brief post pred function (does the update of all fields before doing the
+    //! simulation)
+    void PostPred(string name) {
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
+        double alpha = 1.0 / condvhyperinvshape;
+        double beta = alpha / condvhypermean;
+        condv->SetShape(alpha);
+        condv->SetScale(beta);
+        meanomegaarray->SetMulVal(genew);
+        condomegaarray->SetInvShape(omegainvshape);
+        TouchMatrices();
+        phyloprocess->PostPredSample(name);
+    }
+
     //! \brief dummy function that does not do anything.
     //!
     //! Used for the templates of ScalingMove, SlidingMove and ProfileMove

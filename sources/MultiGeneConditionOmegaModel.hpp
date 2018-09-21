@@ -82,6 +82,8 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     int blmode;
     int nucmode;
 
+    int ppredmode;
+
     // Branch lengths
 
     double lambda;
@@ -149,6 +151,8 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
         blmode = 1;
         nucmode = 1;
+
+        ppredmode = 1;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -260,6 +264,10 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         nucmode = innucmode;
     }
 
+    void SetPostPredMode(int mode)  {
+        ppredmode = mode;
+    }
+
     CodonStateSpace *GetCodonStateSpace() const {
         return (CodonStateSpace *)refcodondata->GetStateSpace();
     }
@@ -339,6 +347,15 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         }
         os << '\n';
         os.flush();
+    }
+
+    void NoDeviations() {
+        meanomegabidimarray->Update();
+        for (int j = 0; j < GetNcond(); j++) {
+            for (int i = 0; i < GetNgene(); i++) {
+                (*condomegabidimarray)[i][j] = meanomegabidimarray->GetVal(i).GetVal(j);
+            }
+        }
     }
 
     // Branch lengths
@@ -498,6 +515,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         genewarray->SetShape(genealpha);
         genewarray->SetScale(genebeta);
         condomegabidimarray->SetInvShape(omegainvshape);
+        meanomegabidimarray->Update();
     }
 
     void MasterUpdate() override {
@@ -550,6 +568,61 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     void GeneUpdate() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->Update();
+        }
+    }
+
+    void MasterPostPred(string name) override {
+        FastUpdate();
+
+        if (! ppredmode)    {
+            NoDeviations();
+        }
+
+        if (nprocs > 1) {
+            MasterSendBranchLengthsHyperParameters();
+            MasterSendNucRatesHyperParameters();
+
+            if (blmode == 2) {
+                MasterSendGlobalBranchLengths();
+            } else {
+                MasterSendGeneBranchLengths();
+            }
+
+            if (nucmode == 2) {
+                MasterSendGlobalNucRates();
+            } else {
+                MasterSendGeneNucRates();
+            }
+
+            MasterSendOmegaHyperParameters();
+            MasterSendOmega();
+        }
+    }
+
+    void SlavePostPred(string name) override {
+
+        SlaveReceiveBranchLengthsHyperParameters();
+        SlaveReceiveNucRatesHyperParameters();
+
+        if (blmode == 2) {
+            SlaveReceiveGlobalBranchLengths();
+        } else {
+            SlaveReceiveGeneBranchLengths();
+        }
+        if (nucmode == 2) {
+            SlaveReceiveGlobalNucRates();
+        } else {
+            SlaveReceiveGeneNucRates();
+        }
+
+        SlaveReceiveOmegaHyperParameters();
+        SlaveReceiveOmega();
+        GenePostPred(name);
+    }
+
+    void GenePostPred(string name) {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
         }
     }
 

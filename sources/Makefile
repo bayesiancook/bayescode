@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenecondom multigenebranchom readmultigenebranchom ppredtest multigenesiteom siteom 
+ALL= globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenecondom readmultigenecondom multigenebranchom readmultigenebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -161,6 +161,10 @@ $(PROGSDIR)/readmultigenebranchom$(EXEEXT): ReadMultiGeneBranchOmega.o $(OBJS)
 multigenecondom$(EXEEXT): $(PROGSDIR)/multigenecondom$(EXEEXT)
 $(PROGSDIR)/multigenecondom$(EXEEXT): MultiGeneConditionOmega.o $(OBJS)
 	$(CC) MultiGeneConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readmultigenecondom$(EXEEXT): $(PROGSDIR)/readmultigenecondom$(EXEEXT)
+$(PROGSDIR)/readmultigenecondom$(EXEEXT): ReadMultiGeneConditionOmega.o $(OBJS)
+	$(CC) ReadMultiGeneConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 ppredtest$(EXEEXT): $(PROGSDIR)/ppredtest$(EXEEXT)
 $(PROGSDIR)/ppredtest$(EXEEXT): PostPredTest.o $(OBJS)
