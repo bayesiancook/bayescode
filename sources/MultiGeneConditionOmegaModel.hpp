@@ -311,9 +311,9 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
             os << '\t' << GetMeanLength();
             os << '\t' << sqrt(GetVarLength());
         }
-        os << genewhypermean << '\t' << genewhyperinvshape << '\t';
-        os << condvhyperinvshape << '\t';
-        os << omegainvshape << '\t';
+        os << '\t' << genewhypermean << '\t' << genewhyperinvshape;
+        os << '\t' << condvhyperinvshape;
+        os << '\t' << omegainvshape;
 
         os << '\t' << nucstatarray->GetMeanEntropy();
         os << '\t' << nucrelratearray->GetMeanEntropy();
