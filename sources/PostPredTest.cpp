@@ -4,6 +4,10 @@
 
 int main(int argc, char* argv[])	{
 
+    if (argc == 1)  {
+        cerr << "ppredtest obs_ali basename nrep\n";
+        exit(1);
+    }
 	string obsali = argv[1];
 	string basename = argv[2];
 	int nrep = atoi(argv[3]);
