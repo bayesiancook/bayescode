@@ -168,7 +168,6 @@ class ConditionOmegaModel : public ProbModel {
 
         // specifies which condition for which branch
         branchalloc = new BranchAllocationSystem(*tree, Ncond);
-        std::cerr << "-- conditions over branches ok\n";
     }
 
     //! model allocation

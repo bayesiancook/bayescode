@@ -900,6 +900,9 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
+
+            // MoveGeneParameters(1.0);
+
             GeneCollectPathSuffStat();
             SlaveSendOmegaSuffStat();
             SlaveReceiveOmegaHyperParameters();
@@ -910,6 +913,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
                 SlaveSendBranchLengthsSuffStat();
                 SlaveReceiveGlobalBranchLengths();
             } else if (blmode == 1) {
+                MoveGeneBranchLengths();
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
             }
@@ -919,6 +923,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
                 SlaveSendNucPathSuffStat();
                 SlaveReceiveGlobalNucRates();
             } else if (nucmode == 1) {
+                MoveGeneNucRates();
                 SlaveSendNucRatesHyperSuffStat();
                 SlaveReceiveNucRatesHyperParameters();
             }
@@ -951,6 +956,19 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     void GeneResampleOmega() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->ResampleOmega();
+        }
+    }
+
+    void MoveGeneNucRates() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->MoveNucRates();
+        }
+    }
+
+    void MoveGeneBranchLengths() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->MoveBranchLengths();
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
     }
 
