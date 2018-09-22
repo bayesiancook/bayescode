@@ -49,18 +49,24 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "MULTIGENECONDOMEGA") {
-                new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
+                cerr << "make new model\n";
+                model = new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
+                cerr << "make new model ok\n";
                 GetModel()->SetAcrossGenesModes(blmode,nucmode);
+                cerr << "set modes ok\n";
         } else {
             cerr << "error when opening file " << name << '\n';
             cerr << modeltype << '\n';
             exit(1);
         }
 
+        cerr << "allocate\n";
         GetModel()->Allocate();
+        cerr << "from stream\n";
         // read model (i.e. chain's last point) from <name>.param
         model->FromStream(is);
         // open <name>.chain, and prepare stream and stream iterator
+        cerr << "open chain file\n";
         OpenChainFile();
         // now, size is defined (it is the total number of points with which this
         // Sample object will make all its various posterior averages) all these
