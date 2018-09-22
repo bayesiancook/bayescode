@@ -41,7 +41,7 @@ class ConditionSpecificMeanGammaArray : public SimpleArray<double> {
     }
 
     //! return total log prob summed over all entries
-    double GetLogProb() {
+    double GetLogProb() const {
         double total = 0;
         for (int i = 0; i < GetSize(); i++) {
             total += GetLogProb(i);
