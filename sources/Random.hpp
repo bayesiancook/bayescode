@@ -67,11 +67,13 @@ class Random {
 
     static double GetEntropy(const std::vector<double> &profile);
 
+    static double NormalSample(double mean, double var);
     static double GammaSample(double alpha, double beta);
     static double BetaSample(double alpha, double beta);
     static void DirichletSample(vector<double> &x, const vector<double> &center,
                                 double concentration = 1);
 
+    static double logNormalDensity(double x, double mean, double var);
     static double logGammaDensity(double x, double alpha, double beta);
     static double logBetaDensity(double x, double alpha, double beta);
     static double logDirichletDensity(const vector<double> &x, const vector<double> &center,

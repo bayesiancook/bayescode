@@ -624,6 +624,18 @@ double Random::BetaSample(double alpha, double beta) {
     return ret;
 }
 
+double Random::NormalSample(double mean, double var)    {
+    return sqrt(var) * sNormal() + mean;
+}
+
+double Random::logNormalDensity(double x, double mean, double var)  {
+
+    double ret = -0.5 * log(2 * Pi * var);
+    double sum2 = (x-mean)*(x-mean);
+    ret -= 0.5 * sum2/var;
+    return ret;
+}
+
 double Random::GammaSample(double alpha, double beta) { return Gamma(alpha, beta); }
 
 void Random::DirichletSample(vector<double> &x, const vector<double> &center,
