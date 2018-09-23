@@ -23,6 +23,8 @@
 #include "Parallel.hpp"
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
+#include "GeneIIDMultiGamma.hpp"
+#include "GeneIIDMultiDiscrete.hpp"
 
 /**
  * \brief An Array of BranchArray's of OmegaPathSuffStat
@@ -115,24 +117,31 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double condvhypermean;
     double condvhypervar;
     IIDNormal *condvarray;
-    // NormalSuffStat hypercondvsuffstat;
+    NormalSuffStat condvhypersuffstat;
 
     double genewhypermean;
     double genewhypervar;
     IIDNormal *genewarray;
-    // NormalSuffStat hypergenewsuffstat;
+    NormalSuffStat genewhypersuffstat;
 
     SumArray *meanlogomegabidimarray;
 
-    IIDBeta* pipos;
+    vector<double> picenter;
+    double piconcentration;
+    IIDDirichlet* pi;
     IIDGamma* meanpos;
     IIDGamma* invshapepos;
-
-    IIDBeta* pineg;
     IIDGamma* meanneg;
     IIDGamma* invshapeneg;
 
-    LogNormalMixBidimArray *condomegabidimarray;
+    GeneIIDMultiDiscrete* alloc;
+    GeneIIDMultiGamma* devpos;
+    GeneIIDMultiGamma* devneg;
+
+    MultiGammaSuffStat* devposhypersuffstat;
+    MultiGammaSuffStat* devneghypersuffstat;
+
+    GeneIIDLogNormalMixArray *condomegabidimarray;
 
     OmegaPathSuffStatBidimArray *omegapathsuffstatbidimarray;
 
@@ -235,15 +244,26 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         meanlogomegabidimarray = new SumArray(*condvarray, *genewarray);
 
-        pipos = new IIDBeta(Ncond,1.0,9.0);
+        picenter.assign(3,0);
+        picenter[0] = 0.05;
+        picenter[2] = 0.05;
+        picenter[1] = 0.90;
+        piconcentration = 20;
+        pi = new IIDDirichlet(Ncond,picenter,piconcentration);
+
+        alloc = new GeneIIDMultiDiscrete(Ngene,*pi);
+
         meanpos = new IIDGamma(Ncond,1.0,1.0);
         invshapepos = new IIDGamma(Ncond,1.0,1.0);
+        devpos = new GeneIIDMultiGamma(Ngene,*meanpos,*invshapepos);
+        devposhypersuffstat = new MultiGammaSuffStat(Ncond);
 
-        pineg = new IIDBeta(Ncond,1.0,9.0);
         meanneg = new IIDGamma(Ncond,1.0,1.0);
         invshapeneg = new IIDGamma(Ncond,1.0,1.0);
+        devneg = new GeneIIDMultiGamma(Ngene,*meanneg,*invshapeneg);
+        devneghypersuffstat = new MultiGammaSuffStat(Ncond);
 
-        condomegabidimarray = new LogNormalMixBidimArray(*meanlogomegabidimarray, *pipos, *meanpos, *invshapepos, *pineg, *meanneg, *invshapeneg);
+        condomegabidimarray = new GeneIIDLogNormalMixArray(*meanlogomegabidimarray, *alloc, *devpos, *devneg);
 
         // should be a branch site structure
         omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, Ngene);
@@ -342,10 +362,10 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         os << genewhypermean << '\t' << genewhypervar << '\t';
         os << condvhypervar << '\t';
         for (int cond=0; cond<Ncond; cond++)    {
-            os << pipos->GetVal(cond) << '\t';
+            os << pi->GetVal(cond)[0] << '\t';
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << pineg->GetVal(cond) << '\t';
+            os << pi->GetVal(cond)[2] << '\t';
         }
         for (int cond=0; cond<Ncond; cond++)    {
             os << meanpos->GetVal(cond) << '\t';
@@ -506,9 +526,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         os << *condvarray << '\t';
         os << genewhypermean << '\t' << genewhypervar << '\t';
         os << *genewarray << '\t';
-        os << *pipos << '\t' << *meanpos << '\t' << *invshapepos << '\t';
-        os << *pineg << '\t' << *meanneg << '\t' << *invshapeneg << '\t';
-        os << *condomegabidimarray << '\n';
+        os << *pi << '\t';
+        os << *alloc << '\t';
+        os << *meanpos << '\t' << *invshapepos << '\t';
+        os << *devpos << '\t';
+        os << *meanneg << '\t' << *invshapeneg << '\t';
+        os << *devneg;
     }
 
     void MasterFromStream(istream &is) {
@@ -534,9 +557,9 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         is >> *condvarray;
         is >> genewhypermean >> genewhypervar;
         is >> *genewarray;
-        is >> *pipos >> *meanpos >> *invshapepos;
-        is >> *pineg >> *meanneg >> *invshapeneg;
-        is >> *condomegabidimarray;
+        is >> *pi >> *alloc;
+        is >> *meanpos >> *invshapepos >> *devpos;
+        is >> *meanneg >> *invshapeneg >> *devneg;
     }
 
     //-------------------
@@ -559,6 +582,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         genewarray->SetVar(genewhypervar);
 
         meanlogomegabidimarray->Update();
+        condomegabidimarray->Update();
     }
 
     void MasterUpdate() override {
@@ -580,7 +604,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
                 MasterSendGeneNucRates();
             }
 
-            MasterSendOmegaHyperParameters();
+            // MasterSendOmegaHyperParameters();
             MasterSendOmega();
             MasterReceiveLogProbs();
         }
@@ -602,7 +626,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             SlaveReceiveGeneNucRates();
         }
 
-        SlaveReceiveOmegaHyperParameters();
+        // SlaveReceiveOmegaHyperParameters();
         SlaveReceiveOmega();
         GeneUpdate();
         SlaveSendLogProbs();
@@ -637,7 +661,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
                 MasterSendGeneNucRates();
             }
 
-            MasterSendOmegaHyperParameters();
+            // MasterSendOmegaHyperParameters();
             MasterSendOmega();
         }
     }
@@ -658,7 +682,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             SlaveReceiveGeneNucRates();
         }
 
-        SlaveReceiveOmegaHyperParameters();
+        // SlaveReceiveOmegaHyperParameters();
         SlaveReceiveOmega();
         GenePostPred(name);
     }
@@ -688,6 +712,10 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         return meanlogomegabidimarray->GetVal(gene).GetVal(cond);
     }
 
+    double GetMeanOmega(int gene, int cond) const {
+        return exp(meanlogomegabidimarray->GetVal(gene).GetVal(cond));
+    }
+
     double GetLogPrior() const {
         double total = 0;
         // branch lengths
@@ -712,15 +740,16 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         total += CondVLogPrior();
         total += GeneWHyperLogPrior();
         total += GeneWLogPrior();
-        total += PosLogPrior();
-        total += NegLogPrior();
-        total += OmegaLogPrior();
-        return total;
-    }
 
-    double OmegaLogPrior() const {
-        meanlogomegabidimarray->Update();
-        return condomegabidimarray->GetLogProb();
+        total += DevPosHyperLogPrior();
+        total += DevPosLogPrior();
+        total += DevNegHyperLogPrior();
+        total += DevNegLogPrior();
+
+        total += PiLogPrior();
+        total += AllocLogPrior();
+
+        return total;
     }
 
     // Branch lengths
@@ -756,15 +785,17 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     double CondVHyperLogPrior() const { return -condvhypermean*condvhypermean - condvhypervar; }
-
     double GeneWHyperLogPrior() const { return -genewhypermean*genewhypermean - genewhypervar; }
-
     double CondVLogPrior() const { return condvarray->GetLogProb(); }
-
     double GeneWLogPrior() const { return genewarray->GetLogProb(); }
 
-    double PosLogPrior() const { return pipos->GetLogProb() + meanpos->GetLogProb() + invshapepos->GetLogProb();}
-    double NegLogPrior() const { return pineg->GetLogProb() + meanneg->GetLogProb() + invshapeneg->GetLogProb();}
+    double DevPosHyperLogPrior() const { return meanpos->GetLogProb() + invshapepos->GetLogProb();}
+    double DevNegHyperLogPrior() const { return meanneg->GetLogProb() + invshapeneg->GetLogProb();}
+    double DevPosLogPrior() const { return devpos->GetLogProb(); }
+    double DevNegLogPrior() const { return devneg->GetLogProb(); }
+
+    double PiLogPrior() const { return pi->GetLogProb(); }
+    double AllocLogPrior() const { return alloc->GetLogProb(); }
 
     double GetLogLikelihood() const { return lnL; }
 
@@ -803,15 +834,19 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     double CondVHyperSuffStatLogProb() const {
-        cerr << "normal suff stat\n";
-        exit(1);
-        return 0;
+        return condvhypersuffstat.GetLogProb(condvhypermean,condvhypervar);
     }
 
     double GeneWHyperSuffStatLogProb() const {
-        cerr << "normal suff stat\n";
-        exit(1);
-        return 0;
+        return genewhypersuffstat.GetLogProb(genewhypermean,genewhypervar);
+    }
+
+    double DevPosHyperSuffStatLogProb() const   {
+        return devposhypersuffstat->GetLogProb(*meanpos,*invshapepos);
+    }
+
+    double DevNegHyperSuffStatLogProb() const   {
+        return devneghypersuffstat->GetLogProb(*meanneg,*invshapeneg);
     }
 
     double OmegaSuffStatLogProb() const {
@@ -839,15 +874,44 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     double GeneConditionOmegaSuffStatLogProb(int gene, int cond) const {
-        /*
         const OmegaPathSuffStat &suffstat = omegapathsuffstatbidimarray->GetVal(gene).GetVal(cond);
         int count = suffstat.GetCount();
         double b = suffstat.GetBeta();
-        */
 
-        cerr << "in GeneConditionOmegaSuffStatLogProb\n";
-        exit(1);
-        return 0;
+        double logom = GetMeanLogOmega(gene,cond);
+
+        double om0 = exp(logom);
+        double logp0 = count*log(om0) - b*om0;
+
+        double ompos = exp(logom + devpos->GetVal(gene).GetVal(cond));
+        double logppos = count*log(ompos) - b*ompos;
+
+        double omneg = exp(logom - devneg->GetVal(gene).GetVal(cond));
+        double logpneg = count*log(omneg) - b*omneg;
+
+        double max = logp0;
+        if (max < logppos)  {
+            max = logppos;
+        }
+        if (max < logpneg)  {
+            max = logpneg;
+        }
+        const vector<double>& w = (*pi)[cond];
+        double pneg = w[0]*exp(logpneg-max);
+        double p0 = w[1]*exp(logp0-max);
+        double ppos = w[2]*exp(logppos-max);
+        double tot = pneg + p0 + ppos;
+        double u = Random::Uniform() * tot;
+        if (u < pneg)   {
+            (*alloc)[gene][cond] = 0;
+        }
+        else if (u < (pneg + p0))   {
+            (*alloc)[gene][cond] = 1;
+        }
+        else    {
+            (*alloc)[gene][cond] = 2;
+        }
+        return log(tot) + max;
     }
 
     //-------------------
@@ -882,6 +946,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     // log prob for moving gene w hyperparameters
     double GeneWHyperLogProb() const { return GeneWHyperLogPrior() + GeneWHyperSuffStatLogProb(); }
 
+    // log prob for moving meanpos and invshapepos
+    double DevPosHyperLogProb() const { return DevPosHyperLogPrior() + DevPosHyperSuffStatLogProb(); }
+
+    // log prob for moving meaneg and invshapeneg
+    double DevNegHyperLogProb() const { return DevNegHyperLogPrior() + DevNegHyperSuffStatLogProb(); }
+
     //-------------------
     // Moves
     //-------------------
@@ -898,8 +968,9 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
             MasterReceiveOmegaSuffStat();
-            // MoveOmegaHyperParameters(3);
-            MasterSendOmegaHyperParameters();
+            MoveOmegaHyperParameters(3);
+            // MasterSendOmegaHyperParameters();
+            MasterSendOmega();
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
@@ -932,7 +1003,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         if (nucmode != 2) {
             MasterReceiveGeneNucRates();
         }
-        MasterReceiveOmega();
+        // MasterReceiveOmega();
         MasterReceiveLogProbs();
     }
 
@@ -945,8 +1016,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             GeneCollectPathSuffStat();
             SlaveSendOmegaSuffStat();
-            SlaveReceiveOmegaHyperParameters();
-            GeneResampleOmega();
+            // SlaveReceiveOmegaHyperParameters();
+            SlaveReceiveOmega();
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
@@ -977,7 +1048,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             SlaveSendGeneNucRates();
         }
 
-        SlaveSendOmega();
+        // SlaveSendOmega();
         SlaveSendLogProbs();
     }
 
@@ -990,12 +1061,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     void GeneCollectPathSuffStat() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectPathSuffStat();
-        }
-    }
-
-    void GeneResampleOmega() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleOmega();
         }
     }
 
@@ -1127,15 +1192,90 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
                     &MultiGeneSparseConditionOmegaModel::TouchNucMatrix, this);
     }
 
-    /*
     void MoveOmegaHyperParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
+            MoveDevPos(1.0,1);
+            MoveDevNeg(1.0,1);
+
             MoveGeneW(0.3, 1);
             MoveCondV(0.3, 1);
+            MoveDevPos(0.3,1);
+            MoveDevNeg(0.3,1);
         }
+
+        OmegaSuffStatLogProb();
+        ResamplePi();
+
         MoveGeneWHyperParams(1.0, 100);
+        MoveDevPosHyperParams(1.0,100);
+        MoveDevNegHyperParams(1.0,100);
+    }
+
+    void ResamplePi()   {
+        for (int cond=0; cond<Ncond; cond++)    {
+            int count[3];
+            count[0] = count[1] = count[2] = 0;
+            for (int gene=0; gene<Ngene; gene++)    {
+                count[(*alloc)[gene][cond]]++;
+            }
+            double p[3];
+            double tot = 0;
+            for (int k=0; k<3; k++) {
+                p[k] = Random::sGamma(piconcentration*picenter[k] + count[k]);
+            }
+            for (int k=0; k<3; k++) {
+                p[k] /= tot;
+                (*pi)[cond][k] = p[k];
+            }
+        }
+    }
+
+    double MoveDevPos(double tuning, int nrep)  {
+        double nacc = 0;
+        double ntot = 0;
+        for (int gene=0; gene<Ngene; gene++)    {
+            for (int cond=0; cond<Ncond; cond++)    {
+                double deltalogprob = -devpos->GetLogProb(gene,cond) - GeneConditionOmegaSuffStatLogProb(gene,cond);
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                (*devpos)[gene][cond] *= e;
+                deltalogprob += devpos->GetLogProb(gene,cond) + GeneConditionOmegaSuffStatLogProb(gene,cond);
+                deltalogprob += m;
+                int acc = (log(Random::Uniform()) < deltalogprob);
+                if (acc) {
+                    nacc++;
+                } else {
+                    (*devpos)[gene][cond] /= e;
+                }
+                ntot++;
+            }
+        }
+        return nacc / ntot;
+    }
+
+    double MoveDevNeg(double tuning, int nrep)  {
+        double nacc = 0;
+        double ntot = 0;
+        for (int gene=0; gene<Ngene; gene++)    {
+            for (int cond=0; cond<Ncond; cond++)    {
+                double deltalogprob = -devneg->GetLogProb(gene,cond) - GeneConditionOmegaSuffStatLogProb(gene,cond);
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                (*devneg)[gene][cond] *= e;
+                deltalogprob += devneg->GetLogProb(gene,cond) + GeneConditionOmegaSuffStatLogProb(gene,cond);
+                deltalogprob += m;
+                int acc = (log(Random::Uniform()) < deltalogprob);
+                if (acc) {
+                    nacc++;
+                } else {
+                    (*devneg)[gene][cond] /= e;
+                }
+                ntot++;
+            }
+        }
+        return nacc / ntot;
     }
 
     double MoveCondV(double tuning, int nrep) {
@@ -1143,12 +1283,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             for (int j = 1; j < GetNcond(); j++) {
                 double deltalogprob = -condvarray->GetLogProb(j);
-                deltalogprob -= SparseConditionOmegaSuffStatLogProb(j);
+                deltalogprob -= ConditionOmegaSuffStatLogProb(j);
                 double m = tuning * (Random::Uniform() - 0.5);
                 double e = exp(m);
                 (*condvarray)[j] *= e;
                 deltalogprob += condvarray->GetLogProb(j);
-                deltalogprob += SparseConditionOmegaSuffStatLogProb(j);
+                deltalogprob += ConditionOmegaSuffStatLogProb(j);
                 deltalogprob += m;
                 int acc = (log(Random::Uniform()) < deltalogprob);
                 if (acc) {
@@ -1184,33 +1324,45 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         return nacc / GetNgene() / nrep;
     }
 
-    double MoveOmegaInvShape(double tuning, int nrep) {
-        double nacc = 0;
-        for (int rep = 0; rep < nrep; rep++) {
-            double deltalogprob = -OmegaInvShapeLogPrior() - OmegaSuffStatLogProb();
-            double m = tuning * (Random::Uniform() - 0.5);
-            double e = exp(m);
-            omegainvshape *= e;
-            deltalogprob += OmegaInvShapeLogPrior() + OmegaSuffStatLogProb();
-            deltalogprob += m;
-            int acc = (log(Random::Uniform()) < deltalogprob);
-            if (acc) {
-                nacc++;
-            } else {
-                omegainvshape /= e;
-            }
+    void MoveDevPosHyperParams(double tuning, int nrep) {
+        devposhypersuffstat->Clear();
+        devposhypersuffstat->AddSuffStat(*devpos);
+
+        for (int cond=0; cond<Ncond; cond++)    {
+            ScalingMove((*meanpos)[cond], 1.0, 10, &MultiGeneSparseConditionOmegaModel::DevPosHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*meanpos)[cond], 0.3, 10, &MultiGeneSparseConditionOmegaModel::DevPosHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*invshapepos)[cond], 1.0, 10, &MultiGeneSparseConditionOmegaModel::DevPosHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*invshapepos)[cond], 0.3, 10, &MultiGeneSparseConditionOmegaModel::DevPosHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
         }
-        condomegabidimarray->SetInvShape(omegainvshape);
-        return nacc / nrep;
+    }
+
+    void MoveDevNegHyperParams(double tuning, int nrep) {
+        devneghypersuffstat->Clear();
+        devneghypersuffstat->AddSuffStat(*devneg);
+
+        for (int cond=0; cond<Ncond; cond++)    {
+            ScalingMove((*meanneg)[cond], 1.0, 10, &MultiGeneSparseConditionOmegaModel::DevNegHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*meanneg)[cond], 0.3, 10, &MultiGeneSparseConditionOmegaModel::DevNegHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*invshapeneg)[cond], 1.0, 10, &MultiGeneSparseConditionOmegaModel::DevNegHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+            ScalingMove((*invshapeneg)[cond], 0.3, 10, &MultiGeneSparseConditionOmegaModel::DevNegHyperLogProb,
+                        &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
+        }
     }
 
     void MoveCondVHyperParams(double tuning, int nrep) {
-        hypercondvsuffstat.Clear();
-        hypercondvsuffstat.AddSuffStat(*condvarray);
+        condvhypersuffstat.Clear();
+        condvhypersuffstat.AddSuffStat(*condvarray);
 
-        ScalingMove(condvhyperinvshape, 1.0, 10, &MultiGeneSparseConditionOmegaModel::CondVHyperLogProb,
+        ScalingMove(condvhypervar, 1.0, 10, &MultiGeneSparseConditionOmegaModel::CondVHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
-        ScalingMove(condvhyperinvshape, 0.3, 10, &MultiGeneSparseConditionOmegaModel::CondVHyperLogProb,
+        ScalingMove(condvhypervar, 0.3, 10, &MultiGeneSparseConditionOmegaModel::CondVHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
 
         condvarray->SetMean(condvhypermean);
@@ -1218,22 +1370,21 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     void MoveGeneWHyperParams(double tuning, int nrep) {
-        hypergenewsuffstat.Clear();
-        hypergenewsuffstat.AddSuffStat(*genewarray);
+        genewhypersuffstat.Clear();
+        genewhypersuffstat.AddSuffStat(*genewarray);
 
-        ScalingMove(genewhypermean, 1.0, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
+        SlidingMove(genewhypermean, 1.0, 10, 0, 0, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
-        ScalingMove(genewhypermean, 0.3, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
+        SlidingMove(genewhypermean, 0.3, 10, 0, 0, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
-        ScalingMove(genewhyperinvshape, 1.0, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
+        ScalingMove(genewhypervar, 1.0, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
-        ScalingMove(genewhyperinvshape, 0.3, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
+        ScalingMove(genewhypervar, 0.3, 10, &MultiGeneSparseConditionOmegaModel::GeneWHyperLogProb,
                     &MultiGeneSparseConditionOmegaModel::NoUpdate, this);
 
         genewarray->SetMean(genewhypermean);
         genewarray->SetVar(genewhypervar);
     }
-    */
 
     //-------------------
     // MPI send / receive
@@ -1393,6 +1544,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
     // omega arrays
 
+    /*
     void SlaveSendOmega() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             (*condomegabidimarray)[gene].Copy(*geneprocess[gene]->GetOmegaArray());
@@ -1401,6 +1553,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     void MasterReceiveOmega() { MasterReceiveGeneArray(*condomegabidimarray); }
+    */
 
     void MasterSendOmega() { MasterSendGeneArray(*condomegabidimarray); }
 
@@ -1413,6 +1566,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
     // omega hyperparameters
 
+    /*
     void MasterSendOmegaHyperParameters() {
         MasterSendGlobal(condvhypermean, condvhypervar);
         MasterSendGlobal(genewhypermean, genewhypervar);
@@ -1438,6 +1592,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->SetOmegaHyperParameters(*pipos,*meanpos,*invshapepos,*pineg,*meanneg,*invshapeneg);
         }
     }
+    */
 
     // omega path suff stat
 

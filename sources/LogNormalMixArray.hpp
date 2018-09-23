@@ -6,85 +6,30 @@
 #include "PoissonSuffStat.hpp"
 #include "Sum.hpp"
 #include "Random.hpp"
+#include "GeneIIDMultiGamma.hpp"
+#include "GeneIIDMultiDiscrete.hpp"
+
 
 class LogNormalMixArray : public SimpleArray<double> {
   public:
-    LogNormalMixArray(const Selector<double> &inmean, const Selector<double>& inpipos, const Selector<double>& inmeanpos, const Selector<double>& ininvshapepos, const Selector<double>& inpineg, const Selector<double>& inmeanneg, const Selector<double>& ininvshapeneg) 
-        : SimpleArray<double>(inmean.GetSize()), mean(mean), pipos(inpipos), meanpos(inmeanpos), invshapepos(ininvshapepos), pineg(inpineg), meanneg(inmeanneg), invshapeneg(ininvshapeneg) {
-        Sample();
+    LogNormalMixArray(const Selector<double> &inmean, const Selector<int>& inalloc, const Selector<double>& indevpos, const Selector<double>& indevneg) : SimpleArray<double>(inmean.GetSize()), mean(inmean), alloc(inalloc), devpos(indevpos), devneg(indevneg)    {
+        Update();
     }
 
     ~LogNormalMixArray() {}
 
     //! sample all entries from prior
-    void Sample() {
+    void Update() {
         for (int i = 0; i < GetSize(); i++) {
-            double logv = 0;
-            double pi = pipos.GetVal(i) + pineg.GetVal(i);
-            if (pi > 1.0)   {
-                cerr << "error in LogNormalMixArray::Sample: prob > 1\n";
-                exit(1);
+            double x = mean.GetVal(i);
+            if (alloc.GetVal(i) == 0)   {
+                x -= devneg.GetVal(i);
             }
-            double u = Random::Uniform();
-            logv = mean.GetVal(i);
-
-            if (u < pipos.GetVal(i))   {
-                double shape = 1.0 / invshapepos.GetVal(i);
-                double scale = shape / meanpos.GetVal(i);
-                logv += Random::GammaSample(shape, scale);
+            else if (alloc.GetVal(i) == 2)  {
+                x += devpos.GetVal(i);
             }
-            else if (u < pi)    {
-                double shape = 1.0 / invshapeneg.GetVal(i);
-                double scale = shape / meanneg.GetVal(i);
-                logv -= Random::GammaSample(shape, scale);
-            }
-            (*this)[i] = exp(logv);
+            (*this)[i] = exp(x);
         }
-    }
-
-    //! resample entries based on a Array of PoissonSuffStat
-    void MultipleTryResample(const Selector<PoissonSuffStat> &suffstatarray) {
-        for (int i = 0; i < GetSize(); i++) {
-            const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            cerr << "do something here\n";
-            exit(1);
-        }
-    }
-
-    //! return total log prob summed over all entries
-    double GetLogProb() const {
-        double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
-        return total;
-    }
-
-    //! return log prob for one entry
-    double GetLogProb(int index) const {
-        double dev = log(GetVal(index)) - mean.GetVal(index);
-        double ret = 0;
-        if (dev > 0)    {
-            ret += log(pipos.GetVal(index));
-            double shape = 1.0 / invshapepos.GetVal(index);
-            double scale = shape / meanpos.GetVal(index);
-            ret += Random::logGammaDensity(dev, shape, scale);
-        }
-        else if (dev < 0)   {
-            ret += log(pineg.GetVal(index));
-            double shape = 1.0 / invshapeneg.GetVal(index);
-            double scale = shape / meanneg.GetVal(index);
-            ret += Random::logGammaDensity(-dev, shape, scale);
-        }
-        else    {
-            double pi = pipos.GetVal(index) + pineg.GetVal(index);
-            if (pi >= 1.0)  {
-                cerr << "error in LogNormalMixArray:GetLogProb: pi > 1.0\n";
-                exit(1);
-            }
-            ret += log(1.0 - pi);
-        }
-        return ret;
     }
 
     double GetMean() const {
@@ -133,29 +78,30 @@ class LogNormalMixArray : public SimpleArray<double> {
 
   protected:
     const Selector<double>& mean;
-    const Selector<double>& pipos;
-    const Selector<double>& meanpos;
-    const Selector<double>& invshapepos;
-    const Selector<double>& pineg;
-    const Selector<double>& meanneg;
-    const Selector<double>& invshapeneg;
+    const Selector<int>& alloc;
+    const Selector<double>& devpos;
+    const Selector<double>& devneg;
 };
 
-class LogNormalMixBidimArray : public Array<LogNormalMixArray> {
+class GeneIIDLogNormalMixArray : public Array<LogNormalMixArray> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
-    LogNormalMixBidimArray(const SumArray &inmean, const Selector<double>& inpipos, const Selector<double>& inmeanpos, const Selector<double>& ininvshapepos, const Selector<double>& inpineg, const Selector<double>& inmeanneg, const Selector<double>& ininvshapeneg)
-        : mean(inmean), pipos(inpipos), meanpos(inmeanpos), invshapepos(ininvshapepos), pineg(inpineg), meanneg(inmeanneg), invshapeneg(ininvshapeneg),
-          array(inmean.GetSize(), (LogNormalMixArray *)0) {
+    GeneIIDLogNormalMixArray(const SumArray &inmean, const GeneIIDMultiDiscrete& inalloc, const GeneIIDMultiGamma& indevpos, const GeneIIDMultiGamma& indevneg) : mean(inmean), alloc(inalloc), devpos(indevpos), devneg(indevneg), array(inmean.GetSize(), (LogNormalMixArray *)0) {
         for (int gene = 0; gene < GetSize(); gene++) {
-            array[gene] = new LogNormalMixArray(mean.GetVal(gene), pipos, meanpos, invshapepos, pineg, meanneg, invshapeneg);
+            array[gene] = new LogNormalMixArray(mean.GetVal(gene), alloc.GetVal(gene), devpos.GetVal(gene), devneg.GetVal(gene));
         }
     }
 
-    ~LogNormalMixBidimArray() {
+    ~GeneIIDLogNormalMixArray() {
         for (int gene = 0; gene < GetSize(); gene++) {
             delete array[gene];
+        }
+    }
+
+    void Update()   {
+        for (int gene=0; gene<GetSize(); gene++)   {
+            array[gene]->Update();
         }
     }
 
@@ -241,23 +187,11 @@ class LogNormalMixBidimArray : public Array<LogNormalMixArray> {
         return tot;
     }
 
-    //! return total log prob (over all genes and over all branches)
-    double GetLogProb() const {
-        double total = 0;
-        for (int gene = 0; gene < GetSize(); gene++) {
-            total += array[gene]->GetLogProb();
-        }
-        return total;
-    }
-
   private:
     const SumArray &mean;
-    const Selector<double>& pipos;
-    const Selector<double>& meanpos;
-    const Selector<double>& invshapepos;
-    const Selector<double>& pineg;
-    const Selector<double>& meanneg;
-    const Selector<double>& invshapeneg;
+    const GeneIIDMultiDiscrete& alloc;
+    const GeneIIDMultiGamma& devpos;
+    const GeneIIDMultiGamma& devneg;
     vector<LogNormalMixArray *> array;
 };
 

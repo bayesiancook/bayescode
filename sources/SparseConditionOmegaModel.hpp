@@ -3,12 +3,15 @@
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrixArray.hpp"
 #include "CodonSuffStat.hpp"
+#include "GeneIIDMultiDiscrete.hpp"
+#include "GeneIIDMultiGamma.hpp"
 #include "LogNormalMixArray.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDBeta.hpp"
 #include "IIDNormal.hpp"
 #include "IIDGamma.hpp"
+#include "IIDDirichlet.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "Sum.hpp"
@@ -111,13 +114,17 @@ class SparseConditionOmegaModel : public ProbModel {
 
     Sum *meanlogomegaarray;
 
-    IIDBeta* pipos;
+    vector<double> picenter;
+    double piconcentration;
+    IIDDirichlet* pi;
     IIDGamma* meanpos;
     IIDGamma* invshapepos;
-
-    IIDBeta* pineg;
     IIDGamma* meanneg;
     IIDGamma* invshapeneg;
+
+    MultiDiscrete* alloc;
+    MultiGamma* devpos;
+    MultiGamma* devneg;
 
     // condition-specific omega's
     LogNormalMixArray *condomegaarray;
@@ -214,15 +221,24 @@ class SparseConditionOmegaModel : public ProbModel {
         genew = 0.0;
         meanlogomegaarray = new Sum(*condv, genew);
 
-        pipos = new IIDBeta(Ncond,1.0,9.0);
+        picenter.assign(3,0);
+        picenter[0] = 0.05;
+        picenter[2] = 0.05;
+        picenter[1] = 0.90;
+        piconcentration = 20;
+        pi = new IIDDirichlet(Ncond,picenter,piconcentration);
+
+        alloc = new MultiDiscrete(*pi);
+
         meanpos = new IIDGamma(Ncond,1.0,1.0);
         invshapepos = new IIDGamma(Ncond,1.0,1.0);
-
-        pineg = new IIDBeta(Ncond,1.0,9.0);
         meanneg = new IIDGamma(Ncond,1.0,1.0);
         invshapeneg = new IIDGamma(Ncond,1.0,1.0);
 
-        condomegaarray = new LogNormalMixArray(*meanlogomegaarray, *pipos, *meanpos, *invshapepos, *pineg, *meanneg, *invshapeneg);
+        devpos = new MultiGamma(*meanpos,*invshapepos);
+        devneg = new MultiGamma(*meanneg,*invshapeneg);
+
+        condomegaarray = new LogNormalMixArray(*meanlogomegaarray, *alloc, *devpos, *devneg);
 
         codonmatrixarray =
             new MGOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, condomegaarray);
@@ -251,6 +267,7 @@ class SparseConditionOmegaModel : public ProbModel {
 
     void SetOmegaTree(const Selector<double> &from) { condomegaarray->Copy(from); }
 
+    /*
     void SetOmegaHyperParameters(const Selector<double>& inpipos, const Selector<double>& inmeanpos, const Selector<double>& ininvshapepos, const Selector<double>& inpineg, const Selector<double>& inmeanneg, const Selector<double>& ininvshapeneg) {
         pipos->Copy(inpipos);
         meanpos->Copy(inmeanpos);
@@ -259,6 +276,7 @@ class SparseConditionOmegaModel : public ProbModel {
         meanneg->Copy(inmeanneg);
         invshapeneg->Copy(ininvshapeneg);
     }
+    */
 
     //-------------------
     // Setting and updating
@@ -374,6 +392,7 @@ class SparseConditionOmegaModel : public ProbModel {
         condv->SetMean(condvhypermean);
         condv->SetVar(condvhypervar);
         meanlogomegaarray->SetGeneVal(genew);
+        condomegaarray->Update();
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -387,6 +406,7 @@ class SparseConditionOmegaModel : public ProbModel {
         condv->SetMean(condvhypermean);
         condv->SetVar(condvhypervar);
         meanlogomegaarray->SetGeneVal(genew);
+        condomegaarray->Update();
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -413,7 +433,6 @@ class SparseConditionOmegaModel : public ProbModel {
         if (!FixedNucRates()) {
             total += NucRatesLogPrior();
         }
-        total += OmegaLogPrior();
         return total;
     }
 
@@ -449,9 +468,6 @@ class SparseConditionOmegaModel : public ProbModel {
         total += Random::logDirichletDensity(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
         return total;
     }
-
-    //! log prior over omega
-    double OmegaLogPrior() const { return condomegaarray->GetLogProb(); }
 
     //-------------------
     // Suff Stat and suffstatlogprobs
@@ -564,7 +580,6 @@ class SparseConditionOmegaModel : public ProbModel {
 
             CollectPathSuffStat();
             CollectOmegaSuffStat();
-            ResampleOmega();
 
             if (!FixedNucRates()) {
                 TouchMatrices();
@@ -635,13 +650,6 @@ class SparseConditionOmegaModel : public ProbModel {
     void CollectOmegaSuffStat() {
         omegapathsuffstatarray->Clear();
         omegapathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray, *branchalloc);
-    }
-
-    //! Gibbs resample omega (based on sufficient statistics of current
-    //! substitution mapping)
-    void ResampleOmega() {
-        condomegaarray->MultipleTryResample(*omegapathsuffstatarray);
-        codonmatrixarray->UpdateCodonMatrices();
     }
 
     //! collect sufficient statistics for moving nucleotide rates (based on
