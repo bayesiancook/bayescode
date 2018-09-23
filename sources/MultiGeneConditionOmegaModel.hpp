@@ -609,6 +609,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         } else {
             SlaveReceiveGeneBranchLengths();
         }
+
         if (nucmode == 2) {
             SlaveReceiveGlobalNucRates();
         } else {
@@ -617,6 +618,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
         SlaveReceiveOmegaHyperParameters();
         SlaveReceiveOmega();
+
         GenePostPred(name);
     }
 
@@ -1423,7 +1425,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         MasterSendGlobal(genewhypermean, genewhyperinvshape);
         MasterSendGlobal(omegainvshape);
         MasterSendGlobal(*condvarray);
-        MasterSendGlobal(*genewarray);
+        MasterSendGeneArray(*genewarray);
     }
 
     void SlaveReceiveOmegaHyperParameters() {
@@ -1431,7 +1433,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         SlaveReceiveGlobal(genewhypermean, genewhyperinvshape);
         SlaveReceiveGlobal(omegainvshape);
         SlaveReceiveGlobal(*condvarray);
-        SlaveReceiveGlobal(*genewarray);
+        SlaveReceiveGeneArray(*genewarray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetCondVHyperParams(condvhypermean, condvhyperinvshape);
             geneprocess[gene]->SetCondV(*condvarray);
