@@ -8,102 +8,6 @@
 #include "Random.hpp"
 #include "SuffStat.hpp"
 
-class NormalSuffStat : public SuffStat {
-  public:
-    NormalSuffStat() {}
-    ~NormalSuffStat() {}
-
-    //! set suff stats to 0
-    void Clear() {
-        m1 = 0;
-        m2 = 0;
-        n = 0;
-    }
-
-    //! add the contribution of one normal variate (x) to this suffstat
-    void AddSuffStat(double x)  {
-        m1 += x;
-        m2 += x*x;
-        n ++;
-    }
-
-    //! (*this) += from
-    void Add(const NormalSuffStat &from) {
-        m1 += from.m1;
-        m2 += from.m2;
-        n += from.n;
-    }
-
-    //! (*this) += from, operator version
-    NormalSuffStat &operator+=(const NormalSuffStat &from) {
-        Add(from);
-        return *this;
-    }
-
-    //! get suff stats from an IIDNormal array
-    void AddSuffStat(const IIDNormal &array) {
-        for (int i = 0; i < array.GetSize(); i++) {
-            AddSuffStat(array.GetVal(i));
-        }
-    }
-
-    //! get suff stats from entries of an IIDNormal array such that occupancy[i] !=
-    //! 0
-    void AddSuffStat(const IIDNormal &array, const Selector<int> &occupancy) {
-        for (int i = 0; i < array.GetSize(); i++) {
-            if (occupancy.GetVal(i)) {
-                AddSuffStat(array.GetVal(i));
-            }
-        }
-    }
-
-    //! get suff stats from a BranchIIDNormal array
-    void AddSuffStat(const BranchIIDNormal &array) {
-        for (int i = 0; i < array.GetNbranch(); i++) {
-            AddSuffStat(array.GetVal(i));
-        }
-    }
-
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return 3; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const { buffer << m1 << m2 << n; }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) { buffer >> m1 >> m2 >> n; }
-
-    //! read a NormalSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double temp;
-        buffer >> temp;
-        m1 += temp;
-        buffer >> temp;
-        m2 += temp;
-
-        int tmp;
-        buffer >> tmp;
-        n += tmp;
-    }
-
-    //! return log prob, as a function of the given shape and scale parameters
-    double GetLogProb(double mean, double var) const    {
-        return -0.5 * (n*log(2*Pi*var) + (m2 - 2*mean*m1 + n*mean*mean)/var);
-    }
-
-    //! return sum of normal variates contributing to the suff stat
-    double GetSum() const { return m1; }
-    //! return sum of squares of normal variates contributing to the suff stat
-    double GetSumOfSquares() const { return m2; }
-    //! return N, total number of normal variates contributing to the suff stat
-    int GetN() const { return n; }
-
-  private:
-    double m1;
-    double m2;
-    int n;
-};
-
 /**
  * \brief An array of IID normal random variables
  *
@@ -228,4 +132,99 @@ class BranchIIDNormal : public SimpleBranchArray<double> {
     double var;
 };
 
+class NormalSuffStat : public SuffStat {
+  public:
+    NormalSuffStat() {}
+    ~NormalSuffStat() {}
+
+    //! set suff stats to 0
+    void Clear() {
+        m1 = 0;
+        m2 = 0;
+        n = 0;
+    }
+
+    //! add the contribution of one normal variate (x) to this suffstat
+    void AddSuffStat(double x)  {
+        m1 += x;
+        m2 += x*x;
+        n ++;
+    }
+
+    //! (*this) += from
+    void Add(const NormalSuffStat &from) {
+        m1 += from.m1;
+        m2 += from.m2;
+        n += from.n;
+    }
+
+    //! (*this) += from, operator version
+    NormalSuffStat &operator+=(const NormalSuffStat &from) {
+        Add(from);
+        return *this;
+    }
+
+    //! get suff stats from an IIDNormal array
+    void AddSuffStat(const IIDNormal &array) {
+        for (int i = 0; i < array.GetSize(); i++) {
+            AddSuffStat(array.GetVal(i));
+        }
+    }
+
+    //! get suff stats from entries of an IIDNormal array such that occupancy[i] !=
+    //! 0
+    void AddSuffStat(const IIDNormal &array, const Selector<int> &occupancy) {
+        for (int i = 0; i < array.GetSize(); i++) {
+            if (occupancy.GetVal(i)) {
+                AddSuffStat(array.GetVal(i));
+            }
+        }
+    }
+
+    //! get suff stats from a BranchIIDNormal array
+    void AddSuffStat(const BranchIIDNormal &array) {
+        for (int i = 0; i < array.GetNbranch(); i++) {
+            AddSuffStat(array.GetVal(i));
+        }
+    }
+
+    //! return object size, when put into an MPI buffer
+    unsigned int GetMPISize() const { return 3; }
+
+    //! put object into MPI buffer
+    void MPIPut(MPIBuffer &buffer) const { buffer << m1 << m2 << n; }
+
+    //! read object from MPI buffer
+    void MPIGet(const MPIBuffer &buffer) { buffer >> m1 >> m2 >> n; }
+
+    //! read a NormalSuffStat from MPI buffer and add it to this
+    void Add(const MPIBuffer &buffer) {
+        double temp;
+        buffer >> temp;
+        m1 += temp;
+        buffer >> temp;
+        m2 += temp;
+
+        int tmp;
+        buffer >> tmp;
+        n += tmp;
+    }
+
+    //! return log prob, as a function of the given shape and scale parameters
+    double GetLogProb(double mean, double var) const    {
+        return -0.5 * (n*log(2*Pi*var) + (m2 - 2*mean*m1 + n*mean*mean)/var);
+    }
+
+    //! return sum of normal variates contributing to the suff stat
+    double GetSum() const { return m1; }
+    //! return sum of squares of normal variates contributing to the suff stat
+    double GetSumOfSquares() const { return m2; }
+    //! return N, total number of normal variates contributing to the suff stat
+    int GetN() const { return n; }
+
+  private:
+    double m1;
+    double m2;
+    int n;
+};
 #endif
