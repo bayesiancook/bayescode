@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include "Parallel.hpp"
 #include "Array.hpp"
 #include "MPIBuffer.hpp"
 #include "SequenceAlignment.hpp"

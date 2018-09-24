@@ -25,7 +25,7 @@
 
 class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
   private:
-    Tree *tree;
+    std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
 
@@ -106,8 +106,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         taxonset = refdata->GetTaxonSet();
         Ntaxa = refdata->GetNtaxa();
 
-        // // get tree from file (newick format)
-        // tree = new Tree(treefile);
+        // get tree from file (newick format)
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
 
         // // check whether tree and data fits together
         // tree->RegisterWith(taxonset);

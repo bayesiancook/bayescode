@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter") # normal mode
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
 set(CXX_FEATURES cxx_auto_type cxx_nullptr cxx_final cxx_override cxx_range_for)
 include_directories("src")
 include_directories("src/lib")
@@ -24,6 +24,8 @@ set(BAYESCODE_LIB
     src/lib/GTRSubMatrix.cpp
     src/lib/linalg.cpp
     src/lib/MPIBuffer.cpp
+    src/lib/MultiGeneChain.cpp
+    src/lib/MultiGeneMPIModule.cpp
     src/lib/PhyloProcess.cpp
     src/lib/Random.cpp
     src/lib/RandomGeneSample.cpp
@@ -53,8 +55,8 @@ target_link_libraries(readglobom bayescode_lib)
 target_compile_features(readglobom PRIVATE ${CXX_FEATURES})
 
 # Multi gene single omega
-# add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
-# target_link_libraries(multigeneglobom bayescode_lib)
-# target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
+add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
+target_link_libraries(multigeneglobom bayescode_lib ${MPI_LIBRARIES})
+target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 
-#TODO readsingleomega and readdiffseldoublesparse
+#TODO readdiffseldoublesparse
