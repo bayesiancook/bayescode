@@ -29,7 +29,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
     // 1 : gathering suff stats across genes, then resampling hyperparams based on integrated bls
     blsamplemode = 0;
 
-    modalprior = 0;
+    modalprior = 1;
 
     pihypermean = inpihypermean;
     pihyperinvconc = inpihyperinvconc;
