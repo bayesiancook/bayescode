@@ -1092,6 +1092,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void MoveGeneNucRates() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveNucRates();
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
         }
     }
 
@@ -1413,9 +1414,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneBranchLengths() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
         SlaveSendGeneArray(*branchlengtharray);
     }
 
@@ -1432,9 +1430,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneNucRates() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
         SlaveSendGeneArray(*nucrelratearray, *nucstatarray);
     }
 

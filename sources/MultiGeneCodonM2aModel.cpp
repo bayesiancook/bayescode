@@ -1085,10 +1085,6 @@ void MultiGeneCodonM2aModel::SlaveReceiveGeneBranchLengths() {
 }
 
 void MultiGeneCodonM2aModel::SlaveSendGeneBranchLengths() {
-    // in principle, redundant..
-    for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-    }
     SlaveSendGeneArray(*branchlengtharray);
 }
 
@@ -1107,7 +1103,6 @@ void MultiGeneCodonM2aModel::SlaveSendBranchLengthsSuffStat() {
 
 void MultiGeneCodonM2aModel::CollectGeneBranchLengthsSuffStat()    {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
-        // geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         geneprocess[gene]->CollectLengthSuffStat();
         // (*lengthpathsuffstattreearray)[gene].Clear();
         // (*lengthpathsuffstattreearray)[gene]->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());

@@ -1123,13 +1123,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
-    void ResampleGeneBranchLengths()   {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleBranchLengths();
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-    }
-
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -1465,10 +1458,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneBranchLengths() {
-        // in principle, redundant..
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
         SlaveSendGeneArray(*branchlengtharray);
     }
 

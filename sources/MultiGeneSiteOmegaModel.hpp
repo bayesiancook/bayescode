@@ -1093,10 +1093,6 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneBranchLengths() {
-        // in principle, redundant..
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
         SlaveSendGeneArray(*branchlengtharray);
     }
 

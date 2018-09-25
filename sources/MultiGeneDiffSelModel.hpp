@@ -414,6 +414,7 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
             }
         }
 
+        // collect current state
         MasterReceiveGeneBranchLengths();
         MasterReceiveGeneNucRates();
         MasterReceiveLogProbs();
@@ -454,7 +455,8 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     void GeneMove() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(1, 10);
-            // geneprocess[gene]->MoveParameters(1,20);
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
         }
     }
 
@@ -588,9 +590,6 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneBranchLengths() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
         SlaveSendGeneArray(*branchlengtharray);
     }
 
@@ -607,9 +606,6 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneNucRates() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
         SlaveSendGeneArray(*nucrelratearray, *nucstatarray);
     }
 

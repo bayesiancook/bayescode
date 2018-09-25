@@ -722,7 +722,10 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     void GeneMove(int nrep0, int nrep) {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(nrep0, nrep);
+            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
         }
+        GeneCollectShiftCounts();
     }
 
     void GeneResampleSub(double frac) {
@@ -955,9 +958,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneBranchLengths() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
         SlaveSendGeneArray(*branchlengtharray);
     }
 
@@ -974,9 +974,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     void SlaveSendGeneNucRates() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
         SlaveSendGeneArray(*nucrelratearray, *nucstatarray);
     }
 
@@ -1047,7 +1044,6 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     void SlaveSendShiftCounts() {
-        GeneCollectShiftCounts();
         SlaveSendGeneArray(*shiftcountarray);
         SlaveSendGeneArray(*totcount);
     }
@@ -1078,6 +1074,10 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     void SlaveSendNucRatesHyperSuffStat() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+        }
+
         nucrelratesuffstat.Clear();
         nucrelratearray->AddSuffStat(nucrelratesuffstat);
         SlaveSendAdditive(nucrelratesuffstat);
