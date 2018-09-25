@@ -748,7 +748,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         total += PiLogPrior();
         total += AllocLogPrior();
 
-        if (isnan(total))   {
+        if (std::isnan(total))   {
             cerr << "in GetLogPrior: nan\n";
             exit(1);
         }
