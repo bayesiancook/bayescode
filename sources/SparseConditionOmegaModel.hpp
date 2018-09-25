@@ -265,7 +265,10 @@ class SparseConditionOmegaModel : public ProbModel {
 
     LogNormalMixArray *GetOmegaArray() const { return condomegaarray; }
 
-    void SetOmegaTree(const Selector<double> &from) { condomegaarray->Copy(from); }
+    void SetOmegaTree(const Selector<double> &from) { 
+        condomegaarray->Copy(from); 
+        TouchMatrices();
+    }
 
     /*
     void SetOmegaHyperParameters(const Selector<double>& inpipos, const Selector<double>& inmeanpos, const Selector<double>& ininvshapepos, const Selector<double>& inpineg, const Selector<double>& inmeanneg, const Selector<double>& ininvshapeneg) {
