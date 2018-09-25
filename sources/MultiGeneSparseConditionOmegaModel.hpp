@@ -240,7 +240,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         genewhypermean = 0;
         genewhypervar = 1.0;
-        genewarray = new IIDNormal(Ngene, genewhypermean, genewhypervar);
+        genewarray = new IIDNormal(GetLocalNgene(), genewhypermean, genewhypervar);
 
         meanlogomegabidimarray = new SumArray(*condvarray, *genewarray);
 
@@ -251,22 +251,22 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         piconcentration = 20;
         pi = new IIDDirichlet(Ncond,picenter,piconcentration);
 
-        alloc = new GeneIIDMultiDiscrete(Ngene,*pi);
+        alloc = new GeneIIDMultiDiscrete(GetLocalNgene(),*pi);
 
         meanpos = new IIDGamma(Ncond,1.0,1.0);
         invshapepos = new IIDGamma(Ncond,1.0,1.0);
-        devpos = new GeneIIDMultiGamma(Ngene,*meanpos,*invshapepos);
+        devpos = new GeneIIDMultiGamma(GetLocalNgene(),*meanpos,*invshapepos);
         devposhypersuffstat = new MultiGammaSuffStat(Ncond);
 
         meanneg = new IIDGamma(Ncond,1.0,1.0);
         invshapeneg = new IIDGamma(Ncond,1.0,1.0);
-        devneg = new GeneIIDMultiGamma(Ngene,*meanneg,*invshapeneg);
+        devneg = new GeneIIDMultiGamma(GetLocalNgene(),*meanneg,*invshapeneg);
         devneghypersuffstat = new MultiGammaSuffStat(Ncond);
 
         condomegabidimarray = new GeneIIDLogNormalMixArray(*meanlogomegabidimarray, *alloc, *devpos, *devneg);
 
         // should be a branch site structure
-        omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, Ngene);
+        omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, GetLocalNgene());
 
         lnL = 0;
         GeneLogPrior = 0;
@@ -1221,7 +1221,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int cond=0; cond<Ncond; cond++)    {
             int count[3];
             count[0] = count[1] = count[2] = 0;
-            for (int gene=0; gene<Ngene; gene++)    {
+            for (int gene=0; gene<GetNgene(); gene++)    {
                 count[(*alloc)[gene][cond]]++;
             }
             double p[3];
@@ -1240,7 +1240,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double MoveDevPos(double tuning, int nrep)  {
         double nacc = 0;
         double ntot = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
+        for (int gene=0; gene<GetNgene(); gene++)    {
             for (int cond=0; cond<Ncond; cond++)    {
                 double deltalogprob = -devpos->GetLogProb(gene,cond) - GeneConditionOmegaSuffStatLogProb(gene,cond);
                 double m = tuning * (Random::Uniform() - 0.5);
@@ -1263,7 +1263,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double MoveDevNeg(double tuning, int nrep)  {
         double nacc = 0;
         double ntot = 0;
-        for (int gene=0; gene<Ngene; gene++)    {
+        for (int gene=0; gene<GetNgene(); gene++)    {
             for (int cond=0; cond<Ncond; cond++)    {
                 double deltalogprob = -devneg->GetLogProb(gene,cond) - GeneConditionOmegaSuffStatLogProb(gene,cond);
                 double m = tuning * (Random::Uniform() - 0.5);

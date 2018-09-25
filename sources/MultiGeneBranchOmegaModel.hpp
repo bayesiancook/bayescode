@@ -177,14 +177,14 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         genewhyperinvshape = 1.0;
         double genealpha = 1.0 / genewhyperinvshape;
         double genebeta = genealpha / genewhypermean;
-        genewarray = new IIDGamma(Ngene, genealpha, genebeta);
+        genewarray = new IIDGamma(GetLocalNgene(), genealpha, genebeta);
 
         meanomegatreearray = new BranchProductArray(*branchvarray, *genewarray);
         omegainvshape = 1.0;
         omegatreearray = new BranchSpecificMeanGammaTreeArray(*meanomegatreearray, omegainvshape);
 
         // should be a branch site structure
-        omegapathsuffstatarray = new OmegaPathSuffStatTreeArray(*tree, Ngene);
+        omegapathsuffstatarray = new OmegaPathSuffStatTreeArray(*tree, GetLocalNgene());
 
         pathsuffstatarray = new PathSuffStatNodeArray(*tree);
 
@@ -776,7 +776,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         MasterSendGlobal(genewhypermean, genewhyperinvshape);
         MasterSendGlobal(omegainvshape);
         MasterSendGlobal(*branchvarray);
-        MasterSendGlobal(*genewarray);
+        MasterSendGeneArray(*genewarray);
     }
 
     void SlaveReceiveOmegaHyperParameters() {
@@ -784,7 +784,7 @@ class MultiGeneBranchOmegaModel : public MultiGeneProbModel {
         SlaveReceiveGlobal(genewhypermean, genewhyperinvshape);
         SlaveReceiveGlobal(omegainvshape);
         SlaveReceiveGlobal(*branchvarray);
-        SlaveReceiveGlobal(*genewarray);
+        SlaveReceiveGeneArray(*genewarray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchVHyperParams(branchvhypermean, branchvhyperinvshape);
             geneprocess[gene]->SetBranchV(*branchvarray);

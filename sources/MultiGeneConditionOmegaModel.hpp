@@ -228,7 +228,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         genewhyperinvshape = 1.0;
         double genealpha = 1.0 / genewhyperinvshape;
         double genebeta = genealpha / genewhypermean;
-        genewarray = new IIDGamma(Ngene, genealpha, genebeta);
+        genewarray = new IIDGamma(GetLocalNgene(), genealpha, genebeta);
 
         meanomegabidimarray = new ProductArray(*condvarray, *genewarray);
         omegainvshape = 1.0;
@@ -236,7 +236,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
             new ConditionSpecificMeanGammaBidimArray(*meanomegabidimarray, omegainvshape);
 
         // should be a branch site structure
-        omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, Ngene);
+        omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, GetLocalNgene());
 
         lnL = 0;
         GeneLogPrior = 0;
