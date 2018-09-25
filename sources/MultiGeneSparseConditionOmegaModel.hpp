@@ -321,7 +321,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         }
         os << "\tgenemean\tvar";
         os << "\tcondvar";
-        os << "\tomegainvshape";
         for (int cond=0; cond<Ncond; cond++)    {
             os << "\tpipos" << cond;
         }
@@ -748,6 +747,11 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         total += PiLogPrior();
         total += AllocLogPrior();
+
+        if (isnan(total))   {
+            cerr << "in GetLogPrior: nan\n";
+            exit(1);
+        }
 
         return total;
     }
@@ -1224,6 +1228,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             double tot = 0;
             for (int k=0; k<3; k++) {
                 p[k] = Random::sGamma(piconcentration*picenter[k] + count[k]);
+                tot += p[k];
             }
             for (int k=0; k<3; k++) {
                 p[k] /= tot;
