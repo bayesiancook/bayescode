@@ -86,6 +86,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
     int ppredmode;
 
+    int modalprior;
+
     // Branch lengths
 
     double lambda;
@@ -169,6 +171,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         nucmode = 1;
 
         ppredmode = 1;
+
+        modalprior = 1;
 
         AllocateAlignments(datafile);
         treefile = intreefile;
@@ -255,17 +259,22 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         meanpos = new IIDGamma(Ncond,1.0,1.0);
         invshapepos = new IIDGamma(Ncond,1.0,1.0);
+        for (int k=0; k<Ncond; k++) {
+            (*invshapepos)[k] = 0.5;
+        }
         devpos = new GeneIIDMultiGamma(GetLocalNgene(),*meanpos,*invshapepos);
         devposhypersuffstat = new MultiGammaSuffStat(Ncond);
 
         meanneg = new IIDGamma(Ncond,1.0,1.0);
         invshapeneg = new IIDGamma(Ncond,1.0,1.0);
+        for (int k=0; k<Ncond; k++) {
+            (*invshapeneg)[k] = 0.5;
+        }
         devneg = new GeneIIDMultiGamma(GetLocalNgene(),*meanneg,*invshapeneg);
         devneghypersuffstat = new MultiGammaSuffStat(Ncond);
 
         condomegabidimarray = new GeneIIDLogNormalMixArray(*meanlogomegabidimarray, *alloc, *devpos, *devneg);
 
-        // should be a branch site structure
         omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, GetLocalNgene());
 
         lnL = 0;
@@ -358,25 +367,25 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             os << '\t' << GetMeanLength();
             os << '\t' << sqrt(GetVarLength());
         }
-        os << genewhypermean << '\t' << genewhypervar << '\t';
-        os << condvhypervar << '\t';
+        os << '\t' << genewhypermean << '\t' << genewhypervar;
+        os << '\t' << condvhypervar << '\t';
         for (int cond=0; cond<Ncond; cond++)    {
-            os << pi->GetVal(cond)[0] << '\t';
+            os << '\t' << pi->GetVal(cond)[0];
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << pi->GetVal(cond)[2] << '\t';
+            os << '\t' << pi->GetVal(cond)[2];
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << meanpos->GetVal(cond) << '\t';
+            os << '\t' << meanpos->GetVal(cond);
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << meanneg->GetVal(cond) << '\t';
+            os << '\t' << meanneg->GetVal(cond);
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << invshapepos->GetVal(cond) << '\t';
+            os << '\t' << invshapepos->GetVal(cond);
         }
         for (int cond=0; cond<Ncond; cond++)    {
-            os << invshapeneg->GetVal(cond) << '\t';
+            os << '\t' << invshapeneg->GetVal(cond);
         }
 
         os << '\t' << nucstatarray->GetMeanEntropy();
@@ -793,8 +802,34 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double CondVLogPrior() const { return condvarray->GetLogProb(); }
     double GeneWLogPrior() const { return genewarray->GetLogProb(); }
 
-    double DevPosHyperLogPrior() const { return meanpos->GetLogProb() + invshapepos->GetLogProb();}
-    double DevNegHyperLogPrior() const { return meanneg->GetLogProb() + invshapeneg->GetLogProb();}
+    double DevPosHyperLogPrior() const {
+        double total = 0;
+        total += meanpos->GetLogProb();
+        total +=  invshapepos->GetLogProb();
+        if (modalprior) {
+            for (int k=0; k<Ncond; k++) {
+                if (invshapepos->GetVal(k) > 1.0)   {
+                    return log(0);
+                }
+            }
+        }
+        return total;
+    }
+
+    double DevNegHyperLogPrior() const {
+        double total = 0;
+        total += meanneg->GetLogProb();
+        total += invshapeneg->GetLogProb();
+        if (modalprior) {
+            for (int k=0; k<Ncond; k++) {
+                if (invshapeneg->GetVal(k) > 1.0)   {
+                    return log(0);
+                }
+            }
+        }
+        return total;
+    }
+
     double DevPosLogPrior() const { return devpos->GetLogProb(); }
     double DevNegLogPrior() const { return devneg->GetLogProb(); }
 

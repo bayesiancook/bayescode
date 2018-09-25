@@ -43,7 +43,7 @@ class GeneIIDMultiDiscrete : public Array<MultiDiscrete>  {
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, shape parameter and center (frequency vector)
     GeneIIDMultiDiscrete(int inngene, const Selector<vector<double>>& inprob) 
-        : prob(inprob), array(inprob.GetSize(), (MultiDiscrete*) 0) {
+        : prob(inprob), size(inngene), array(inngene, (MultiDiscrete*) 0) {
         for (int gene = 0; gene < GetSize(); gene++) {
             array[gene] = new MultiDiscrete(prob);
         }
@@ -56,7 +56,7 @@ class GeneIIDMultiDiscrete : public Array<MultiDiscrete>  {
     }
 
     //! return total number of entries (number of genes)
-    int GetSize() const { return prob.GetSize(); }
+    int GetSize() const { return size; }
 
     //! return total number of conditions
     int GetNcond() const { return array[0]->GetSize(); }
@@ -79,6 +79,7 @@ class GeneIIDMultiDiscrete : public Array<MultiDiscrete>  {
   private:
 
     const Selector<vector<double>> &prob;
+    int size;
     vector<MultiDiscrete*> array;
 };
 

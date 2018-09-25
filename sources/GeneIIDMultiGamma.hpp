@@ -71,7 +71,7 @@ class GeneIIDMultiGamma : public Array<MultiGamma>  {
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, shape parameter and center (frequency vector)
     GeneIIDMultiGamma(int inngene, const Selector<double>& inmean, const Selector<double>& ininvshape)
-        : mean(inmean), invshape(ininvshape), array(inmean.GetSize(), (MultiGamma*) 0) {
+        : mean(inmean), invshape(ininvshape), size(inngene), array(inngene, (MultiGamma*) 0) {
         for (int gene = 0; gene < GetSize(); gene++) {
             array[gene] = new MultiGamma(mean, invshape);
         }
@@ -84,7 +84,7 @@ class GeneIIDMultiGamma : public Array<MultiGamma>  {
     }
 
     //! return total number of entries (number of genes)
-    int GetSize() const { return mean.GetSize(); }
+    int GetSize() const { return size; }
 
     //! return total number of conditions
     int GetNcond() const { return array[0]->GetSize(); }
@@ -147,6 +147,7 @@ class GeneIIDMultiGamma : public Array<MultiGamma>  {
 
     const Selector<double> &mean;
     const Selector<double> &invshape;
+    int size;
     vector<MultiGamma*> array;
 };
 
