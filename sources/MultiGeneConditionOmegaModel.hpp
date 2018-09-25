@@ -644,6 +644,13 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     }
 
     double GetMeanOmega(int gene, int cond) const {
+        double tmp1 = meanomegabidimarray->GetVal(gene).GetVal(cond);
+        double tmp2 = condvarray->GetVal(cond) * genewarray->GetVal(gene);
+        if (fabs(tmp1 - tmp2) > 1e-6)   {
+            cerr << "error in GetMeanOmega\n";
+            cerr << tmp1 << '\t' << tmp2 << '\n';
+            exit(1);
+        }
         return meanomegabidimarray->GetVal(gene).GetVal(cond);
     }
 
@@ -1134,6 +1141,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         }
         // MoveCondVHyperParams(1.0,100);
         MoveGeneWHyperParams(1.0, 100);
+        meanomegabidimarray->Update();
     }
 
     double MoveCondV(double tuning, int nrep) {

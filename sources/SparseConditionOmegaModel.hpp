@@ -184,7 +184,6 @@ class SparseConditionOmegaModel : public ProbModel {
 
         // specifies which condition for which branch
         branchalloc = new BranchAllocationSystem(*tree, Ncond);
-        std::cerr << "-- conditions over branches ok\n";
     }
 
     //! model allocation
@@ -269,17 +268,6 @@ class SparseConditionOmegaModel : public ProbModel {
         condomegaarray->Copy(from); 
         TouchMatrices();
     }
-
-    /*
-    void SetOmegaHyperParameters(const Selector<double>& inpipos, const Selector<double>& inmeanpos, const Selector<double>& ininvshapepos, const Selector<double>& inpineg, const Selector<double>& inmeanneg, const Selector<double>& ininvshapeneg) {
-        pipos->Copy(inpipos);
-        meanpos->Copy(inmeanpos);
-        invshapepos->Copy(ininvshapepos);
-        pineg->Copy(inpineg);
-        meanneg->Copy(inmeanneg);
-        invshapeneg->Copy(ininvshapeneg);
-    }
-    */
 
     //-------------------
     // Setting and updating

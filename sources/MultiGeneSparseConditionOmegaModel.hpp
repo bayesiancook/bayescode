@@ -717,7 +717,17 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     double GetMeanLogOmega(int gene, int cond) const {
+        /*
+        double tmp1 = meanlogomegabidimarray->GetVal(gene).GetVal(cond);
+        double tmp2 = genewarray->GetVal(gene) + condvarray->GetVal(cond);
+        if (fabs(tmp1 - tmp2) > 1e-6)   {
+            cerr << "error in get mean log omega\n";
+            cerr << tmp1 << '\t' << tmp2 << '\n';
+            exit(1);
+        }
         return meanlogomegabidimarray->GetVal(gene).GetVal(cond);
+        */
+        return genewarray->GetVal(gene) + condvarray->GetVal(cond);
     }
 
     double GetMeanOmega(int gene, int cond) const {
@@ -1008,7 +1018,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             MasterReceiveOmegaSuffStat();
             MoveOmegaHyperParameters(3);
-            // MasterSendOmegaHyperParameters();
             MasterSendOmega();
 
             // global branch lengths, or gene branch lengths hyperparameters
@@ -1042,7 +1051,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         if (nucmode != 2) {
             MasterReceiveGeneNucRates();
         }
-        // MasterReceiveOmega();
         MasterReceiveLogProbs();
     }
 
@@ -1055,7 +1063,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             GeneCollectPathSuffStat();
             SlaveSendOmegaSuffStat();
-            // SlaveReceiveOmegaHyperParameters();
             SlaveReceiveOmega();
 
             // global branch lengths, or gene branch lengths hyperparameters
@@ -1086,8 +1093,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         if (nucmode != 2) {
             SlaveSendGeneNucRates();
         }
-
-        // SlaveSendOmega();
         SlaveSendLogProbs();
     }
 
@@ -1226,6 +1231,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     }
 
     void MoveOmegaHyperParameters(int nrep) {
+
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
@@ -1239,8 +1245,10 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         }
 
         OmegaSuffStatLogProb();
-        ResamplePi();
+        meanlogomegabidimarray->Update();
+        condomegabidimarray->Update();
 
+        ResamplePi();
         MoveGeneWHyperParams(1.0, 100);
         MoveDevPosHyperParams(1.0,100);
         MoveDevNegHyperParams(1.0,100);
@@ -1574,18 +1582,10 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
     // omega arrays
 
-    /*
-    void SlaveSendOmega() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            (*condomegabidimarray)[gene].Copy(*geneprocess[gene]->GetOmegaArray());
-        }
-        SlaveSendGeneArray(*condomegabidimarray);
+    void MasterSendOmega() { 
+        condomegabidimarray->Update();
+        MasterSendGeneArray(*condomegabidimarray); 
     }
-
-    void MasterReceiveOmega() { MasterReceiveGeneArray(*condomegabidimarray); }
-    */
-
-    void MasterSendOmega() { MasterSendGeneArray(*condomegabidimarray); }
 
     void SlaveReceiveOmega() {
         SlaveReceiveGeneArray(*condomegabidimarray);
@@ -1593,36 +1593,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->SetOmegaTree(condomegabidimarray->GetVal(gene));
         }
     }
-
-    // omega hyperparameters
-
-    /*
-    void MasterSendOmegaHyperParameters() {
-        MasterSendGlobal(condvhypermean, condvhypervar);
-        MasterSendGlobal(genewhypermean, genewhypervar);
-        MasterSendGlobal(*pipos,*pineg);
-        MasterSendGlobal(*meanpos,*meanneg);
-        MasterSendGlobal(*invshapepos,*invshapeneg);
-        MasterSendGlobal(*condvarray);
-        MasterSendGlobal(*genewarray);
-    }
-
-    void SlaveReceiveOmegaHyperParameters() {
-        SlaveReceiveGlobal(condvhypermean, condvhypervar);
-        SlaveReceiveGlobal(genewhypermean, genewhypervar);
-        SlaveReceiveGlobal(*pipos,*pineg);
-        SlaveReceiveGlobal(*meanpos,*meanneg);
-        SlaveReceiveGlobal(*invshapepos,*invshapeneg);
-        SlaveReceiveGlobal(*condvarray);
-        SlaveReceiveGlobal(*genewarray);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetCondVHyperParams(condvhypermean, condvhypervar);
-            geneprocess[gene]->SetCondV(*condvarray);
-            geneprocess[gene]->SetGeneW(genewarray->GetVal(gene));
-            geneprocess[gene]->SetOmegaHyperParameters(*pipos,*meanpos,*invshapepos,*pineg,*meanneg,*invshapeneg);
-        }
-    }
-    */
 
     // omega path suff stat
 
