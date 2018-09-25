@@ -1106,6 +1106,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     void MoveGeneNucRates() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveNucRates();
+            geneprocess[gene]->GetNucRates((*nucrelratearray)[gene],(*nucstatarray)[gene]);
         }
     }
 
