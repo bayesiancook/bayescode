@@ -28,7 +28,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenecondom readmultigenecondom multigenesparsecondom ppredtest multigenesiteom siteom 
+ALL= globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigeneconditionomega readmultigeneconditionomega multigenesparseconditionomega readmultigenesparseconditionomega ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -150,17 +150,21 @@ multigenesiteom$(EXEEXT): $(PROGSDIR)/multigenesiteom$(EXEEXT)
 $(PROGSDIR)/multigenesiteom$(EXEEXT): MultiGeneSiteOmega.o $(OBJS)
 	$(CC) MultiGeneSiteOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-multigenecondom$(EXEEXT): $(PROGSDIR)/multigenecondom$(EXEEXT)
-$(PROGSDIR)/multigenecondom$(EXEEXT): MultiGeneConditionOmega.o $(OBJS)
+multigeneconditionomega$(EXEEXT): $(PROGSDIR)/multigeneconditionomega$(EXEEXT)
+$(PROGSDIR)/multigeneconditionomega$(EXEEXT): MultiGeneConditionOmega.o $(OBJS)
 	$(CC) MultiGeneConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-readmultigenecondom$(EXEEXT): $(PROGSDIR)/readmultigenecondom$(EXEEXT)
-$(PROGSDIR)/readmultigenecondom$(EXEEXT): ReadMultiGeneConditionOmega.o $(OBJS)
+readmultigeneconditionomega$(EXEEXT): $(PROGSDIR)/readmultigeneconditionomega$(EXEEXT)
+$(PROGSDIR)/readmultigeneconditionomega$(EXEEXT): ReadMultiGeneConditionOmega.o $(OBJS)
 	$(CC) ReadMultiGeneConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-multigenesparsecondom$(EXEEXT): $(PROGSDIR)/multigenesparsecondom$(EXEEXT)
-$(PROGSDIR)/multigenesparsecondom$(EXEEXT): MultiGeneSparseConditionOmega.o $(OBJS)
+multigenesparseconditionomega$(EXEEXT): $(PROGSDIR)/multigenesparseconditionomega$(EXEEXT)
+$(PROGSDIR)/multigenesparseconditionomega$(EXEEXT): MultiGeneSparseConditionOmega.o $(OBJS)
 	$(CC) MultiGeneSparseConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readmultigenesparseconditionomega$(EXEEXT): $(PROGSDIR)/readmultigenesparseconditionomega$(EXEEXT)
+$(PROGSDIR)/readmultigenesparseconditionomega$(EXEEXT): ReadMultiGeneSparseConditionOmega.o $(OBJS)
+	$(CC) ReadMultiGeneSparseConditionOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 ppredtest$(EXEEXT): $(PROGSDIR)/ppredtest$(EXEEXT)
 $(PROGSDIR)/ppredtest$(EXEEXT): PostPredTest.o $(OBJS)
