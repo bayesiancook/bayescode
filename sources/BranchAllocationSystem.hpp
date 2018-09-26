@@ -40,19 +40,28 @@ class BranchAllocationSystem {
   private:
     //! read out branch names (recursively) and fill-in allocation map
     void MakeBranchAllocations() {
-        // default pre-initialization
-        for (int j = 0; j < Nbranch; j++) {
-            branchalloc[j] = -1;
+
+        if (Ncond == Nbranch)   {
+            for (int j = 0; j < Nbranch; j++) {
+                branchalloc[j] = j;
+            }
         }
 
-        RecursiveMakeBranchAllocations(tree.GetRoot());
+        else    {
+            // default pre-initialization
+            for (int j = 0; j < Nbranch; j++) {
+                branchalloc[j] = -1;
+            }
 
-        // check that all branches have been correctly initialized
-        for (int j = 0; j < Nbranch; j++) {
-            if ((branchalloc[j] < 0) || (branchalloc[j] >= Ncond)) {
-                std::cerr << "error in make branch allocation\n";
-                cerr << j << '\t' << branchalloc[j] << '\n';
-                exit(1);
+            RecursiveMakeBranchAllocations(tree.GetRoot());
+
+            // check that all branches have been correctly initialized
+            for (int j = 0; j < Nbranch; j++) {
+                if ((branchalloc[j] < 0) || (branchalloc[j] >= Ncond)) {
+                    std::cerr << "error in make branch allocation\n";
+                    cerr << j << '\t' << branchalloc[j] << '\n';
+                    exit(1);
+                }
             }
         }
     }
