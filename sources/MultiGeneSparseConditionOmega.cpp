@@ -12,7 +12,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel;
-    double epsilon;
+    double pipos, pineg;
     int blmode, nucmode;
 
   public:
@@ -22,7 +22,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneSparseConditionOmegaChain(string indatafile, string intreefile, int inncond, int innlevel, double inepsilon,
+    MultiGeneSparseConditionOmegaChain(string indatafile, string intreefile, int inncond, int innlevel, double inpipos, double inpineg,
 		    		 int inblmode, int innucmode,
                                  int inevery, int inuntil, string inname, int force, int inmyid,
                                  int innprocs)
@@ -31,7 +31,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
           datafile(indatafile),
           treefile(intreefile),
           ncond(inncond),
-          nlevel(innlevel), epsilon(inepsilon) {
+          nlevel(innlevel), pipos(inpipos), pineg(inpineg) {
 	blmode = inblmode;
 	nucmode = innucmode;
         every = inevery;
@@ -48,7 +48,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, epsilon, myid, nprocs);
+        model = new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, pipos, pineg, myid, nprocs);
         GetModel()->SetAcrossGenesModes(blmode,nucmode);
         if (!myid) {
             cerr << "allocate\n";
@@ -71,7 +71,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel;
-        is >> epsilon;
+        is >> pipos >> pineg;
         is >> blmode >> nucmode;
         int tmp;
         is >> tmp;
@@ -83,7 +83,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENESPARSECONDOMEGA") {
             model =
-                new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, epsilon, myid, nprocs);
+                new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, pipos, pineg, myid, nprocs);
                 GetModel()->SetAcrossGenesModes(blmode,nucmode);
         } else {
             cerr << "error when opening file " << name
@@ -106,7 +106,7 @@ class MultiGeneSparseConditionOmegaChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\n';
-            param_os << epsilon << '\n';
+            param_os << pipos << '\t' << pineg << '\n';
 	    param_os << blmode << '\t' << nucmode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
@@ -182,7 +182,8 @@ int main(int argc, char *argv[]) {
         int until = -1;
         int blmode = 1;
         int nucmode = 1;
-        double epsilon = 0.1;
+        double pipos = 0.1;
+        double pineg = 0.1;
 
         try {
             if (argc == 1) {
@@ -206,9 +207,11 @@ int main(int argc, char *argv[]) {
                     ncond = atoi(argv[i]);
                 } else if (s == "-pi")  {
                     i++;
-                    epsilon = atof(argv[i]);
+                    pipos = atof(argv[i]);
+                    i++;
+                    pineg = atof(argv[i]);
                 } else if (s == "-nodev")   {
-                    epsilon = 0;
+                    pipos = pineg = 0;
                 } else if (s == "-nucrates") {
                     i++;
                     string tmp = argv[i];
@@ -259,7 +262,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneSparseConditionOmegaChain(datafile, treefile, ncond, nlevel, epsilon, blmode, nucmode, 
+        chain = new MultiGeneSparseConditionOmegaChain(datafile, treefile, ncond, nlevel, pipos, pineg, blmode, nucmode, 
 						every, until, name, force, myid, nprocs);
     }
 

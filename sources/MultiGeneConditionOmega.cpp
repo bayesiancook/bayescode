@@ -124,6 +124,9 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         ofstream nameos((name + ".genelist").c_str());
         GetModel()->PrintGeneList(nameos);
         nameos.close();
+
+        ofstream tos((name + ".branchindices").c_str());
+        GetModel()->PrintBranchIndices(tos);
     }
 
     void SavePoint() override {

@@ -113,6 +113,8 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     IIDDirichlet *nucstatarray;
     DirichletSuffStat nucstatsuffstat;
 
+    BranchAllocationSystem* branchalloc;
+
     double condvhypermean;
     double condvhyperinvshape;
     IIDGamma *condvarray;
@@ -173,6 +175,12 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
+
+        if (! Ncond)    {
+            Ncond = Nbranch;
+        }
+
+        branchalloc = new BranchAllocationSystem(*tree, Ncond);
 
         if (!myid) {
             std::cerr << "number of taxa : " << Ntaxa << '\n';
@@ -291,6 +299,27 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     //-------------------
     // Traces and Monitors
     //-------------------
+
+    void PrintBranchIndices(ostream& os) const {
+        RecursivePrintBranchIndices(os,GetTree()->GetRoot());
+    } 
+
+    void RecursivePrintBranchIndices(ostream& os, const Link* from) const {
+        if (!from->isLeaf()) {
+            os << '(';
+            for (const Link *link = from->Next(); link != from; link = link->Next()) {
+                RecursivePrintBranchIndices(os, link->Out());
+                if (link->Next() != from) {
+                    os << ',';
+                }
+            }
+            os << ')';
+        }
+        os << from->GetNode()->GetName();
+        if (!from->isRoot()) {
+            os << ':' << branchalloc->GetBranchAlloc(from->GetBranch()->GetIndex());
+        }
+    }
 
     void TraceHeader(ostream &os) const {
         os << "#logprior\tlnL";

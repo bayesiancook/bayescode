@@ -84,7 +84,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     int blmode;
     int nucmode;
 
-    double epsilon;
+    double pineg;
+    double pipos;
 
     int ppredmode;
 
@@ -117,6 +118,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double nucstathyperinvconc;
     IIDDirichlet *nucstatarray;
     DirichletSuffStat nucstatsuffstat;
+
+    BranchAllocationSystem* branchalloc;
 
     double condvhypermean;
     double condvhypervar;
@@ -163,7 +166,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSparseConditionOmegaModel(string datafile, string intreefile, int inNcond, int inNlevel, double inepsilon,
+    MultiGeneSparseConditionOmegaModel(string datafile, string intreefile, int inNcond, int inNlevel, double inpipos, double inpineg,
                                  int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
@@ -174,8 +177,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         ppredmode = 1;
 
-        epsilon = inepsilon;
-
+        pipos = inpipos;
+        pineg = inpineg;
 
         modalprior = 1;
 
@@ -196,6 +199,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
 
         tree->SetIndices();
         Nbranch = tree->GetNbranch();
+
+        if (! Ncond)    {
+            Ncond = Nbranch;
+        }
+
+        branchalloc = new BranchAllocationSystem(*tree, Ncond);
 
         if (!myid) {
             std::cerr << "number of taxa : " << Ntaxa << '\n';
@@ -254,16 +263,27 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         meanlogomegabidimarray = new SumArray(*condvarray, *genewarray);
 
         picenter.assign(3,0);
-        picenter[0] = epsilon/2;
-        picenter[2] = epsilon/2;
-        picenter[1] = 1.0 - epsilon;
+        if (pipos + pineg >= 1.0)   {
+            cerr << "error: pi's sum up to more than 1.0\n";
+            exit(1);
+        }
+        picenter[0] = pineg;
+        picenter[2] = pipos;
+        picenter[1] = 1.0 - pipos - pineg;
         piconcentration = 20;
         pi = new IIDDirichlet(Ncond,picenter,piconcentration);
-        if (! epsilon)  {
+        if (! pineg)  {
             for (int cond=0; cond<Ncond; cond++)    {
-                (*pi)[cond][0] = (*pi)[cond][2] = 0;
-                (*pi)[cond][1] = 1.0;
+                (*pi)[cond][0] = 0;
             }
+        }
+        if (! pipos)  {
+            for (int cond=0; cond<Ncond; cond++)    {
+                (*pi)[cond][2] = 0;
+            }
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            (*pi)[cond][1] = 1.0 - (*pi)[cond][2] - (*pi)[cond][0];
         }
 
         alloc = new GeneIIDMultiDiscrete(GetLocalNgene(),*pi);
@@ -332,6 +352,27 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     // Traces and Monitors
     //-------------------
 
+    void PrintBranchIndices(ostream& os) const {
+        RecursivePrintBranchIndices(os,GetTree()->GetRoot());
+    } 
+
+    void RecursivePrintBranchIndices(ostream& os, const Link* from) const {
+        if (!from->isLeaf()) {
+            os << '(';
+            for (const Link *link = from->Next(); link != from; link = link->Next()) {
+                RecursivePrintBranchIndices(os, link->Out());
+                if (link->Next() != from) {
+                    os << ',';
+                }
+            }
+            os << ')';
+        }
+        os << from->GetNode()->GetName();
+        if (!from->isRoot()) {
+            os << ':' << branchalloc->GetBranchAlloc(from->GetBranch()->GetIndex());
+        }
+    }
+
     void TraceHeader(ostream &os) const {
         os << "#logprior\tlnL";
         if (blmode == 2) {
@@ -341,25 +382,23 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         }
         os << "\tgenemean\tvar";
         os << "\tcondvar";
-        if (epsilon)    {
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tpipos" << cond;
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tpineg" << cond;
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tmeanpos" << cond;
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tmeanneg" << cond;
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tinvshapepos" << cond;
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << "\tinvshapeneg" << cond;
-            }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tpipos" << cond;
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tpineg" << cond;
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tmeanpos" << cond;
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tmeanneg" << cond;
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tinvshapepos" << cond;
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << "\tinvshapeneg" << cond;
         }
         os << "\tstatent";
         os << "\trrent";
@@ -382,25 +421,23 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         }
         os << '\t' << genewhypermean << '\t' << genewhypervar;
         os << '\t' << condvhypervar;
-        if (epsilon)  {
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << pi->GetVal(cond)[0];
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << pi->GetVal(cond)[2];
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << meanpos->GetVal(cond);
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << meanneg->GetVal(cond);
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << invshapepos->GetVal(cond);
-            }
-            for (int cond=0; cond<Ncond; cond++)    {
-                os << '\t' << invshapeneg->GetVal(cond);
-            }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << pi->GetVal(cond)[2];
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << pi->GetVal(cond)[0];
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << meanpos->GetVal(cond);
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << meanneg->GetVal(cond);
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << invshapepos->GetVal(cond);
+        }
+        for (int cond=0; cond<Ncond; cond++)    {
+            os << '\t' << invshapeneg->GetVal(cond);
         }
 
         os << '\t' << nucstatarray->GetMeanEntropy();
@@ -555,14 +592,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         os << *condvarray << '\t';
         os << genewhypermean << '\t' << genewhypervar << '\t';
         os << *genewarray << '\t';
-        if (epsilon)  {
-            os << *pi << '\t';
-            os << *alloc << '\t';
-            os << *meanpos << '\t' << *invshapepos << '\t';
-            os << *devpos << '\t';
-            os << *meanneg << '\t' << *invshapeneg << '\t';
-            os << *devneg;
-        }
+        os << *pi << '\t';
+        os << *alloc << '\t';
+        os << *meanpos << '\t' << *invshapepos << '\t';
+        os << *devpos << '\t';
+        os << *meanneg << '\t' << *invshapeneg << '\t';
+        os << *devneg;
     }
 
     void MasterFromStream(istream &is) {
@@ -588,11 +623,9 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         is >> *condvarray;
         is >> genewhypermean >> genewhypervar;
         is >> *genewarray;
-        if (epsilon)    {
-            is >> *pi >> *alloc;
-            is >> *meanpos >> *invshapepos >> *devpos;
-            is >> *meanneg >> *invshapeneg >> *devneg;
-        }
+        is >> *pi >> *alloc;
+        is >> *meanpos >> *invshapepos >> *devpos;
+        is >> *meanneg >> *invshapeneg >> *devneg;
     }
 
     //-------------------
@@ -780,15 +813,17 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         total += GeneWHyperLogPrior();
         total += GeneWLogPrior();
 
-        if (epsilon)    {
+        if (pipos)  {
             total += DevPosHyperLogPrior();
             total += DevPosLogPrior();
+        }
+        if (pineg)  {
             total += DevNegHyperLogPrior();
             total += DevNegLogPrior();
-
-            total += PiLogPrior();
-            total += AllocLogPrior();
         }
+
+        // total += PiLogPrior();
+        total += AllocLogPrior();
 
         if (std::isnan(total))   {
             cerr << "in GetLogPrior: nan\n";
@@ -866,7 +901,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double DevPosLogPrior() const { return devpos->GetLogProb(); }
     double DevNegLogPrior() const { return devneg->GetLogProb(); }
 
-    double PiLogPrior() const { return pi->GetLogProb(); }
+    // double PiLogPrior() const { return pi->GetLogProb(); }
     double AllocLogPrior() const { return alloc->GetLogProb(); }
 
     double GetLogLikelihood() const { return lnL; }
@@ -955,7 +990,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         double om0 = exp(logom);
         double logp0 = count*log(om0) - b*om0;
 
-        if (! epsilon)  {
+        if ((!pipos) && (!pineg))  {
             return logp0;
         }
 
@@ -1262,15 +1297,19 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
-            if (epsilon)    {
+            if (pipos)    {
                 MoveDevPos(1.0,1);
+            }
+            if (pineg)  {
                 MoveDevNeg(1.0,1);
             }
 
             MoveGeneW(0.3, 1);
             MoveCondV(0.3, 1);
-            if (epsilon)    {
+            if (pipos)    {
                 MoveDevPos(0.3,1);
+            }
+            if (pineg)  {
                 MoveDevNeg(0.3,1);
             }
         }
@@ -1279,9 +1318,13 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         meanlogomegabidimarray->Update();
         condomegabidimarray->Update();
 
-        if (epsilon)    {
+        if (pipos || pineg) {
             ResamplePi();
+        }
+        if (pipos)  {
             MoveDevPosHyperParams(1.0,100);
+        }
+        if (pineg)  {
             MoveDevNegHyperParams(1.0,100);
         }
         MoveGeneWHyperParams(1.0, 100);
@@ -1295,11 +1338,25 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
                 count[(*alloc)[gene][cond]]++;
             }
             double p[3];
+            if (pipos)  {
+                p[2] = Random::sGamma(piconcentration*picenter[2] + count[2]);
+            }
+            else    {
+                p[2] = 0;
+            }
+            if (pineg)  {
+                p[0] = Random::sGamma(piconcentration*picenter[0] + count[0]);
+            }
+            else    {
+                p[0] = 0;
+            }
+            p[1] = Random::sGamma(piconcentration*picenter[1] + count[1]);
+
             double tot = 0;
             for (int k=0; k<3; k++) {
-                p[k] = Random::sGamma(piconcentration*picenter[k] + count[k]);
                 tot += p[k];
             }
+
             for (int k=0; k<3; k++) {
                 p[k] /= tot;
                 (*pi)[cond][k] = p[k];
