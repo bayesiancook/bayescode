@@ -81,6 +81,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     int Ncond;
     int Nlevel;
 
+    int burnin;
+
     int blmode;
     int nucmode;
 
@@ -175,6 +177,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         blmode = 1;
         nucmode = 1;
 
+        burnin = 0;
+
         ppredmode = 1;
 
         pipos = inpipos;
@@ -256,8 +260,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             (*condvarray)[j] = 0;
         }
 
-        genewhypermean = 0;
-        genewhypervar = 1.0;
+        genewhypermean = -1;
+        genewhypervar = 0.1;
         genewarray = new IIDNormal(GetLocalNgene(), genewhypermean, genewhypervar);
 
         meanlogomegabidimarray = new SumArray(*condvarray, *genewarray);
@@ -272,6 +276,12 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         picenter[1] = 1.0 - pipos - pineg;
         piconcentration = 20;
         pi = new IIDDirichlet(Ncond,picenter,piconcentration);
+        for (int cond=0; cond<Ncond; cond++)    {
+            for (int k=0; k<3; k++) {
+                (*pi)[cond][k] = picenter[k];
+            }
+        }
+        /*
         if (! pineg)  {
             for (int cond=0; cond<Ncond; cond++)    {
                 (*pi)[cond][0] = 0;
@@ -285,12 +295,15 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int cond=0; cond<Ncond; cond++)    {
             (*pi)[cond][1] = 1.0 - (*pi)[cond][2] - (*pi)[cond][0];
         }
+        */
 
         alloc = new GeneIIDMultiDiscrete(GetLocalNgene(),*pi);
+        alloc->SetVal(1);
 
         meanpos = new IIDGamma(Ncond,1.0,1.0);
         invshapepos = new IIDGamma(Ncond,1.0,1.0);
         for (int k=0; k<Ncond; k++) {
+            (*meanpos)[k] = 0.01;
             (*invshapepos)[k] = 0.5;
         }
         devpos = new GeneIIDMultiGamma(GetLocalNgene(),*meanpos,*invshapepos);
@@ -299,6 +312,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         meanneg = new IIDGamma(Ncond,1.0,1.0);
         invshapeneg = new IIDGamma(Ncond,1.0,1.0);
         for (int k=0; k<Ncond; k++) {
+            (*meanneg)[k] = 0.01;
             (*invshapeneg)[k] = 0.5;
         }
         devneg = new GeneIIDMultiGamma(GetLocalNgene(),*meanneg,*invshapeneg);
@@ -1012,15 +1026,17 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         double p0 = w[1]*exp(logp0-max);
         double ppos = w[2]*exp(logppos-max);
         double tot = pneg + p0 + ppos;
-        double u = Random::Uniform() * tot;
-        if (u < pneg)   {
-            (*alloc)[gene][cond] = 0;
-        }
-        else if (u < (pneg + p0))   {
-            (*alloc)[gene][cond] = 1;
-        }
-        else    {
-            (*alloc)[gene][cond] = 2;
+        if (burnin >= 30)   {
+            double u = Random::Uniform() * tot;
+            if (u < pneg)   {
+                (*alloc)[gene][cond] = 0;
+            }
+            else if (u < (pneg + p0))   {
+                (*alloc)[gene][cond] = 1;
+            }
+            else    {
+                (*alloc)[gene][cond] = 2;
+            }
         }
         return log(tot) + max;
     }
@@ -1114,6 +1130,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             MasterReceiveGeneNucRates();
         }
         MasterReceiveLogProbs();
+        burnin++;
     }
 
     // slave move
@@ -1156,6 +1173,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             SlaveSendGeneNucRates();
         }
         SlaveSendLogProbs();
+        burnin++;
     }
 
     void GeneResampleSub(double frac) {
@@ -1297,20 +1315,24 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
-            if (pipos)    {
-                MoveDevPos(1.0,1);
-            }
-            if (pineg)  {
-                MoveDevNeg(1.0,1);
+            if (burnin >= 30) {
+                if (pipos)    {
+                    MoveDevPos(1.0,1);
+                }
+                if (pineg)  {
+                    MoveDevNeg(1.0,1);
+                }
             }
 
             MoveGeneW(0.3, 1);
             MoveCondV(0.3, 1);
-            if (pipos)    {
-                MoveDevPos(0.3,1);
-            }
-            if (pineg)  {
-                MoveDevNeg(0.3,1);
+            if (burnin >= 30)   {
+                if (pipos)    {
+                    MoveDevPos(0.3,1);
+                }
+                if (pineg)  {
+                    MoveDevNeg(0.3,1);
+                }
             }
         }
 
@@ -1318,14 +1340,16 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         meanlogomegabidimarray->Update();
         condomegabidimarray->Update();
 
-        if (pipos || pineg) {
-            ResamplePi();
-        }
-        if (pipos)  {
-            MoveDevPosHyperParams(1.0,100);
-        }
-        if (pineg)  {
-            MoveDevNegHyperParams(1.0,100);
+        if (burnin >= 30)   {
+            if (pipos || pineg) {
+                ResamplePi();
+            }
+            if (pipos)  {
+                MoveDevPosHyperParams(1.0,100);
+            }
+            if (pineg)  {
+                MoveDevNegHyperParams(1.0,100);
+            }
         }
         MoveGeneWHyperParams(1.0, 100);
     }

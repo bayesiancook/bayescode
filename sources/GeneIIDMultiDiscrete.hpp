@@ -19,6 +19,12 @@ class MultiDiscrete : public SimpleArray<int>   {
         }
     }
 
+    void SetVal(int in) {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i] = in;
+        }
+    }
+
     //! return total log prob summed over all entries
     double GetLogProb() const {
         double total = 0;
@@ -52,6 +58,12 @@ class GeneIIDMultiDiscrete : public Array<MultiDiscrete>  {
     ~GeneIIDMultiDiscrete() {
         for (int gene = 0; gene < GetSize(); gene++) {
             delete array[gene];
+        }
+    }
+
+    void SetVal(int in) {
+        for (int gene = 0; gene < GetSize(); gene++) {
+            array[gene]->SetVal(in);
         }
     }
 
