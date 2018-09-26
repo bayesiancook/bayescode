@@ -23,6 +23,16 @@ class MultiGamma : public SimpleArray<double>   {
         }
     }
 
+    void Sample(const MultiDiscrete& alloc, int val)    {
+        for (int i = 0; i < GetSize(); i++) {
+            if (alloc.GetVal(i) != val) {
+                double shape = 1.0 / invshape.GetVal(i);
+                double scale = shape / mean.GetVal(i);
+                (*this)[i] = Random::GammaSample(shape, scale);
+            }
+        }
+    }
+
     //! return total log prob summed over all entries
     double GetLogProb() const {
         double total = 0;
@@ -143,6 +153,12 @@ class GeneIIDMultiGamma : public Array<MultiGamma>  {
         return array[gene]->GetLogProb(cond);
     }
 
+    void Sample(const GeneIIDMultiDiscrete& alloc, int val) {
+        for (int gene=0; gene<GetSize(); gene++)    {
+            array[gene]->Sample(alloc.GetVal(gene),val);
+        }
+    }
+
   private:
 
     const Selector<double> &mean;
@@ -169,6 +185,17 @@ class MultiGammaSuffStat : public SimpleArray<GammaSuffStat>    {
             for (int cond=0; cond<GetSize(); cond++)    {
                 double x = array.GetVal(gene).GetVal(cond);
                 (*this)[cond].AddSuffStat(x,log(x),1);
+            }
+        }
+    }
+
+    void AddSuffStat(const GeneIIDMultiGamma& array, const GeneIIDMultiDiscrete& alloc, int val)    {
+        for (int gene=0; gene<array.GetSize(); gene++)  {
+            for (int cond=0; cond<GetSize(); cond++)    {
+                if (alloc.GetVal(gene).GetVal(cond) == val) {
+                    double x = array.GetVal(gene).GetVal(cond);
+                    (*this)[cond].AddSuffStat(x,log(x),1);
+                }
             }
         }
     }
