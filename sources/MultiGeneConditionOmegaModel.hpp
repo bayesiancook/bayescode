@@ -1090,53 +1090,12 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
                     &MultiGeneConditionOmegaModel::TouchNucMatrix, this);
     }
 
-    /*
-    double BranchGeneCompMove(double tuning, int nrep)   {
-
-        double nacc = 0;
-        for (int rep=0; rep<nrep; rep++)    {
-            double deltalogprob = -CondVLogPrior() - GeneWLogPrior();
-
-            double m = tuning*(Random::Uniform() - 0.5);
-            double e = exp(m);
-            for (int i=0; i<GetNgene(); i++) {
-                (*genewarray)[i] *= e;
-            }
-            for (int j=0; j<GetNbranch(); j++)  {
-                (*condvarray)[j] /= e;
-            }
-
-            deltalogprob += CondVLogPrior() + GeneWLogPrior();
-            deltalogprob += (GetNgene() - GetNbranch())*m;
-
-            int acc = (log(Random::Uniform()) < deltalogprob);
-            if (acc)  {
-                nacc++;
-            }
-            else    {
-                for (int i=0; i<GetNgene(); i++) {
-                    (*genewarray)[i] /= e;
-                }
-                for (int j=0; j<GetNbranch(); j++)  {
-                    (*condvarray)[j] *= e;
-                }
-            }
-        }
-        return nacc/nrep;
-    }
-    */
-
     void MoveOmegaHyperParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
             MoveGeneW(0.3, 1);
             MoveCondV(0.3, 1);
-            /*
-            BranchGeneCompMove(1.0,1);
-            BranchGeneCompMove(0.3,1);
-            */
-            MoveOmegaInvShape(1.0, 1);
             MoveOmegaInvShape(0.3, 1);
         }
         // MoveCondVHyperParams(1.0,100);

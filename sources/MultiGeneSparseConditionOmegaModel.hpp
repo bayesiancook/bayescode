@@ -730,10 +730,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         return genewarray->GetVal(gene) + condvarray->GetVal(cond);
     }
 
-    double GetMeanOmega(int gene, int cond) const {
-        return exp(meanlogomegabidimarray->GetVal(gene).GetVal(cond));
-    }
-
     double GetLogPrior() const {
         double total = 0;
         // branch lengths
@@ -815,7 +811,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
     double DevPosHyperLogPrior() const {
         double total = 0;
         total += meanpos->GetLogProb();
-        total +=  invshapepos->GetLogProb();
+        total += invshapepos->GetLogProb();
         if (modalprior) {
             for (int k=0; k<Ncond; k++) {
                 if (invshapepos->GetVal(k) > 1.0)   {
