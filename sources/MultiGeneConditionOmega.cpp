@@ -12,7 +12,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     // Chain parameters
     string modeltype, datafile, treefile;
     int ncond, nlevel;
-    int blmode, nucmode;
+    int blmode, nucmode, devmode;
 
   public:
     MultiGeneConditionOmegaModel *GetModel() {
@@ -22,7 +22,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     string GetModelType() override { return modeltype; }
 
     MultiGeneConditionOmegaChain(string indatafile, string intreefile, int inncond, int innlevel,
-		    		 int inblmode, int innucmode,
+		    		 int inblmode, int innucmode, int indevmode,
                                  int inevery, int inuntil, string inname, int force, int inmyid,
                                  int innprocs)
         : MultiGeneChain(inmyid, innprocs),
@@ -31,8 +31,9 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
           treefile(intreefile),
           ncond(inncond),
           nlevel(innlevel) {
-	blmode = inblmode;
-	nucmode = innucmode;
+        blmode = inblmode;
+        nucmode = innucmode;
+        devmode = indevmode;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -49,6 +50,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
     void New(int force) override {
         model = new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
         GetModel()->SetAcrossGenesModes(blmode,nucmode);
+        GetModel()->SetDeviationMode(devmode);
         if (!myid) {
             cerr << "allocate\n";
         }
@@ -70,7 +72,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel;
-        is >> blmode >> nucmode;
+        is >> blmode >> nucmode >> devmode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -83,6 +85,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
             model =
                 new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
                 GetModel()->SetAcrossGenesModes(blmode,nucmode);
+                GetModel()->SetDeviationMode(devmode);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -104,7 +107,7 @@ class MultiGeneConditionOmegaChain : public MultiGeneChain {
             param_os << GetModelType() << '\n';
             param_os << datafile << '\t' << treefile << '\n';
             param_os << ncond << '\t' << nlevel << '\n';
-	    param_os << blmode << '\t' << nucmode << '\n';
+            param_os << blmode << '\t' << nucmode << '\t' << devmode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
@@ -179,6 +182,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
         int blmode = 1;
         int nucmode = 1;
+        int devmode = 1;
 
         try {
             if (argc == 1) {
@@ -200,6 +204,8 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-ncond") {
                     i++;
                     ncond = atoi(argv[i]);
+                } else if (s == "-nodev")   {
+                    devmode = 0;
                 } else if (s == "-nucrates") {
                     i++;
                     string tmp = argv[i];
@@ -250,7 +256,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new MultiGeneConditionOmegaChain(datafile, treefile, ncond, nlevel, blmode, nucmode, 
+        chain = new MultiGeneConditionOmegaChain(datafile, treefile, ncond, nlevel, blmode, nucmode, devmode, 
 						every, until, name, force, myid, nprocs);
     }
 

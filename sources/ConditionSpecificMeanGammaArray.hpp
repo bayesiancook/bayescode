@@ -23,28 +23,42 @@ class ConditionSpecificMeanGammaArray : public SimpleArray<double> {
     //! sample all entries from prior
     void Sample() {
         for (int i = 0; i < GetSize(); i++) {
-            double shape = 1.0 / invshape;
-            double scale = shape / blmean.GetVal(i);
-            (*this)[i] = Random::GammaSample(shape, scale);
+            if (! invshape) {
+                (*this)[i] = blmean.GetVal(i);
+            }
+            else    {
+                double shape = 1.0 / invshape;
+                double scale = shape / blmean.GetVal(i);
+                (*this)[i] = Random::GammaSample(shape, scale);
+            }
         }
     }
 
     //! resample entries based on a Array of PoissonSuffStat
     void GibbsResample(const Selector<PoissonSuffStat> &suffstatarray) {
-        for (int i = 0; i < GetSize(); i++) {
-            const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            double shape = 1.0 / invshape;
-            double scale = shape / blmean.GetVal(i);
-            (*this)[i] =
-                Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
+        if (invshape) {
+            for (int i = 0; i < GetSize(); i++) {
+                const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
+                double shape = 1.0 / invshape;
+                double scale = shape / blmean.GetVal(i);
+                (*this)[i] =
+                    Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
+            }
+        }
+        else    {
+            for (int i = 0; i < GetSize(); i++) {
+                (*this)[i] = blmean.GetVal(i);
+            }
         }
     }
 
     //! return total log prob summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
+        if (invshape)   {
+            for (int i = 0; i < GetSize(); i++) {
+                total += GetLogProb(i);
+            }
         }
         return total;
     }

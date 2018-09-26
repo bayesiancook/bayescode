@@ -10,7 +10,7 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
   private:
     string modeltype, datafile, treefile;
     int ncond, nlevel;
-    int blmode, nucmode;
+    int blmode, nucmode, devmode;
 
   public:
     string GetModelType() { return modeltype; }
@@ -38,7 +38,7 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> ncond >> nlevel;
-        is >> blmode >> nucmode;
+        is >> blmode >> nucmode >> devmode;
         int check;
         is >> check;
         if (check) {
@@ -51,6 +51,7 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         if (modeltype == "MULTIGENECONDOMEGA") {
                 model = new MultiGeneConditionOmegaModel(datafile, treefile, ncond, nlevel, myid, nprocs);
                 GetModel()->SetAcrossGenesModes(blmode,nucmode);
+                GetModel()->SetDeviationMode(devmode);
         } else {
             cerr << "error when opening file " << name << '\n';
             cerr << modeltype << '\n';

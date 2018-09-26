@@ -81,6 +81,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
     int blmode;
     int nucmode;
+    int devmode;
 
     int ppredmode;
 
@@ -143,7 +144,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneConditionOmegaModel(string datafile, string intreefile, int inNcond, int inNlevel,
+    MultiGeneConditionOmegaModel(string datafile, string intreefile, int inNcond, int inNlevel, 
                                  int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
@@ -151,6 +152,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
         blmode = 1;
         nucmode = 1;
+        devmode = 1;
 
         ppredmode = 1;
 
@@ -231,11 +233,15 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         genewarray = new IIDGamma(GetLocalNgene(), genealpha, genebeta);
 
         meanomegabidimarray = new ProductArray(*condvarray, *genewarray);
-        omegainvshape = 1.0;
+        if (devmode)    {
+            omegainvshape = 1.0;
+        }
+        else    {
+            omegainvshape = 0;
+        }
         condomegabidimarray =
             new ConditionSpecificMeanGammaBidimArray(*meanomegabidimarray, omegainvshape);
 
-        // should be a branch site structure
         omegapathsuffstatbidimarray = new OmegaPathSuffStatBidimArray(Ncond, GetLocalNgene());
 
         lnL = 0;
@@ -262,6 +268,10 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode)   {
         blmode = inblmode;
         nucmode = innucmode;
+    }
+
+    void SetDeviationMode(int indevmode)    {
+        devmode = indevmode;
     }
 
     void SetPostPredMode(int mode)  {
@@ -514,8 +524,8 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         double genebeta = genealpha / genewhypermean;
         genewarray->SetShape(genealpha);
         genewarray->SetScale(genebeta);
-        condomegabidimarray->SetInvShape(omegainvshape);
         meanomegabidimarray->Update();
+        condomegabidimarray->SetInvShape(omegainvshape);
     }
 
     void MasterUpdate() override {
@@ -678,8 +688,10 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         total += CondVLogPrior();
         total += GeneWHyperLogPrior();
         total += GeneWLogPrior();
-        total += OmegaInvShapeLogPrior();
-        total += OmegaLogPrior();
+        if (devmode)    {
+            total += OmegaInvShapeLogPrior();
+            total += OmegaLogPrior();
+        }
         return total;
     }
 
@@ -809,6 +821,11 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         double b = suffstat.GetBeta();
 
         double mean = genewarray->GetVal(gene) * condvarray->GetVal(cond);
+
+        if (!devmode)    {
+            return count*log(mean) - b*mean;
+        }
+
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / mean;
 
@@ -909,8 +926,6 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-
-            // MoveGeneParameters(1.0);
 
             GeneCollectPathSuffStat();
             SlaveSendOmegaSuffStat();
@@ -1096,7 +1111,9 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
             MoveCondV(1.0, 1);
             MoveGeneW(0.3, 1);
             MoveCondV(0.3, 1);
-            MoveOmegaInvShape(0.3, 1);
+            if (devmode)    {
+                MoveOmegaInvShape(0.3, 1);
+            }
         }
         // MoveCondVHyperParams(1.0,100);
         MoveGeneWHyperParams(1.0, 100);

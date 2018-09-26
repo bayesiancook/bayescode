@@ -379,6 +379,14 @@ class ConditionOmegaModel : public ProbModel {
         phyloprocess->PostPredSample(name);
     }
 
+    double GetMeanDeviation() const {
+        double total = 0;
+        for (int cond=0; cond<Ncond; cond++)    {
+            total += fabs(meanomegaarray->GetVal(cond) - condomegaarray->GetVal(cond));
+        }
+        return total;
+    }
+
     //! \brief dummy function that does not do anything.
     //!
     //! Used for the templates of ScalingMove, SlidingMove and ProfileMove
