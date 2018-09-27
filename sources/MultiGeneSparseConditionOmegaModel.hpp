@@ -1310,6 +1310,165 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
                     &MultiGeneSparseConditionOmegaModel::TouchNucMatrix, this);
     }
 
+    void MultipleTryMove(int nrep, int ntry)  {
+
+        for (int rep=0; rep<nrep; rep++)    {
+            for (int cond=0; cond<Ncond; cond++)    {
+
+                vector<int> count(3,0);
+                for (int k=0; k<3; k++) {
+                    count[k] = 0;
+                }
+                for (int gene=0; gene<GetNgene(); gene++)   {
+                    count[alloc->GetVal(gene).GetVal(cond)]++;
+                }
+
+                for (int gene=0; gene<GetNgene(); gene++)    {
+
+                    int bkalloc = alloc->GetVal(gene).GetVal(cond);
+                    count[bkalloc]--;
+                    if (count[bkalloc] < 0) {
+                        cerr << "error in mtry move: count overflow\n";
+                        exit(1);
+                    }
+
+                    const OmegaPathSuffStat &suffstat = omegapathsuffstatbidimarray->GetVal(gene).GetVal(cond);
+                    int c = suffstat.GetCount();
+                    double b = suffstat.GetBeta();
+
+                    double logom0 = GetMeanLogOmega(gene,cond);
+                    double logp[3];
+                    logp[1] = c*logom0 - b*exp(logom0);
+
+                    vector<double> trydevneg(ntry,0);
+                    vector<double> trydevpos(ntry,0);
+
+                    vector<double> logpneg(ntry,0);
+                    vector<double> logppos(ntry,0);
+
+                    vector<double> cumulpneg(ntry,0);
+                    vector<double> cumulppos(ntry,0);
+
+                    int minneg = 0;
+                    int minpos = 0;
+
+                    if (bkalloc == 0)   {
+                        minneg = 1;
+                        trydevneg[0] = devneg->GetVal(gene).GetVal(cond);
+                    }
+                    else if (bkalloc == 2)  {
+                        minpos = 1;
+                        trydevpos[0] = devpos->GetVal(gene).GetVal(cond);
+                    }
+
+                    double shapeneg = 1.0 / invshapeneg->GetVal(cond);
+                    double scaleneg = shapeneg / meanneg->GetVal(cond);
+                    for (int k=minneg; k<ntry; k++) {
+                        trydevneg[k] = Random::GammaSample(shapeneg,scaleneg);
+                    }
+
+                    double maxneg = 0;
+                    for (int k=0; k<ntry; k++)  {
+                        double logom = logom0 - trydevneg[k];
+                        double om = exp(logom);
+                        logpneg[k] = c*logom - b*om;
+                        if ((!k) || (maxneg < logpneg[k]))  {
+                            maxneg = logpneg[k];
+                        }
+                    }
+
+                    double totneg = 0;
+                    for (int k=0; k<ntry; k++)  {
+                        double p = exp(logpneg[k] - maxneg);
+                        totneg += p;
+                        cumulpneg[k] = totneg;
+                    }
+                    logp[0] = log(totneg / ntry) + maxneg;
+
+                    double uneg = totneg * Random::Uniform();
+                    int kneg = 0;
+                    while ((kneg < ntry) && (uneg > cumulpneg[kneg]))   {
+                        kneg++;
+                    }
+                    if (kneg == ntry)   {
+                        cerr << "error in multiple try: neg overflow\n";
+                        exit(1);
+                    }
+
+                    double shapepos = 1.0 / invshapepos->GetVal(cond);
+                    double scalepos = shapepos / meanpos->GetVal(cond);
+                    for (int k=minpos; k<ntry; k++) {
+                        trydevpos[k] = Random::GammaSample(shapepos,scalepos);
+                    }
+                    double maxpos = 0;
+                    for (int k=0; k<ntry; k++)  {
+                        double logom = logom0 + trydevpos[k];
+                        double om = exp(logom);
+                        logppos[k] = c*logom - b*om;
+                        if ((!k) || (maxpos < logppos[k]))  {
+                            maxpos = logppos[k];
+                        }
+                    }
+
+                    double totpos = 0;
+                    for (int k=0; k<ntry; k++)  {
+                        double p = exp(logppos[k] - maxpos);
+                        totpos += p;
+                        cumulppos[k] = totpos;
+                    }
+                    logp[2] = log(totpos / ntry) + maxpos;
+
+                    double upos = totpos * Random::Uniform();
+                    int kpos = 0;
+                    while ((kpos < ntry) && (upos > cumulpneg[kpos]))   {
+                        kpos++;
+                    }
+                    if (kpos == ntry)   {
+                        cerr << "error in multiple try: pos overflow\n";
+                        exit(1);
+                    }
+
+                    double max = logp[0];
+                    for (int k=1; k<3; k++) {
+                        if (max < logp[k])  {
+                            max = logp[k];
+                        }
+                    }
+
+                    double cumul[3];
+                    double tot = 0;
+                    for (int k=0; k<3; k++) {
+                        tot += (piconcentration*picenter[k] + count[k]) * exp(logp[k] - max);
+                        cumul[k] = max;
+                    }
+                    double u = tot*Random::Uniform();
+                    int k = 0;
+                    while ((k<3) && (cumul[k] < u)) {
+                        k++;
+                    }
+                    if (k == 3) {
+                        cerr << "error in multiple try: overflow\n";
+                    }
+
+                    (*alloc)[gene][cond] = k;
+                    count[k]++;
+
+                    if (k == 0) {
+                        (*devneg)[gene][cond] = trydevneg[kneg];
+                    }
+                    else if (k == 1)    {
+                    }
+                    else if (k == 2)    {
+                        (*devpos)[gene][cond] = trydevpos[kneg];
+                    }
+
+                }
+            }
+        }
+
+        ResamplePi();
+    }
+
     void MoveOmegaHyperParameters(int nrep) {
 
         for (int rep = 0; rep < nrep; rep++) {
