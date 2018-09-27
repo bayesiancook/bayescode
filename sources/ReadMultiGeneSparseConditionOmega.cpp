@@ -64,7 +64,7 @@ class MultiGeneSparseConditionOmegaSample : public MultiGeneSample {
         OpenChainFile();
     }
 
-    void MasterRead() {
+    void MasterRead(double cutoff) {
         cerr << size << " points to read\n";
         vector<vector<double>> pppos(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
         vector<vector<double>> ppneg(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
@@ -89,6 +89,14 @@ class MultiGeneSparseConditionOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
 
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                effect[cond][gene] /= size;
+                pppos[cond][gene] /= size;
+                ppneg[cond][gene] /= size;
+            }
+        }
+
         ofstream os((name + ".postmeaneffects").c_str());
         os << "gene";
         for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
@@ -96,14 +104,19 @@ class MultiGeneSparseConditionOmegaSample : public MultiGeneSample {
         }
         os << '\n';
         for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
-            os << GetModel()->GetLocalGeneName(gene);
+            int report = 0;
             for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
-                effect[cond][gene] /= size;
-                pppos[cond][gene] /= size;
-                ppneg[cond][gene] /= size;
-                os << '\t' << effect[cond][gene] << '\t' << pppos[cond][gene] << '\t' << ppneg[cond][gene];
+                if ((pppos[cond][gene] > cutoff) || (ppneg[cond][gene] > cutoff))    {
+                    report = 1;
+                }
             }
-            os << '\n';
+            if (report) {
+                os << GetModel()->GetLocalGeneName(gene);
+                for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                    os << '\t' << effect[cond][gene] << '\t' << pppos[cond][gene] << '\t' << ppneg[cond][gene];
+                }
+                os << '\n';
+            }
         }
         cerr << "post mean log deviations (and post probs) in " << name << ".postmeaneffects\n";
     }
@@ -139,6 +152,8 @@ int main(int argc, char *argv[]) {
     string name;
     int ppred = 0;
 
+    double cutoff = 0.7;
+
     try {
         if (argc == 1) {
             throw(0);
@@ -151,6 +166,9 @@ int main(int argc, char *argv[]) {
                 ppred = 1;
             } else if (s == "-ppred0")    {
                 ppred = 2;
+            } else if (s == "-c")   {
+                i++;
+                cutoff = atof(argv[i]);
             } else if ((s == "-x") || (s == "-extract")) {
                 i++;
                 if (i == argc) throw(0);
@@ -206,7 +224,7 @@ int main(int argc, char *argv[]) {
         }
     } else {
         if (!myid) {
-            sample->MasterRead();
+            sample->MasterRead(cutoff);
         } else {
             sample->SlaveRead();
         }

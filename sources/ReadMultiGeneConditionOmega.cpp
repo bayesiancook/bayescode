@@ -63,7 +63,7 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         OpenChainFile();
     }
 
-    void MasterRead() {
+    void MasterRead(double cutoff) {
         cerr << size << " points to read\n";
         vector<vector<double>> pp(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
         vector<vector<double>> effect(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
@@ -83,6 +83,13 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
 
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                effect[cond][gene] /= size;
+                pp[cond][gene] /= size;
+            }
+        }
+
         ofstream os((name + ".postmeaneffects").c_str());
         os << "gene";
         for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
@@ -90,13 +97,19 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         }
         os << '\n';
         for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
-            os << GetModel()->GetLocalGeneName(gene);
+            int report = 0;
             for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
-                effect[cond][gene] /= size;
-                pp[cond][gene] /= size;
-                os << '\t' << effect[cond][gene] << '\t' << pp[cond][gene];
+                if ((pp[cond][gene] > cutoff) || (pp[cond][gene] < (1-cutoff)))    {
+                    report = 1;
+                }
             }
-            os << '\n';
+            if (report) {
+                os << GetModel()->GetLocalGeneName(gene);
+                for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                    os << '\t' << effect[cond][gene] << '\t' << pp[cond][gene];
+                }
+                os << '\n';
+            }
         }
         cerr << "post mean log deviations (and post probs) in " << name << ".postmeaneffects\n";
     }
@@ -133,6 +146,8 @@ int main(int argc, char *argv[]) {
     string name;
     int ppred = 0;
 
+    double cutoff = 0.7;
+
     try {
         if (argc == 1) {
             throw(0);
@@ -145,6 +160,8 @@ int main(int argc, char *argv[]) {
                 ppred = 1;
             } else if (s == "-ppred0")    {
                 ppred = 2;
+            } else if (s == "-c")   {
+                cutoff = atof(argv[i]);
             } else if ((s == "-x") || (s == "-extract")) {
                 i++;
                 if (i == argc) throw(0);
@@ -200,7 +217,7 @@ int main(int argc, char *argv[]) {
         }
     } else {
         if (!myid) {
-            sample->MasterRead();
+            sample->MasterRead(cutoff);
         } else {
             sample->SlaveRead();
         }
