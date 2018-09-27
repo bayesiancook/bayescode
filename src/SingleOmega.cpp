@@ -1,26 +1,13 @@
 #include <cmath>
 #include <fstream>
 #include "SingleOmegaModel.hpp"
-#include "components/BaseArgParse.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
+#include "InferenceAppArgParse.hpp"
 
 using namespace std;
-
-class SingleOmegaArgParse : public BaseArgParse {
-  public:
-    SingleOmegaArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
-    ValueArg<string> alignment{
-        "a", "alignment", "Alignment file (PHYLIP)", true, "", "string", cmd};
-    ValueArg<string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
-    ValueArg<int> every{
-        "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
-    ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
-        false, -1, "int", cmd};
-    SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
-};
 
 int main(int argc, char *argv[]) {
     ChainCmdLine cmd{argc, argv, "SingleOmega", ' ', "0.1"};
@@ -33,7 +20,7 @@ int main(int argc, char *argv[]) {
         chain_driver = new ChainDriver(is);
         model = new SingleOmegaModel(is);
     } else {
-        SingleOmegaArgParse args(cmd);
+        InferenceAppArgParse args(cmd);
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
