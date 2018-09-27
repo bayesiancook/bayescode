@@ -638,7 +638,6 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         is >> genewhypermean >> genewhypervar;
         is >> *genewarray;
         is >> *pi >> *alloc;
-        cerr << *alloc << '\n';
         is >> *meanpos >> *invshapepos >> *devpos;
         is >> *meanneg >> *invshapeneg >> *devneg;
     }
