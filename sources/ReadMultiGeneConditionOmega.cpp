@@ -65,12 +65,42 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
 
     void MasterRead() {
         cerr << size << " points to read\n";
+        vector<vector<double>> pp(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
+        vector<vector<double>> effect(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
+            GetModel()->FastUpdate();
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+                    double temp = log(GetModel()->GetOmega(gene,cond) / GetModel()->GetMeanOmega(gene,cond));
+                    if (temp > 0)   {
+                        pp[cond][gene]++;
+                    }
+                    effect[cond][gene] += temp;
+                }
+            }
         }
         cerr << '\n';
+
+        ofstream os((name + ".postmeaneffects").c_str());
+        os << "gene";
+        for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+            os << '\t' << "cond" << cond << '\t' << "pp";
+        }
+        os << '\n';
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+            os << GetModel()->GetLocalGeneName(gene);
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                effect[cond][gene] /= size;
+                pp[cond][gene] /= size;
+                os << '\t' << effect[cond][gene] << '\t' << pp[cond][gene];
+            }
+            os << '\n';
+        }
+        cerr << "post mean log deviations (and post probs) in " << name << ".postmeaneffects\n";
     }
+
 
     void SlaveRead() {
         for (int i = 0; i < size; i++) {

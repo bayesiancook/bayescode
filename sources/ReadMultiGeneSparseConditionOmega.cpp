@@ -51,7 +51,7 @@ class MultiGeneSparseConditionOmegaSample : public MultiGeneSample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "MULTIGENESPARSECONDOMEGA") {
-                new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, pipos, pineg, myid, nprocs);
+                model = new MultiGeneSparseConditionOmegaModel(datafile, treefile, ncond, nlevel, pipos, pineg, myid, nprocs);
                 GetModel()->SetAcrossGenesModes(blmode,nucmode);
         } else {
             cerr << "error when opening file " << name << '\n';
@@ -66,11 +66,46 @@ class MultiGeneSparseConditionOmegaSample : public MultiGeneSample {
 
     void MasterRead() {
         cerr << size << " points to read\n";
+        vector<vector<double>> pppos(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
+        vector<vector<double>> ppneg(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
+        vector<vector<double>> effect(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
+            GetModel()->FastUpdate();
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+                    int tmp = GetModel()->GetAlloc(gene,cond);
+                    if (tmp == 0)   {
+                        ppneg[cond][gene]++;
+                    }
+                    else if (tmp == 2)  {
+                        pppos[cond][gene]++;
+                    }
+                    double temp = log(GetModel()->GetOmega(gene,cond)) - GetModel()->GetMeanLogOmega(gene,cond);
+                    effect[cond][gene] += temp;
+                }
+            }
         }
         cerr << '\n';
+
+        ofstream os((name + ".postmeaneffects").c_str());
+        os << "gene";
+        for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+            os << '\t' << "cond" << cond << '\t' << "pp+" << '\t' << "pp-";
+        }
+        os << '\n';
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
+            os << GetModel()->GetLocalGeneName(gene);
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                effect[cond][gene] /= size;
+                pppos[cond][gene] /= size;
+                ppneg[cond][gene] /= size;
+                os << '\t' << effect[cond][gene] << '\t' << pppos[cond][gene] << '\t' << ppneg[cond][gene];
+            }
+            os << '\n';
+        }
+        cerr << "post mean log deviations (and post probs) in " << name << ".postmeaneffects\n";
     }
 
     void SlaveRead() {
