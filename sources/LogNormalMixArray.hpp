@@ -4,7 +4,7 @@
 
 #include "MPIBuffer.hpp"
 #include "PoissonSuffStat.hpp"
-#include "Sum.hpp"
+#include "Product.hpp"
 #include "Random.hpp"
 #include "GeneIIDMultiGamma.hpp"
 #include "GeneIIDMultiDiscrete.hpp"
@@ -21,7 +21,7 @@ class LogNormalMixArray : public SimpleArray<double> {
     //! sample all entries from prior
     void Update() {
         for (int i = 0; i < GetSize(); i++) {
-            double x = mean.GetVal(i);
+            double x = log(mean.GetVal(i));
             if (alloc.GetVal(i) == 0)   {
                 x -= devneg.GetVal(i);
             }
@@ -87,7 +87,7 @@ class GeneIIDLogNormalMixArray : public Array<LogNormalMixArray> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
-    GeneIIDLogNormalMixArray(const SumArray &inmean, const GeneIIDMultiDiscrete& inalloc, const GeneIIDMultiGamma& indevpos, const GeneIIDMultiGamma& indevneg) : mean(inmean), alloc(inalloc), devpos(indevpos), devneg(indevneg), array(inmean.GetSize(), (LogNormalMixArray *)0) {
+    GeneIIDLogNormalMixArray(const ProductArray &inmean, const GeneIIDMultiDiscrete& inalloc, const GeneIIDMultiGamma& indevpos, const GeneIIDMultiGamma& indevneg) : mean(inmean), alloc(inalloc), devpos(indevpos), devneg(indevneg), array(inmean.GetSize(), (LogNormalMixArray *)0) {
         for (int gene = 0; gene < GetSize(); gene++) {
             array[gene] = new LogNormalMixArray(mean.GetVal(gene), alloc.GetVal(gene), devpos.GetVal(gene), devneg.GetVal(gene));
         }
@@ -188,7 +188,7 @@ class GeneIIDLogNormalMixArray : public Array<LogNormalMixArray> {
     }
 
   private:
-    const SumArray &mean;
+    const ProductArray &mean;
     const GeneIIDMultiDiscrete& alloc;
     const GeneIIDMultiGamma& devpos;
     const GeneIIDMultiGamma& devneg;

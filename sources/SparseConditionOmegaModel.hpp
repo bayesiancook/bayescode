@@ -14,7 +14,7 @@
 #include "IIDDirichlet.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
-#include "Sum.hpp"
+#include "Product.hpp"
 #include "SimpleSubMatrixSelector.hpp"
 #include "Tree.hpp"
 
@@ -107,12 +107,12 @@ class SparseConditionOmegaModel : public ProbModel {
 
     // all this is fixed, being controlled at the inter-gene level
     double condvhypermean;
-    double condvhypervar;
-    IIDNormal *condv;
+    double condvhyperinvshape;
+    IIDGamma *condv;
 
     double genew;
 
-    Sum *meanlogomegaarray;
+    Product *meanomegaarray;
 
     vector<double> picenter;
     double piconcentration;
@@ -215,10 +215,12 @@ class SparseConditionOmegaModel : public ProbModel {
         nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
         condvhypermean = 1.0;
-        condvhypervar = 1.0;
-        condv = new IIDNormal(Ncond, condvhypermean, condvhypervar);
+        condvhyperinvshape = 1.0;
+        double alpha = 1.0 / condvhyperinvshape;
+        double beta = alpha / condvhypermean;
+        condv = new IIDGamma(Ncond, alpha, beta);
         genew = 0.0;
-        meanlogomegaarray = new Sum(*condv, genew);
+        meanomegaarray = new Product(*condv, genew);
 
         picenter.assign(3,0);
         picenter[0] = 0.05;
@@ -237,7 +239,7 @@ class SparseConditionOmegaModel : public ProbModel {
         devpos = new MultiGamma(*meanpos,*invshapepos);
         devneg = new MultiGamma(*meanneg,*invshapeneg);
 
-        condomegaarray = new LogNormalMixArray(*meanlogomegaarray, *alloc, *devpos, *devneg);
+        condomegaarray = new LogNormalMixArray(*meanomegaarray, *alloc, *devpos, *devneg);
 
         codonmatrixarray =
             new MGOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, condomegaarray);
@@ -343,16 +345,18 @@ class SparseConditionOmegaModel : public ProbModel {
 
     void SetGeneW(double inw) {
         genew = inw;
-        meanlogomegaarray->SetGeneVal(genew);
+        meanomegaarray->SetMulVal(genew);
     }
 
     void SetCondV(const Selector<double> &incondv) { condv->Copy(incondv); }
 
-    void SetCondVHyperParams(double incondvhypermean, double incondvhypervar) {
+    void SetCondVHyperParams(double incondvhypermean, double incondvhyperinvshape) {
         condvhypermean = incondvhypermean;
-        condvhypervar = incondvhypervar;
-        condv->SetMean(condvhypermean);
-        condv->SetVar(condvhypervar);
+        condvhyperinvshape = incondvhyperinvshape;
+        double alpha = 1.0 / condvhyperinvshape;
+        double beta = alpha / condvhypermean;
+        condv->SetShape(alpha);
+        condv->SetScale(beta);
     }
 
     //! \brief tell the nucleotide matrix that its parameters have changed and
@@ -380,9 +384,11 @@ class SparseConditionOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
-        condv->SetMean(condvhypermean);
-        condv->SetVar(condvhypervar);
-        meanlogomegaarray->SetGeneVal(genew);
+        double alpha = 1.0 / condvhyperinvshape;
+        double beta = alpha / condvhypermean;
+        condv->SetShape(alpha);
+        condv->SetScale(beta);
+        meanomegaarray->SetMulVal(genew);
         condomegaarray->Update();
         TouchMatrices();
         ResampleSub(1.0);
@@ -394,9 +400,11 @@ class SparseConditionOmegaModel : public ProbModel {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
-        condv->SetMean(condvhypermean);
-        condv->SetVar(condvhypervar);
-        meanlogomegaarray->SetGeneVal(genew);
+        double alpha = 1.0 / condvhyperinvshape;
+        double beta = alpha / condvhypermean;
+        condv->SetShape(alpha);
+        condv->SetScale(beta);
+        meanomegaarray->SetMulVal(genew);
         condomegaarray->Update();
         TouchMatrices();
         phyloprocess->PostPredSample(name);

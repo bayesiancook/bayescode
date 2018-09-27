@@ -367,17 +367,13 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     }
 
     void PrintGeneEffects(ostream &os) const {
-        for (int i = 0; i < GetNgene(); i++) {
-            os << genewarray->GetVal(i) << '\t';
-        }
+        os << *genewarray;
         os << '\n';
         os.flush();
     }
 
     void PrintCondEffects(ostream &os) const {
-        for (int j = 0; j < GetNcond(); j++) {
-            os << condvarray->GetVal(j) << '\t';
-        }
+        os << *condvarray;
         os << '\n';
         os.flush();
     }
