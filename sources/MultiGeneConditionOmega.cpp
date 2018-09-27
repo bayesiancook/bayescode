@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
     else {
         string datafile = "";
         string treefile = "";
-        int ncond = 2;
+        int ncond = 0;
         int nlevel = 1;
         int force = 1;
         int every = 1;
