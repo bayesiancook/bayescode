@@ -51,6 +51,12 @@ void MultiGeneSample::GetNextPoint() {
             }
         }
     }
+    if (!myid)  {
+        GetMultiGeneModel()->MasterFromStream(*chain_is);
+    }
+    else    {
+        GetMultiGeneModel()->SlaveFromStream();
+    }
     currentpoint++;
 }
 
