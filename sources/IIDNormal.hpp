@@ -45,6 +45,29 @@ class IIDNormal : public SimpleArray<double> {
         }
     }
 
+    //! get mean over the array
+    double GetEmpiricalMean() const {
+        double m1 = 0;
+        for (int i = 0; i < GetSize(); i++) {
+            m1 += GetVal(i);
+        }
+        m1 /= GetSize();
+        return m1;
+    }
+
+    //! get variance over the array
+    double GetEmpiricalVar() const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i = 0; i < GetSize(); i++) {
+            m1 += GetVal(i);
+            m2 += GetVal(i) * GetVal(i);
+        }
+        m1 /= GetSize();
+        m2 /= GetSize();
+        m2 -= m1 * m1;
+        return m2;
+    }
     //! return total log prob (summed over the array) given current mean and
     //! var params
     double GetLogProb() const {
