@@ -263,6 +263,11 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         genewhypermean = -1;
         genewhypervar = 0.1;
         genewarray = new IIDNormal(GetLocalNgene(), genewhypermean, genewhypervar);
+        /*
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            (*genewarray)[gene] = 0;
+        }
+        */
 
         meanlogomegabidimarray = new SumArray(*condvarray, *genewarray);
 
@@ -395,7 +400,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             os << "\tmeanlength\tstdev";
         }
         os << "\tgenemean\tvar";
-        os << "\tcondvar";
+        os << "\tcondmean\tcondvar";
         for (int cond=0; cond<Ncond; cond++)    {
             os << "\tpipos" << cond;
         }
@@ -433,8 +438,8 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             os << '\t' << GetMeanLength();
             os << '\t' << sqrt(GetVarLength());
         }
-        os << '\t' << genewhypermean << '\t' << genewhypervar;
-        os << '\t' << condvhypervar;
+        os << '\t' << genewarray->GetEmpiricalMean() << '\t' << genewarray->GetEmpiricalVar();
+        os << '\t' << condvarray->GetEmpiricalMean() << '\t' << condvarray->GetEmpiricalVar();
         for (int cond=0; cond<Ncond; cond++)    {
             os << '\t' << pi->GetVal(cond)[2];
         }
@@ -1473,8 +1478,27 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
         ResamplePi();
     }
 
+    void GammaResampleGeneW()   {
+
+        for (int gene=0; gene<GetNgene(); gene++)   {
+            OmegaPathSuffStat suffstat;
+            suffstat.Clear();
+            for (int cond=0; cond<GetNcond(); cond++)   {
+                suffstat += omegapathsuffstatbidimarray->GetVal(gene).GetVal(cond);
+            }
+            double tmp = Random::GammaSample(1.0 + suffstat.GetCount(), 1.0 + suffstat.GetBeta());
+            (*genewarray)[gene] = log(tmp);
+        }
+        meanlogomegabidimarray->Update();
+        condomegabidimarray->Update();
+    }
+
     void MoveOmegaHyperParameters(int nrep) {
 
+        if (burnin <= 10)   {
+            GammaResampleGeneW();
+        }
+        else    {
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneW(1.0, 1);
             MoveCondV(1.0, 1);
@@ -1513,6 +1537,7 @@ class MultiGeneSparseConditionOmegaModel : public MultiGeneProbModel {
             if (pineg)  {
                 MoveDevNegHyperParams(1.0,100);
             }
+        }
         }
         MoveGeneWHyperParams(1.0, 100);
     }
