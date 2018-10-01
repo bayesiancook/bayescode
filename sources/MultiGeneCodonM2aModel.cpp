@@ -217,6 +217,11 @@ void MultiGeneCodonM2aModel::MasterPostPred(string name) {
         MasterSendMixture();
         // MasterReceiveLogProbs();
     }
+
+    ofstream os((name + ".ppredparams").c_str());
+    for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        os << GetLocalGeneName(gene) << '\t' << 0 << '\t' << poswarray->GetVal(gene) << '\t' << 1.0 + dposomarray->GetVal(gene) << '\n';
+    }
 }
 
 void MultiGeneCodonM2aModel::SlavePostPred(string name) {
