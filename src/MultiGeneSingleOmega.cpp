@@ -58,14 +58,14 @@ public:
           treefile(intreefile),
           myid(inmyid),
           nprocs(innprocs) {
-        blmode = inblmode;
-        nucmode = innucmode;
-        omegamode = inomegamode;
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
-        every = inevery;
-        until = inuntil;
-        name = inname;
+        blmode = inblmode; //
+        nucmode = innucmode; //
+        omegamode = inomegamode; //
+        omegahypermean = inomegahypermean; //
+        omegahyperinvshape = inomegahyperinvshape; //
+        every = inevery;                           //
+        until = inuntil;                           //
+        name = inname;                             //
         New(force);
     }
 
@@ -86,13 +86,13 @@ public:
     }
 
     void New(int force) {
-        model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs);
-        GetModel()->SetAcrossGenesModes(blmode, nucmode, omegamode);
-        GetModel()->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
-        if (!myid) { cerr << "allocate\n"; }
-        GetModel()->Allocate();
-        if (!myid) { cerr << "update\n"; }
-        GetModel()->Update();
+        model = new MultiGeneSingleOmegaModel(datafile, treefile, myid, nprocs); //
+        GetModel()->SetAcrossGenesModes(blmode, nucmode, omegamode); //
+        GetModel()->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape); //
+        if (!myid) { cerr << "allocate\n"; } //
+        GetModel()->Allocate();              //
+        if (!myid) { cerr << "update\n"; }   //
+        GetModel()->Update();                //
         Reset(force);
         if (!myid) { model->Trace(cerr); }
     }
@@ -194,7 +194,7 @@ public:
         }
         Run();
     }
-    
+
     void Run() {
         if (!myid) {
             while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
@@ -266,86 +266,86 @@ int main(int argc, char *argv[]) {
 
     // new chain
     else {
-        string datafile = "";
-        string treefile = "";
-        int force = 1;
-        int every = 1;
-        int until = -1;
-        int blmode = 1;
-        int nucmode = 1;
-        int omegamode = 1;
-        double omegahypermean = 1.0;
-        double omegahyperinvshape = 1.0;
+        string datafile = ""; //
+        string treefile = ""; //
+        int force = 1;        //
+        int every = 1;        //
+        int until = -1;       //
+        int blmode = 1;       //
+        int nucmode = 1;      //
+        int omegamode = 1;    //
+        double omegahypermean = 1.0; //
+        double omegahyperinvshape = 1.0; //
 
         try {
-            if (argc == 1) { throw(0); }
+            if (argc == 1) { throw(0); } //
 
-            int i = 1;
-            while (i < argc) {
-                string s = argv[i];
+            int i = 1; //
+            while (i < argc) { //
+                string s = argv[i]; //
 
-                if (s == "-d") {
-                    i++;
-                    datafile = argv[i];
-                } else if ((s == "-t") || (s == "-T")) {
-                    i++;
-                    treefile = argv[i];
-                } else if (s == "-f") {
-                    force = 1;
-                } else if (s == "-omega") {
-                    omegamode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        omegahypermean = atof(argv[i]);
-                        i++;
-                        omegahyperinvshape = atof(argv[i]);
-                    }
-                } else if (s == "-nucrates") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        nucmode = 2;
-                    } else if (tmp == "shrunken") {
-                        nucmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        nucmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -nucrates\n";
-                        exit(1);
-                    }
-                } else if (s == "-bl") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        blmode = 2;
-                    } else if (tmp == "shrunken") {
-                        blmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        blmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -bl\n";
-                        exit(1);
-                    }
-                } else if ((s == "-x") || (s == "-extract")) {
-                    i++;
-                    if (i == argc) throw(0);
-                    every = atoi(argv[i]);
-                    i++;
-                    if (i == argc) throw(0);
-                    until = atoi(argv[i]);
-                } else {
-                    if (i != (argc - 1)) { throw(0); }
-                    name = argv[i];
-                }
-                i++;
-            }
-            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
-        } catch (...) {
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
-            cerr << '\n';
-            exit(1);
-        }
+                if (s == "-d") { //
+                    i++;         //
+                    datafile = argv[i]; //
+                } else if ((s == "-t") || (s == "-T")) { //
+                    i++;                                 //
+                    treefile = argv[i];                  //
+                } else if (s == "-f") {                  //
+                    force = 1;                           //
+                } else if (s == "-omega") {              //
+                    omegamode = 0;                       //
+                    i++;                                 //
+                    string tmp = argv[i];                //
+                    if (tmp != "uninf") {                //
+                        omegahypermean = atof(argv[i]);  //
+                        i++;                             //
+                        omegahyperinvshape = atof(argv[i]); //
+                    }                                       //
+                } else if (s == "-nucrates") {              //
+                    i++;                                    //
+                    string tmp = argv[i];                   //
+                    if (tmp == "shared") {                  //
+                        nucmode = 2;                        //
+                    } else if (tmp == "shrunken") {         //
+                        nucmode = 1;                        //
+                    } else if ((tmp == "ind") || (tmp == "independent")) { //
+                        nucmode = 0; //
+                    } else {         //
+                        cerr << "error: does not recongnize command after -nucrates\n"; //
+                        exit(1); //
+                    }            //
+                } else if (s == "-bl") { //
+                    i++;                 //
+                    string tmp = argv[i]; //
+                    if (tmp == "shared") { //
+                        blmode = 2;        //
+                    } else if (tmp == "shrunken") { //
+                        blmode = 1;                 //
+                    } else if ((tmp == "ind") || (tmp == "independent")) { //
+                        blmode = 0; //
+                    } else {        //
+                        cerr << "error: does not recongnize command after -bl\n"; //
+                        exit(1); //
+                    }            //
+                } else if ((s == "-x") || (s == "-extract")) { //
+                    i++;                                       //
+                    if (i == argc) throw(0);                   //
+                    every = atoi(argv[i]);                     //
+                    i++;                                       //
+                    if (i == argc) throw(0);                   //
+                    until = atoi(argv[i]);                     //
+                } else {                                       //
+                    if (i != (argc - 1)) { throw(0); }         //
+                    name = argv[i];                            //
+                }                                              //
+                i++;                                           //
+            }                                                  //
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); } //
+        } catch (...) { //
+            cerr << "globom -d <alignment> -t <tree> <chainname> \n"; //
+            cerr << '\n'; //
+            exit(1);      //
+        }                 //
 
         chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode, omegamode,
             omegahypermean, omegahyperinvshape, every, until, name, force, myid, nprocs);
