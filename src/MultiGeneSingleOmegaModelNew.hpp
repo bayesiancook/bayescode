@@ -120,11 +120,9 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule, public MultiG
         // tree->SetIndices();
         // Nbranch = tree->GetNbranch();
 
-        if (!myid) {
-            cerr << "number of taxa : " << Ntaxa << '\n';
-            cerr << "number of branches : " << Nbranch << '\n';
-            cerr << "tree and data fit together\n";
-        }
+        cerr << "number of taxa : " << Ntaxa << '\n';
+        cerr << "number of branches : " << Nbranch << '\n';
+        cerr << "tree and data fit together\n";
     }
 
     void Allocate() {
@@ -893,12 +891,6 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
 
         // tree->SetIndices();
         // Nbranch = tree->GetNbranch();
-
-        if (!myid) {
-            cerr << "number of taxa : " << Ntaxa << '\n';
-            cerr << "number of branches : " << Nbranch << '\n';
-            cerr << "tree and data fit together\n";
-        }
     }
 
     void Allocate() {
