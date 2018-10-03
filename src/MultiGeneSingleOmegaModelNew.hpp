@@ -20,13 +20,16 @@
 
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
-#include "MultiGeneProbModel.hpp"
 #include "SingleOmegaModel.hpp"
+#include "MultiGeneMPIModule.hpp"
 
 class MultiGeneSingleOmegaModelShared {
 public:
     MultiGeneSingleOmegaModelShared(string datafile, string intreefile)
         : treefile(intreefile), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+        blmode = 1;
+        nucmode = 1;
+        omegamode = 1;
     }
 
 protected:
@@ -91,23 +94,15 @@ protected:
     double GeneLogPrior;
 };
 
-class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSingleOmegaModelShared {
-  private:
-    // each gene defines its own SingleOmegaModel
-    std::vector<SingleOmegaModel *> geneprocess;
-
+class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule, public MultiGeneSingleOmegaModelShared, public ProbModel{
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
     MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneProbModel(inmyid, innprocs),
+        : MultiGeneMPIModule(inmyid, innprocs),
           MultiGeneSingleOmegaModelShared(datafile, intreefile) {
-        blmode = 1;
-        nucmode = 1;
-        omegamode = 1;
-
         AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
@@ -115,7 +110,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
         Ntaxa = refdata->GetNtaxa();
 
         // get tree from file (newick format)
-        cout << treefile << " biquette \n";
         std::ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
@@ -183,18 +177,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
 
         lnL = 0;
         GeneLogPrior = 0;
-
-        if (!GetMyid()) {
-            geneprocess.assign(0, (SingleOmegaModel *)0);
-        } else {
-            geneprocess.assign(GetLocalNgene(), (SingleOmegaModel *)0);
-
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene), treefile);
-                geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
-                geneprocess[gene]->Allocate();
-            }
-        }
     }
 
     // called upon constructing the model
@@ -224,102 +206,51 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
         omegaarray->SetScale(beta);
     }
 
-    void MasterUpdate() override {
+    void Update() {
         FastUpdate();
 
         if (nprocs > 1) {
-            MasterSendBranchLengthsHyperParameters();
-            MasterSendNucRatesHyperParameters();
+            SendBranchLengthsHyperParameters();
+            SendNucRatesHyperParameters();
 
             if (blmode == 2) {
-                MasterSendGlobalBranchLengths();
+                SendGlobalBranchLengths();
             } else {
-                MasterSendGeneBranchLengths();
+                SendGeneBranchLengths();
             }
 
             if (nucmode == 2) {
-                MasterSendGlobalNucRates();
+                SendGlobalNucRates();
             } else {
-                MasterSendGeneNucRates();
+                SendGeneNucRates();
             }
 
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
-            MasterReceiveLogProbs();
+            SendOmegaHyperParameters();
+            SendOmega();
+            ReceiveLogProbs();
         }
     }
 
-    void SlaveUpdate() override {
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
-
-        if (blmode == 2) {
-            SlaveReceiveGlobalBranchLengths();
-        } else {
-            SlaveReceiveGeneBranchLengths();
-        }
-        if (nucmode == 2) {
-            SlaveReceiveGlobalNucRates();
-        } else {
-            SlaveReceiveGeneNucRates();
-        }
-
-        SlaveReceiveOmegaHyperParameters();
-        SlaveReceiveOmega();
-        GeneUpdate();
-        SlaveSendLogProbs();
-    }
-
-    void GeneUpdate() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
-    }
-
-    void MasterPostPred(string name) override {
+    void PostPred(string name) {
         FastUpdate();
         if (nprocs > 1) {
-            MasterSendBranchLengthsHyperParameters();
-            MasterSendNucRatesHyperParameters();
+            SendBranchLengthsHyperParameters();
+            SendNucRatesHyperParameters();
 
             if (blmode == 2) {
-                MasterSendGlobalBranchLengths();
+                SendGlobalBranchLengths();
             } else {
-                MasterSendGeneBranchLengths();
+                SendGeneBranchLengths();
             }
 
             if (nucmode == 2) {
-                MasterSendGlobalNucRates();
+                SendGlobalNucRates();
             } else {
-                MasterSendGeneNucRates();
+                SendGeneNucRates();
             }
 
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
-        }
-    }
-
-    void SlavePostPred(string name) override {
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
-
-        if (blmode == 2) {
-            SlaveReceiveGlobalBranchLengths();
-        } else {
-            SlaveReceiveGeneBranchLengths();
-        }
-        if (nucmode == 2) {
-            SlaveReceiveGlobalNucRates();
-        } else {
-            SlaveReceiveGeneNucRates();
-        }
-
-        SlaveReceiveOmegaHyperParameters();
-        SlaveReceiveOmega();
-        GenePostPred(name);
-    }
-
-    void GenePostPred(string name) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
+            SendOmegaHyperParameters();
+            SendOmega();
         }
     }
 
@@ -456,7 +387,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
 
     void Monitor(ostream &os) const {}
 
-    void MasterFromStream(istream &is) {
+    void FromStream(istream &is) {
         if (blmode == 2) {
             is >> lambda;
             is >> *branchlength;
@@ -479,7 +410,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
         is >> *omegaarray;
     }
 
-    void MasterToStream(ostream &os) const {
+    void ToStream(ostream &os) const {
         if (blmode == 2) {
             os << lambda << '\t';
             os << *branchlength << '\t';
@@ -681,113 +612,51 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
     // all methods starting with Gene are called only be slaves, and do some work
     // across all genes allocated to that slave
 
-    void MasterMove() override {
+    double Move() override {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
             if (omegamode == 1) {
-                MasterReceiveOmega();
+                ReceiveOmega();
                 MoveOmegaHyperParameters();
-                MasterSendOmegaHyperParameters();
+                SendOmegaHyperParameters();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
-                MasterReceiveBranchLengthsSuffStat();
+                ReceiveBranchLengthsSuffStat();
                 ResampleBranchLengths();
                 MoveLambda();
-                MasterSendGlobalBranchLengths();
+                SendGlobalBranchLengths();
             } else if (blmode == 1) {
-                MasterReceiveBranchLengthsHyperSuffStat();
+                ReceiveBranchLengthsHyperSuffStat();
                 MoveBranchLengthsHyperParameters();
-                MasterSendBranchLengthsHyperParameters();
+                SendBranchLengthsHyperParameters();
             }
 
             // global nucrates, or gene nucrates hyperparameters
             if (nucmode == 2) {
-                MasterReceiveNucPathSuffStat();
+                ReceiveNucPathSuffStat();
                 MoveNucRates();
-                MasterSendGlobalNucRates();
+                SendGlobalNucRates();
             } else if (nucmode == 1) {
-                MasterReceiveNucRatesHyperSuffStat();
+                ReceiveNucRatesHyperSuffStat();
                 MoveNucRatesHyperParameters();
-                MasterSendNucRatesHyperParameters();
+                SendNucRatesHyperParameters();
             }
         }
 
         // collect current state
-        if (blmode != 2) { MasterReceiveGeneBranchLengths(); }
-        if (nucmode != 2) { MasterReceiveGeneNucRates(); }
-        MasterReceiveOmega();
-        MasterReceiveLogProbs();
-    }
-
-    // slave move
-    void SlaveMove() override {
-        GeneResampleSub(1.0);
-
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            MoveGeneParameters(1.0);
-
-            if (omegamode == 1) {
-                SlaveSendOmega();
-                SlaveReceiveOmegaHyperParameters();
-            }
-
-            // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == 2) {
-                SlaveSendBranchLengthsSuffStat();
-                SlaveReceiveGlobalBranchLengths();
-            } else if (blmode == 1) {
-                SlaveSendBranchLengthsHyperSuffStat();
-                SlaveReceiveBranchLengthsHyperParameters();
-            }
-
-            // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == 2) {
-                SlaveSendNucPathSuffStat();
-                SlaveReceiveGlobalNucRates();
-            } else if (nucmode == 1) {
-                SlaveSendNucRatesHyperSuffStat();
-                SlaveReceiveNucRatesHyperParameters();
-            }
-        }
-
-        // collect current state
-        if (blmode != 2) { SlaveSendGeneBranchLengths(); }
-        if (nucmode != 2) { SlaveSendGeneNucRates(); }
-        SlaveSendOmega();
-        SlaveSendLogProbs();
-    }
-
-    void GeneResampleSub(double frac) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->ResampleSub(frac); }
-    }
-
-    void MoveGeneParameters(int nrep) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->MoveParameters(nrep);
-
-            (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            if (blmode != 2) { geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]); }
-            if (nucmode != 2) {
-                geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-            }
-        }
+        if (blmode != 2) { ReceiveGeneBranchLengths(); }
+        if (nucmode != 2) { ReceiveGeneNucRates(); }
+        ReceiveOmega();
+        ReceiveLogProbs();
+        return 1;
     }
 
     // Branch lengths
 
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
-
-    void ResampleGeneBranchLengths() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleBranchLengths();
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-    }
 
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
@@ -926,124 +795,42 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
 
     // Branch lengths
 
-    void MasterSendGlobalBranchLengths() { MasterSendGlobal(*branchlength); }
+    void SendGlobalBranchLengths() { MasterSendGlobal(*branchlength); }
 
-    void SlaveReceiveGlobalBranchLengths() {
-        SlaveReceiveGlobal(*branchlength);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengths(*branchlength);
-        }
-    }
-
-    void MasterSendBranchLengthsHyperParameters() {
+    void SendBranchLengthsHyperParameters() {
         MasterSendGlobal(*branchlength, blhyperinvshape);
     }
 
-    void SlaveReceiveBranchLengthsHyperParameters() {
-        SlaveReceiveGlobal(*branchlength, blhyperinvshape);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
-        }
-    }
+    void SendGeneBranchLengths() { MasterSendGeneArray(*branchlengtharray); }
 
-    void MasterSendGeneBranchLengths() { MasterSendGeneArray(*branchlengtharray); }
+    void ReceiveGeneBranchLengths() { MasterReceiveGeneArray(*branchlengtharray); }
 
-    void SlaveReceiveGeneBranchLengths() {
-        SlaveReceiveGeneArray(*branchlengtharray);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
-        }
-    }
-
-    void SlaveSendGeneBranchLengths() {
-        // in principle, redundant..
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-        SlaveSendGeneArray(*branchlengtharray);
-    }
-
-    void MasterReceiveGeneBranchLengths() { MasterReceiveGeneArray(*branchlengtharray); }
-
-    void SlaveSendBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->CollectLengthSuffStat();
-            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
-        }
-        SlaveSendAdditive(*lengthpathsuffstatarray);
-    }
-
-    void MasterReceiveBranchLengthsSuffStat() {
+    void ReceiveBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
         MasterReceiveAdditive(*lengthpathsuffstatarray);
     }
 
-    void SlaveSendBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-        SlaveSendAdditive(*lengthhypersuffstatarray);
-    }
-
-    void MasterReceiveBranchLengthsHyperSuffStat() {
+    void ReceiveBranchLengthsHyperSuffStat() {
         lengthhypersuffstatarray->Clear();
         MasterReceiveAdditive(*lengthhypersuffstatarray);
     }
 
     // Nucleotide Rates
 
-    void MasterSendGlobalNucRates() {
+    void SendGlobalNucRates() {
         MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
     }
 
-    void SlaveReceiveGlobalNucRates() {
-        SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
+    void SendGeneNucRates() { MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
 
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
-        }
-    }
+    void ReceiveGeneNucRates() { MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
 
-    void MasterSendGeneNucRates() { MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void SlaveReceiveGeneNucRates() {
-        SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
-
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
-    }
-
-    void SlaveSendGeneNucRates() { SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void MasterReceiveGeneNucRates() { MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void MasterSendNucRatesHyperParameters() {
+    void SendNucRatesHyperParameters() {
         MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
         MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
     }
 
-    void SlaveReceiveNucRatesHyperParameters() {
-        SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
-
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
-                nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
-        }
-    }
-
-    void SlaveSendNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        nucrelratearray->AddSuffStat(nucrelratesuffstat);
-        SlaveSendAdditive(nucrelratesuffstat);
-
-        nucstatsuffstat.Clear();
-        nucstatarray->AddSuffStat(nucstatsuffstat);
-        SlaveSendAdditive(nucstatsuffstat);
-    }
-
-    void MasterReceiveNucRatesHyperSuffStat() {
+    void ReceiveNucRatesHyperSuffStat() {
         nucrelratesuffstat.Clear();
         MasterReceiveAdditive(nucrelratesuffstat);
 
@@ -1051,61 +838,24 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
         MasterReceiveAdditive(nucstatsuffstat);
     }
 
-    void SlaveSendNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->CollectNucPathSuffStat();
-            nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
-        }
-
-        SlaveSendAdditive(nucpathsuffstat);
-    }
-
-    void MasterReceiveNucPathSuffStat() {
+    void ReceiveNucPathSuffStat() {
         nucpathsuffstat.Clear();
         MasterReceiveAdditive(nucpathsuffstat);
     }
 
     // omega (and hyperparameters)
 
-    void SlaveSendOmega() { SlaveSendGeneArray(*omegaarray); }
+    void ReceiveOmega() { MasterReceiveGeneArray(*omegaarray); }
 
-    void MasterReceiveOmega() { MasterReceiveGeneArray(*omegaarray); }
-
-    void MasterSendOmega() { MasterSendGeneArray(*omegaarray); }
-
-    void SlaveReceiveOmega() {
-        SlaveReceiveGeneArray(*omegaarray);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetOmega((*omegaarray)[gene]);
-        }
-    }
+    void SendOmega() { MasterSendGeneArray(*omegaarray); }
 
     // omega hyperparameters
 
-    void MasterSendOmegaHyperParameters() { MasterSendGlobal(omegahypermean, omegahyperinvshape); }
-
-    void SlaveReceiveOmegaHyperParameters() {
-        SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
-        }
-    }
+    void SendOmegaHyperParameters() { MasterSendGlobal(omegahypermean, omegahyperinvshape); }
 
     // log probs
 
-    void SlaveSendLogProbs() {
-        GeneLogPrior = 0;
-        lnL = 0;
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            GeneLogPrior += geneprocess[gene]->GetLogPrior();
-            lnL += geneprocess[gene]->GetLogLikelihood();
-        }
-        SlaveSendAdditive(GeneLogPrior);
-        SlaveSendAdditive(lnL);
-    }
-
-    void MasterReceiveLogProbs() {
+    void ReceiveLogProbs() {
         GeneLogPrior = 0;
         MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
@@ -1114,7 +864,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneProbModel, MultiGeneSing
 };
 
 
-class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingleOmegaModelShared {
+class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbModel, public MultiGeneSingleOmegaModelShared {
   private:
     // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel *> geneprocess;
@@ -1125,12 +875,8 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
     //-------------------
 
     MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneProbModel(inmyid, innprocs),
+        : MultiGeneMPIModule(inmyid, innprocs),
           MultiGeneSingleOmegaModelShared(datafile, intreefile) {
-        blmode = 1;
-        nucmode = 1;
-        omegamode = 1;
-
         AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
@@ -1138,7 +884,6 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         Ntaxa = refdata->GetNtaxa();
 
         // get tree from file (newick format)
-        cout << treefile << " biquette \n";
         std::ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
@@ -1207,16 +952,11 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         lnL = 0;
         GeneLogPrior = 0;
 
-        if (!GetMyid()) {
-            geneprocess.assign(0, (SingleOmegaModel *)0);
-        } else {
-            geneprocess.assign(GetLocalNgene(), (SingleOmegaModel *)0);
-
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene), treefile);
-                geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
-                geneprocess[gene]->Allocate();
-            }
+        geneprocess.assign(GetLocalNgene(), (SingleOmegaModel *)0);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene), treefile);
+            geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
+            geneprocess[gene]->Allocate();
         }
     }
 
@@ -1247,96 +987,48 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         omegaarray->SetScale(beta);
     }
 
-    void MasterUpdate() override {
-        FastUpdate();
-
-        if (nprocs > 1) {
-            MasterSendBranchLengthsHyperParameters();
-            MasterSendNucRatesHyperParameters();
-
-            if (blmode == 2) {
-                MasterSendGlobalBranchLengths();
-            } else {
-                MasterSendGeneBranchLengths();
-            }
-
-            if (nucmode == 2) {
-                MasterSendGlobalNucRates();
-            } else {
-                MasterSendGeneNucRates();
-            }
-
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
-            MasterReceiveLogProbs();
-        }
-    }
-
-    void SlaveUpdate() override {
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
+    void Update() {
+        ReceiveBranchLengthsHyperParameters();
+        ReceiveNucRatesHyperParameters();
 
         if (blmode == 2) {
-            SlaveReceiveGlobalBranchLengths();
+            ReceiveGlobalBranchLengths();
         } else {
-            SlaveReceiveGeneBranchLengths();
+            ReceiveGeneBranchLengths();
         }
         if (nucmode == 2) {
-            SlaveReceiveGlobalNucRates();
+            ReceiveGlobalNucRates();
         } else {
-            SlaveReceiveGeneNucRates();
+            ReceiveGeneNucRates();
         }
 
-        SlaveReceiveOmegaHyperParameters();
-        SlaveReceiveOmega();
+        ReceiveOmegaHyperParameters();
+        ReceiveOmega();
         GeneUpdate();
-        SlaveSendLogProbs();
+        SendLogProbs();
     }
 
     void GeneUpdate() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
     }
 
-    void MasterPostPred(string name) override {
-        FastUpdate();
-        if (nprocs > 1) {
-            MasterSendBranchLengthsHyperParameters();
-            MasterSendNucRatesHyperParameters();
-
-            if (blmode == 2) {
-                MasterSendGlobalBranchLengths();
-            } else {
-                MasterSendGeneBranchLengths();
-            }
-
-            if (nucmode == 2) {
-                MasterSendGlobalNucRates();
-            } else {
-                MasterSendGeneNucRates();
-            }
-
-            MasterSendOmegaHyperParameters();
-            MasterSendOmega();
-        }
-    }
-
-    void SlavePostPred(string name) override {
-        SlaveReceiveBranchLengthsHyperParameters();
-        SlaveReceiveNucRatesHyperParameters();
+    void PostPred(string name) {
+        ReceiveBranchLengthsHyperParameters();
+        ReceiveNucRatesHyperParameters();
 
         if (blmode == 2) {
-            SlaveReceiveGlobalBranchLengths();
+            ReceiveGlobalBranchLengths();
         } else {
-            SlaveReceiveGeneBranchLengths();
+            ReceiveGeneBranchLengths();
         }
         if (nucmode == 2) {
-            SlaveReceiveGlobalNucRates();
+            ReceiveGlobalNucRates();
         } else {
-            SlaveReceiveGeneNucRates();
+            ReceiveGeneNucRates();
         }
 
-        SlaveReceiveOmegaHyperParameters();
-        SlaveReceiveOmega();
+        ReceiveOmegaHyperParameters();
+        ReceiveOmega();
         GenePostPred(name);
     }
 
@@ -1478,52 +1170,6 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
     }
 
     void Monitor(ostream &os) const {}
-
-    void MasterFromStream(istream &is) {
-        if (blmode == 2) {
-            is >> lambda;
-            is >> *branchlength;
-        } else {
-            is >> lambda;
-            is >> *branchlength;
-            is >> blhyperinvshape;
-            is >> *branchlengtharray;
-        }
-
-        is >> nucrelratehypercenter;
-        is >> nucrelratehyperinvconc;
-        is >> nucstathypercenter;
-        is >> nucstathyperinvconc;
-        is >> *nucrelratearray;
-        is >> *nucstatarray;
-
-        is >> omegahypermean;
-        is >> omegahyperinvshape;
-        is >> *omegaarray;
-    }
-
-    void MasterToStream(ostream &os) const {
-        if (blmode == 2) {
-            os << lambda << '\t';
-            os << *branchlength << '\t';
-        } else {
-            os << lambda << '\t';
-            os << *branchlength << '\t';
-            os << blhyperinvshape << '\t';
-            os << *branchlengtharray << '\t';
-        }
-
-        os << nucrelratehypercenter << '\t';
-        os << nucrelratehyperinvconc << '\t';
-        os << nucstathypercenter << '\t';
-        os << nucstathyperinvconc << '\t';
-        os << *nucrelratearray << '\t';
-        os << *nucstatarray << '\t';
-
-        os << omegahypermean << '\t';
-        os << omegahyperinvshape << '\t';
-        os << *omegaarray << '\n';
-    }
 
     void TraceOmega(ostream &os) const {
         for (int gene = 0; gene < Ngene; gene++) { os << omegaarray->GetVal(gene) << '\t'; }
@@ -1697,56 +1343,9 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
     // Moves
     //-------------------
 
-    // all methods starting with Master are called only by master
-    // for each such method, there is a corresponding method called by slave, and
-    // starting with Slave
-    //
-    // all methods starting with Gene are called only be slaves, and do some work
-    // across all genes allocated to that slave
-
-    void MasterMove() override {
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            if (omegamode == 1) {
-                MasterReceiveOmega();
-                MoveOmegaHyperParameters();
-                MasterSendOmegaHyperParameters();
-            }
-
-            // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == 2) {
-                MasterReceiveBranchLengthsSuffStat();
-                ResampleBranchLengths();
-                MoveLambda();
-                MasterSendGlobalBranchLengths();
-            } else if (blmode == 1) {
-                MasterReceiveBranchLengthsHyperSuffStat();
-                MoveBranchLengthsHyperParameters();
-                MasterSendBranchLengthsHyperParameters();
-            }
-
-            // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == 2) {
-                MasterReceiveNucPathSuffStat();
-                MoveNucRates();
-                MasterSendGlobalNucRates();
-            } else if (nucmode == 1) {
-                MasterReceiveNucRatesHyperSuffStat();
-                MoveNucRatesHyperParameters();
-                MasterSendNucRatesHyperParameters();
-            }
-        }
-
-        // collect current state
-        if (blmode != 2) { MasterReceiveGeneBranchLengths(); }
-        if (nucmode != 2) { MasterReceiveGeneNucRates(); }
-        MasterReceiveOmega();
-        MasterReceiveLogProbs();
-    }
 
     // slave move
-    void SlaveMove() override {
+    double Move() override {
         GeneResampleSub(1.0);
 
         int nrep = 30;
@@ -1755,34 +1354,35 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
             MoveGeneParameters(1.0);
 
             if (omegamode == 1) {
-                SlaveSendOmega();
-                SlaveReceiveOmegaHyperParameters();
+                SendOmega();
+                ReceiveOmegaHyperParameters();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
-                SlaveSendBranchLengthsSuffStat();
-                SlaveReceiveGlobalBranchLengths();
+                SendBranchLengthsSuffStat();
+                ReceiveGlobalBranchLengths();
             } else if (blmode == 1) {
-                SlaveSendBranchLengthsHyperSuffStat();
-                SlaveReceiveBranchLengthsHyperParameters();
+                SendBranchLengthsHyperSuffStat();
+                ReceiveBranchLengthsHyperParameters();
             }
 
             // global nucrates, or gene nucrates hyperparameters
             if (nucmode == 2) {
-                SlaveSendNucPathSuffStat();
-                SlaveReceiveGlobalNucRates();
+                SendNucPathSuffStat();
+                ReceiveGlobalNucRates();
             } else if (nucmode == 1) {
-                SlaveSendNucRatesHyperSuffStat();
-                SlaveReceiveNucRatesHyperParameters();
+                SendNucRatesHyperSuffStat();
+                ReceiveNucRatesHyperParameters();
             }
         }
 
         // collect current state
-        if (blmode != 2) { SlaveSendGeneBranchLengths(); }
-        if (nucmode != 2) { SlaveSendGeneNucRates(); }
-        SlaveSendOmega();
-        SlaveSendLogProbs();
+        if (blmode != 2) { SendGeneBranchLengths(); }
+        if (nucmode != 2) { SendGeneNucRates(); }
+        SendOmega();
+        SendLogProbs();
+        return 1;
     }
 
     void GeneResampleSub(double frac) {
@@ -1949,36 +1549,28 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
 
     // Branch lengths
 
-    void MasterSendGlobalBranchLengths() { MasterSendGlobal(*branchlength); }
-
-    void SlaveReceiveGlobalBranchLengths() {
+    void ReceiveGlobalBranchLengths() {
         SlaveReceiveGlobal(*branchlength);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengths(*branchlength);
         }
     }
 
-    void MasterSendBranchLengthsHyperParameters() {
-        MasterSendGlobal(*branchlength, blhyperinvshape);
-    }
-
-    void SlaveReceiveBranchLengthsHyperParameters() {
+    void ReceiveBranchLengthsHyperParameters() {
         SlaveReceiveGlobal(*branchlength, blhyperinvshape);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
         }
     }
 
-    void MasterSendGeneBranchLengths() { MasterSendGeneArray(*branchlengtharray); }
-
-    void SlaveReceiveGeneBranchLengths() {
+    void ReceiveGeneBranchLengths() {
         SlaveReceiveGeneArray(*branchlengtharray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
         }
     }
 
-    void SlaveSendGeneBranchLengths() {
+    void SendGeneBranchLengths() {
         // in principle, redundant..
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
@@ -1986,9 +1578,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         SlaveSendGeneArray(*branchlengtharray);
     }
 
-    void MasterReceiveGeneBranchLengths() { MasterReceiveGeneArray(*branchlengtharray); }
-
-    void SlaveSendBranchLengthsSuffStat() {
+    void SendBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectLengthSuffStat();
@@ -1997,29 +1587,15 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
-    void MasterReceiveBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthpathsuffstatarray);
-    }
-
-    void SlaveSendBranchLengthsHyperSuffStat() {
+    void SendBranchLengthsHyperSuffStat() {
         lengthhypersuffstatarray->Clear();
         lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
         SlaveSendAdditive(*lengthhypersuffstatarray);
     }
 
-    void MasterReceiveBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthhypersuffstatarray);
-    }
-
     // Nucleotide Rates
 
-    void MasterSendGlobalNucRates() {
-        MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
-    }
-
-    void SlaveReceiveGlobalNucRates() {
+    void ReceiveGlobalNucRates() {
         SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
 
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
@@ -2027,26 +1603,17 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         }
     }
 
-    void MasterSendGeneNucRates() { MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void SlaveReceiveGeneNucRates() {
+    void ReceiveGeneNucRates() {
         SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
 
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
-    }
+        } 
+   }
 
-    void SlaveSendGeneNucRates() { SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
+    void SendGeneNucRates() { SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
 
-    void MasterReceiveGeneNucRates() { MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void MasterSendNucRatesHyperParameters() {
-        MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
-    }
-
-    void SlaveReceiveNucRatesHyperParameters() {
+    void ReceiveNucRatesHyperParameters() {
         SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
         SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
 
@@ -2056,7 +1623,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         }
     }
 
-    void SlaveSendNucRatesHyperSuffStat() {
+    void SendNucRatesHyperSuffStat() {
         nucrelratesuffstat.Clear();
         nucrelratearray->AddSuffStat(nucrelratesuffstat);
         SlaveSendAdditive(nucrelratesuffstat);
@@ -2066,15 +1633,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         SlaveSendAdditive(nucstatsuffstat);
     }
 
-    void MasterReceiveNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        MasterReceiveAdditive(nucrelratesuffstat);
-
-        nucstatsuffstat.Clear();
-        MasterReceiveAdditive(nucstatsuffstat);
-    }
-
-    void SlaveSendNucPathSuffStat() {
+    void SendNucPathSuffStat() {
         nucpathsuffstat.Clear();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectNucPathSuffStat();
@@ -2084,20 +1643,11 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         SlaveSendAdditive(nucpathsuffstat);
     }
 
-    void MasterReceiveNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        MasterReceiveAdditive(nucpathsuffstat);
-    }
-
     // omega (and hyperparameters)
 
-    void SlaveSendOmega() { SlaveSendGeneArray(*omegaarray); }
+    void SendOmega() { SlaveSendGeneArray(*omegaarray); }
 
-    void MasterReceiveOmega() { MasterReceiveGeneArray(*omegaarray); }
-
-    void MasterSendOmega() { MasterSendGeneArray(*omegaarray); }
-
-    void SlaveReceiveOmega() {
+    void ReceiveOmega() {
         SlaveReceiveGeneArray(*omegaarray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetOmega((*omegaarray)[gene]);
@@ -2106,9 +1656,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
 
     // omega hyperparameters
 
-    void MasterSendOmegaHyperParameters() { MasterSendGlobal(omegahypermean, omegahyperinvshape); }
-
-    void SlaveReceiveOmegaHyperParameters() {
+    void ReceiveOmegaHyperParameters() {
         SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
@@ -2117,7 +1665,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
 
     // log probs
 
-    void SlaveSendLogProbs() {
+    void SendLogProbs() {
         GeneLogPrior = 0;
         lnL = 0;
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
@@ -2126,12 +1674,5 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneProbModel, MultiGeneSingl
         }
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
-    }
-
-    void MasterReceiveLogProbs() {
-        GeneLogPrior = 0;
-        MasterReceiveAdditive(GeneLogPrior);
-        lnL = 0;
-        MasterReceiveAdditive(lnL);
     }
 };
