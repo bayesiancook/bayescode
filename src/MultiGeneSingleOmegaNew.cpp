@@ -49,6 +49,35 @@ private:
     }
 };
 
+template<class M>
+std::pair<ChainDriver*, M*> appmain(ChainCmdLine& cmd, int myid, int nprocs) {
+    ChainDriver *chain_driver = nullptr;
+    MultiGeneSingleOmegaModel *model = nullptr;
+
+    if (cmd.resume_from_checkpoint()) {
+        std::ifstream is = cmd.checkpoint_file();
+        chain_driver = new ChainDriver(is);
+        // model = new SingleOmegaModel(is);
+    } else {
+        MultiGeneSingleOmegaArgParse args(cmd);
+        cmd.parse();
+        chain_driver =
+            new ChainDriver(cmd.chain_name(), args.app.every.getValue(), args.app.until.getValue());
+        model = new M(args.app.alignment.getValue(),
+                      args.app.treefile.getValue(),
+                      myid, nprocs);
+
+        double omegahypermean;
+        double omegahyperinvshape;
+        model->SetAcrossGenesModes(args.blmode(),
+                                   args.nucmode(),
+                                   args.omegamode(omegahypermean, omegahyperinvshape));
+        model->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
+        model->Allocate();
+        model->Update();
+    }
+    return std::make_pair(chain_driver, model);
+}
 
 int main(int argc, char *argv[]) {
     int myid = 0;
@@ -63,29 +92,9 @@ int main(int argc, char *argv[]) {
 
     ChainDriver *chain_driver = nullptr;
     MultiGeneSingleOmegaModel *model = nullptr;
+    tie(chain_driver, model) = appmain<MultiGeneSingleOmegaModel>(cmd, myid, nprocs);
 
-    if (cmd.resume_from_checkpoint()) {
-        std::ifstream is = cmd.checkpoint_file();
-        chain_driver = new ChainDriver(is);
-        // model = new SingleOmegaModel(is);
-    } else {
-        MultiGeneSingleOmegaArgParse args(cmd);
-        cmd.parse();
-        chain_driver =
-            new ChainDriver(cmd.chain_name(), args.app.every.getValue(), args.app.until.getValue());
-        model = new MultiGeneSingleOmegaModel(args.app.alignment.getValue(),
-                                              args.app.treefile.getValue(),
-                                              myid, nprocs);
-
-        double omegahypermean;
-        double omegahyperinvshape;
-        model->SetAcrossGenesModes(args.blmode(),
-                                   args.nucmode(),
-                                   args.omegamode(omegahypermean, omegahyperinvshape));
-        model->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
-        model->Allocate();
-        model->Update();
-    }
-
+    delete chain_driver;
+    // delete model;  // FIXME: warning compilo
     MPI_Finalize();
 }
