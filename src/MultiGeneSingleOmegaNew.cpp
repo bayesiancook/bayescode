@@ -1,11 +1,12 @@
 #include <cmath>
 #include <fstream>
 #include "MultiGeneChain.hpp"
-#include "MultiGeneSingleOmegaModel.hpp"
+#include "MultiGeneSingleOmegaModelNew.hpp"
 #include "InferenceAppArgParse.hpp"
 #include "components/ChainDriver.hpp"
 
 using namespace std;
+using std::unique_ptr;
 
 class MultiGeneSingleOmegaArgParse : public BaseArgParse {
   public:
@@ -50,33 +51,42 @@ private:
 };
 
 template<class M>
-std::pair<ChainDriver*, M*> appmain(ChainCmdLine& cmd, int myid, int nprocs) {
-    ChainDriver *chain_driver = nullptr;
-    MultiGeneSingleOmegaModel *model = nullptr;
+struct AppData {
+    unique_ptr<ChainDriver> chain_driver;
+    unique_ptr<M> model;
+};
+
+template<class M>
+AppData<M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
 
     if (cmd.resume_from_checkpoint()) {
+        AppData<M> d;
         std::ifstream is = cmd.checkpoint_file();
-        chain_driver = new ChainDriver(is);
+        d.chain_driver = unique_ptr<ChainDriver>(new ChainDriver(is));
         // model = new SingleOmegaModel(is);
+        return d;
     } else {
+        AppData<M> d;
         MultiGeneSingleOmegaArgParse args(cmd);
         cmd.parse();
-        chain_driver =
-            new ChainDriver(cmd.chain_name(), args.app.every.getValue(), args.app.until.getValue());
-        model = new M(args.app.alignment.getValue(),
-                      args.app.treefile.getValue(),
-                      myid, nprocs);
+        d.chain_driver =
+            unique_ptr<ChainDriver>(new ChainDriver(cmd.chain_name(),
+                                                    args.app.every.getValue(),
+                                                    args.app.until.getValue()));
+        d.model = unique_ptr<M>(new M(args.app.alignment.getValue(),
+                                      args.app.treefile.getValue(),
+                                      myid, nprocs));
 
         double omegahypermean;
         double omegahyperinvshape;
-        model->SetAcrossGenesModes(args.blmode(),
+        d.model->SetAcrossGenesModes(args.blmode(),
                                    args.nucmode(),
                                    args.omegamode(omegahypermean, omegahyperinvshape));
-        model->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
-        model->Allocate();
-        model->Update();
+        d.model->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
+        d.model->Allocate();
+        d.model->Update();
+        return d;
     }
-    return std::make_pair(chain_driver, model);
 }
 
 int main(int argc, char *argv[]) {
@@ -90,11 +100,11 @@ int main(int argc, char *argv[]) {
 
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
-    ChainDriver *chain_driver = nullptr;
-    MultiGeneSingleOmegaModel *model = nullptr;
-    tie(chain_driver, model) = appmain<MultiGeneSingleOmegaModel>(cmd, myid, nprocs);
-
-    delete chain_driver;
-    // delete model;  // FIXME: warning compilo
+    if(!myid) {
+        auto p = load_appdata<MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+    }
+    else {
+        auto p = load_appdata<MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
+    }
     MPI_Finalize();
 }
