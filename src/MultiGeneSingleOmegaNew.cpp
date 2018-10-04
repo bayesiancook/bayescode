@@ -12,7 +12,7 @@ class MultiGeneSingleOmegaArgParse : public BaseArgParse {
   public:
     MultiGeneSingleOmegaArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd), app(cmd) {}
     InferenceAppArgParse app;
-    ValueArg<string> omega{"","omega","omega hyperparameter, expected syntax: <float>, <float>",false,"uninf","string",cmd};
+    ValueArg<string> omega{"","omega","omega hyperparameter, expected syntax: <float>,<float>",false,"uninf","string",cmd};
     ValueArg<string> nucrates{"","nucrates","Possible values are, shared, shrunken, independent(ind)",false,"shrunken","string",cmd};
     ValueArg<string> bl{"","blmode","Possible values are, shared, shrunken, independent(ind)",false,"shrunken","string",cmd};
 
@@ -101,10 +101,14 @@ int main(int argc, char *argv[]) {
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
     if(!myid) {
-        auto p = load_appdata<MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+        auto d = load_appdata<MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+        d.chain_driver->add(*d.model);
+        d.chain_driver->go();
     }
     else {
-        auto p = load_appdata<MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
+        auto d = load_appdata<MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
+        d.chain_driver->add(*d.model);
+        d.chain_driver->go();
     }
     MPI_Finalize();
 }

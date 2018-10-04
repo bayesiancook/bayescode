@@ -22,6 +22,7 @@
 #include "IIDGamma.hpp"
 #include "SingleOmegaModel.hpp"
 #include "MultiGeneMPIModule.hpp"
+#include "components/ChainComponent.hpp"
 
 class MultiGeneSingleOmegaModelShared {
 public:
@@ -94,7 +95,10 @@ protected:
     double GeneLogPrior;
 };
 
-class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule, public MultiGeneSingleOmegaModelShared, public ProbModel{
+class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
+                                        public MultiGeneSingleOmegaModelShared,
+                                        public ProbModel,
+                                        public ChainComponent {
   public:
     //-------------------
     // Construction and allocation
@@ -123,6 +127,18 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule, public MultiG
         cerr << "number of taxa : " << Ntaxa << '\n';
         cerr << "number of branches : " << Nbranch << '\n';
         cerr << "tree and data fit together\n";
+    }
+
+    void start() override {}
+    void move(int) override {
+        SendRunningStatus(1);
+        Move();
+    }
+    void savepoint(int) override {}
+    void end() override {}
+
+    void SendRunningStatus(int status) {
+        MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
     }
 
     void Allocate() {
@@ -892,6 +908,11 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
         // tree->SetIndices();
         // Nbranch = tree->GetNbranch();
     }
+
+    void start() override {}
+    void move(int) override {}
+    void savepoint(int) override {}
+    void end() override {}
 
     void Allocate() {
         // Branch lengths
