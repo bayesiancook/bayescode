@@ -32,6 +32,8 @@ public:
         omegamode = 1;
     }
 
+    virtual ~MultiGeneSingleOmegaModelShared() = default;
+
 protected:
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
