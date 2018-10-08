@@ -1,3 +1,4 @@
+#pragma once
 #include "components/BaseArgParse.hpp"
 
 class InferenceAppArgParse : public BaseArgParse {
