@@ -4,6 +4,7 @@
 #include "MultiGeneSingleOmegaModelNew.hpp"
 #include "InferenceAppArgParse.hpp"
 #include "components/ChainDriver.hpp"
+#include "SlaveChainDriver.hpp"
 
 using namespace std;
 using std::unique_ptr;
@@ -50,29 +51,29 @@ private:
     }
 };
 
-template<class M>
+template<class D, class M>
 struct AppData {
-    unique_ptr<ChainDriver> chain_driver;
+    unique_ptr<D> chain_driver;
     unique_ptr<M> model;
 };
 
-template<class M>
-AppData<M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
+template<class D, class M>
+AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
 
     if (cmd.resume_from_checkpoint()) {
-        AppData<M> d;
+        AppData<D, M> d;
         std::ifstream is = cmd.checkpoint_file();
-        d.chain_driver = unique_ptr<ChainDriver>(new ChainDriver(is));
+        d.chain_driver = unique_ptr<D>(new D(is));
         // model = new SingleOmegaModel(is);
         return d;
     } else {
-        AppData<M> d;
+        AppData<D, M> d;
         MultiGeneSingleOmegaArgParse args(cmd);
         cmd.parse();
         d.chain_driver =
-            unique_ptr<ChainDriver>(new ChainDriver(cmd.chain_name(),
-                                                    args.app.every.getValue(),
-                                                    args.app.until.getValue()));
+            unique_ptr<D>(new D(cmd.chain_name(),
+                                          args.app.every.getValue(),
+                                          args.app.until.getValue()));
         d.model = unique_ptr<M>(new M(args.app.alignment.getValue(),
                                       args.app.treefile.getValue(),
                                       myid, nprocs));
@@ -101,12 +102,12 @@ int main(int argc, char *argv[]) {
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
     if(!myid) {
-        auto d = load_appdata<MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+        auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
         d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }
     else {
-        auto d = load_appdata<MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
+        auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
         d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }
