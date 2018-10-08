@@ -178,7 +178,6 @@ class MultiGeneSingleOmegaModelShared {
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
-                                        public ProbModel,
                                         public ChainComponent {
     MultiGeneMPIModule mpi;
 
@@ -631,7 +630,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // all methods starting with Gene are called only be slaves, and do some work
     // across all genes allocated to that slave
 
-    double Move() override {
+    double Move() {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
@@ -680,9 +679,9 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
+        Move::Scaling(lambda, 1.0, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
+        Move::Scaling(lambda, 0.3, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
@@ -691,10 +690,10 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         BranchLengthsHyperScalingMove(1.0, 10);
         BranchLengthsHyperScalingMove(0.3, 10);
 
-        ScalingMove(blhyperinvshape, 1.0, 10,
+        Move::Scaling(blhyperinvshape, 1.0, 10,
             &MultiGeneSingleOmegaModelMaster::BranchLengthsHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(blhyperinvshape, 0.3, 10,
+        Move::Scaling(blhyperinvshape, 0.3, 10,
             &MultiGeneSingleOmegaModelMaster::BranchLengthsHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
 
@@ -734,41 +733,41 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // Nucleotide rates
 
     void MoveNucRatesHyperParameters() {
-        ProfileMove(nucrelratehypercenter, 1.0, 1, 10,
+        Move::Profile(nucrelratehypercenter, 1.0, 1, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.3, 1, 10,
+        Move::Profile(nucrelratehypercenter, 0.3, 1, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.1, 3, 10,
+        Move::Profile(nucrelratehypercenter, 0.1, 3, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 1.0, 10,
+        Move::Scaling(nucrelratehyperinvconc, 1.0, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.3, 10,
+        Move::Scaling(nucrelratehyperinvconc, 0.3, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.03, 10,
+        Move::Scaling(nucrelratehyperinvconc, 0.03, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
 
-        ProfileMove(nucstathypercenter, 1.0, 1, 10,
+        Move::Profile(nucstathypercenter, 1.0, 1, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.3, 1, 10,
+        Move::Profile(nucstathypercenter, 0.3, 1, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.1, 2, 10,
+        Move::Profile(nucstathypercenter, 0.1, 2, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 1.0, 10,
+        Move::Scaling(nucstathyperinvconc, 1.0, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.3, 10,
+        Move::Scaling(nucstathyperinvconc, 0.3, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.03, 10,
+        Move::Scaling(nucstathyperinvconc, 0.03, 10,
             &MultiGeneSingleOmegaModelMaster::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
 
@@ -778,17 +777,17 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
     void MoveNucRates() {
         vector<double> &nucrelrate = (*nucrelratearray)[0];
-        ProfileMove(nucrelrate, 0.1, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.1, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
             &MultiGeneSingleOmegaModelMaster::UpdateNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.03, 3, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
             &MultiGeneSingleOmegaModelMaster::UpdateNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.01, 3, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
             &MultiGeneSingleOmegaModelMaster::UpdateNucMatrix, this);
 
         vector<double> &nucstat = (*nucstatarray)[0];
-        ProfileMove(nucstat, 0.1, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
+        Move::Profile(nucstat, 0.1, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
             &MultiGeneSingleOmegaModelMaster::UpdateNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
+        Move::Profile(nucstat, 0.01, 1, 10, &MultiGeneSingleOmegaModelMaster::NucRatesLogProb,
             &MultiGeneSingleOmegaModelMaster::UpdateNucMatrix, this);
     }
 
@@ -798,14 +797,14 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         omegahypersuffstat.Clear();
         omegahypersuffstat.AddSuffStat(*omegaarray);
 
-        ScalingMove(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
+        Move::Scaling(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
+        Move::Scaling(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(omegahyperinvshape, 1.0, 10,
+        Move::Scaling(omegahyperinvshape, 1.0, 10,
             &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        ScalingMove(omegahyperinvshape, 0.3, 10,
+        Move::Scaling(omegahyperinvshape, 0.3, 10,
             &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
 
@@ -891,7 +890,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
 
 class MultiGeneSingleOmegaModelSlave : public ChainComponent,
-                                       public ProbModel,
                                        public MultiGeneSingleOmegaModelShared {
   private:
     MultiGeneMPIModule mpi;
@@ -1298,7 +1296,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
 
     // slave move
-    double Move() override {
+    double Move() {
         GeneResampleSub(1.0);
 
         int nrep = 30;
@@ -1370,9 +1368,9 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
+        Move::Scaling(lambda, 1.0, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
+        Move::Scaling(lambda, 0.3, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
         branchlength->SetScale(lambda);
     }
@@ -1381,10 +1379,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         BranchLengthsHyperScalingMove(1.0, 10);
         BranchLengthsHyperScalingMove(0.3, 10);
 
-        ScalingMove(blhyperinvshape, 1.0, 10,
+        Move::Scaling(blhyperinvshape, 1.0, 10,
             &MultiGeneSingleOmegaModelSlave::BranchLengthsHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(blhyperinvshape, 0.3, 10,
+        Move::Scaling(blhyperinvshape, 0.3, 10,
             &MultiGeneSingleOmegaModelSlave::BranchLengthsHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
 
@@ -1424,41 +1422,41 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     // Nucleotide rates
 
     void MoveNucRatesHyperParameters() {
-        ProfileMove(nucrelratehypercenter, 1.0, 1, 10,
+        Move::Profile(nucrelratehypercenter, 1.0, 1, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.3, 1, 10,
+        Move::Profile(nucrelratehypercenter, 0.3, 1, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.1, 3, 10,
+        Move::Profile(nucrelratehypercenter, 0.1, 3, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 1.0, 10,
+        Move::Scaling(nucrelratehyperinvconc, 1.0, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.3, 10,
+        Move::Scaling(nucrelratehyperinvconc, 0.3, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.03, 10,
+        Move::Scaling(nucrelratehyperinvconc, 0.03, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
 
-        ProfileMove(nucstathypercenter, 1.0, 1, 10,
+        Move::Profile(nucstathypercenter, 1.0, 1, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.3, 1, 10,
+        Move::Profile(nucstathypercenter, 0.3, 1, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.1, 2, 10,
+        Move::Profile(nucstathypercenter, 0.1, 2, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 1.0, 10,
+        Move::Scaling(nucstathyperinvconc, 1.0, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.3, 10,
+        Move::Scaling(nucstathyperinvconc, 0.3, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.03, 10,
+        Move::Scaling(nucstathyperinvconc, 0.03, 10,
             &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
 
@@ -1468,17 +1466,17 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void MoveNucRates() {
         vector<double> &nucrelrate = (*nucrelratearray)[0];
-        ProfileMove(nucrelrate, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
             &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.03, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
             &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.01, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
             &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
 
         vector<double> &nucstat = (*nucstatarray)[0];
-        ProfileMove(nucstat, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
+        Move::Profile(nucstat, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
             &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
+        Move::Profile(nucstat, 0.01, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
             &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
     }
 
@@ -1488,13 +1486,13 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         omegahypersuffstat.Clear();
         omegahypersuffstat.AddSuffStat(*omegaarray);
 
-        ScalingMove(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(omegahyperinvshape, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahyperinvshape, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        ScalingMove(omegahyperinvshape, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahyperinvshape, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
 
         double alpha = 1.0 / omegahyperinvshape;
