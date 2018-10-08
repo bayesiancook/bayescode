@@ -92,58 +92,8 @@ protected:
     // total logprior for gene-specific variables (here, omega only)
     // summed over all genes
     double GeneLogPrior;
-};
 
-class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
-                                        public ProbModel,
-                                        public ChainComponent {
-    MultiGeneMPIModule mpi;
-
-  public:
-    //-------------------
-    // Construction and allocation
-    //-------------------
-
-    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile),
-          mpi(inmyid, innprocs) {
-
-
-        mpi.AllocateAlignments(datafile);
-
-        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
-        taxonset = mpi.refdata->GetTaxonSet();
-        Ntaxa = mpi.refdata->GetNtaxa();
-
-        // get tree from file (newick format)
-        std::ifstream tree_stream{treefile};
-        NHXParser parser{tree_stream};
-        tree = make_from_parser(parser);
-
-        // // check whether tree and data fits together
-        // tree->RegisterWith(taxonset);
-
-        // tree->SetIndices();
-        // Nbranch = tree->GetNbranch();
-
-        cerr << "number of taxa : " << Ntaxa << '\n';
-        cerr << "number of branches : " << Nbranch << '\n';
-        cerr << "tree and data fit together\n";
-    }
-
-    void start() override {}
-    void move(int) override {
-        SendRunningStatus(1);
-        Move();
-    }
-    void savepoint(int) override {}
-    void end() override {}
-
-    void SendRunningStatus(int status) {
-        MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    }
-
-    void Allocate() {
+    void Allocate(MultiGeneMPIModule& mpi) {
         // Branch lengths
 
         lambda = 10;
@@ -194,6 +144,59 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         lnL = 0;
         GeneLogPrior = 0;
     }
+};
+
+class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
+                                        public ProbModel,
+                                        public ChainComponent {
+    MultiGeneMPIModule mpi;
+
+  public:
+    //-------------------
+    // Construction and allocation
+    //-------------------
+
+    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile),
+          mpi(inmyid, innprocs) {
+
+
+        mpi.AllocateAlignments(datafile);
+
+        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
+        taxonset = mpi.refdata->GetTaxonSet();
+        Ntaxa = mpi.refdata->GetNtaxa();
+
+        // get tree from file (newick format)
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
+
+        // // check whether tree and data fits together
+        // tree->RegisterWith(taxonset);
+
+        // tree->SetIndices();
+        // Nbranch = tree->GetNbranch();
+
+        cerr << "number of taxa : " << Ntaxa << '\n';
+        cerr << "number of branches : " << Nbranch << '\n';
+        cerr << "tree and data fit together\n";
+    }
+
+    void Allocate() { MultiGeneSingleOmegaModelShared::Allocate(mpi); }
+
+    void start() override {}
+    void move(int) override {
+        SendRunningStatus(1);
+        Move();
+    }
+    void savepoint(int) override {}
+    void end() override {}
+
+    void SendRunningStatus(int status) {
+        MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
+
 
     // called upon constructing the model
     // mode == 2: global
@@ -920,56 +923,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void end() override {}
 
     void Allocate() {
-        // Branch lengths
-
-        lambda = 10;
-        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhyperinvshape = 0.1;
-        if (blmode == 2) {
-            lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-            lengthhypersuffstatarray = 0;
-        } else {
-            branchlength->SetAllBranches(1.0 / lambda);
-            branchlengtharray = new GammaWhiteNoiseArray(
-                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
-            lengthpathsuffstatarray = 0;
-            lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
-        }
-
-        // Nucleotide rates
-
-        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
-        nucrelratehyperinvconc = 0.1 / Nrr;
-
-        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
-        nucstathyperinvconc = 0.1 / Nnuc;
-
-        if (nucmode == 2) {
-            nucrelratearray =
-                new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-            nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
-            nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
-        } else {
-            nucrelratearray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-            nucstatarray =
-                new IIDDirichlet(mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
-            nucmatrix = 0;
-        }
-
-        // Omega
-
-        /*
-        omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
-        */
-        omegaarray = new IIDGamma(mpi.GetLocalNgene(), omegahypermean, omegahyperinvshape);
-
-        // Gene processes
-
-        lnL = 0;
-        GeneLogPrior = 0;
-
+        MultiGeneSingleOmegaModelShared::Allocate(mpi);
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
