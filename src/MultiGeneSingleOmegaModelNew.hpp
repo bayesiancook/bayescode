@@ -63,7 +63,133 @@ class MultiGeneSingleOmegaModelShared {
         omegaarray->SetScale(beta);
     }
 
-  protected:
+    //-------------------
+    // Log Prior and Likelihood
+    //-------------------
+
+    double GetLogPrior() const {
+        // gene contributions
+        double total = GeneLogPrior;
+
+        // branch lengths
+        if (blmode == 2) {
+            total += GlobalBranchLengthsLogPrior();
+        } else if (blmode == 1) {
+            total += GeneBranchLengthsHyperLogPrior();
+        } else {
+            // nothing: everything accounted for by gene component
+        }
+
+        // nuc rates
+        if (nucmode == 2) {
+            total += GlobalNucRatesLogPrior();
+        } else if (nucmode == 1) {
+            total += GeneNucRatesHyperLogPrior();
+        } else {
+            // nothing: everything accounted for by gene component
+        }
+
+        if (omegamode == 1) { total += OmegaHyperLogPrior(); }
+        // already accounted for in GeneLogPrior
+        // total += OmegaLogPrior();
+        return total;
+    }
+
+    // Branch lengths
+
+    double LambdaHyperLogPrior() const { return -lambda / 10; }
+
+    double GlobalBranchLengthsLogPrior() const {
+        return LambdaHyperLogPrior() + branchlength->GetLogProb();
+    }
+
+    // exponential of mean 1 for blhyperinvshape
+    double BranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
+
+    double GeneBranchLengthsHyperLogPrior() const {
+        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
+    }
+
+    // Nucleotide rates
+
+    double GlobalNucRatesLogPrior() const {
+        return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
+    }
+
+    // exponential of mean 1 for nucrelrate and nucstat hyper inverse
+    // concentration
+    double GeneNucRatesHyperLogPrior() const {
+        double total = 0;
+        if (nucmode == 1) {
+            total -= nucrelratehyperinvconc;
+            total -= nucstathyperinvconc;
+        }
+        return total;
+    }
+
+    // Omega
+
+    double OmegaHyperLogPrior() const {
+        double total = 0;
+        total -= omegahypermean;
+        total -= omegahyperinvshape;
+        return total;
+    }
+
+    double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
+
+    double GetLogLikelihood() const { return lnL; }
+
+    //-------------------
+    // Suff Stat Log Probs
+    //-------------------
+
+    // Branch lengths
+
+    // suff stat for global branch lengths, as a function of lambda
+    double LambdaHyperSuffStatLogProb() const {
+        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
+    }
+
+    // suff stat for gene-specific branch lengths, as a function of bl
+    // hyperparameters
+    double BranchLengthsHyperSuffStatLogProb() const {
+        return lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
+    }
+
+    // Nucleotide rates
+
+    // suff stat for global nuc rates, as a function of nucleotide matrix
+    // (which itself depends on nucstat and nucrelrate)
+    double NucRatesSuffStatLogProb() const {
+        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
+    }
+
+    // suff stat for gene-specific nuc rates, as a function of nucrate
+    // hyperparameters
+    double NucRatesHyperSuffStatLogProb() const {
+        double total = 0;
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter, 1.0 / nucstathyperinvconc);
+        return total;
+    }
+
+    // Omega
+
+    // suff stats for moving omega hyper parameters
+    double OmegaHyperSuffStatLogProb() const {
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        return omegahypersuffstat.GetLogProb(alpha, beta);
+    }
+
+    CodonStateSpace *GetCodonStateSpace() const {
+        return (CodonStateSpace *)refcodondata->GetStateSpace();
+    }
+
+    const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
+
+protected:
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
@@ -270,12 +396,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         }
     }
 
-    CodonStateSpace *GetCodonStateSpace() const {
-        return (CodonStateSpace *)refcodondata->GetStateSpace();
-    }
-
-    const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
-
     //-------------------
     // Traces and Monitors
     //-------------------
@@ -467,126 +587,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     }
 
     void NoUpdate() {}
-
-    //-------------------
-    // Log Prior and Likelihood
-    //-------------------
-
-    double GetLogPrior() const {
-        // gene contributions
-        double total = GeneLogPrior;
-
-        // branch lengths
-        if (blmode == 2) {
-            total += GlobalBranchLengthsLogPrior();
-        } else if (blmode == 1) {
-            total += GeneBranchLengthsHyperLogPrior();
-        } else {
-            // nothing: everything accounted for by gene component
-        }
-
-        // nuc rates
-        if (nucmode == 2) {
-            total += GlobalNucRatesLogPrior();
-        } else if (nucmode == 1) {
-            total += GeneNucRatesHyperLogPrior();
-        } else {
-            // nothing: everything accounted for by gene component
-        }
-
-        if (omegamode == 1) { total += OmegaHyperLogPrior(); }
-        // already accounted for in GeneLogPrior
-        // total += OmegaLogPrior();
-        return total;
-    }
-
-    // Branch lengths
-
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
-
-    double GlobalBranchLengthsLogPrior() const {
-        return LambdaHyperLogPrior() + branchlength->GetLogProb();
-    }
-
-    // exponential of mean 1 for blhyperinvshape
-    double BranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
-
-    double GeneBranchLengthsHyperLogPrior() const {
-        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
-    }
-
-    // Nucleotide rates
-
-    double GlobalNucRatesLogPrior() const {
-        return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
-    }
-
-    // exponential of mean 1 for nucrelrate and nucstat hyper inverse
-    // concentration
-    double GeneNucRatesHyperLogPrior() const {
-        double total = 0;
-        if (nucmode == 1) {
-            total -= nucrelratehyperinvconc;
-            total -= nucstathyperinvconc;
-        }
-        return total;
-    }
-
-    // Omega
-
-    double OmegaHyperLogPrior() const {
-        double total = 0;
-        total -= omegahypermean;
-        total -= omegahyperinvshape;
-        return total;
-    }
-
-    double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
-
-    double GetLogLikelihood() const { return lnL; }
-
-    //-------------------
-    // Suff Stat Log Probs
-    //-------------------
-
-    // Branch lengths
-
-    // suff stat for global branch lengths, as a function of lambda
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
-    // suff stat for gene-specific branch lengths, as a function of bl
-    // hyperparameters
-    double BranchLengthsHyperSuffStatLogProb() const {
-        return lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
-    }
-
-    // Nucleotide rates
-
-    // suff stat for global nuc rates, as a function of nucleotide matrix
-    // (which itself depends on nucstat and nucrelrate)
-    double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
-    }
-
-    // suff stat for gene-specific nuc rates, as a function of nucrate
-    // hyperparameters
-    double NucRatesHyperSuffStatLogProb() const {
-        double total = 0;
-        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-        total += nucstatsuffstat.GetLogProb(nucstathypercenter, 1.0 / nucstathyperinvconc);
-        return total;
-    }
-
-    // Omega
-
-    // suff stats for moving omega hyper parameters
-    double OmegaHyperSuffStatLogProb() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        return omegahypersuffstat.GetLogProb(alpha, beta);
-    }
 
     //-------------------
     // Log Probs for MH moves
@@ -987,12 +987,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         }
     }
 
-    CodonStateSpace *GetCodonStateSpace() const {
-        return (CodonStateSpace *)refcodondata->GetStateSpace();
-    }
-
-    const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
-
     //-------------------
     // Traces and Monitors
     //-------------------
@@ -1138,126 +1132,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     void NoUpdate() {}
-
-    //-------------------
-    // Log Prior and Likelihood
-    //-------------------
-
-    double GetLogPrior() const {
-        // gene contributions
-        double total = GeneLogPrior;
-
-        // branch lengths
-        if (blmode == 2) {
-            total += GlobalBranchLengthsLogPrior();
-        } else if (blmode == 1) {
-            total += GeneBranchLengthsHyperLogPrior();
-        } else {
-            // nothing: everything accounted for by gene component
-        }
-
-        // nuc rates
-        if (nucmode == 2) {
-            total += GlobalNucRatesLogPrior();
-        } else if (nucmode == 1) {
-            total += GeneNucRatesHyperLogPrior();
-        } else {
-            // nothing: everything accounted for by gene component
-        }
-
-        if (omegamode == 1) { total += OmegaHyperLogPrior(); }
-        // already accounted for in GeneLogPrior
-        // total += OmegaLogPrior();
-        return total;
-    }
-
-    // Branch lengths
-
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
-
-    double GlobalBranchLengthsLogPrior() const {
-        return LambdaHyperLogPrior() + branchlength->GetLogProb();
-    }
-
-    // exponential of mean 1 for blhyperinvshape
-    double BranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
-
-    double GeneBranchLengthsHyperLogPrior() const {
-        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
-    }
-
-    // Nucleotide rates
-
-    double GlobalNucRatesLogPrior() const {
-        return nucrelratearray->GetLogProb() + nucstatarray->GetLogProb();
-    }
-
-    // exponential of mean 1 for nucrelrate and nucstat hyper inverse
-    // concentration
-    double GeneNucRatesHyperLogPrior() const {
-        double total = 0;
-        if (nucmode == 1) {
-            total -= nucrelratehyperinvconc;
-            total -= nucstathyperinvconc;
-        }
-        return total;
-    }
-
-    // Omega
-
-    double OmegaHyperLogPrior() const {
-        double total = 0;
-        total -= omegahypermean;
-        total -= omegahyperinvshape;
-        return total;
-    }
-
-    double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
-
-    double GetLogLikelihood() const { return lnL; }
-
-    //-------------------
-    // Suff Stat Log Probs
-    //-------------------
-
-    // Branch lengths
-
-    // suff stat for global branch lengths, as a function of lambda
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
-    // suff stat for gene-specific branch lengths, as a function of bl
-    // hyperparameters
-    double BranchLengthsHyperSuffStatLogProb() const {
-        return lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
-    }
-
-    // Nucleotide rates
-
-    // suff stat for global nuc rates, as a function of nucleotide matrix
-    // (which itself depends on nucstat and nucrelrate)
-    double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
-    }
-
-    // suff stat for gene-specific nuc rates, as a function of nucrate
-    // hyperparameters
-    double NucRatesHyperSuffStatLogProb() const {
-        double total = 0;
-        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-        total += nucstatsuffstat.GetLogProb(nucstathypercenter, 1.0 / nucstathyperinvconc);
-        return total;
-    }
-
-    // Omega
-
-    // suff stats for moving omega hyper parameters
-    double OmegaHyperSuffStatLogProb() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        return omegahypersuffstat.GetLogProb(alpha, beta);
-    }
 
     //-------------------
     // Log Probs for MH moves
