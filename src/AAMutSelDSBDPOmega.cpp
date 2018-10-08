@@ -2,6 +2,9 @@
 #include <fstream>
 #include "AAMutSelDSBDPOmegaModel.hpp"
 #include "Chain.hpp"
+#include "InferenceAppArgParse.hpp"
+#include "components/ChainDriver.hpp"
+
 using namespace std;
 
 /**
@@ -113,7 +116,53 @@ class AAMutSelDSBDPOmegaChain : public Chain {
     }
 };
 
+class AAMutselArgParse : public BaseArgParse {
+  public:
+    AAMutselArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
+    ValueArg<int> ncat{
+        "", "ncat", "Maximum number of Dirichlet amino acid profiles", false, 100, "int", cmd};
+    ValueArg<int> basencat{"", "basencat", "TODO", false, 1, "int", cmd};
+    // SwitchArg fixomega{"", "fixomega", "TODO", cmd};
+    SwitchArg freeomega{"", "freeomega", "TODO", cmd};
+    SwitchArg gamomega{"", "gamomega", "TODO", cmd};
+    SwitchArg mixomega{"", "mixomega", "TODO", cmd};
+    SwitchArg omegaprior{"", "omegaprior", "TODO", cmd};
+    ValueArg<double> dposompi{"", "dposompi", "TODO", false, 0.1, "double", cmd};
+    ValueArg<double> dposomhypermean{"", "dposomhypermean", "TODO", false, 1.0, "double", cmd};
+    ValueArg<double> dposomhyperinvshape{
+        "", "dposomhyperinvshape", "TODO", false, 0.5, "double", cmd};
+
+    int omegamode() {
+        if (freeomega.getValue()) {
+            return 1;
+        } else {
+            return 3;
+        }
+    }
+};
+
 int main(int argc, char *argv[]) {
+    ChainCmdLine cmd{argc, argv, "aamutsel", ' ', "0.1"};
+
+    ChainDriver *chain_driver = nullptr;
+    AAMutSelDSBDPOmegaModel *model = nullptr;
+
+    if (cmd.resume_from_checkpoint()) {
+        std::ifstream is = cmd.checkpoint_file();
+        chain_driver = new ChainDriver(is);
+        // model = new AAMutSelDSBDPOmegaModel(is); // TODO
+    } else {
+        InferenceAppArgParse args(cmd);
+        AAMutselArgParse aamutsel_args(cmd);
+        cmd.parse();
+        chain_driver =
+            new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
+        model = new AAMutSelDSBDPOmegaModel(args.alignment.getValue(), args.treefile.getValue(),
+            aamutsel_args.omegamode(), aamutsel_args.omegaprior.getValue(),
+            aamutsel_args.ncat.getValue(), aamutsel_args.basencat.getValue());
+    }
+
+
     string name = "";
     AAMutSelDSBDPOmegaChain *chain = 0;
 
