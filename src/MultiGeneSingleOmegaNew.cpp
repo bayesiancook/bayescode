@@ -12,8 +12,7 @@ using std::unique_ptr;
 
 class MultiGeneSingleOmegaArgParse : public BaseArgParse {
   public:
-    MultiGeneSingleOmegaArgParse(ChainCmdLine& cmd) : BaseArgParse(cmd), app(cmd) {}
-    InferenceAppArgParse app;
+    MultiGeneSingleOmegaArgParse(ChainCmdLine& cmd) : BaseArgParse(cmd) {}
     ValueArg<string> omega{"", "omega", "omega hyperparameter, expected syntax: <float>,<float>",
         false, "uninf", "string", cmd};
     ValueArg<string> nucrates{"", "nucrates",
@@ -71,12 +70,13 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         return d;
     } else {
         AppData<D, M> d;
+        InferenceAppArgParse app(cmd);
         MultiGeneSingleOmegaArgParse args(cmd);
         cmd.parse();
         d.chain_driver = unique_ptr<D>(
-            new D(cmd.chain_name(), args.app.every.getValue(), args.app.until.getValue()));
+            new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
         d.model = unique_ptr<M>(
-            new M(args.app.alignment.getValue(), args.app.treefile.getValue(), myid, nprocs));
+            new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs));
 
         double omegahypermean;
         double omegahyperinvshape;
