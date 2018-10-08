@@ -55,12 +55,17 @@ add_executable(readcodonm2a "src/ReadCodonM2a.cpp")
 target_link_libraries(readcodonm2a bayescode_lib)
 target_compile_features(readcodonm2a PRIVATE ${CXX_FEATURES})
 
+# AAMutSel
+add_executable(aamutsel "src/AAMutSelDSBDPOmega.cpp")
+target_link_libraries(aamutsel bayescode_lib)
+target_compile_features(aamutsel PRIVATE ${CXX_FEATURES})
+
 # Diffsel double sparse
 add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
 target_link_libraries(diffseldsparse bayescode_lib)
 target_compile_features(diffseldsparse PRIVATE ${CXX_FEATURES})
 
-# Diffsel double sparse
+# Read single omega
 add_executable(readglobom "src/ReadSingleOmega.cpp")
 target_link_libraries(readglobom bayescode_lib)
 target_compile_features(readglobom PRIVATE ${CXX_FEATURES})
@@ -70,7 +75,7 @@ add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
 target_link_libraries(multigeneglobom bayescode_lib ${MPI_LIBRARIES})
 target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 
-# Multi gene single omega
+# Multi gene single omega (new)
 add_executable(multigeneglobomnew "src/MultiGeneSingleOmegaNew.cpp")
 target_link_libraries(multigeneglobomnew bayescode_lib ${MPI_LIBRARIES})
 target_compile_features(multigeneglobomnew PRIVATE ${CXX_FEATURES})

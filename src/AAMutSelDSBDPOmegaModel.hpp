@@ -1,4 +1,3 @@
-
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "Chrono.hpp"
 #include "CodonSequenceAlignment.hpp"
@@ -12,7 +11,7 @@
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "StickBreakingProcess.hpp"
-#include "Tree.hpp"
+#include "tree/implem.hpp"
 
 /**
  * \brief The mutation-selection model with constant fitness landscape over the
@@ -66,7 +65,7 @@
  */
 
 class AAMutSelDSBDPOmegaModel : public ProbModel {
-    Tree *tree;
+    std::unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
@@ -232,13 +231,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
 
-        // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        Nbranch = tree->nb_nodes() - 1;
 
-        tree->SetIndices();
-        Nbranch = tree->GetNbranch();
+        // not sure this was not needed
+        // tree->SetIndices();
 
         acca1 = acca2 = acca3 = acca4 = 0;
         tota1 = tota2 = tota3 = tota4 = 0;
@@ -387,7 +387,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         // create polyprocess
 
-        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, sitesubmatrixarray);
+        phyloprocess = new PhyloProcess(tree.get(), codondata, branchlength, 0, sitesubmatrixarray);
         phyloprocess->Unfold();
 
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
