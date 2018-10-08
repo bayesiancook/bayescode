@@ -1,4 +1,3 @@
-
 // this is a multigene version of singleomegamodel
 //
 // - branch lengths are shared across genes, and are iid Exponential of rate
@@ -95,23 +94,26 @@ protected:
     double GeneLogPrior;
 };
 
-class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
-                                        public MultiGeneSingleOmegaModelShared,
+class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
                                         public ProbModel,
                                         public ChainComponent {
+    MultiGeneMPIModule mpi;
+
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
     MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneMPIModule(inmyid, innprocs),
-          MultiGeneSingleOmegaModelShared(datafile, intreefile) {
-        AllocateAlignments(datafile);
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile),
+          mpi(inmyid, innprocs) {
 
-        refcodondata = new CodonSequenceAlignment(refdata, true);
-        taxonset = refdata->GetTaxonSet();
-        Ntaxa = refdata->GetNtaxa();
+
+        mpi.AllocateAlignments(datafile);
+
+        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
+        taxonset = mpi.refdata->GetTaxonSet();
+        Ntaxa = mpi.refdata->GetNtaxa();
 
         // get tree from file (newick format)
         std::ifstream tree_stream{treefile};
@@ -153,7 +155,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
         } else {
             branchlength->SetAllBranches(1.0 / lambda);
             branchlengtharray = new GammaWhiteNoiseArray(
-                GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -173,9 +175,9 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
             nucrelratearray = new IIDDirichlet(
-                GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray =
-                new IIDDirichlet(GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+                new IIDDirichlet(mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
         }
 
@@ -185,7 +187,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
         */
-        omegaarray = new IIDGamma(GetLocalNgene(), omegahypermean, omegahyperinvshape);
+        omegaarray = new IIDGamma(mpi.GetLocalNgene(), omegahypermean, omegahyperinvshape);
 
         // Gene processes
 
@@ -223,7 +225,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
     void Update() {
         FastUpdate();
 
-        if (nprocs > 1) {
+        if (mpi.GetNprocs() > 1) {
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
@@ -247,7 +249,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
 
     void PostPred(string name) {
         FastUpdate();
-        if (nprocs > 1) {
+        if (mpi.GetNprocs() > 1) {
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
@@ -361,13 +363,13 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < Ngene; g++) {
+            for (int g = 0; g < mpi.GetNgene(); g++) {
                 double tmp = (*nucrelratearray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= Ngene;
-            var /= Ngene;
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
             var -= mean * mean;
             tot += var;
         }
@@ -385,13 +387,13 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < Ngene; g++) {
+            for (int g = 0; g < mpi.GetNgene(); g++) {
                 double tmp = (*nucstatarray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= Ngene;
-            var /= Ngene;
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
             var -= mean * mean;
             tot += var;
         }
@@ -448,7 +450,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
     }
 
     void TraceOmega(ostream &os) const {
-        for (int gene = 0; gene < Ngene; gene++) { os << omegaarray->GetVal(gene) << '\t'; }
+        for (int gene = 0; gene < mpi.GetNgene(); gene++) { os << omegaarray->GetVal(gene) << '\t'; }
         os << '\n';
         os.flush();
     }
@@ -809,77 +811,80 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneMPIModule,
 
     // Branch lengths
 
-    void SendGlobalBranchLengths() { MasterSendGlobal(*branchlength); }
+    void SendGlobalBranchLengths() { mpi.MasterSendGlobal(*branchlength); }
 
     void SendBranchLengthsHyperParameters() {
-        MasterSendGlobal(*branchlength, blhyperinvshape);
+        mpi.MasterSendGlobal(*branchlength, blhyperinvshape);
     }
 
-    void SendGeneBranchLengths() { MasterSendGeneArray(*branchlengtharray); }
+    void SendGeneBranchLengths() { mpi.MasterSendGeneArray(*branchlengtharray); }
 
-    void ReceiveGeneBranchLengths() { MasterReceiveGeneArray(*branchlengtharray); }
+    void ReceiveGeneBranchLengths() { mpi.MasterReceiveGeneArray(*branchlengtharray); }
 
     void ReceiveBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthpathsuffstatarray);
+        mpi.MasterReceiveAdditive(*lengthpathsuffstatarray);
     }
 
     void ReceiveBranchLengthsHyperSuffStat() {
         lengthhypersuffstatarray->Clear();
-        MasterReceiveAdditive(*lengthhypersuffstatarray);
+        mpi.MasterReceiveAdditive(*lengthhypersuffstatarray);
     }
 
     // Nucleotide Rates
 
     void SendGlobalNucRates() {
-        MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
+        mpi.MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
     }
 
-    void SendGeneNucRates() { MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
+    void SendGeneNucRates() { mpi.MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
 
-    void ReceiveGeneNucRates() { MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
+    void ReceiveGeneNucRates() { mpi.MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
 
     void SendNucRatesHyperParameters() {
-        MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
+        mpi.MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
+        mpi.MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
     }
 
     void ReceiveNucRatesHyperSuffStat() {
         nucrelratesuffstat.Clear();
-        MasterReceiveAdditive(nucrelratesuffstat);
+        mpi.MasterReceiveAdditive(nucrelratesuffstat);
 
         nucstatsuffstat.Clear();
-        MasterReceiveAdditive(nucstatsuffstat);
+        mpi.MasterReceiveAdditive(nucstatsuffstat);
     }
 
     void ReceiveNucPathSuffStat() {
         nucpathsuffstat.Clear();
-        MasterReceiveAdditive(nucpathsuffstat);
+        mpi.MasterReceiveAdditive(nucpathsuffstat);
     }
 
     // omega (and hyperparameters)
 
-    void ReceiveOmega() { MasterReceiveGeneArray(*omegaarray); }
+    void ReceiveOmega() { mpi.MasterReceiveGeneArray(*omegaarray); }
 
-    void SendOmega() { MasterSendGeneArray(*omegaarray); }
+    void SendOmega() { mpi.MasterSendGeneArray(*omegaarray); }
 
     // omega hyperparameters
 
-    void SendOmegaHyperParameters() { MasterSendGlobal(omegahypermean, omegahyperinvshape); }
+    void SendOmegaHyperParameters() { mpi.MasterSendGlobal(omegahypermean, omegahyperinvshape); }
 
     // log probs
 
     void ReceiveLogProbs() {
         GeneLogPrior = 0;
-        MasterReceiveAdditive(GeneLogPrior);
+        mpi.MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
-        MasterReceiveAdditive(lnL);
+        mpi.MasterReceiveAdditive(lnL);
     }
 };
 
 
-class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbModel, public MultiGeneSingleOmegaModelShared {
+class MultiGeneSingleOmegaModelSlave : public ChainComponent,
+                                       public ProbModel,
+                                       public MultiGeneSingleOmegaModelShared {
   private:
+    MultiGeneMPIModule mpi;
     // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel *> geneprocess;
 
@@ -889,13 +894,13 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     //-------------------
 
     MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneMPIModule(inmyid, innprocs),
-          MultiGeneSingleOmegaModelShared(datafile, intreefile) {
-        AllocateAlignments(datafile);
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile),
+          mpi(inmyid, innprocs) {
+        mpi.AllocateAlignments(datafile);
 
-        refcodondata = new CodonSequenceAlignment(refdata, true);
-        taxonset = refdata->GetTaxonSet();
-        Ntaxa = refdata->GetNtaxa();
+        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
+        taxonset = mpi.refdata->GetTaxonSet();
+        Ntaxa = mpi.refdata->GetNtaxa();
 
         // get tree from file (newick format)
         std::ifstream tree_stream{treefile};
@@ -926,7 +931,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
         } else {
             branchlength->SetAllBranches(1.0 / lambda);
             branchlengtharray = new GammaWhiteNoiseArray(
-                GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -946,9 +951,9 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
             nucrelratearray = new IIDDirichlet(
-                GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray =
-                new IIDDirichlet(GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+                new IIDDirichlet(mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
         }
 
@@ -958,16 +963,16 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
         */
-        omegaarray = new IIDGamma(GetLocalNgene(), omegahypermean, omegahyperinvshape);
+        omegaarray = new IIDGamma(mpi.GetLocalNgene(), omegahypermean, omegahyperinvshape);
 
         // Gene processes
 
         lnL = 0;
         GeneLogPrior = 0;
 
-        geneprocess.assign(GetLocalNgene(), (SingleOmegaModel *)0);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene] = new SingleOmegaModel(GetLocalGeneName(gene), treefile);
+        geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+            geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
             geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
             geneprocess[gene]->Allocate();
         }
@@ -1022,7 +1027,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     }
 
     void GeneUpdate() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
     }
 
     void PostPred(string name) {
@@ -1046,8 +1051,8 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     }
 
     void GenePostPred(string name) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->PostPred(name + GetLocalGeneName(gene));
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+            geneprocess[gene]->PostPred(name + mpi.GetLocalGeneName(gene));
         }
     }
 
@@ -1144,13 +1149,13 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < Ngene; g++) {
+            for (int g = 0; g < mpi.GetNgene(); g++) {
                 double tmp = (*nucrelratearray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= Ngene;
-            var /= Ngene;
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
             var -= mean * mean;
             tot += var;
         }
@@ -1168,13 +1173,13 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < Ngene; g++) {
+            for (int g = 0; g < mpi.GetNgene(); g++) {
                 double tmp = (*nucstatarray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= Ngene;
-            var /= Ngene;
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
             var -= mean * mean;
             tot += var;
         }
@@ -1185,7 +1190,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     void Monitor(ostream &os) const {}
 
     void TraceOmega(ostream &os) const {
-        for (int gene = 0; gene < Ngene; gene++) { os << omegaarray->GetVal(gene) << '\t'; }
+        for (int gene = 0; gene < mpi.GetNgene(); gene++) { os << omegaarray->GetVal(gene) << '\t'; }
         os << '\n';
         os.flush();
     }
@@ -1399,11 +1404,11 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     }
 
     void GeneResampleSub(double frac) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) { geneprocess[gene]->ResampleSub(frac); }
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) { geneprocess[gene]->ResampleSub(frac); }
     }
 
     void MoveGeneParameters(int nrep) {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(nrep);
 
             (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
@@ -1419,7 +1424,7 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
     void ResampleGeneBranchLengths() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->ResampleBranchLengths();
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
@@ -1563,74 +1568,74 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     // Branch lengths
 
     void ReceiveGlobalBranchLengths() {
-        SlaveReceiveGlobal(*branchlength);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        mpi.SlaveReceiveGlobal(*branchlength);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengths(*branchlength);
         }
     }
 
     void ReceiveBranchLengthsHyperParameters() {
-        SlaveReceiveGlobal(*branchlength, blhyperinvshape);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        mpi.SlaveReceiveGlobal(*branchlength, blhyperinvshape);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
         }
     }
 
     void ReceiveGeneBranchLengths() {
-        SlaveReceiveGeneArray(*branchlengtharray);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        mpi.SlaveReceiveGeneArray(*branchlengtharray);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
         }
     }
 
     void SendGeneBranchLengths() {
         // in principle, redundant..
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
-        SlaveSendGeneArray(*branchlengtharray);
+        mpi.SlaveSendGeneArray(*branchlengtharray);
     }
 
     void SendBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectLengthSuffStat();
             lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         }
-        SlaveSendAdditive(*lengthpathsuffstatarray);
+        mpi.SlaveSendAdditive(*lengthpathsuffstatarray);
     }
 
     void SendBranchLengthsHyperSuffStat() {
         lengthhypersuffstatarray->Clear();
         lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-        SlaveSendAdditive(*lengthhypersuffstatarray);
+        mpi.SlaveSendAdditive(*lengthhypersuffstatarray);
     }
 
     // Nucleotide Rates
 
     void ReceiveGlobalNucRates() {
-        SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
+        mpi.SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
 
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
         }
     }
 
     void ReceiveGeneNucRates() {
-        SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
+        mpi.SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
 
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        } 
+        }
    }
 
-    void SendGeneNucRates() { SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
+    void SendGeneNucRates() { mpi.SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
 
     void ReceiveNucRatesHyperParameters() {
-        SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
+        mpi.SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
+        mpi.SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
 
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
                 nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
         }
@@ -1639,30 +1644,30 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     void SendNucRatesHyperSuffStat() {
         nucrelratesuffstat.Clear();
         nucrelratearray->AddSuffStat(nucrelratesuffstat);
-        SlaveSendAdditive(nucrelratesuffstat);
+        mpi.SlaveSendAdditive(nucrelratesuffstat);
 
         nucstatsuffstat.Clear();
         nucstatarray->AddSuffStat(nucstatsuffstat);
-        SlaveSendAdditive(nucstatsuffstat);
+        mpi.SlaveSendAdditive(nucstatsuffstat);
     }
 
     void SendNucPathSuffStat() {
         nucpathsuffstat.Clear();
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectNucPathSuffStat();
             nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
         }
 
-        SlaveSendAdditive(nucpathsuffstat);
+        mpi.SlaveSendAdditive(nucpathsuffstat);
     }
 
     // omega (and hyperparameters)
 
-    void SendOmega() { SlaveSendGeneArray(*omegaarray); }
+    void SendOmega() { mpi.SlaveSendGeneArray(*omegaarray); }
 
     void ReceiveOmega() {
-        SlaveReceiveGeneArray(*omegaarray);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        mpi.SlaveReceiveGeneArray(*omegaarray);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetOmega((*omegaarray)[gene]);
         }
     }
@@ -1670,8 +1675,8 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     // omega hyperparameters
 
     void ReceiveOmegaHyperParameters() {
-        SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        mpi.SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
         }
     }
@@ -1681,11 +1686,11 @@ class MultiGeneSingleOmegaModelSlave : public MultiGeneMPIModule, public ProbMod
     void SendLogProbs() {
         GeneLogPrior = 0;
         lnL = 0;
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
         }
-        SlaveSendAdditive(GeneLogPrior);
-        SlaveSendAdditive(lnL);
+        mpi.SlaveSendAdditive(GeneLogPrior);
+        mpi.SlaveSendAdditive(lnL);
     }
 };

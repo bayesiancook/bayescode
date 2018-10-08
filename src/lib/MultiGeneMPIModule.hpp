@@ -182,6 +182,8 @@ class MultiGeneMPIModule {
         }
     }
 
+    SequenceAlignment *refdata; // FIXME: should not be public
+
   protected:
     int myid;
     int nprocs;
@@ -194,5 +196,4 @@ class MultiGeneMPIModule {
     std::vector<string> GeneName;
     std::vector<int> GeneNsite;
 
-    SequenceAlignment *refdata;
 };
