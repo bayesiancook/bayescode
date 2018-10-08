@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
         d.chain_driver->go();
     } else {
         auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
-        // d.chain_driver->add(*d.model);
+        d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }
     MPI_Finalize();
