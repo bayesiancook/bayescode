@@ -36,6 +36,33 @@ class MultiGeneSingleOmegaModelShared {
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
 
+    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
+        omegahypermean = inomegahypermean;
+        omegahyperinvshape = inomegahyperinvshape;
+    }
+
+    // called upon constructing the model
+    // mode == 2: global
+    // mode == 1: gene specific, with hyperparameters estimated across genes
+    // mode == 0: gene-specific, with fixed hyperparameters
+    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode) {
+        blmode = inblmode;
+        nucmode = innucmode;
+        omegamode = inomegamode;
+    }
+
+    void FastUpdate() {
+        branchlength->SetScale(lambda);
+        if (blmode == 1) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
+        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
+        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+
+        double alpha = 1.0 / omegahyperinvshape;
+        double beta = alpha / omegahypermean;
+        omegaarray->SetShape(alpha);
+        omegaarray->SetScale(beta);
+    }
+
   protected:
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
@@ -195,34 +222,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void end() override { SendRunningStatus(0); }
 
     void SendRunningStatus(int status) { MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD); }
-
-
-    // called upon constructing the model
-    // mode == 2: global
-    // mode == 1: gene specific, with hyperparameters estimated across genes
-    // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode) {
-        blmode = inblmode;
-        nucmode = innucmode;
-        omegamode = inomegamode;
-    }
-
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
-    }
-
-    void FastUpdate() {
-        branchlength->SetScale(lambda);
-        if (blmode == 1) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
-    }
 
     void Update() {
         FastUpdate();
@@ -937,33 +936,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
             geneprocess[gene]->Allocate();
         }
-    }
-
-    // called upon constructing the model
-    // mode == 2: global
-    // mode == 1: gene specific, with hyperparameters estimated across genes
-    // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode) {
-        blmode = inblmode;
-        nucmode = innucmode;
-        omegamode = inomegamode;
-    }
-
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
-    }
-
-    void FastUpdate() {
-        branchlength->SetScale(lambda);
-        if (blmode == 1) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
     }
 
     void Update() {
