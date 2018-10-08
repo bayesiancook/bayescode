@@ -4,6 +4,7 @@
 #include "MultiGeneSingleOmegaModelNew.hpp"
 #include "InferenceAppArgParse.hpp"
 #include "components/ChainDriver.hpp"
+#include "components/ConsoleLogger.hpp"
 #include "SlaveChainDriver.hpp"
 
 using namespace std;
@@ -103,12 +104,14 @@ int main(int argc, char *argv[]) {
 
     if(!myid) {
         auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+        ConsoleLogger console_logger;
         d.chain_driver->add(*d.model);
+        d.chain_driver->add(console_logger);
         d.chain_driver->go();
     }
     else {
         auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
-        d.chain_driver->add(*d.model);
+        // d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }
     MPI_Finalize();

@@ -188,10 +188,10 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void start() override {}
     void move(int) override {
         SendRunningStatus(1);
-        Move();
+        // Move();
     }
     void savepoint(int) override {}
-    void end() override {}
+    void end() override { SendRunningStatus(0); }
 
     void SendRunningStatus(int status) {
         MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD);
