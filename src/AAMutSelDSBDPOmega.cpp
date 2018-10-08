@@ -22,9 +22,8 @@ class AAMutSelDSBDPOmegaChain : public Chain {
     string GetModelType() override { return modeltype; }
 
     AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inomegamode, int inomegaprior,
-                            double indposompi, double indposomhypermean,
-                            double indposomhyperinvshape, int inNcat, int inbaseNcat, int inevery,
-                            int inuntil, string inname, int force)
+        double indposompi, double indposomhypermean, double indposomhyperinvshape, int inNcat,
+        int inbaseNcat, int inevery, int inuntil, string inname, int force)
         : modeltype("AAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
           treefile(intreefile),
@@ -83,11 +82,11 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
-            model = new AAMutSelDSBDPOmegaModel(datafile, treefile, omegamode, omegaprior, Ncat,
-                                                baseNcat);
+            model = new AAMutSelDSBDPOmegaModel(
+                datafile, treefile, omegamode, omegaprior, Ncat, baseNcat);
             if (omegaprior == 1) {
-                GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
-                                                     dposomhyperinvshape);
+                GetModel()->SetDPosOmHyperParameters(
+                    dposompi, dposomhypermean, dposomhyperinvshape);
             }
         } else {
             cerr << "-- Error when opening file " << name
@@ -141,9 +140,7 @@ int main(int argc, char *argv[]) {
         int until = -1;
 
         try {
-            if (argc == 1) {
-                throw(0);
-            }
+            if (argc == 1) { throw(0); }
 
             int i = 1;
             while (i < argc) {
@@ -185,16 +182,12 @@ int main(int argc, char *argv[]) {
                     if (i == argc) throw(0);
                     until = atoi(argv[i]);
                 } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
+                    if (i != (argc - 1)) { throw(0); }
                     name = argv[i];
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
+            if ((datafile == "") || (treefile == "") || (name == "")) { throw(0); }
         } catch (...) {
             cerr << "aamutseldp -d <alignment> -t <tree> -ncat <ncat> <chainname> \n";
             cerr << '\n';
@@ -202,8 +195,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new AAMutSelDSBDPOmegaChain(datafile, treefile, omegamode, omegaprior, dposompi,
-                                            dposomhypermean, dposomhyperinvshape, Ncat, baseNcat,
-                                            every, until, name, force);
+            dposomhypermean, dposomhyperinvshape, Ncat, baseNcat, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

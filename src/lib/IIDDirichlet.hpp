@@ -29,9 +29,7 @@ class DirichletSuffStat : public SuffStat {
 
     //! set suff stats to 0
     void Clear() {
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            sumlog[i] = 0;
-        }
+        for (unsigned int i = 0; i < sumlog.size(); i++) { sumlog[i] = 0; }
         n = 0;
     }
 
@@ -43,9 +41,7 @@ class DirichletSuffStat : public SuffStat {
         for (unsigned int i = 0; i < sumlog.size(); i++) {
             if (pi[i] <= 0) {
                 cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
-                for (unsigned int j = 0; j < sumlog.size(); j++) {
-                    cerr << pi[j] << '\t';
-                }
+                for (unsigned int j = 0; j < sumlog.size(); j++) { cerr << pi[j] << '\t'; }
                 cerr << '\n';
                 exit(1);
             }
@@ -56,17 +52,13 @@ class DirichletSuffStat : public SuffStat {
 
     //! add the contribution of one variate (x) to this suffstat
     void AddSuffStat(const double *insumlog, int d) {
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            sumlog[i] += insumlog[i];
-        }
+        for (unsigned int i = 0; i < sumlog.size(); i++) { sumlog[i] += insumlog[i]; }
         n += d;
     }
 
     //! (*this) += from
     void Add(const DirichletSuffStat &from) {
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            sumlog[i] += from.GetSumLog(i);
-        }
+        for (unsigned int i = 0; i < sumlog.size(); i++) { sumlog[i] += from.GetSumLog(i); }
         n += from.GetN();
     }
 
@@ -99,17 +91,13 @@ class DirichletSuffStat : public SuffStat {
 
     //! put object into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            buffer << sumlog[i];
-        }
+        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer << sumlog[i]; }
         buffer << n;
     }
 
     //! read object from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            buffer >> sumlog[i];
-        }
+        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer >> sumlog[i]; }
         buffer >> n;
     }
 
@@ -147,16 +135,12 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
 
     //! set suff stat to 0
     void Clear() {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Clear();
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Clear(); }
     }
 
     //! element-wise addition of array given as argument to this array
     void Add(const DirichletSuffStatArray &from) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].Add(from.GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].Add(from.GetVal(i)); }
     }
 
     //! element-wise addition, operator version
@@ -170,23 +154,17 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
 
     //! put object into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer << GetVal(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
     }
 
     //! read object from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            buffer >> (*this)[i];
-        }
+        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! read a DirichletSuffStatArray from MPI buffer and add it to this
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i] += buffer;
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 
   private:
@@ -203,9 +181,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     //! distribution (center and concentration)
     IIDDirichlet(int insize, const vector<double> &incenter, double inconcentration)
         : SimpleArray<vector<double>>(insize), center(incenter), concentration(inconcentration) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].assign(center.size(), 0);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(center.size(), 0); }
         Sample();
     }
 
@@ -221,9 +197,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     void SetUniform() {
         int dim = GetDim();
         for (int i = 0; i < GetSize(); i++) {
-            for (int k = 0; k < dim; k++) {
-                (*this)[i][k] = 1.0 / dim;
-            }
+            for (int k = 0; k < dim; k++) { (*this)[i][k] = 1.0 / dim; }
         }
     }
 
@@ -241,9 +215,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     //! and concentration parameters
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -254,18 +226,14 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
 
     //! add this array to sufficient statistic given as argument
     void AddSuffStat(DirichletSuffStat &suffstat) const {
-        for (int i = 0; i < GetSize(); i++) {
-            suffstat.AddSuffStat(GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { suffstat.AddSuffStat(GetVal(i)); }
     }
 
     //! add this array to sufficient statistic given as argument -- only entries
     //! with non zero occupancy
     void AddSuffStat(DirichletSuffStat &suffstat, const Selector<int> &occupancy) const {
         for (int i = 0; i < GetSize(); i++) {
-            if (occupancy.GetVal(i)) {
-                suffstat.AddSuffStat(GetVal(i));
-            }
+            if (occupancy.GetVal(i)) { suffstat.AddSuffStat(GetVal(i)); }
         }
     }
 
@@ -281,9 +249,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     //! get mean entropy over all elements of the array
     double GetMeanEntropy() const {
         double mean = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            mean += Random::GetEntropy(GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { mean += Random::GetEntropy(GetVal(i)); }
         mean /= GetSize();
         return mean;
     }
@@ -291,9 +257,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     //! get mean of component k of all elements of the array
     double GetMean(int k) const {
         double m1 = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            m1 += GetVal(i)[k];
-        }
+        for (int i = 0; i < GetSize(); i++) { m1 += GetVal(i)[k]; }
         m1 /= GetSize();
         return m1;
     }
@@ -326,8 +290,8 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
   public:
     //! constructor, parameterized by arrays of center and concentration
     //! parameters (both of same size, which will also be the size of this array)
-    MultiDirichlet(const Selector<vector<double>> *incenterarray,
-                   const Selector<double> *inconcentrationarray)
+    MultiDirichlet(
+        const Selector<vector<double>> *incenterarray, const Selector<double> *inconcentrationarray)
         : SimpleArray<vector<double>>(incenterarray->GetSize()),
           dim(incenterarray->GetVal(0).size()),
           centerarray(incenterarray),
@@ -339,9 +303,7 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
             exit(1);
         }
 
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].assign(dim, 0);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(dim, 0); }
         Sample();
     }
 
@@ -353,9 +315,7 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
           centerarray(0),
           concentrationarray(0),
           weightarray(inweightarray) {
-        for (int i = 0; i < GetSize(); i++) {
-            (*this)[i].assign(dim, 0);
-        }
+        for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(dim, 0); }
         Sample();
     }
 
@@ -372,8 +332,8 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
             }
         } else {
             for (int i = 0; i < GetSize(); i++) {
-                Random::DirichletSample((*this)[i], centerarray->GetVal(i),
-                                        concentrationarray->GetVal(i));
+                Random::DirichletSample(
+                    (*this)[i], centerarray->GetVal(i), concentrationarray->GetVal(i));
             }
         }
     }
@@ -381,9 +341,7 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
     //! get total log prob (sum over all array)
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -393,8 +351,8 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
         if (weightarray) {
             ret = Random::logDirichletDensity(GetVal(i), weightarray->GetVal(i));
         } else {
-            ret = Random::logDirichletDensity(GetVal(i), centerarray->GetVal(i),
-                                              concentrationarray->GetVal(i));
+            ret = Random::logDirichletDensity(
+                GetVal(i), centerarray->GetVal(i), concentrationarray->GetVal(i));
         }
         return ret;
     }
@@ -414,8 +372,8 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
                 if (weightarray) {
                     Random::DirichletSample((*this)[i], weightarray->GetVal(i));
                 } else {
-                    Random::DirichletSample((*this)[i], centerarray->GetVal(i),
-                                            concentrationarray->GetVal(i));
+                    Random::DirichletSample(
+                        (*this)[i], centerarray->GetVal(i), concentrationarray->GetVal(i));
                 }
             }
         }
@@ -424,9 +382,7 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
     //! get mean entropy over all elements of the array
     double GetMeanEntropy() const {
         double mean = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            mean += Random::GetEntropy(GetVal(i));
-        }
+        for (int i = 0; i < GetSize(); i++) { mean += Random::GetEntropy(GetVal(i)); }
         mean /= GetSize();
         return mean;
     }
@@ -434,9 +390,7 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
     //! get mean of component k of all elements of the array
     double GetMean(int k) const {
         double m1 = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            m1 += GetVal(i)[k];
-        }
+        for (int i = 0; i < GetSize(); i++) { m1 += GetVal(i)[k]; }
         m1 /= GetSize();
         return m1;
     }

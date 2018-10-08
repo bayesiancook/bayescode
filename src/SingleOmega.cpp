@@ -1,11 +1,11 @@
 #include <cmath>
 #include <fstream>
+#include "InferenceAppArgParse.hpp"
 #include "SingleOmegaModel.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
-#include "InferenceAppArgParse.hpp"
 
 using namespace std;
 

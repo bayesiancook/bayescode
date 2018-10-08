@@ -2,9 +2,9 @@
 
 #include <string>
 #include <vector>
-#include "Parallel.hpp"
 #include "Array.hpp"
 #include "MPIBuffer.hpp"
+#include "Parallel.hpp"
 #include "SequenceAlignment.hpp"
 
 class MultiGeneMPIModule {
@@ -182,7 +182,7 @@ class MultiGeneMPIModule {
         }
     }
 
-    SequenceAlignment *refdata; // FIXME: should not be public
+    SequenceAlignment *refdata;  // FIXME: should not be public
 
   protected:
     int myid;
@@ -195,5 +195,4 @@ class MultiGeneMPIModule {
     std::vector<int> GeneAlloc;
     std::vector<string> GeneName;
     std::vector<int> GeneNsite;
-
 };

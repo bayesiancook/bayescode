@@ -16,23 +16,17 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile) {
         is >> genename[gene];
         SequenceAlignment *tmpdata = new FileSequenceAlignment(genename[gene]);
 
-        if (!gene) {
-            refdata = tmpdata;
-        }
+        if (!gene) { refdata = tmpdata; }
 
         genesize[gene] = tmpdata->GetNsite() / 3;
         geneweight[gene] = tmpdata->GetNsite() * tmpdata->GetNtaxa();
 
-        if (gene) {
-            delete tmpdata;
-        }
+        if (gene) { delete tmpdata; }
     }
 
     // sort alignments by decreasing size
     std::vector<int> permut(Ngene);
-    for (int gene = 0; gene < Ngene; gene++) {
-        permut[gene] = gene;
-    }
+    for (int gene = 0; gene < Ngene; gene++) { permut[gene] = gene; }
     for (int i = 0; i < Ngene; i++) {
         for (int j = Ngene - 1; j > i; j--) {
             if (geneweight[permut[i]] < geneweight[permut[j]]) {
@@ -45,9 +39,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile) {
     }
 
     int totsize[nprocs];
-    for (int i = 0; i < nprocs; i++) {
-        totsize[i] = 0;
-    }
+    for (int i = 0; i < nprocs; i++) { totsize[i] = 0; }
 
     for (int i = 0; i < Ngene; i++) {
         int gene = permut[i];
@@ -130,9 +122,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile) {
             }
         }
         cerr << '\n';
-        if (i != Ngene) {
-            cerr << "error in mpimodule: non matching number of genes\n";
-        }
+        if (i != Ngene) { cerr << "error in mpimodule: non matching number of genes\n"; }
     } else {
         GeneAlloc.assign(0, 0);
         LocalNgene = SlaveNgene[myid];

@@ -25,9 +25,7 @@ void MultiGeneChain::SavePoint() {
 
 void MultiGeneChain::Reset(int force) {
     size = 0;
-    if (!myid) {
-        MakeFiles(force);
-    }
+    if (!myid) { MakeFiles(force); }
     Save();
 }
 
@@ -39,14 +37,10 @@ void MultiGeneChain::MakeFiles(int force) {
 }
 
 void MultiGeneChain::Move() {
-    for (int i = 0; i < every; i++) {
-        GetMultiGeneModel()->Move();
-    }
+    for (int i = 0; i < every; i++) { GetMultiGeneModel()->Move(); }
     SavePoint();
     Save();
-    if (!myid) {
-        Monitor();
-    }
+    if (!myid) { Monitor(); }
 }
 
 void MultiGeneChain::Start() {
@@ -84,8 +78,6 @@ void MultiGeneChain::Run() {
         ofstream run_os((name + ".run").c_str());
         run_os << 0 << '\n';
     } else {
-        while (SlaveReceiveRunningStatus()) {
-            Move();
-        }
+        while (SlaveReceiveRunningStatus()) { Move(); }
     }
 }
