@@ -969,65 +969,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     //-------------------
-    // Traces and Monitors
-    //-------------------
-
-    void TraceHeader(ostream &os) const {
-        os << "#logprior\tlnL";
-        if (blmode == 2) {
-            os << "\tlength";
-        } else {
-            os << "\tmeanlength\tstdev";
-        }
-        os << "\tmeanomega";
-        os << "\tvaromega";
-        os << "\tomegahypermean\tinvshape";
-        os << "\tstatent";
-        os << "\trrent";
-        if (nucmode != 2) {
-            os << "\tstdevrr\tcenter\thyperinvconc";
-            os << "\tstdevstat\tcenter\thyperinvconc";
-        }
-        os << '\n';
-    }
-
-    void Trace(ostream &os) const {
-        os << GetLogPrior() << '\t';
-        os << GetLogLikelihood();
-
-        if (blmode == 2) {
-            os << '\t' << GetMeanTotalLength();
-        } else {
-            os << '\t' << GetMeanLength();
-            os << '\t' << sqrt(GetVarLength());
-        }
-        os << '\t' << omegaarray->GetMean();
-        os << '\t' << omegaarray->GetVar();
-        os << '\t' << omegahypermean << '\t' << omegahyperinvshape;
-
-        os << '\t' << nucstatarray->GetMeanEntropy();
-        os << '\t' << nucrelratearray->GetMeanEntropy();
-        if (nucmode != 2) {
-            os << '\t' << sqrt(GetVarNucRelRate()) << '\t'
-               << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc;
-            os << '\t' << sqrt(GetVarNucStat()) << '\t' << Random::GetEntropy(nucstathypercenter)
-               << '\t' << nucstathyperinvconc;
-        }
-        os << '\n';
-        os.flush();
-    }
-
-    void Monitor(ostream &os) const {}
-
-    void TraceOmega(ostream &os) const {
-        for (int gene = 0; gene < mpi.GetNgene(); gene++) {
-            os << omegaarray->GetVal(gene) << '\t';
-        }
-        os << '\n';
-        os.flush();
-    }
-
-    //-------------------
     // Moves
     //-------------------
 
