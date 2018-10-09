@@ -280,6 +280,58 @@ class MultiGeneSingleOmegaModelShared {
         return tot;
     }
 
+    template <class C>
+    void declare_model(C &t) {
+        if (blmode == 2) {
+            t.add("lambda", lambda);
+            t.add("branchlength", *branchlength);
+        } else {
+            t.add("lambda", lambda);
+            t.add("branchlength", *branchlength);
+            t.add("blhyperinvshape", blhyperinvshape);
+            t.add("branchlengtharray", *branchlengtharray);
+        }
+
+        t.add("nucrelratehypercenter", nucrelratehypercenter);
+        t.add("nucstathyperinvconc", nucrelratehyperinvconc);
+        t.add("nucstathypercenter", nucstathypercenter);
+        t.add("nucstathyperinvconc", nucstathyperinvconc);
+        t.add("nucrelratearray", *nucrelratearray);
+        t.add("nucstatarray", *nucstatarray);
+
+        t.add("omegahypermean", omegahypermean);
+        t.add("omegahyperinvshape", omegahyperinvshape);
+        t.add("omegaarray", *omegaarray);
+    }
+
+    template <class C>
+    void declare_stats(C &t) {
+        t.add("logprior", this, &MultiGeneSingleOmegaModelShared::GetLogPrior);
+        t.add("lnL", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
+
+        if (blmode == 2) {
+            t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
+        } else {
+            t.add("mean_length", &MultiGeneSingleOmegaModelShared::GetMeanLength);
+            t.add("sd_length", [this](){ return sqrt(GetVarLength()); });
+        }
+        t.add("omegaarray_mean", [this](){ return omegaarray->GetMean(); });
+        t.add("omegaarray_var", [this](){ return omegaarray->GetVar(); });
+        t.add("omegahypermean", omegahypermean);
+        t.add("omegahyperinvshape", omegahyperinvshape);
+
+        t.add("nucstatarray_mean_entropy", [this](){ return nucstatarray->GetMeanEntropy(); });
+        t.add("nucrelratearray_mean_entropy", [this](){ return nucrelratearray->GetMeanEntropy(); });
+        if (nucmode != 2) {
+            t.add("sqrt_varnucrelrate", [this](){ return sqrt(GetVarNucRelRate()); });
+            t.add("nucrelratehypercenter_entropy", [this](){ return Random::GetEntropy(nucrelratehypercenter); });
+            t.add("nucrelratehyperinvconc", nucrelratehyperinvconc);
+            t.add("sd_nucstat", [this](){return sqrt(GetVarNucStat()); });
+            t.add("nucstathypercenter_entropy", Random::GetEntropy(nucstathypercenter));
+            t.add("nucstathyperinvconc", nucstathyperinvconc);
+        }
+    }
+
 protected:
     MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
