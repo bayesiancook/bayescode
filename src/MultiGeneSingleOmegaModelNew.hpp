@@ -204,7 +204,83 @@ class MultiGeneSingleOmegaModelShared {
 
     const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
 
-  protected:
+    // Branch lengths
+
+    double GetMeanTotalLength() const {
+        double tot = 0;
+        for (int j = 0; j < Nbranch; j++) { tot += branchlength->GetVal(j); }
+        return tot;
+    }
+
+    double GetMeanLength() const {
+        if (blmode == 2) {
+            cerr << "error: in getvarlength\n";
+            exit(1);
+        }
+
+        return branchlengtharray->GetMeanLength();
+    }
+
+    double GetVarLength() const {
+        if (blmode == 2) {
+            cerr << "error: in getvarlength\n";
+            exit(1);
+        }
+
+        return branchlengtharray->GetVarLength();
+    }
+
+    // Nucleotide rates
+
+    double GetVarNucRelRate() const {
+        if (nucmode == 2) {
+            cerr << "error in getvarnucrelrate\n";
+            exit(1);
+        }
+
+        double tot = 0;
+        for (int j = 0; j < Nrr; j++) {
+            double mean = 0;
+            double var = 0;
+            for (int g = 0; g < mpi.GetNgene(); g++) {
+                double tmp = (*nucrelratearray)[g][j];
+                mean += tmp;
+                var += tmp * tmp;
+            }
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
+            var -= mean * mean;
+            tot += var;
+        }
+        tot /= Nrr;
+        return tot;
+    }
+
+    double GetVarNucStat() const {
+        if (nucmode == 2) {
+            cerr << "error in getvarnucstat\n";
+            exit(1);
+        }
+
+        double tot = 0;
+        for (int j = 0; j < Nnuc; j++) {
+            double mean = 0;
+            double var = 0;
+            for (int g = 0; g < mpi.GetNgene(); g++) {
+                double tmp = (*nucstatarray)[g][j];
+                mean += tmp;
+                var += tmp * tmp;
+            }
+            mean /= mpi.GetNgene();
+            var /= mpi.GetNgene();
+            var -= mean * mean;
+            tot += var;
+        }
+        tot /= Nnuc;
+        return tot;
+    }
+
+protected:
     MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
@@ -317,6 +393,7 @@ class MultiGeneSingleOmegaModelShared {
         lnL = 0;
         GeneLogPrior = 0;
     }
+
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
@@ -442,82 +519,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         os.flush();
     }
 
-    // Branch lengths
-
-    double GetMeanTotalLength() const {
-        double tot = 0;
-        for (int j = 0; j < Nbranch; j++) { tot += branchlength->GetVal(j); }
-        return tot;
-    }
-
-    double GetMeanLength() const {
-        if (blmode == 2) {
-            cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
-        return branchlengtharray->GetMeanLength();
-    }
-
-    double GetVarLength() const {
-        if (blmode == 2) {
-            cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
-        return branchlengtharray->GetVarLength();
-    }
-
-    // Nucleotide rates
-
-    double GetVarNucRelRate() const {
-        if (nucmode == 2) {
-            cerr << "error in getvarnucrelrate\n";
-            exit(1);
-        }
-
-        double tot = 0;
-        for (int j = 0; j < Nrr; j++) {
-            double mean = 0;
-            double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
-                double tmp = (*nucrelratearray)[g][j];
-                mean += tmp;
-                var += tmp * tmp;
-            }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
-            var -= mean * mean;
-            tot += var;
-        }
-        tot /= Nrr;
-        return tot;
-    }
-
-    double GetVarNucStat() const {
-        if (nucmode == 2) {
-            cerr << "error in getvarnucstat\n";
-            exit(1);
-        }
-
-        double tot = 0;
-        for (int j = 0; j < Nnuc; j++) {
-            double mean = 0;
-            double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
-                double tmp = (*nucstatarray)[g][j];
-                mean += tmp;
-                var += tmp * tmp;
-            }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
-            var -= mean * mean;
-            tot += var;
-        }
-        tot /= Nnuc;
-        return tot;
-    }
-
     void Monitor(ostream &os) const {}
 
     void FromStream(istream &is) {
@@ -616,6 +617,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
+
     //-------------------
     // Moves
     //-------------------
@@ -677,7 +679,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         Move::Scaling(lambda, 1.0, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
-            &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
+                      &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
         Move::Scaling(lambda, 0.3, 10, &MultiGeneSingleOmegaModelMaster::LambdaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
         branchlength->SetScale(lambda);
@@ -1015,82 +1017,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         os.flush();
     }
 
-    // Branch lengths
-
-    double GetMeanTotalLength() const {
-        double tot = 0;
-        for (int j = 0; j < Nbranch; j++) { tot += branchlength->GetVal(j); }
-        return tot;
-    }
-
-    double GetMeanLength() const {
-        if (blmode == 2) {
-            cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
-        return branchlengtharray->GetMeanLength();
-    }
-
-    double GetVarLength() const {
-        if (blmode == 2) {
-            cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
-        return branchlengtharray->GetVarLength();
-    }
-
-    // Nucleotide rates
-
-    double GetVarNucRelRate() const {
-        if (nucmode == 2) {
-            cerr << "error in getvarnucrelrate\n";
-            exit(1);
-        }
-
-        double tot = 0;
-        for (int j = 0; j < Nrr; j++) {
-            double mean = 0;
-            double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
-                double tmp = (*nucrelratearray)[g][j];
-                mean += tmp;
-                var += tmp * tmp;
-            }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
-            var -= mean * mean;
-            tot += var;
-        }
-        tot /= Nrr;
-        return tot;
-    }
-
-    double GetVarNucStat() const {
-        if (nucmode == 2) {
-            cerr << "error in getvarnucstat\n";
-            exit(1);
-        }
-
-        double tot = 0;
-        for (int j = 0; j < Nnuc; j++) {
-            double mean = 0;
-            double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
-                double tmp = (*nucstatarray)[g][j];
-                mean += tmp;
-                var += tmp * tmp;
-            }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
-            var -= mean * mean;
-            tot += var;
-        }
-        tot /= Nnuc;
-        return tot;
-    }
-
     void Monitor(ostream &os) const {}
 
     void TraceOmega(ostream &os) const {
@@ -1102,51 +1028,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     //-------------------
-    // Updates
-    //-------------------
-
-    void UpdateNucMatrix() {
-        nucmatrix->CopyStationary((*nucstatarray)[0]);
-        nucmatrix->CorruptMatrix();
-    }
-
-    void NoUpdate() {}
-
-    //-------------------
-    // Log Probs for MH moves
-    //-------------------
-
-    // Branch lengths
-
-    // logprob for moving lambda
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
-
-    // logprob for moving hyperparameters of gene-specific branchlengths
-    double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
-    }
-
-    // Nucleotide rates
-
-    // log prob for moving nuc rates hyper params
-    double NucRatesHyperLogProb() const {
-        return GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
-    }
-
-    // log prob for moving nuc rates
-    double NucRatesLogProb() const { return GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb(); }
-
-    // Omega
-
-    // log prob for moving omega hyperparameters
-    double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
-
-    //-------------------
     // Moves
     //-------------------
-
 
     // slave move
     double Move() {
@@ -1216,144 +1099,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             geneprocess[gene]->ResampleBranchLengths();
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
-    }
-
-    void MoveLambda() {
-        hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &MultiGeneSingleOmegaModelSlave::LambdaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        branchlength->SetScale(lambda);
-    }
-
-    void MoveBranchLengthsHyperParameters() {
-        BranchLengthsHyperScalingMove(1.0, 10);
-        BranchLengthsHyperScalingMove(0.3, 10);
-
-        Move::Scaling(blhyperinvshape, 1.0, 10,
-            &MultiGeneSingleOmegaModelSlave::BranchLengthsHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(blhyperinvshape, 0.3, 10,
-            &MultiGeneSingleOmegaModelSlave::BranchLengthsHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-
-        branchlengtharray->SetShape(1.0 / blhyperinvshape);
-        MoveLambda();
-    }
-
-    double BranchLengthsHyperScalingMove(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int rep = 0; rep < nrep; rep++) {
-            for (int j = 0; j < Nbranch; j++) {
-                double deltalogprob =
-                    -branchlength->GetLogProb(j) -
-                    lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                        1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
-                double m = tuning * (Random::Uniform() - 0.5);
-                double e = exp(m);
-                (*branchlength)[j] *= e;
-                deltalogprob +=
-                    branchlength->GetLogProb(j) +
-                    lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                        1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
-                deltalogprob += m;
-                int accepted = (log(Random::Uniform()) < deltalogprob);
-                if (accepted) {
-                    nacc++;
-                } else {
-                    (*branchlength)[j] /= e;
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
-    }
-
-    // Nucleotide rates
-
-    void MoveNucRatesHyperParameters() {
-        Move::Profile(nucrelratehypercenter, 1.0, 1, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Profile(nucrelratehypercenter, 0.3, 1, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Profile(nucrelratehypercenter, 0.1, 3, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucrelratehyperinvconc, 1.0, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucrelratehyperinvconc, 0.3, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucrelratehyperinvconc, 0.03, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-
-        Move::Profile(nucstathypercenter, 1.0, 1, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.3, 1, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.1, 2, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 1.0, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.3, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.03, 10,
-            &MultiGeneSingleOmegaModelSlave::NucRatesHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-    }
-
-    void MoveNucRates() {
-        vector<double> &nucrelrate = (*nucrelratearray)[0];
-        Move::Profile(nucrelrate, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
-            &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.03, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
-            &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.01, 3, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
-            &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-
-        vector<double> &nucstat = (*nucstatarray)[0];
-        Move::Profile(nucstat, 0.1, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
-            &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-        Move::Profile(nucstat, 0.01, 1, 10, &MultiGeneSingleOmegaModelSlave::NucRatesLogProb,
-            &MultiGeneSingleOmegaModelSlave::UpdateNucMatrix, this);
-    }
-
-    // Omega
-
-    void MoveOmegaHyperParameters() {
-        omegahypersuffstat.Clear();
-        omegahypersuffstat.AddSuffStat(*omegaarray);
-
-        Move::Scaling(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 1.0, 10,
-            &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 0.3, 10,
-            &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
-            &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
     }
 
     //-------------------
