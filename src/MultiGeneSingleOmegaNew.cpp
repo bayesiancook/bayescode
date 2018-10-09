@@ -73,10 +73,10 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         InferenceAppArgParse app(cmd);
         MultiGeneSingleOmegaArgParse args(cmd);
         cmd.parse();
-        d.chain_driver = unique_ptr<D>(
-            new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
-        d.model = unique_ptr<M>(
-            new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs));
+        d.chain_driver =
+            unique_ptr<D>(new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
+        d.model =
+            unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs));
 
         double omegahypermean;
         double omegahyperinvshape;

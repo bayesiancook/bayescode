@@ -32,7 +32,6 @@ class MultiGeneSingleOmegaModelShared {
           treefile(intreefile),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
-
         // get tree from file (newick format)
         std::ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
