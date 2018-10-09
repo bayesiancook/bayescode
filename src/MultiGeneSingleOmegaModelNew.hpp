@@ -27,8 +27,24 @@ using namespace std;
 
 class MultiGeneSingleOmegaModelShared {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string intreefile)
-        : treefile(intreefile), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+    MultiGeneSingleOmegaModelShared(string datafile, string intreefile, int inmyid, int innprocs)
+        : mpi(inmyid, innprocs),
+          treefile(intreefile),
+          nucrelratesuffstat(Nrr),
+          nucstatsuffstat(Nnuc) {
+
+        // get tree from file (newick format)
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
+
+        Nbranch = tree->nb_nodes() - 1;
+        mpi.AllocateAlignments(datafile);
+
+        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
+        taxonset = mpi.refdata->GetTaxonSet();
+        Ntaxa = mpi.refdata->GetNtaxa();
+
         blmode = 1;
         nucmode = 1;
         omegamode = 1;
@@ -189,7 +205,8 @@ class MultiGeneSingleOmegaModelShared {
 
     const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
 
-protected:
+  protected:
+    MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
@@ -250,7 +267,7 @@ protected:
     // summed over all genes
     double GeneLogPrior;
 
-    void Allocate(MultiGeneMPIModule &mpi) {
+    void Allocate() {
         // Branch lengths
 
         lambda = 10;
@@ -305,38 +322,19 @@ protected:
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
                                         public ChainComponent {
-    MultiGeneMPIModule mpi;
-
   public:
     //-------------------
     // Construction and allocation
     //-------------------
 
     MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile), mpi(inmyid, innprocs) {
-        mpi.AllocateAlignments(datafile);
-
-        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
-        taxonset = mpi.refdata->GetTaxonSet();
-        Ntaxa = mpi.refdata->GetNtaxa();
-
-        // get tree from file (newick format)
-        std::ifstream tree_stream{treefile};
-        NHXParser parser{tree_stream};
-        tree = make_from_parser(parser);
-
-        // // check whether tree and data fits together
-        // tree->RegisterWith(taxonset);
-
-        // tree->SetIndices();
-        // Nbranch = tree->GetNbranch();
-
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs) {
         cerr << "number of taxa : " << Ntaxa << '\n';
         cerr << "number of branches : " << Nbranch << '\n';
         cerr << "tree and data fit together\n";
     }
 
-    void Allocate() { MultiGeneSingleOmegaModelShared::Allocate(mpi); }
+    void Allocate() { MultiGeneSingleOmegaModelShared::Allocate(); }
 
     void start() override {}
     void move(int) override {
@@ -892,7 +890,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                                        public MultiGeneSingleOmegaModelShared {
   private:
-    MultiGeneMPIModule mpi;
     // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel *> geneprocess;
 
@@ -902,24 +899,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     //-------------------
 
     MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile), mpi(inmyid, innprocs) {
-        mpi.AllocateAlignments(datafile);
-
-        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
-        taxonset = mpi.refdata->GetTaxonSet();
-        Ntaxa = mpi.refdata->GetNtaxa();
-
-        // get tree from file (newick format)
-        std::ifstream tree_stream{treefile};
-        NHXParser parser{tree_stream};
-        tree = make_from_parser(parser);
-
-        // // check whether tree and data fits together
-        // tree->RegisterWith(taxonset);
-
-        // tree->SetIndices();
-        // Nbranch = tree->GetNbranch();
-    }
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs) {}
 
     void start() override {}
     void move(int) override { Move(); }
@@ -927,7 +907,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void end() override {}
 
     void Allocate() {
-        MultiGeneSingleOmegaModelShared::Allocate(mpi);
+        MultiGeneSingleOmegaModelShared::Allocate();
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
@@ -1364,9 +1344,11 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
         Move::Scaling(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 1.0, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahyperinvshape, 1.0, 10,
+            &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 0.3, 10, &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
+        Move::Scaling(omegahyperinvshape, 0.3, 10,
+            &MultiGeneSingleOmegaModelSlave::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelSlave::NoUpdate, this);
 
         double alpha = 1.0 / omegahyperinvshape;
