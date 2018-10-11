@@ -23,6 +23,8 @@
 #include "MultiGeneProbModel.hpp"
 #include "SingleOmegaModel.hpp"
 
+using namespace std;
+
 class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
   private:
     std::unique_ptr<const Tree> tree;

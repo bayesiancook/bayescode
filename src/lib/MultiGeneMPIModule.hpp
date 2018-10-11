@@ -26,21 +26,21 @@ class MultiGeneMPIModule {
 
     int GetSlaveNgene(int proc) const {
         if (myid) {
-            cerr << "error: slave in GetSlaveNgene\n";
+            std::cerr << "error: slave in GetSlaveNgene\n";
             exit(1);
         }
         return SlaveNgene[proc];
     }
 
-    string GetLocalGeneName(int gene) const { return GeneName[gene]; }
+    std::string GetLocalGeneName(int gene) const { return GeneName[gene]; }
 
     int GetLocalGeneNsite(int gene) const { return GeneNsite[gene]; }
 
     int GetSlaveTotNsite(int proc) const { return SlaveTotNsite[proc]; }
 
-    void AllocateAlignments(string datafile);
+    void AllocateAlignments(std::string datafile);
 
-    void PrintGeneList(ostream &os) const;
+    void PrintGeneList(std::ostream &os) const;
 
     template <class T>
     void MasterSendGlobal(const T &t) const {
@@ -193,6 +193,6 @@ class MultiGeneMPIModule {
     std::vector<int> SlaveNgene;
     std::vector<int> SlaveTotNsite;
     std::vector<int> GeneAlloc;
-    std::vector<string> GeneName;
+    std::vector<std::string> GeneName;
     std::vector<int> GeneNsite;
 };

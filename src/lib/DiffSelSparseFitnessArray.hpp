@@ -4,6 +4,7 @@
 
 #include "Array.hpp"
 #include "BidimArray.hpp"
+#include "Random.hpp"
 
 /**
  * \brief An array of site- and condition-specific fitness profiles -- sparse
@@ -31,13 +32,13 @@
  * - F_kia = F_1ia^(1-d_kia) * G_kia^(d_kia), for k=2..K-1
  */
 
-class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
+class DiffSelSparseFitnessArray : public SimpleBidimArray<std::vector<double>> {
   public:
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
-    DiffSelSparseFitnessArray(const BidimSelector<vector<double>> &infitness,
-        const BidimSelector<vector<int>> &intoggle, int inNlevel)
-        : SimpleBidimArray<vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-              vector<double>(infitness.GetVal(0, 0).size(), 0)),
+    DiffSelSparseFitnessArray(const BidimSelector<std::vector<double>> &infitness,
+        const BidimSelector<std::vector<int>> &intoggle, int inNlevel)
+        : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
+                                                std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           toggle(intoggle),
           Nlevel(inNlevel) {
@@ -61,7 +62,7 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
 
     //! update of column j (i.e. site j) and condition i
     void Update(int i, int j) {
-        vector<double> &x = (*this)(i, j);
+        std::vector<double> &x = (*this)(i, j);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             int l = 0;
@@ -79,8 +80,8 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
     }
 
   protected:
-    const BidimSelector<vector<double>> &fitness;
-    const BidimSelector<vector<int>> &toggle;
+    const BidimSelector<std::vector<double>> &fitness;
+    const BidimSelector<std::vector<int>> &toggle;
     int Nlevel;
 };
 
@@ -116,14 +117,14 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<vector<double>> {
  * - F_kia = F_1ia^(1-d_kia) * G_kia^(d_kia), for k=2..K-1
  */
 
-class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> {
+class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<double>> {
   public:
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
-    DiffSelDoublySparseFitnessArray(const BidimSelector<vector<double>> &infitness,
-        const Selector<vector<int>> &inmask, const BidimSelector<vector<int>> &intoggle,
+    DiffSelDoublySparseFitnessArray(const BidimSelector<std::vector<double>> &infitness,
+        const Selector<std::vector<int>> &inmask, const BidimSelector<std::vector<int>> &intoggle,
         int inNlevel, double inepsilon)
-        : SimpleBidimArray<vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-              vector<double>(infitness.GetVal(0, 0).size(), 0)),
+        : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
+                                                std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           toggle(intoggle),
@@ -152,7 +153,7 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
 
     //! update of column j (i.e. site j) and condition i
     void Update(int i, int j) {
-        vector<double> &x = (*this)(i, j);
+        std::vector<double> &x = (*this)(i, j);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             if (mask.GetVal(j)[k]) {
@@ -174,9 +175,9 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
     }
 
   protected:
-    const BidimSelector<vector<double>> &fitness;
-    const Selector<vector<int>> &mask;
-    const BidimSelector<vector<int>> &toggle;
+    const BidimSelector<std::vector<double>> &fitness;
+    const Selector<std::vector<int>> &mask;
+    const BidimSelector<std::vector<int>> &toggle;
     int Nlevel;
     double epsilon;
 };
@@ -196,14 +197,14 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<vector<double>> 
  * - F_ia is the actual fitness of amino acid a at site i
  */
 
-class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
+class MutSelSparseFitnessArray : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by input fitness array, mask array and epsilon
     //! (background fitness of low-fitness amino-acids)
-    MutSelSparseFitnessArray(const Selector<vector<double>> &infitness,
-        const Selector<vector<int>> &inmask, double inepsilon)
-        : SimpleArray<vector<double>>(
-              infitness.GetSize(), vector<double>(infitness.GetVal(0).size(), 0)),
+    MutSelSparseFitnessArray(const Selector<std::vector<double>> &infitness,
+        const Selector<std::vector<int>> &inmask, double inepsilon)
+        : SimpleArray<std::vector<double>>(
+              infitness.GetSize(), std::vector<double>(infitness.GetVal(0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           epsilon(inepsilon) {
@@ -223,7 +224,7 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
 
     //! update site i
     void Update(int i) {
-        vector<double> &x = (*this)[i];
+        std::vector<double> &x = (*this)[i];
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             if (mask.GetVal(i)[k]) {
@@ -244,8 +245,8 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
     }
 
   protected:
-    const Selector<vector<double>> &fitness;
-    const Selector<vector<int>> &mask;
+    const Selector<std::vector<double>> &fitness;
+    const Selector<std::vector<int>> &mask;
     double epsilon;
 };
 

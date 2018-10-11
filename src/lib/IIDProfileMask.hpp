@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Array.hpp"
+#include <cmath>
 
 /**
  * \brief An array of IID 0/1 masks of a fixed dimension
@@ -15,12 +16,12 @@
  * of the mask being equal to 1.
  */
 
-class IIDProfileMask : public SimpleArray<vector<int>> {
+class IIDProfileMask : public SimpleArray<std::vector<int>> {
   public:
     //! constructor, parameterized by array size, mask dimension and Bernoulli
     //! probability parameter
     IIDProfileMask(int size, int indim, double pi)
-        : SimpleArray(size, vector<int>(indim, 1)), dim(indim), pi(0.1) {}
+        : SimpleArray(size, std::vector<int>(indim, 1)), dim(indim), pi(0.1) {}
 
     //! return dimension of the masks
     int GetDim() const { return dim; }
@@ -38,10 +39,10 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
     //! return log probability for entry i
     double GetLogProb(int i) const {
         int naa = 0;
-        const vector<int> &x = GetVal(i);
+        const std::vector<int> &x = GetVal(i);
         for (int k = 0; k < GetDim(); k++) { naa += x[k]; }
         if (!naa) {
-            cerr << "error in IIDProfileMask: all entries are null\n";
+            std::cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
         }
         // probability is conditional on at least one entry being 1
@@ -54,7 +55,7 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
     double GetMeanWidth() const {
         double mean = 0;
         for (int i = 0; i < GetSize(); i++) {
-            const vector<int> &x = GetVal(i);
+            const std::vector<int> &x = GetVal(i);
             for (int k = 0; k < GetDim(); k++) { mean += x[k]; }
         }
         mean /= GetSize();
@@ -66,12 +67,12 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
     double pi;
 };
 
-class ProfileMask : public SimpleArray<vector<int>> {
+class ProfileMask : public SimpleArray<std::vector<int>> {
   public:
     //! constructor, parameterized by array size, mask dimension and Bernoulli
     //! probability parameter
-    ProfileMask(int size, const vector<double> &inpi)
-        : SimpleArray(size, vector<int>(inpi.size(), 1)), dim(inpi.size()), pi(inpi) {}
+    ProfileMask(int size, const std::vector<double> &inpi)
+        : SimpleArray(size, std::vector<int>(inpi.size(), 1)), dim(inpi.size()), pi(inpi) {}
 
     //! return dimension of the masks
     int GetDim() const { return dim; }
@@ -88,7 +89,7 @@ class ProfileMask : public SimpleArray<vector<int>> {
         int naa = 0;
         double ret = 0;
         double z = 1.0;
-        const vector<int> &x = GetVal(i);
+        const std::vector<int> &x = GetVal(i);
         for (int k = 0; k < GetDim(); k++) {
             if (x[k]) {
                 ret += log(pi[k]);
@@ -99,7 +100,7 @@ class ProfileMask : public SimpleArray<vector<int>> {
             z *= (1.0 - pi[k]);
         }
         if (!naa) {
-            cerr << "error in IIDProfileMask: all entries are null\n";
+            std::cerr << "error in IIDProfileMask: all entries are null\n";
             exit(1);
         }
         // probability is conditional on at least one entry being 1
@@ -112,7 +113,7 @@ class ProfileMask : public SimpleArray<vector<int>> {
     double GetMeanWidth() const {
         double mean = 0;
         for (int i = 0; i < GetSize(); i++) {
-            const vector<int> &x = GetVal(i);
+            const std::vector<int> &x = GetVal(i);
             for (int k = 0; k < GetDim(); k++) { mean += x[k]; }
         }
         mean /= GetSize();
@@ -121,5 +122,5 @@ class ProfileMask : public SimpleArray<vector<int>> {
 
   private:
     int dim;
-    const vector<double> &pi;
+    const std::vector<double> &pi;
 };

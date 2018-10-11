@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BidimArray.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A BidimArray of iid vectors (of dimension dim) of Bernoulli variables
@@ -19,12 +20,12 @@
  * occurs with condition-dependent probability prob[i].
  */
 
-class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
+class BidimIIDMultiBernoulli : public SimpleBidimArray<std::vector<int>> {
   public:
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, and the probability vector
-    BidimIIDMultiBernoulli(int innrow, int inncol, int indim, const vector<double> &inprob)
-        : SimpleBidimArray(innrow, inncol, vector<int>(indim, 1)), dim(indim), prob(inprob) {
+    BidimIIDMultiBernoulli(int innrow, int inncol, int indim, const std::vector<double> &inprob)
+        : SimpleBidimArray(innrow, inncol, std::vector<int>(indim, 1)), dim(indim), prob(inprob) {
         Sample();
     }
 
@@ -42,7 +43,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     void Reset() {
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
-                vector<int> &x = (*this)(i, j);
+                std::vector<int> &x = (*this)(i, j);
                 for (int k = 0; k < GetDim(); k++) { x[k] = 0; }
             }
         }
@@ -50,7 +51,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
 
     //! sample entry i,j
     void Sample(int i, int j) {
-        vector<int> &x = (*this)(i, j);
+        std::vector<int> &x = (*this)(i, j);
         for (int k = 0; k < GetDim(); k++) { x[k] = (Random::Uniform() < prob[i]); }
     }
 
@@ -58,7 +59,7 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
     //! j
     int GetEventNumber(int i, int j) const {
         int tot = 0;
-        const vector<int> &x = GetVal(i, j);
+        const std::vector<int> &x = GetVal(i, j);
         for (int k = 0; k < GetDim(); k++) { tot += x[k]; }
         return tot;
     }
@@ -75,5 +76,5 @@ class BidimIIDMultiBernoulli : public SimpleBidimArray<vector<int>> {
 
   protected:
     int dim;
-    const vector<double> &prob;
+    const std::vector<double> &prob;
 };

@@ -3,7 +3,6 @@
 
 #include <cstdlib>
 #include <fstream>
-using namespace std;
 
 #include "ProbModel.hpp"
 
@@ -21,12 +20,12 @@ class Sample {
   public:
     //! \brief Constructor, opening chain from file, with specified burn-in,
     //! thinning factor and upper limit.
-    Sample(string filename, int in_burnin = 0, int in_every = 1, int in_until = -1);
+    Sample(std::string filename, int in_burnin = 0, int in_every = 1, int in_until = -1);
 
     virtual ~Sample();
 
     //! \brief return the base name of all files (same as for the Chain class)
-    string GetName() { return name; }
+    std::string GetName() { return name; }
 
     //! \brief get the next point (automatically accounts for subsampling, as
     //! specified by the thinning parameter)
@@ -45,7 +44,7 @@ class Sample {
     virtual ProbModel *GetModel() { return model; }
 
     //! \brief return model type (see Chain)
-    virtual string GetModelType() = 0;
+    virtual std::string GetModelType() = 0;
 
     //! \brief create MCMC sample
     virtual void Open() = 0;
@@ -56,7 +55,7 @@ class Sample {
     int size;  // sample size (calculated from parameters above)
 
   protected:
-    ifstream *chain_is;
+    std::ifstream *chain_is;
     int chainevery;  // chain's saving frequency
     int chainuntil;  // chain's intended size of the run (number of saved points)
     int chainsize;   // chain's current size
@@ -67,7 +66,7 @@ class Sample {
     int until;   // reading chain until this point
     int currentpoint;
     ProbModel *model;  // the model
-    string name;       // the name of the chain in the filesystem
+    std::string name;       // the name of the chain in the filesystem
 };
 
 #endif  // SAMPLE_H

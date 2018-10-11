@@ -5,8 +5,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-
 class MPIBuffer {
   public:
     MPIBuffer(unsigned int insize) : buffer(0), size(insize), it(0) { buffer = new double[insize]; }
@@ -61,12 +59,12 @@ class MPIBuffer {
         i = (int)d;
     }
 
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         for (unsigned int i = 0; i < size; i++) { os << buffer[i] << '\t'; }
         os << '\n';
     }
 
-    void FromStream(istream &is) {
+    void FromStream(std::istream &is) {
         for (unsigned int i = 0; i < size; i++) { is >> buffer[i]; }
     }
 
@@ -89,7 +87,7 @@ template <>
 unsigned int MPISize(const int &i);
 
 template <class T>
-unsigned int MPISize(const vector<T> &t) {
+unsigned int MPISize(const std::vector<T> &t) {
     return t.size() * MPISize(t[0]);
 }
 
@@ -108,13 +106,13 @@ const MPIBuffer &operator>>(const MPIBuffer &buffer, T &t) {
 }
 
 template <class T>
-MPIBuffer &operator<<(MPIBuffer &buffer, const vector<T> &v) {
+MPIBuffer &operator<<(MPIBuffer &buffer, const std::vector<T> &v) {
     for (unsigned int i = 0; i < v.size(); i++) { buffer << v[i]; }
     return buffer;
 }
 
 template <class T>
-const MPIBuffer &operator>>(const MPIBuffer &buffer, vector<T> &v) {
+const MPIBuffer &operator>>(const MPIBuffer &buffer, std::vector<T> &v) {
     for (unsigned int i = 0; i < v.size(); i++) { buffer >> v[i]; }
     return buffer;
 }
@@ -142,8 +140,8 @@ template <>
 int &operator+=(int &i, const MPIBuffer &buffer);
 
 template <>
-vector<int> &operator+=(vector<int> &v, const MPIBuffer &buffer);
+std::vector<int> &operator+=(std::vector<int> &v, const MPIBuffer &buffer);
 template <>
-vector<double> &operator+=(vector<double> &v, const MPIBuffer &buffer);
+std::vector<double> &operator+=(std::vector<double> &v, const MPIBuffer &buffer);
 
 #endif

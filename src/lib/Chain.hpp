@@ -83,7 +83,7 @@ class Chain {
 
     //! return chain name: i.e. base name for all files corresponding to that
     //! chain
-    string GetName() { return name; }
+    std::string GetName() { return name; }
 
     //! return pointer to underlying model
     ProbModel *GetModel() { return model; }
@@ -103,7 +103,7 @@ class Chain {
     //! pointer to the underlying model
     ProbModel *model;
     //! base name for all files corresponding to that chain
-    string name;
+    std::string name;
     //! flag: if 1, then complete state is saved at each interation in .chain file
     int saveall;
 };

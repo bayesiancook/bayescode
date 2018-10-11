@@ -4,6 +4,8 @@
 
 #include <fstream>
 
+using namespace std;
+
 void MultiGeneMPIModule::AllocateAlignments(string datafile) {
     ifstream is(datafile.c_str());
     is >> Ngene;

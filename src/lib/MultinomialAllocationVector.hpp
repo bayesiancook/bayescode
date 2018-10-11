@@ -17,7 +17,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
   public:
     //! Constructor (parameterized by number of items (N) and mixture weights
     //! (vector of dimension K)
-    MultinomialAllocationVector(int insize, const vector<double> &inweight)
+    MultinomialAllocationVector(int insize, const std::vector<double> &inweight)
         : SimpleArray<int>(insize), weight(inweight) {
         SampleAlloc();
     }
@@ -33,13 +33,13 @@ class MultinomialAllocationVector : public SimpleArray<int> {
 
     //! resample allocation of item i based on an externally given vector of
     //! posterior probabilities
-    void GibbsResample(int i, const vector<double> &postprob) {
+    void GibbsResample(int i, const std::vector<double> &postprob) {
         (*this)[i] = Random::DrawFromDiscreteDistribution(postprob);
     }
 
     //! resample all allocations based on an externally given array of
     //! item-specific posterior probabilities
-    void GibbsResample(const vector<vector<double>> &postprobarray) {
+    void GibbsResample(const std::vector<std::vector<double>> &postprobarray) {
         for (int i = 0; i < GetSize(); i++) {
             (*this)[i] = Random::DrawFromDiscreteDistribution(postprobarray[i]);
         }
@@ -48,11 +48,11 @@ class MultinomialAllocationVector : public SimpleArray<int> {
     //! apply permutation to allocation vector
     void Permute(const Selector<int> &permut) override {
         if (permut.GetSize() != int(weight.size())) {
-            cerr << "error in MultinomialAllocationVector::Permute: non matching "
+            std::cerr << "error in MultinomialAllocationVector::Permute: non matching "
                     "array size\n";
             exit(1);
         }
-        vector<int> invpermut(permut.GetSize(), 0);
+        std::vector<int> invpermut(permut.GetSize(), 0);
         for (int k = 0; k < permut.GetSize(); k++) { invpermut[permut.GetVal(k)] = k; }
         for (int i = 0; i < GetSize(); i++) { (*this)[i] = invpermut[(*this)[i]]; }
     }
@@ -69,7 +69,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
     }
 
   private:
-    const vector<double> &weight;
+    const std::vector<double> &weight;
 };
 
 #endif

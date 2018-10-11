@@ -316,5 +316,5 @@ class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
   private:
     const Tree &tree;
     int size;
-    vector<PoissonSuffStatBranchArray *> array;
+    std::vector<PoissonSuffStatBranchArray *> array;
 };

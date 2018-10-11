@@ -37,12 +37,12 @@ class DirichletSuffStat : public SuffStat {
     int GetDim() { return (int)sumlog.size(); }
 
     //! add the contribution of one variate (x) to this suffstat
-    void AddSuffStat(const vector<double> &pi) {
+    void AddSuffStat(const std::vector<double> &pi) {
         for (unsigned int i = 0; i < sumlog.size(); i++) {
             if (pi[i] <= 0) {
-                cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
-                for (unsigned int j = 0; j < sumlog.size(); j++) { cerr << pi[j] << '\t'; }
-                cerr << '\n';
+                std::cerr << "error: negative pi in DirichletSuffStat: " << pi[i] << '\n';
+                for (unsigned int j = 0; j < sumlog.size(); j++) { std::cerr << pi[j] << '\t'; }
+                std::cerr << '\n';
                 exit(1);
             }
             sumlog[i] += log(pi[i]);
@@ -77,7 +77,7 @@ class DirichletSuffStat : public SuffStat {
 
     //! return logprob, as a function of center (renormalized alpha) and
     //! concentration (sum of the alpha vector)
-    double GetLogProb(const vector<double> &center, double concentration) const {
+    double GetLogProb(const std::vector<double> &center, double concentration) const {
         double tot = n * Random::logGamma(concentration);
         for (unsigned int i = 0; i < sumlog.size(); i++) {
             tot += -n * Random::logGamma(concentration * center[i]) +
@@ -114,7 +114,7 @@ class DirichletSuffStat : public SuffStat {
     }
 
   private:
-    vector<double> sumlog;
+    std::vector<double> sumlog;
     int n;
 };
 
@@ -175,12 +175,12 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
  * \brief An array of IID Dirichlet random variables
  */
 
-class IIDDirichlet : public SimpleArray<vector<double>> {
+class IIDDirichlet : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by array size and parameters of the Dirichlet
     //! distribution (center and concentration)
-    IIDDirichlet(int insize, const vector<double> &incenter, double inconcentration)
-        : SimpleArray<vector<double>>(insize), center(incenter), concentration(inconcentration) {
+    IIDDirichlet(int insize, const std::vector<double> &incenter, double inconcentration)
+        : SimpleArray<std::vector<double>>(insize), center(incenter), concentration(inconcentration) {
         for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(center.size(), 0); }
         Sample();
     }
@@ -188,7 +188,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     ~IIDDirichlet() {}
 
     //! set center of the Dirichlet distribution
-    void SetCenter(const vector<double> &incenter) { center = incenter; }
+    void SetCenter(const std::vector<double> &incenter) { center = incenter; }
 
     //! set concentration of the Dirichlet distribution
     void SetConcentration(double inconcentration) { concentration = inconcentration; }
@@ -277,7 +277,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     }
 
   protected:
-    vector<double> center;
+    std::vector<double> center;
     double concentration;
 };
 
@@ -286,19 +286,19 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
  * concentration parameters
  */
 
-class MultiDirichlet : public SimpleArray<vector<double>> {
+class MultiDirichlet : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by arrays of center and concentration
     //! parameters (both of same size, which will also be the size of this array)
     MultiDirichlet(
-        const Selector<vector<double>> *incenterarray, const Selector<double> *inconcentrationarray)
-        : SimpleArray<vector<double>>(incenterarray->GetSize()),
+        const Selector<std::vector<double>> *incenterarray, const Selector<double> *inconcentrationarray)
+        : SimpleArray<std::vector<double>>(incenterarray->GetSize()),
           dim(incenterarray->GetVal(0).size()),
           centerarray(incenterarray),
           concentrationarray(inconcentrationarray),
           weightarray(0) {
         if (centerarray->GetSize() != concentrationarray->GetSize()) {
-            cerr << "error in multi dirichlet: center and concentration arrays "
+            std::cerr << "error in multi dirichlet: center and concentration arrays "
                     "should have same size\n";
             exit(1);
         }
@@ -309,8 +309,8 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
 
     //! constructor, parameterized by arrays of center and concentration
     //! parameters (both of same size, which will also be the size of this array)
-    MultiDirichlet(const Selector<vector<double>> *inweightarray)
-        : SimpleArray<vector<double>>(inweightarray->GetSize()),
+    MultiDirichlet(const Selector<std::vector<double>> *inweightarray)
+        : SimpleArray<std::vector<double>>(inweightarray->GetSize()),
           dim(inweightarray->GetVal(0).size()),
           centerarray(0),
           concentrationarray(0),
@@ -411,9 +411,9 @@ class MultiDirichlet : public SimpleArray<vector<double>> {
 
   protected:
     int dim;
-    const Selector<vector<double>> *centerarray;
+    const Selector<std::vector<double>> *centerarray;
     const Selector<double> *concentrationarray;
-    const Selector<vector<double>> *weightarray;
+    const Selector<std::vector<double>> *weightarray;
 };
 
 #endif

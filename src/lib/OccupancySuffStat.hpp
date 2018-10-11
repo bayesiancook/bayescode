@@ -40,7 +40,7 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
     //! implement additive behavior of OccupancySuffStat
     void Add(const OccupancySuffStat &from) {
         if (from.GetSize() != GetSize()) {
-            cerr << "error in OccupancySuffStat::Add: non matching array size\n";
+            std::cerr << "error in OccupancySuffStat::Add: non matching array size\n";
             exit(1);
         }
         for (int i = 0; i < GetSize(); i++) { (*this)[i] += from.GetVal(i); }

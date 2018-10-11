@@ -27,13 +27,13 @@ class Selector;
 template <class T>
 class Array;
 template <class T>
-ostream &operator<<(ostream &os, const vector<T> &array);
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &array);
 template <class T>
-istream &operator>>(istream &is, vector<T> &array);
+std::istream &operator>>(std::istream &is, std::vector<T> &array);
 template <class T>
-ostream &operator<<(ostream &os, const Selector<T> &array);
+std::ostream &operator<<(std::ostream &os, const Selector<T> &array);
 template <class T>
-istream &operator>>(istream &is, Array<T> &array);
+std::istream &operator>>(std::istream &is, Array<T> &array);
 
 template <class T>
 class Selector {
@@ -54,7 +54,7 @@ class Selector {
     }
 
     //! write array into generic output stream
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetSize(); i++) { os << this->GetVal(i) << '\t'; }
     }
 };
@@ -84,7 +84,7 @@ class Array : public Selector<T> {
     //! element-by-element copy (arrays should be of same size)
     void Copy(const Selector<T> &from) {
         if (this->GetSize() != from.GetSize()) {
-            cerr << "error: arrays do not have same size\n";
+            std::cerr << "error: arrays do not have same size\n";
             exit(1);
         }
         for (int i = 0; i < this->GetSize(); i++) { (*this)[i] = from.GetVal(i); }
@@ -96,7 +96,7 @@ class Array : public Selector<T> {
     }
 
     //! get array from generic input stream
-    void FromStream(istream &is) {
+    void FromStream(std::istream &is) {
         for (int i = 0; i < this->GetSize(); i++) { is >> (*this)[i]; }
     }
 };
@@ -105,7 +105,7 @@ class Array : public Selector<T> {
  * \brief template for output stream operator for a std::vector<T>
  */
 template <class T>
-ostream &operator<<(ostream &os, const vector<T> &array) {
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &array) {
     for (unsigned int i = 0; i < array.size(); i++) { os << array[i] << '\t'; }
     return os;
 }
@@ -114,7 +114,7 @@ ostream &operator<<(ostream &os, const vector<T> &array) {
  * \brief template for input stream operator for a std::vector<T>
  */
 template <class T>
-istream &operator>>(istream &is, vector<T> &array) {
+std::istream &operator>>(std::istream &is, std::vector<T> &array) {
     for (unsigned int i = 0; i < array.size(); i++) { is >> array[i]; }
     return is;
 }
@@ -125,7 +125,7 @@ istream &operator>>(istream &is, vector<T> &array) {
  * in practice, calls the ToStream method of Selector<T>
  */
 template <class T>
-ostream &operator<<(ostream &os, const Selector<T> &array) {
+std::ostream &operator<<(std::ostream &os, const Selector<T> &array) {
     array.ToStream(os);
     return os;
 }
@@ -137,7 +137,7 @@ ostream &operator<<(ostream &os, const Selector<T> &array) {
  */
 
 template <class T>
-istream &operator>>(istream &is, Array<T> &array) {
+std::istream &operator>>(std::istream &is, Array<T> &array) {
     array.FromStream(is);
     return is;
 }
@@ -197,17 +197,17 @@ class SimpleArray : public Array<T> {
 
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
-    const vector<T> &GetArray() const { return array; }
+    const std::vector<T> &GetArray() const { return array; }
 
     //! Apply a permutation over the arguments, such that entry indexed by i after
     //! the call is equal to entry formely indexed by permut[i]
     virtual void Permute(const Selector<int> &permut) {
         if (permut.GetSize() != GetSize()) {
-            cerr << "error in Array<T>::Permute: non matching array size\n";
+            std::cerr << "error in Array<T>::Permute: non matching array size\n";
             exit(1);
         }
 
-        vector<T> tmp(GetSize(), GetVal(0));
+        std::vector<T> tmp(GetSize(), GetVal(0));
         for (int i = 0; i < GetSize(); i++) { tmp[i] = GetVal(permut.GetVal(i)); }
         for (int i = 0; i < GetSize(); i++) { (*this)[i] = tmp[i]; }
     }
@@ -220,7 +220,7 @@ class SimpleArray : public Array<T> {
     }
 
   protected:
-    vector<T> array;
+    std::vector<T> array;
 };
 
 /**

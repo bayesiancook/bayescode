@@ -56,7 +56,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
     //! update only those matrices for which occupancy[i] != 0
     void UpdateCodonMatrices(const Selector<int> &occupancy) {
         if (occupancy.GetSize() != GetSize()) {
-            cerr << "error in UpdateCodonMatrices: occupancy vector size does not "
+            std::cerr << "error in UpdateCodonMatrices: occupancy vector size does not "
                     "match array size\n";
             exit(1);
         }
@@ -83,7 +83,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
     const CodonStateSpace *codonstatespace;
     const SubMatrix *nucmatrix;
     const Selector<double> *omegaarray;
-    vector<MGOmegaCodonSubMatrix *> matrixarray;
+    std::vector<MGOmegaCodonSubMatrix *> matrixarray;
 };
 
 /**
@@ -100,7 +100,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     //! constructor with a nucleotide matrix, an array of amino-acid fitness
     //! profiles and a single omega value (for all matrices)
     AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace *incodonstatespace,
-        const SubMatrix *innucmatrix, const Selector<vector<double>> *inaafitnessarray,
+        const SubMatrix *innucmatrix, const Selector<std::vector<double>> *inaafitnessarray,
         double inomega)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
@@ -115,7 +115,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     //! profiles and an array of omega value (one for each entry of the matrix
     //! array)
     AAMutSelOmegaCodonSubMatrixArray(const CodonStateSpace *incodonstatespace,
-        const SubMatrix *innucmatrix, const Selector<vector<double>> *inaafitnessarray,
+        const SubMatrix *innucmatrix, const Selector<std::vector<double>> *inaafitnessarray,
         const Selector<double> *inomegaarray)
         : codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
@@ -123,7 +123,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
           omegaarray(inomegaarray),
           matrixarray(inomegaarray->GetSize()) {
         if (aafitnessarray->GetSize() != omegaarray->GetSize()) {
-            cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: "
+            std::cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: "
                     "arrays of aafitness and omega values should be of same size\n";
             exit(1);
         }
@@ -138,7 +138,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     //! makes an error (with exit) if this is not the case.
     void SetOmega(double inomega) {
         if (omegaarray) {
-            cerr << "error in AAMutSelOmegaCodonSubMatrixArray::SetOmega\n";
+            std::cerr << "error in AAMutSelOmegaCodonSubMatrixArray::SetOmega\n";
             exit(1);
         }
         omega = inomega;
@@ -207,10 +207,10 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
 
     const CodonStateSpace *codonstatespace;
     const SubMatrix *nucmatrix;
-    const Selector<vector<double>> *aafitnessarray;
+    const Selector<std::vector<double>> *aafitnessarray;
     double omega;
     const Selector<double> *omegaarray;
-    vector<AAMutSelOmegaCodonSubMatrix *> matrixarray;
+    std::vector<AAMutSelOmegaCodonSubMatrix *> matrixarray;
 };
 
 #endif

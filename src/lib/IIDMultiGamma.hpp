@@ -3,13 +3,14 @@
 #define IIDMULTIGAMMA_H
 
 #include "BidimArray.hpp"
+#include "Random.hpp"
 
-class IIDMultiGamma : public SimpleArray<vector<double>> {
+class IIDMultiGamma : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, shape parameter and center (frequency vector)
-    IIDMultiGamma(int insize, int indim, double inshape, const vector<double> &incenter)
-        : SimpleArray(insize, vector<double>(indim, 1.0 / indim)),
+    IIDMultiGamma(int insize, int indim, double inshape, const std::vector<double> &incenter)
+        : SimpleArray(insize, std::vector<double>(indim, 1.0 / indim)),
           dim(indim),
           shape(inshape),
           center(incenter) {
@@ -28,14 +29,14 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
     }
 
     void Sample(int i) {
-        vector<double> &x = (*this)[i];
+        std::vector<double> &x = (*this)[i];
         for (int k = 0; k < GetDim(); k++) { x[k] = Random::sGamma(shape * center[k]); }
     }
 
-    void PriorResample(const Selector<vector<int>> &mask, double min = 0) {
+    void PriorResample(const Selector<std::vector<int>> &mask, double min = 0) {
         for (int i = 0; i < GetSize(); i++) {
-            vector<double> &x = (*this)[i];
-            const vector<int> &s = mask.GetVal(i);
+            std::vector<double> &x = (*this)[i];
+            const std::vector<int> &s = mask.GetVal(i);
             for (int k = 0; k < GetDim(); k++) {
                 if (!s[k]) {
                     x[k] = Random::sGamma(shape * center[k]);
@@ -47,7 +48,7 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
 
     void SetUniform() {
         for (int i = 0; i < GetSize(); i++) {
-            vector<double> &x = (*this)[i];
+            std::vector<double> &x = (*this)[i];
             for (int k = 0; k < GetDim(); k++) { x[k] = 1.0; }
         }
     }
@@ -61,7 +62,7 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
 
     //! return log prob for entry i
     double GetLogProb(int i) const {
-        const vector<double> &x = GetVal(i);
+        const std::vector<double> &x = GetVal(i);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             double alpha = shape * center[k];
@@ -70,8 +71,8 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
         return total;
     }
 
-    double GetLogProb(int i, const vector<int> &toggle) const {
-        const vector<double> &x = GetVal(i);
+    double GetLogProb(int i, const std::vector<int> &toggle) const {
+        const std::vector<double> &x = GetVal(i);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             if (toggle[k]) {
@@ -85,7 +86,7 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
   protected:
     int dim;
     double shape;
-    const vector<double> &center;
+    const std::vector<double> &center;
 };
 
 /**
@@ -119,13 +120,13 @@ class IIDMultiGamma : public SimpleArray<vector<double>> {
  * turns out to be more practical.
  */
 
-class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
+class BidimIIDMultiGamma : public SimpleBidimArray<std::vector<double>> {
   public:
     //! constructor, parameterized by number of rows, of columns, dimension of the
     //! vectors, shape parameter and center (frequency vector)
     BidimIIDMultiGamma(
-        int innrow, int inncol, int indim, double inshape, const vector<double> &incenter)
-        : SimpleBidimArray(innrow, inncol, vector<double>(indim, 1.0 / indim)),
+        int innrow, int inncol, int indim, double inshape, const std::vector<double> &incenter)
+        : SimpleBidimArray(innrow, inncol, std::vector<double>(indim, 1.0 / indim)),
           dim(indim),
           shape(inshape),
           center(incenter) {
@@ -147,7 +148,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
 
     //! sample entry i,j
     void Sample(int i, int j) {
-        vector<double> &x = (*this)(i, j);
+        std::vector<double> &x = (*this)(i, j);
         for (int k = 0; k < GetDim(); k++) {
             x[k] = Random::sGamma(shape * center[k]);
             // x[k] = Random::Gamma(shape,shape/center[k]);
@@ -168,7 +169,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
     double GetRelVar(int k, int j) const {
         double mean = 0;
         double var = 0;
-        const vector<double> &x = GetVal(k, j);
+        const std::vector<double> &x = GetVal(k, j);
         for (int l = 0; l < GetDim(); l++) {
             mean += x[l];
             var += x[l] * x[l];
@@ -203,7 +204,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
 
     //! return total log prob for column j, only for those entries that are
     //! flagged
-    double GetColumnLogProb(int j, const vector<int> &flag) const {
+    double GetColumnLogProb(int j, const std::vector<int> &flag) const {
         double total = 0;
         for (int i = 0; i < GetNrow(); i++) {
             if (flag[i]) { total += GetLogProb(i, j); }
@@ -213,7 +214,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
 
     //! return log prob for entry i,j
     double GetLogProb(int i, int j) const {
-        const vector<double> &x = GetVal(i, j);
+        const std::vector<double> &x = GetVal(i, j);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             double alpha = shape * center[k];
@@ -226,8 +227,8 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
 
     //! return logprob for entry i,j, only for those amino-acids for which
     //! toggle[k] != 0
-    double GetLogProb(int i, int j, const vector<int> &toggle) const {
-        const vector<double> &x = GetVal(i, j);
+    double GetLogProb(int i, int j, const std::vector<int> &toggle) const {
+        const std::vector<double> &x = GetVal(i, j);
         double total = 0;
         for (int k = 0; k < GetDim(); k++) {
             if (toggle[k]) {
@@ -243,7 +244,7 @@ class BidimIIDMultiGamma : public SimpleBidimArray<vector<double>> {
   protected:
     int dim;
     double shape;
-    const vector<double> &center;
+    const std::vector<double> &center;
 };
 
 #endif

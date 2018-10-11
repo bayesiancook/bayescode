@@ -1,6 +1,10 @@
 #ifndef WHITENOISE_H
 #define WHITENOISE_H
 
+#include "BranchArray.hpp"
+#include "Random.hpp"
+#include "PoissonSuffStat.hpp"
+
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
  * branch-specific means but same shape parameter
@@ -53,7 +57,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
             (*this)[i] = Random::GammaSample(
                 GetAlpha(i) + suffstat.GetCount(), GetBeta(i) + suffstat.GetBeta());
             if ((*this)[i] == 0) {
-                cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
+                std::cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
                      << '\t' << blmean.GetVal(i) << '\n';
                 (*this)[i] = 0.001;
             }
@@ -66,7 +70,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
             if (suffstatarray.GetVal(i).GetBeta() == 0) {
                 (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
                 if ((*this)[i] == 0) {
-                    cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
+                    std::cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
                          << '\t' << blmean.GetVal(i) << '\n';
                     (*this)[i] = 0.001;
                 }
@@ -197,7 +201,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     const Tree &tree;
     const BranchSelector<double> &blmean;
     double shape;
-    vector<GammaWhiteNoise *> blarray;
+    std::vector<GammaWhiteNoise *> blarray;
 };
 
 #endif

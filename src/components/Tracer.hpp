@@ -6,9 +6,9 @@
 
 class Tracer {
     std::vector<std::string> names;
-    std::vector<std::function<void(ostream&)>> header_to_stream;
-    std::vector<std::function<void(ostream&)>> data_to_stream;
-    std::vector<std::function<void(istream&)>> set_from_stream;
+    std::vector<std::function<void(std::ostream&)>> header_to_stream;
+    std::vector<std::function<void(std::ostream&)>> data_to_stream;
+    std::vector<std::function<void(std::istream&)>> set_from_stream;
 
   public:
     template <class T>

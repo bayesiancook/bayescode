@@ -13,7 +13,7 @@
 class StickBreakingProcess : public SimpleArray<double> {
   public:
     // !!!! This should go private, must ask pveber or vlanore !!!!
-    vector<double> V;
+    std::vector<double> V;
 
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
@@ -28,7 +28,7 @@ class StickBreakingProcess : public SimpleArray<double> {
     void SetKappa(double inkappa) { kappa = inkappa; }
 
     //! get underlying array of Beta variates
-    const vector<double> &GetBetaVariates() const { return V; }
+    const std::vector<double> &GetBetaVariates() const { return V; }
 
     //! swap the two components
     void SwapComponents(int cat1, int cat2) {
@@ -115,7 +115,7 @@ class StickBreakingProcess : public SimpleArray<double> {
             }
         }
         if (remainingOcc) {
-            cerr << "error in allocation count\n";
+            std::cerr << "error in allocation count\n";
             exit(1);
         }
         return total;
@@ -146,7 +146,7 @@ class StickBreakingProcess : public SimpleArray<double> {
                     }
                 }
                 if (j != Nocc) {
-                    cerr << "error in MoveOccupiedCompAlloc.\n";
+                    std::cerr << "error in MoveOccupiedCompAlloc.\n";
                     exit(1);
                 }
                 int indices[2];

@@ -61,13 +61,13 @@ class SingleOmegaModel : public ChainComponent {
 
     // Nucleotide rates
 
-    vector<double> nucrelratehypercenter;
+    std::vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
-    vector<double> nucstathypercenter;
+    std::vector<double> nucstathypercenter;
     double nucstathyperinvconc;
 
-    vector<double> nucrelrate;
-    vector<double> nucstat;
+    std::vector<double> nucrelrate;
+    std::vector<double> nucstat;
     GTRSubMatrix *nucmatrix;
 
     // path suff stat can be summarized in terms of 4x4 suff stats, as a function
@@ -105,7 +105,7 @@ class SingleOmegaModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(string datafile, string treefile) : datafile(datafile), treefile(treefile) {
+    SingleOmegaModel(std::string datafile, std::string treefile) : datafile(datafile), treefile(treefile) {
         init();
         Update();
     }
@@ -131,7 +131,7 @@ class SingleOmegaModel : public ChainComponent {
 
         Nbranch = tree->nb_nodes() - 1;
         Allocate();
-        tracer = unique_ptr<Tracer>(new Tracer(*this, &SingleOmegaModel::declare_model));
+        tracer = std::unique_ptr<Tracer>(new Tracer(*this, &SingleOmegaModel::declare_model));
     }
 
     void move(int it) override { Move(); }
@@ -346,7 +346,7 @@ class SingleOmegaModel : public ChainComponent {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) {
+    void PostPred(std::string name) {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
@@ -602,14 +602,14 @@ class SingleOmegaModel : public ChainComponent {
         TouchCodonMatrix();
     }
 
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
         tracer->write_line(os);
     }
 
-    SingleOmegaModel(istream &is) {
+    SingleOmegaModel(std::istream &is) {
         std::string model_name;
         is >> model_name;
         if (model_name != "SingleOmega") {

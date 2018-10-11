@@ -86,9 +86,9 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide rates hyperparameters
-    vector<double> nucrelratehypercenter;
+    std::vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
-    vector<double> nucstathypercenter;
+    std::vector<double> nucstathypercenter;
     double nucstathyperinvconc;
 
     std::vector<double> nucstat;
@@ -110,7 +110,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     StickBreakingProcess *baseweight;
     OccupancySuffStat *baseoccupancy;
 
-    vector<double> basecenterhypercenter;
+    std::vector<double> basecenterhypercenter;
     double basecenterhyperinvconc;
     IIDDirichlet *basecenterarray;
 
@@ -119,7 +119,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     IIDGamma *baseconcentrationarray;
 
     MultinomialAllocationVector *componentalloc;
-    MixtureSelector<vector<double>> *componentcenterarray;
+    MixtureSelector<std::vector<double>> *componentcenterarray;
     MixtureSelector<double> *componentconcentrationarray;
 
     // aa fitness arrays across sites are a SBDP process of base G0 defined above
@@ -194,7 +194,7 @@ public:
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
-    AAMutSelDSBDPOmegaModel(string indatafile, string intreefile, int inomegamode, int inomegaprior,
+    AAMutSelDSBDPOmegaModel(std::string indatafile, std::string intreefile, int inomegamode, int inomegaprior,
                             double indposompi, double indposomhypermean, double indposomhyperinvshape, int inNcat,
                             int inbaseNcat) : datafile(indatafile),
                                               treefile(intreefile),
@@ -232,14 +232,14 @@ public:
             basemin = 1;
             baseNcat = -baseNcat;
             if (baseNcat != 2) {
-                cerr << "error in basencat\n";
+                std::cerr << "error in basencat\n";
                 exit(1);
             }
         }
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
-        cerr << "ncat : " << Ncat << '\n';
-        cerr << "basencat : " << baseNcat << '\n';
+        std::cerr << "ncat : " << Ncat << '\n';
+        std::cerr << "basencat : " << baseNcat << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -259,7 +259,7 @@ public:
         totb1 = totb2 = totb3 = totb4 = 0;
 
         Allocate();
-        tracer = unique_ptr<Tracer>(new Tracer(*this, &AAMutSelDSBDPOmegaModel::declare_model));
+        tracer = std::unique_ptr<Tracer>(new Tracer(*this, &AAMutSelDSBDPOmegaModel::declare_model));
 
     }
 
@@ -385,9 +385,9 @@ public:
 
         // nucleotide mutation matrix
         nucrelrate.assign(Nrr, 0);
-        Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double) Nrr));
+        Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double) Nrr));
         nucstat.assign(Nnuc, 0);
-        Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double) Nnuc));
+        Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double) Nnuc));
         nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
         // base distribution (can be skipped)
@@ -413,7 +413,7 @@ public:
         // suff stats for component aa fitness arrays
         basesuffstatarray = new DirichletSuffStatArray(baseNcat, Naa);
         componentalloc = new MultinomialAllocationVector(Ncat, baseweight->GetArray());
-        componentcenterarray = new MixtureSelector<vector<double>>(basecenterarray, componentalloc);
+        componentcenterarray = new MixtureSelector<std::vector<double>>(basecenterarray, componentalloc);
         componentconcentrationarray =
                 new MixtureSelector<double>(baseconcentrationarray, componentalloc);
 
@@ -551,7 +551,7 @@ public:
 
     //! set base mixture concentration and center parameters to new value
     //! (multi-gene analyses)
-    void SetBaseMixture(const Selector<vector<double>> &inbasecenterarray,
+    void SetBaseMixture(const Selector<std::vector<double>> &inbasecenterarray,
                         const Selector<double> &inbaseconcentrationarray, const Selector<double> &inbaseweight,
                         const Selector<int> &inpermut) {
         basecenterarray->Copy(inbasecenterarray);
@@ -602,7 +602,7 @@ public:
         ResampleSub(1.0);
     }
 
-    void PostPred(string name) {
+    void PostPred(std::string name) {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
@@ -663,11 +663,11 @@ public:
                   beta * omega;
         } else if (omegaprior == 1) {
             if ((dposompi <= 0) || (dposompi >= 1)) {
-                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                std::cerr << "error in omegalogprior: pi is not 0<pi<1\n";
                 exit(1);
             }
             if (omega < 1.0) {
-                cerr << "error in omegalogprior: omega < 1\n";
+                std::cerr << "error in omegalogprior: omega < 1\n";
                 exit(1);
             }
             double dposom = omega - 1.0;
@@ -681,7 +681,7 @@ public:
                        beta * dposom;
             }
         } else {
-            cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
+            std::cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
             exit(1);
         }
         return ret;
@@ -717,7 +717,7 @@ public:
         total += basecenterarray->GetLogProb();
         total += baseconcentrationarray->GetLogProb();
         if (std::isinf(total)) {
-            cerr << "in BaseLogPrior: inf\n";
+            std::cerr << "in BaseLogPrior: inf\n";
             exit(1);
         }
         return total;
@@ -941,8 +941,8 @@ public:
         double alpha = 1.0 / dposomhyperinvshape;
         double beta = alpha / dposomhypermean;
 
-        vector<double> logparray(ntry, 0);
-        vector<double> dposomarray(ntry, 0);
+        std::vector<double> logparray(ntry, 0);
+        std::vector<double> dposomarray(ntry, 0);
         double max = 0;
         for (int i = 0; i < ntry; i++) {
             if ((!i) && (omega > 1.0)) {
@@ -956,7 +956,7 @@ public:
         }
 
         double tot = 0;
-        vector<double> cumulprob(ntry, 0);
+        std::vector<double> cumulprob(ntry, 0);
         for (int i = 0; i < ntry; i++) {
             tot += exp(logparray[i] - max);
             cumulprob[i] = tot;
@@ -1006,7 +1006,7 @@ public:
             int i = 0;
             while ((i < ntry) && (u > cumulprob[i])) { i++; }
             if (i == ntry) {
-                cerr << "error in MultipleTryMoveOmega: overflow\n";
+                std::cerr << "error in MultipleTryMoveOmega: overflow\n";
                 exit(1);
             }
             omega = 1.0 + dposomarray[i];
@@ -1094,7 +1094,7 @@ public:
         double bk[Naa];
         for (int i = 0; i < Ncat; i++) {
             if (occupancy->GetVal(i)) {
-                vector<double> &aa = (*componentaafitnessarray)[i];
+                std::vector<double> &aa = (*componentaafitnessarray)[i];
                 for (int rep = 0; rep < nrep; rep++) {
                     for (int l = 0; l < Naa; l++) { bk[l] = aa[l]; }
                     double deltalogprob = -AALogPrior(i) - PathSuffStatLogProb(i);
@@ -1117,7 +1117,7 @@ public:
     }
 
     //! helper function: log density of 20 gammas
-    double GammaAALogPrior(const vector<double> &x, const vector<double> &aacenter, double aaconc) {
+    double GammaAALogPrior(const std::vector<double> &x, const std::vector<double> &aacenter, double aaconc) {
         double total = 0;
         for (int l = 0; l < Naa; l++) {
             total += (aaconc * aacenter[l] - 1) * log(x[l]) - x[l] -
@@ -1134,16 +1134,16 @@ public:
         for (int i = 0; i < Ncat; i++) {
             if (occupancy->GetVal(i)) {
                 double aaconc = componentconcentrationarray->GetVal(i);
-                const vector<double> &aacenter = componentcenterarray->GetVal(i);
+                const std::vector<double> &aacenter = componentcenterarray->GetVal(i);
 
-                vector<double> &aa = (*componentaafitnessarray)[i];
-                vector<double> x(Naa, 0);
+                std::vector<double> &aa = (*componentaafitnessarray)[i];
+                std::vector<double> x(Naa, 0);
                 double z = Random::sGamma(aaconc);
                 for (int l = 0; l < Naa; l++) { x[l] = z * aa[l]; }
 
                 double bkz = z;
-                vector<double> bkx = x;
-                vector<double> bkaa = aa;
+                std::vector<double> bkx = x;
+                std::vector<double> bkaa = aa;
 
                 for (int rep = 0; rep < nrep; rep++) {
                     double deltalogprob =
@@ -1190,7 +1190,7 @@ public:
 
     //! Gibbs resample mixture allocations
     void ResampleAlloc() {
-        vector<double> postprob(Ncat, 0);
+        std::vector<double> postprob(Ncat, 0);
         for (int i = 0; i < Nsite; i++) {
             GetAllocPostProb(i, postprob);
             sitealloc->GibbsResample(i, postprob);
@@ -1205,9 +1205,9 @@ public:
     }
 
     //! get allocation posterior probabilities for a given site
-    void GetAllocPostProb(int site, vector<double> &postprob) {
+    void GetAllocPostProb(int site, std::vector<double> &postprob) {
         double max = 0;
-        const vector<double> &w = weight->GetArray();
+        const std::vector<double> &w = weight->GetArray();
         const PathSuffStat &suffstat = sitepathsuffstatarray->GetVal(site);
         for (int i = 0; i < Ncat; i++) {
             double tmp = suffstat.GetLogProb(componentcodonmatrixarray->GetVal(i));
@@ -1282,10 +1282,10 @@ public:
     double MoveBaseCenters(double tuning, int n) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa, 0);
+        std::vector<double> bk(Naa, 0);
         for (int k = 0; k < baseNcat; k++) {
             if (baseoccupancy->GetVal(k)) {
-                vector<double> &aa = (*basecenterarray)[k];
+                std::vector<double> &aa = (*basecenterarray)[k];
                 bk = aa;
                 double deltalogprob = -BaseLogProb(k);
                 double loghastings = Random::ProfileProposeMove(aa, Naa, tuning, n);
@@ -1339,12 +1339,12 @@ public:
 
     //! Gibbs resample base mixture allocations
     void ResampleBaseAlloc() {
-        vector<double> postprob(baseNcat, 0);
+        std::vector<double> postprob(baseNcat, 0);
         for (int i = 0; i < Ncat; i++) {
             GetBaseAllocPostProb(i, postprob);
             componentalloc->GibbsResample(i, postprob);
             if ((componentalloc->GetVal(i) < 0) || (componentalloc->GetVal(i) >= baseNcat)) {
-                cerr << "error in ResampleBaseAlloc: out of bound\n";
+                std::cerr << "error in ResampleBaseAlloc: out of bound\n";
                 exit(1);
             }
         }
@@ -1359,9 +1359,9 @@ public:
 
     //! get allocation posterior probability of a component of the first-level
     //! mixture to the components of the second-level mixture
-    void GetBaseAllocPostProb(int cat, vector<double> &postprob) {
+    void GetBaseAllocPostProb(int cat, std::vector<double> &postprob) {
         double max = 0;
-        const vector<double> &w = baseweight->GetArray();
+        const std::vector<double> &w = baseweight->GetArray();
         for (int i = 0; i < baseNcat; i++) {
             double tmp = Random::logDirichletDensity(componentaafitnessarray->GetVal(cat),
                                                      basecenterarray->GetVal(i), baseconcentrationarray->GetVal(i));
@@ -1463,14 +1463,14 @@ public:
         return mean;
     }
 
-    void Monitor(ostream &os) const {
+    void Monitor(std::ostream &os) const {
         os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\t' << basechrono.GetTime()
            << '\n';
         os << "prop time in aa moves  : " << aachrono.GetTime() / totchrono.GetTime() << '\n';
         os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
     }
 
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         os << "AAMutSelDSBDPOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
         // !!!! This must go into declare model (but potential conflict with MPI), must ask pveber or vlanore !!!!
@@ -1479,7 +1479,7 @@ public:
         tracer->write_line(os);
     }
 
-    AAMutSelDSBDPOmegaModel(istream &is) {
+    AAMutSelDSBDPOmegaModel(std::istream &is) {
         std::string model_name;
         is >> model_name;
         if (model_name != "AAMutSelDSBDPOmega") {

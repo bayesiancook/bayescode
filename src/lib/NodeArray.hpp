@@ -42,7 +42,7 @@ class NodeSelector {
     }
 
     //! write array into generic output stream
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetNnode(); i++) { os << this->GetVal(i) << '\t'; }
     }
 };
@@ -66,7 +66,7 @@ class NodeArray : public NodeSelector<T> {
     //! element-by-element copy (arrays should be of same size)
     void Copy(const NodeSelector<T> &from) {
         if (this->GetNnode() != from.GetNnode()) {
-            cerr << "error: branch arrays do not have same size\n";
+            std::cerr << "error: branch arrays do not have same size\n";
             exit(1);
         }
         for (int i = 0; i < this->GetNnode(); i++) { (*this)[i] = from.GetVal(i); }
@@ -81,7 +81,7 @@ class NodeArray : public NodeSelector<T> {
     }
 
     //! get array from generic input stream
-    void FromStream(istream &is) {
+    void FromStream(std::istream &is) {
         for (int i = 0; i < this->GetNnode(); i++) { is >> (*this)[i]; }
     }
 };
@@ -93,7 +93,7 @@ class NodeArray : public NodeSelector<T> {
  */
 
 template <class T>
-ostream &operator<<(ostream &os, const NodeSelector<T> &array) {
+std::ostream &operator<<(std::ostream &os, const NodeSelector<T> &array) {
     array.ToStream(os);
     return os;
 }
@@ -105,7 +105,7 @@ ostream &operator<<(ostream &os, const NodeSelector<T> &array) {
  */
 
 template <class T>
-istream &operator>>(istream &is, NodeArray<T> &array) {
+std::istream &operator>>(std::istream &is, NodeArray<T> &array) {
     array.FromStream(is);
     return is;
 }
@@ -159,7 +159,7 @@ class SimpleNodeArray : public NodeArray<T> {
 
   protected:
     const Tree &tree;
-    vector<T> array;
+    std::vector<T> array;
 };
 
 #endif

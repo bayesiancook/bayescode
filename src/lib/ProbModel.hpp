@@ -4,7 +4,6 @@
 #include <iostream>
 #include <set>
 #include "Random.hpp"
-using namespace std;
 
 /**
  * \brief A generic interface for MCMC probabilistic models
@@ -24,6 +23,8 @@ using namespace std;
  *
  */
 
+using namespace std;
+
 class ProbModel {
   public:
     ProbModel() {}
@@ -35,13 +36,13 @@ class ProbModel {
 
     //! update the entire model
     virtual void Update() {
-        cerr << "error : in ProbModel::Update\n";
+        std::cerr << "error : in ProbModel::Update\n";
         exit(1);
     }
 
     //! post pred method
-    virtual void PostPred(string name) {
-        cerr << "error: in ProbModel::PostPred\n";
+    virtual void PostPred(std::string name) {
+        std::cerr << "error: in ProbModel::PostPred\n";
         exit(1);
     }
 
@@ -49,17 +50,17 @@ class ProbModel {
     virtual double GetLogProb() const { return 0; }
 
     //! save model configuration to stream
-    virtual void ToStream(ostream &os) const {}
+    virtual void ToStream(std::ostream &os) const {}
     //! get model configuration from stream
-    virtual void FromStream(istream &is) {}
+    virtual void FromStream(std::istream &is) {}
 
     //! write one line of trace of the current parameter configuration into trace
     //! file
-    virtual void Trace(ostream & /*unused*/) const {}
+    virtual void Trace(std::ostream & /*unused*/) const {}
     //! write one line of header for the trace file
-    virtual void TraceHeader(ostream & /*unused*/) const {}
+    virtual void TraceHeader(std::ostream & /*unused*/) const {}
     //! output statistics monitoring the MCMC
-    virtual void Monitor(ostream &os) const {}
+    virtual void Monitor(std::ostream &os) const {}
 
     //! new type name for a const method of class C taking no argument and
     //! returning a double (intended: a log prob function)
@@ -150,11 +151,11 @@ class ProbModel {
     //! a log prob and an update functions, as well as a pointer to the model
     //! itself. Returns success rate.
     template <class C>
-    double ProfileMove(vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
+    double ProfileMove(std::vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
         UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(x.size(), 0);
+        std::vector<double> bk(x.size(), 0);
         for (int rep = 0; rep < nrep; rep++) {
             bk = x;
             double deltalogprob = -(This->*logprobf)();

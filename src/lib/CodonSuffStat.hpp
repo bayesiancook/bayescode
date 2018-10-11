@@ -25,7 +25,7 @@
 class NucPathSuffStat : public SuffStat {
   public:
     NucPathSuffStat()
-        : rootcount(4, 0), paircount(4, vector<int>(4, 0)), pairbeta(4, vector<double>(4, 0)) {}
+        : rootcount(4, 0), paircount(4, std::vector<int>(4, 0)), pairbeta(4, std::vector<double>(4, 0)) {}
 
     ~NucPathSuffStat() {}
 
@@ -75,14 +75,14 @@ class NucPathSuffStat : public SuffStat {
             }
         }
 
-        const std::map<pair<int, int>, int> &codonpaircount = codonpathsuffstat.GetPairCountMap();
-        for (std::map<pair<int, int>, int>::const_iterator i = codonpaircount.begin();
+        const std::map<std::pair<int, int>, int> &codonpaircount = codonpathsuffstat.GetPairCountMap();
+        for (std::map<std::pair<int, int>, int>::const_iterator i = codonpaircount.begin();
              i != codonpaircount.end(); i++) {
             int cod1 = i->first.first;
             int cod2 = i->first.second;
             int pos = cod->GetDifferingPosition(cod1, cod2);
             if (pos == 3) {
-                cerr << "error in codon conj path suffstat\n";
+                std::cerr << "error in codon conj path suffstat\n";
                 exit(1);
             }
             int n1 = cod->GetCodonPosition(pos, cod1);
@@ -227,8 +227,8 @@ class NucPathSuffStat : public SuffStat {
 
   private:
     std::vector<int> rootcount;
-    std::vector<vector<int>> paircount;
-    std::vector<vector<double>> pairbeta;
+    std::vector<std::vector<int>> paircount;
+    std::vector<std::vector<double>> pairbeta;
 };
 
 /**
@@ -261,7 +261,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<std::pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbeta = 0;
@@ -283,7 +283,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         tmpbeta /= codonsubmatrix.GetOmega();
 
         int tmpcount = 0;
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
+        for (std::map<std::pair<int, int>, int>::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) { tmpcount += i->second; }
         }

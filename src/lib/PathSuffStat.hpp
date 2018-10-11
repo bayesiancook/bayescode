@@ -60,12 +60,12 @@ class PathSuffStat : public SuffStat {
 
     void IncrementRootCount(int state) { rootcount[state]++; }
 
-    void IncrementPairCount(int state1, int state2) { paircount[pair<int, int>(state1, state2)]++; }
+    void IncrementPairCount(int state1, int state2) { paircount[std::pair<int, int>(state1, state2)]++; }
 
     void AddRootCount(int state, int in) { rootcount[state] += in; }
 
     void AddPairCount(int state1, int state2, int in) {
-        paircount[pair<int, int>(state1, state2)] += in;
+        paircount[std::pair<int, int>(state1, state2)] += in;
     }
 
     void AddWaitingTime(int state, double in) { waitingtime[state] += in; }
@@ -78,7 +78,7 @@ class PathSuffStat : public SuffStat {
              i != suffstat.GetRootCountMap().end(); i++) {
             AddRootCount(i->first, i->second);
         }
-        for (std::map<pair<int, int>, int>::const_iterator i = suffstat.GetPairCountMap().begin();
+        for (std::map<std::pair<int, int>, int>::const_iterator i = suffstat.GetPairCountMap().begin();
              i != suffstat.GetPairCountMap().end(); i++) {
             AddPairCount(i->first.first, i->first.second, i->second);
         }
@@ -100,8 +100,8 @@ class PathSuffStat : public SuffStat {
     }
 
     int GetPairCount(int state1, int state2) const {
-        std::map<pair<int, int>, int>::const_iterator i =
-            paircount.find(pair<int, int>(state1, state2));
+        std::map<std::pair<int, int>, int>::const_iterator i =
+            paircount.find(std::pair<int, int>(state1, state2));
         if (i == paircount.end()) { return 0; }
         return i->second;
     }
@@ -123,7 +123,7 @@ class PathSuffStat : public SuffStat {
              i++) {
             total += i->second * mat(i->first, i->first);
         }
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
+        for (std::map<std::pair<int, int>, int>::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
             total += i->second * log(mat(i->first.first, i->first.second));
         }
@@ -135,14 +135,14 @@ class PathSuffStat : public SuffStat {
     const std::map<int, int> &GetRootCountMap() const { return rootcount; }
     //! const access to the ordered map giving the pair count stat (sparse data
     //! structure)
-    const std::map<pair<int, int>, int> &GetPairCountMap() const { return paircount; }
+    const std::map<std::pair<int, int>, int> &GetPairCountMap() const { return paircount; }
     //! const access to the ordered map giving the waiting time stat (sparse data
     //! structure)
     const std::map<int, double> &GetWaitingTimeMap() const { return waitingtime; }
 
   private:
     std::map<int, int> rootcount;
-    std::map<pair<int, int>, int> paircount;
+    std::map<std::pair<int, int>, int> paircount;
     std::map<int, double> waitingtime;
 };
 
@@ -281,7 +281,7 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
     //! return log prob summed over a given column (and only for items for which
     //! flag is non 0)
     double GetLogProb(
-        int j, const vector<int> &flag, const BidimSelector<SubMatrix> &matrixarray) const {
+        int j, const std::vector<int> &flag, const BidimSelector<SubMatrix> &matrixarray) const {
         double total = 0;
         for (int i = 0; i < this->GetNrow(); i++) {
             if (flag[i]) { total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j)); }

@@ -40,7 +40,7 @@ class BranchSelector {
     }
 
     //! write array into generic output stream
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetNbranch(); i++) { os << this->GetVal(i) << '\t'; }
     }
 };
@@ -64,7 +64,7 @@ class BranchArray : public BranchSelector<T> {
     //! element-by-element copy (arrays should be of same size)
     void Copy(const BranchSelector<T> &from) {
         if (this->GetNbranch() != from.GetNbranch()) {
-            cerr << "error: branch arrays do not have same size\n";
+            std::cerr << "error: branch arrays do not have same size\n";
             exit(1);
         }
         for (int i = 0; i < this->GetNbranch(); i++) { (*this)[i] = from.GetVal(i); }
@@ -79,7 +79,7 @@ class BranchArray : public BranchSelector<T> {
     }
 
     //! get array from generic input stream
-    void FromStream(istream &is) {
+    void FromStream(std::istream &is) {
         for (int i = 0; i < this->GetNbranch(); i++) { is >> (*this)[i]; }
     }
 };
@@ -91,7 +91,7 @@ class BranchArray : public BranchSelector<T> {
  */
 
 template <class T>
-ostream &operator<<(ostream &os, const BranchSelector<T> &array) {
+std::ostream &operator<<(std::ostream &os, const BranchSelector<T> &array) {
     array.ToStream(os);
     return os;
 }
@@ -103,7 +103,7 @@ ostream &operator<<(ostream &os, const BranchSelector<T> &array) {
  */
 
 template <class T>
-istream &operator>>(istream &is, BranchArray<T> &array) {
+std::istream &operator>>(std::istream &is, BranchArray<T> &array) {
     array.FromStream(is);
     return is;
 }
@@ -150,7 +150,7 @@ class SimpleBranchArray : public BranchArray<T> {
     //! Constructor with tree and initializer value
     SimpleBranchArray(const Tree &intree, const T &initval)
         : tree(intree), array(intree.nb_nodes() - 1, initval) {}
-    SimpleBranchArray(const Tree &intree, const vector<T> &initvals)
+    SimpleBranchArray(const Tree &intree, const std::vector<T> &initvals)
         : tree(intree), array(intree.nb_nodes() - 1) {
         array = initvals;
     }
@@ -163,5 +163,5 @@ class SimpleBranchArray : public BranchArray<T> {
 
   protected:
     const Tree &tree;
-    vector<T> array;
+    std::vector<T> array;
 };

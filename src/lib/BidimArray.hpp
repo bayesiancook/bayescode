@@ -42,7 +42,7 @@ class BidimSelector {
     }
 
     //! write array into generic output stream
-    void ToStream(ostream &os) const {
+    void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetNrow(); i++) {
             for (int j = 0; j < this->GetNcol(); j++) { os << this->GetVal(i, j) << '\t'; }
         }
@@ -79,7 +79,7 @@ class BidimArray : public BidimSelector<T> {
     }
 
     //! get array from generic input stream
-    void FromStream(istream &is) {
+    void FromStream(std::istream &is) {
         for (int i = 0; i < this->GetNrow(); i++) {
             for (int j = 0; j < this->GetNcol(); j++) { is >> (*this)(i, j); }
         }
@@ -93,7 +93,7 @@ class BidimArray : public BidimSelector<T> {
  */
 
 template <class T>
-ostream &operator<<(ostream &os, const BidimSelector<T> &array) {
+std::ostream &operator<<(std::ostream &os, const BidimSelector<T> &array) {
     array.ToStream(os);
     return os;
 }
@@ -105,7 +105,7 @@ ostream &operator<<(ostream &os, const BidimSelector<T> &array) {
  */
 
 template <class T>
-istream &operator>>(istream &is, BidimArray<T> &array) {
+std::istream &operator>>(std::istream &is, BidimArray<T> &array) {
     array.FromStream(is);
     return is;
 }
@@ -147,7 +147,7 @@ class SimpleBidimArray : public BidimArray<T> {
   public:
     //! Constructor with array dimensions and initializer value
     SimpleBidimArray(int innrow, int inncol, const T &initval)
-        : nrow(innrow), ncol(inncol), array(innrow, vector<T>(inncol, initval)) {}
+        : nrow(innrow), ncol(inncol), array(innrow, std::vector<T>(inncol, initval)) {}
     virtual ~SimpleBidimArray() {}
 
     int GetNrow() const override { return nrow; }
@@ -157,12 +157,12 @@ class SimpleBidimArray : public BidimArray<T> {
     const T &GetVal(int i, int j) const override { return array[i][j]; }
 
     //! return a const ref to the vector<T> corresponding to row i
-    const vector<T> &GetSubArray(int i) const { return array[i]; }
+    const std::vector<T> &GetSubArray(int i) const { return array[i]; }
 
   protected:
     int nrow;
     int ncol;
-    vector<vector<T>> array;
+    std::vector<std::vector<T>> array;
 };
 
 #endif

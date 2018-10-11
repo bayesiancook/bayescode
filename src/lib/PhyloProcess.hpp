@@ -116,7 +116,7 @@ class PhyloProcess {
     void Cleanup();
 
     //! posterior predictive resampling under current parameter configuration
-    void PostPredSample(string name, bool rootprior = true);  // unclamped Nielsen
+    void PostPredSample(std::string name, bool rootprior = true);  // unclamped Nielsen
 
     //! get data from tips (after simulation) and put in into sequence alignment
     void GetLeafData(SequenceAlignment *data);
@@ -124,7 +124,7 @@ class PhyloProcess {
   private:
     int GetBranchIndex(int index) const {
         if (index <= 0) {
-            cerr << "error in PhyloProcess::GetBranchIndex\n";
+            std::cerr << "error in PhyloProcess::GetBranchIndex\n";
             exit(1);
         }
         return index - 1;
@@ -164,7 +164,7 @@ class PhyloProcess {
     const SequenceAlignment *GetData() const { return data; }
     int GetData(int taxon, int site) const {
         if (taxon_table[taxon] == -1) {
-            cerr << "error in taxon correspondance table\n";
+            std::cerr << "error in taxon correspondance table\n";
             exit(1);
         }
         return data->GetState(taxon_table[taxon], site);
@@ -288,7 +288,7 @@ class PhyloProcess {
 
     const Tree *tree;
     const SequenceAlignment *data;
-    vector<int> taxon_table;
+    std::vector<int> taxon_table;
     // const PolyProcess* polyprocess;
     const BranchSelector<double> *branchlength;
     const Selector<double> *siterate;

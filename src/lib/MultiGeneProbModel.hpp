@@ -18,7 +18,7 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
         }
     }
 
-    virtual void PostPred(string name) override {
+    virtual void PostPred(std::string name) override {
         if (!myid) {
             MasterPostPred(name);
         } else {
@@ -35,7 +35,7 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
         return 1;
     }
 
-    virtual void FromStream(istream &is) override {
+    virtual void FromStream(std::istream &is) override {
         if (!myid) {
             MasterFromStream(is);
         } else {
@@ -43,7 +43,7 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
         }
     }
 
-    virtual void ToStream(ostream &os) const override {
+    virtual void ToStream(std::ostream &os) const override {
         if (!myid) {
             MasterToStream(os);
         } else {
@@ -51,9 +51,9 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
         }
     }
 
-    virtual void MasterToStream(ostream &os) const {}
+    virtual void MasterToStream(std::ostream &os) const {}
     virtual void SlaveToStream() const {}
-    virtual void MasterFromStream(istream &is) {}
+    virtual void MasterFromStream(std::istream &is) {}
     virtual void SlaveFromStream() {}
 
     virtual void MasterMove() {}
@@ -62,8 +62,8 @@ class MultiGeneProbModel : public ProbModel, public MultiGeneMPIModule {
     virtual void MasterUpdate() {}
     virtual void SlaveUpdate() {}
 
-    virtual void MasterPostPred(string name) {}
-    virtual void SlavePostPred(string name) {}
+    virtual void MasterPostPred(std::string name) {}
+    virtual void SlavePostPred(std::string name) {}
 };
 
 #endif

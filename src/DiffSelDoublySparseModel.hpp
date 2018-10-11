@@ -44,6 +44,8 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "SubMatrixSelector.hpp"
 #include "tree/implem.hpp"
 
+using namespace std;
+
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
  * DiffSelModel and DiffSelSparseModel)

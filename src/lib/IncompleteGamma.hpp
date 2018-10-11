@@ -27,8 +27,6 @@ copy of the GNU General Public License along with PhyloBayes. If not, see
 #include <iostream>
 #include "Random.hpp"
 
-using namespace std;
-
 double PointNormal(double prob);
 
 // yan modify 12.Dec.2004 (from Mr.Bayes)

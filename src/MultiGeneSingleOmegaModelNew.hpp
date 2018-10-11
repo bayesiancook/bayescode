@@ -23,6 +23,8 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
 
+using namespace std;
+
 class MultiGeneSingleOmegaModelShared {
   public:
     MultiGeneSingleOmegaModelShared(string datafile, string intreefile)
