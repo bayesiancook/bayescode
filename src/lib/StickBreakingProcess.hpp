@@ -18,7 +18,7 @@ class StickBreakingProcess : public SimpleArray<double> {
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
     StickBreakingProcess(int inncat, double inkappa)
-        : SimpleArray<double>(inncat), kappa(inkappa), V(inncat) {
+        : SimpleArray<double>(inncat), V(inncat), kappa(inkappa) {
         Sample();
     }
 
