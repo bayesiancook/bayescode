@@ -2,6 +2,7 @@
 #define SBP_H
 
 #include "Array.hpp"
+#include "Random.hpp"
 #include "OccupancySuffStat.hpp"
 #include "Permutation.hpp"
 
@@ -11,6 +12,9 @@
 
 class StickBreakingProcess : public SimpleArray<double> {
   public:
+    // !!!! This should go private, must ask pveber or vlanore !!!!
+    vector<double> V;
+
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
     StickBreakingProcess(int inncat, double inkappa)
@@ -187,24 +191,6 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total /= nrep;
     }
 
-    //! specialized FromStream function (ideally should try to override the
-    //! default FromStream instead of that)
-    void FromStreamSB(istream &is) {
-        for (int k = 0; k < GetSize(); k++) {
-            is >> (*this)[k];
-            is >> V[k];
-        }
-    }
-
-    //! specialized ToStream function (ideally should try to override the default
-    //! FromStream instead of that)
-    void ToStreamSB(ostream &os) const {
-        for (int k = 0; k < GetSize(); k++) {
-            os << GetVal(k) << '\t';
-            os << V[k] << '\t';
-        }
-    }
-
     //! specialized GetMPISize (ideally should try to override the default
     //! FromStream instead of that)
     unsigned int GetMPISizeSB() const { return 2 * GetSize(); }
@@ -219,9 +205,8 @@ class StickBreakingProcess : public SimpleArray<double> {
         for (int k = 0; k < GetSize(); k++) { os << GetVal(k) << V[k]; }
     }
 
-  private:
+private:
     double kappa;
-    vector<double> V;
 };
 
 #endif

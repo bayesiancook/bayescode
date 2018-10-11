@@ -1,6 +1,8 @@
 #pragma once
 #include <iostream>
 #include "BranchArray.hpp"
+#include "StickBreakingProcess.hpp"
+#include "MultinomialAllocationVector.hpp"
 
 class Tracer {
     std::vector<std::string> names;
@@ -71,6 +73,44 @@ class Tracer {
         });
         set_from_stream.push_back([&v](std::istream& is) {
             for (auto& e : v) is >> e;
+        });
+    }
+
+    template <class T>
+    void add(std::string name, SimpleArray<T>& v) {
+        names.push_back(name);
+        header_to_stream.push_back([&v, name](std::ostream& os) {
+            int n = v.GetSize();
+            // !!!! This should be T-dependent, must ask pveber or vlanore !!!!
+            if (n > 0) {
+                os << name << "[0]";
+                for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
+            }
+        });
+        data_to_stream.push_back([&v](std::ostream& os) { os << v; });
+        set_from_stream.push_back([&v](std::istream& is) { is >> v; });
+    }
+
+
+    void add(std::string name, StickBreakingProcess &sbp) {
+        names.push_back(name);
+        header_to_stream.push_back([&sbp, name](std::ostream &os) {
+            os << name << "[0]" << "\t" << name << "_V[0]";
+            for (int k = 1; k < sbp.GetSize(); k++) {
+                os << "\t" << name << "[" << k << "]" << "\t" << name << "_V[" << k << "]";
+            }
+        });
+        data_to_stream.push_back([&sbp](std::ostream &os) {
+            for (int k = 0; k < sbp.GetSize(); k++) {
+                os << sbp[k] << "\t";
+                os << sbp.V[k] << "\t";
+            }
+        });
+        set_from_stream.push_back([&sbp](std::istream &is) {
+            for (int k = 0; k < sbp.GetSize(); k++) {
+                is >> sbp[k];
+                is >> sbp.V[k];
+            }
         });
     }
 
