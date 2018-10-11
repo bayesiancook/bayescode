@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Random.hpp"
+
 class Move {
   public:
     //! new type name for a const method of class C taking no argument and
@@ -91,11 +93,11 @@ class Move {
     //! a log prob and an update functions, as well as a pointer to the model
     //! itself. Returns success rate.
     template <class C>
-    static double Profile(vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
+    static double Profile(std::vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
         UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(x.size(), 0);
+        std::vector<double> bk(x.size(), 0);
         for (int rep = 0; rep < nrep; rep++) {
             bk = x;
             double deltalogprob = -(This->*logprobf)();

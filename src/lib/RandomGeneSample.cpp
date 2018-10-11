@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+using namespace std;
+
 int main(int argc, char *argv[]) {
     ifstream is(argv[1]);
     int P = atoi(argv[2]);

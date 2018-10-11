@@ -17,6 +17,8 @@
 // #define SAFE_EXP(x) ((x)<-200.0 ? 0.0 : exp(x))
 #define SAFE_EXP(x) exp(x)
 
+using namespace std;
+
 const double gammacoefs[] = {0.9999999999995183, 676.5203681218835, -1259.139216722289,
     771.3234287757674, -176.6150291498386, 12.50734324009056, -0.1385710331296526,
     0.9934937113930748e-05, 0.1659470187408462e-06};
@@ -30,7 +32,7 @@ class random_init {
     random_init() {
         Random::InitRandom();
         // Random::InitRandom(5301);
-        std::cerr << "-- [Random] Seed : " << Random::GetSeed() << std::endl;
+        cerr << "-- [Random] Seed : " << Random::GetSeed() << endl;
     }
 };
 
@@ -43,7 +45,7 @@ unsigned long long Random::mt_buffer[MT_LEN];
 const double Random::INFPROB = -250;
 
 // ---------------------------------------------------------------------------------
-//		¥ Random()
+//		Random()
 // ---------------------------------------------------------------------------------
 void Random::InitRandom(int seed) {
     if (seed == -1) {
@@ -68,7 +70,7 @@ Random::Random(int seed) { InitRandom(seed); }
 int Random::GetSeed() { return Seed; }
 
 // ---------------------------------------------------------------------------------
-//		¥ Uniform()
+//		Uniform()
 // ---------------------------------------------------------------------------------
 double Random::Uniform() {
     // Mersenne twister
@@ -130,7 +132,7 @@ double Random::Uniform() {
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ GPoisson()
+//		GPoisson()
 // ---------------------------------------------------------------------------------
 int Random::Poisson(double mu) {
     int n = 0;
@@ -143,19 +145,19 @@ int Random::Poisson(double mu) {
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ Gamma()
+//		Gamma()
 // ---------------------------------------------------------------------------------
 int Random::ApproxBinomial(int N, double p) { return Poisson(N * p); }
 
 // ---------------------------------------------------------------------------------
-//		¥ Gamma()
+//		Gamma()
 // ---------------------------------------------------------------------------------
 double Random::Gamma(double alpha, double beta) { return sGamma(alpha) / beta; }
 
 // ---------------------------------------------------------------------------------
-//		¥ DrawFromDiscreteDistribution()
+//		DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
-int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
+int Random::DrawFromDiscreteDistribution(const vector<double> &prob) {
     try {
         int nstate = prob.size();
         double total = 0;
@@ -168,19 +170,19 @@ int Random::DrawFromDiscreteDistribution(const std::vector<double> &prob) {
             tot += prob[k];
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
-            std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
+            cerr << "finite discrete overflow\n";
+            for (int k = 0; k < nstate; k++) { cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
     } catch (...) {
-        std::cerr << "error in draw from \n";
+        cerr << "error in draw from \n";
         throw;
     }
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ DrawFromDiscreteDistribution()
+//		DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
 int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
     try {
@@ -194,19 +196,19 @@ int Random::DrawFromDiscreteDistribution(const EVector &prob, int nstate) {
             tot += prob[k];
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
-            std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
+            cerr << "finite discrete overflow\n";
+            for (int k = 0; k < nstate; k++) { cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
     } catch (...) {
-        std::cerr << "error in draw from \n";
+        cerr << "error in draw from \n";
         throw;
     }
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ DrawFromDiscreteDistribution()
+//		DrawFromDiscreteDistribution()
 // ---------------------------------------------------------------------------------
 int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
     try {
@@ -220,19 +222,19 @@ int Random::DrawFromDiscreteDistribution(const double *prob, int nstate) {
             tot += prob[k];
         } while ((k < nstate) && (tot < p));
         if (k == nstate) {
-            std::cerr << "finite discrete overflow\n";
-            for (int k = 0; k < nstate; k++) { std::cerr << prob[k] << '\n'; }
+            cerr << "finite discrete overflow\n";
+            for (int k = 0; k < nstate; k++) { cerr << prob[k] << '\n'; }
             throw;
         }
         return k;
     } catch (...) {
-        std::cerr << "error in draw from \n";
+        cerr << "error in draw from \n";
         throw;
     }
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ DrawFromUrn()
+//		DrawFromUrn()
 // ---------------------------------------------------------------------------------
 void Random::DrawFromUrn(int *tab, int n, int N) {  // draw n out of N
     // assumes that tab is an Int16[n]
@@ -247,12 +249,12 @@ void Random::DrawFromUrn(int *tab, int n, int N) {  // draw n out of N
             }
         }
         if (trial == N) {
-            std::cerr << "error in draw from urn: overflow\n";
+            cerr << "error in draw from urn: overflow\n";
             exit(1);
         }
         tab[i] = trial;
         if (index[trial] != 0) {
-            std::cerr << "error in draw from urn: chose twice the same\n";
+            cerr << "error in draw from urn: chose twice the same\n";
             exit(1);
         }
         index[trial] = 1;
@@ -261,7 +263,7 @@ void Random::DrawFromUrn(int *tab, int n, int N) {  // draw n out of N
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ Choose()
+//		Choose()
 // ---------------------------------------------------------------------------------
 int Random::Choose(int scale) { return (int)(Random::Uniform() * scale); }
 
@@ -276,7 +278,7 @@ int Random::FiniteDiscrete(int n, const double *probarray) {
     int k = 0;
     while ((k < n) && (u > cumul[k])) { k++; }
     if (k == n) {
-        std::cerr << "error in Random::FiniteDiscrete\n";
+        cerr << "error in Random::FiniteDiscrete\n";
         exit(1);
     }
     delete[] cumul;
@@ -284,7 +286,7 @@ int Random::FiniteDiscrete(int n, const double *probarray) {
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ sNormal()
+//		sNormal()
 // ---------------------------------------------------------------------------------
 double Random::sNormal() {
     double u = Random::Uniform();
@@ -322,7 +324,7 @@ double Random::sNormal() {
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ sExpo()
+//		sExpo()
 // ---------------------------------------------------------------------------------
 double Random::sExpo() { return -log(Random::Uniform()); }
 
@@ -337,7 +339,7 @@ double fsign(double num, double sign)
 }
 
 // ---------------------------------------------------------------------------------
-//		¥ sGamma()
+//		sGamma()
 // ---------------------------------------------------------------------------------
 double Random::sGamma(double a) {
     if (a > 1) {
@@ -358,14 +360,14 @@ double Random::sGamma(double a) {
         t = sNormal();
         x = s + 0.5 * t;
         if (t > 0) {
-            if (x == 0.0) { std::cerr << "1\n"; }
+            if (x == 0.0) { cerr << "1\n"; }
             return x * x;
         }
 
         // step 3
         u = Uniform();
         if (d * u < t * t * t) {
-            if (x == 0.0) { std::cerr << "2\n"; }
+            if (x == 0.0) { cerr << "2\n"; }
             return x * x;
         }
 
@@ -393,7 +395,7 @@ double Random::sGamma(double a) {
             v = 0.5 * t / s;
             q = q0 - s * t + 0.25 * t * t + 2 * s2 * log(1.0 + v);
             if (log(1 - u) < q) {
-                if (x == 0.0) { std::cerr << "3\n"; }
+                if (x == 0.0) { cerr << "3\n"; }
                 return x * x;
             }
         }
@@ -417,10 +419,10 @@ double Random::sGamma(double a) {
         x = s + 0.5 * t;
         /*
           if (!x)	{
-          std::cerr << "4\n";
-          std::cerr << s << '\t' << t << '\n';
-          std::cerr << e << '\t' << sigma << '\t' << u << '\n';
-          std::cerr << b << '\n';
+          cerr << "4\n";
+          cerr << s << '\t' << t << '\n';
+          cerr << e << '\t' << sigma << '\t' << u << '\n';
+          cerr << b << '\n';
           }
         */
         return x * x;
@@ -445,7 +447,7 @@ double Random::sGamma(double a) {
 double Random::logGamma(double alpha) {
     // adapted from statlib
     if (alpha < 0) {
-        std::cerr << "error in loggamma: only positive argument\n";
+        cerr << "error in loggamma: only positive argument\n";
         exit(1);
     }
 
@@ -457,8 +459,8 @@ double Random::logGamma(double alpha) {
 
 double Random::logMultivariateGamma(double a, int p) {
     if (2 * a <= (p - 1)) {
-        std::cerr << "error in Random::logMultivariateGamma\n";
-        std::cerr << "parameter out of bound: " << a << '\t' << p << '\n';
+        cerr << "error in Random::logMultivariateGamma\n";
+        cerr << "parameter out of bound: " << a << '\t' << p << '\n';
         exit(1);
     }
     double ret = p * (p - 1) / 4 * log(Pi);
@@ -466,7 +468,7 @@ double Random::logMultivariateGamma(double a, int p) {
     return ret;
 }
 
-double Random::ProfileProposeMove(std::vector<double> &profile, int dim, double tuning,
+double Random::ProfileProposeMove(vector<double> &profile, int dim, double tuning,
     int n) {  // n==0dirichlet resampling, otherwise, vase communiquants
 
     double ret = 0;
@@ -477,7 +479,7 @@ double Random::ProfileProposeMove(std::vector<double> &profile, int dim, double 
         for (int i = 0; i < dim; i++) {
             profile[i] = Random::sGamma(tuning * oldprofile[i]);
             if (profile[i] == 0) {
-                std::cerr << "error in dirichlet resampling : 0 \n";
+                cerr << "error in dirichlet resampling : 0 \n";
                 exit(1);
             }
             total += profile[i];
@@ -517,7 +519,7 @@ double Random::ProfileProposeMove(std::vector<double> &profile, int dim, double 
     return ret;
 }
 
-double Random::RealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n) {
+double Random::RealVectorProposeMove(vector<double> &x, int dim, double tuning, int n) {
     auto indices = new int[n];
     Random::DrawFromUrn(indices, n, dim);
     for (int i = 0; i < n; i++) {
@@ -528,7 +530,7 @@ double Random::RealVectorProposeMove(std::vector<double> &x, int dim, double tun
     return 0;
 }
 
-double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double tuning, int n) {
+double Random::PosRealVectorProposeMove(vector<double> &x, int dim, double tuning, int n) {
     double logh = 0;
     auto indices = new int[n];
     Random::DrawFromUrn(indices, n, dim);
@@ -542,7 +544,7 @@ double Random::PosRealVectorProposeMove(std::vector<double> &x, int dim, double 
 }
 
 double Random::PosRealVectorProposeMove(
-    std::vector<double> &x, int dim, double tuning, const vector<int> &toggle) {
+    vector<double> &x, int dim, double tuning, const vector<int> &toggle) {
     double logh = 0;
     for (int i = 0; i < dim; i++) {
         if (toggle[i]) {
@@ -554,7 +556,7 @@ double Random::PosRealVectorProposeMove(
     return logh;
 }
 
-double Random::GetEntropy(const std::vector<double> &profile) {
+double Random::GetEntropy(const vector<double> &profile) {
     double tot = 0;
     for (unsigned int i = 0; i < profile.size(); i++) {
         tot -= (profile[i] < 1e-6) ? 0 : profile[i] * log(profile[i]);

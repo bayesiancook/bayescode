@@ -23,7 +23,7 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix,
     //! nucleotide mutation matrix, a 20-vector of amino-acid fitnesss, and a
     //! positive real parameter omega (=1 in the standard model).
     AAMutSelOmegaCodonSubMatrix(const CodonStateSpace *instatespace, const SubMatrix *inNucMatrix,
-        const vector<double> &inaa, double inomega, double inNe, bool innormalise = false)
+        const std::vector<double> &inaa, double inomega, double inNe, bool innormalise = false)
         : SubMatrix(instatespace->GetNstate(), innormalise),
           CodonSubMatrix(instatespace, innormalise),
           NucCodonSubMatrix(instatespace, inNucMatrix, innormalise),
@@ -32,7 +32,7 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix,
           Ne(inNe) {}
 
     //! const access (by reference) to amino-acid fitness vector
-    const vector<double> &GetAAFitnessProfile() const { return aa; }
+    const std::vector<double> &GetAAFitnessProfile() const { return aa; }
 
     //! \brief access by copy to fitness of a given amino-acid
     //!
@@ -53,6 +53,6 @@ class AAMutSelOmegaCodonSubMatrix : public virtual NucCodonSubMatrix,
 
     // data members
 
-    const vector<double> &aa;
+    const std::vector<double> &aa;
     double Ne;
 };

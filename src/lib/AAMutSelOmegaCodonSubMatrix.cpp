@@ -49,12 +49,12 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
             total += Q(i, j);
 
             if (std::isinf(Q(i, j))) {
-                cerr << "Q matrix infinite: " << Q(i, j) << '\n';
+                std::cerr << "Q matrix infinite: " << Q(i, j) << '\n';
                 exit(1);
             }
 
             if (Q(i, j) < 0) {
-                cerr << "Q matrix negative: " << Q(i, j) << '\n';
+                std::cerr << "Q matrix negative: " << Q(i, j) << '\n';
                 exit(1);
             }
         }
@@ -63,7 +63,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
     Q(i, i) = -total;
 
     if (total < 0) {
-        cerr << "negative rate away\n";
+        std::cerr << "negative rate away\n";
         exit(1);
     }
 }

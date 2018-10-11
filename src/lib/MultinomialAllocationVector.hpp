@@ -2,6 +2,7 @@
 #define MULTINOMALLOC_H
 
 #include "Array.hpp"
+#include "Random.hpp"
 #include "OccupancySuffStat.hpp"
 
 /**
