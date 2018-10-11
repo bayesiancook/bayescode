@@ -1,9 +1,9 @@
-sources*/*.o
-sources*/*.d
+*.d
+.idea/
+cmake-build-debug/
 data/*
 *~
 tmp*
 *_bin
 *.json
-*.d.*
 _build/
