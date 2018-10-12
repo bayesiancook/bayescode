@@ -25,7 +25,9 @@
 class NucPathSuffStat : public SuffStat {
   public:
     NucPathSuffStat()
-        : rootcount(4, 0), paircount(4, std::vector<int>(4, 0)), pairbeta(4, std::vector<double>(4, 0)) {}
+        : rootcount(4, 0),
+          paircount(4, std::vector<int>(4, 0)),
+          pairbeta(4, std::vector<double>(4, 0)) {}
 
     ~NucPathSuffStat() {}
 
@@ -75,7 +77,8 @@ class NucPathSuffStat : public SuffStat {
             }
         }
 
-        const std::map<std::pair<int, int>, int> &codonpaircount = codonpathsuffstat.GetPairCountMap();
+        const std::map<std::pair<int, int>, int> &codonpaircount =
+            codonpathsuffstat.GetPairCountMap();
         for (std::map<std::pair<int, int>, int>::const_iterator i = codonpaircount.begin();
              i != codonpaircount.end(); i++) {
             int cod1 = i->first.first;

@@ -180,7 +180,9 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     //! constructor, parameterized by array size and parameters of the Dirichlet
     //! distribution (center and concentration)
     IIDDirichlet(int insize, const std::vector<double> &incenter, double inconcentration)
-        : SimpleArray<std::vector<double>>(insize), center(incenter), concentration(inconcentration) {
+        : SimpleArray<std::vector<double>>(insize),
+          center(incenter),
+          concentration(inconcentration) {
         for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(center.size(), 0); }
         Sample();
     }
@@ -290,8 +292,8 @@ class MultiDirichlet : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by arrays of center and concentration
     //! parameters (both of same size, which will also be the size of this array)
-    MultiDirichlet(
-        const Selector<std::vector<double>> *incenterarray, const Selector<double> *inconcentrationarray)
+    MultiDirichlet(const Selector<std::vector<double>> *incenterarray,
+        const Selector<double> *inconcentrationarray)
         : SimpleArray<std::vector<double>>(incenterarray->GetSize()),
           dim(incenterarray->GetVal(0).size()),
           centerarray(incenterarray),
@@ -299,7 +301,7 @@ class MultiDirichlet : public SimpleArray<std::vector<double>> {
           weightarray(0) {
         if (centerarray->GetSize() != concentrationarray->GetSize()) {
             std::cerr << "error in multi dirichlet: center and concentration arrays "
-                    "should have same size\n";
+                         "should have same size\n";
             exit(1);
         }
 

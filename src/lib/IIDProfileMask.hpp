@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Array.hpp"
 #include <cmath>
+#include "Array.hpp"
 
 /**
  * \brief An array of IID 0/1 masks of a fixed dimension

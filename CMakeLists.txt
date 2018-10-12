@@ -85,9 +85,9 @@ target_link_libraries(diffseldsparse bayescode_lib)
 target_compile_features(diffseldsparse PRIVATE ${CXX_FEATURES})
 
 # Read diffsel double sparse (diffseldsparse)
-add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
-target_link_libraries(readdiffseldsparse bayescode_lib)
-target_compile_features(readdiffseldsparse PRIVATE ${CXX_FEATURES})
+# add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
+# target_link_libraries(readdiffseldsparse bayescode_lib)
+# target_compile_features(readdiffseldsparse PRIVATE ${CXX_FEATURES})
 
 # Multi-gene single omega (multigeneglobom)
 add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
@@ -98,5 +98,3 @@ target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 add_executable(multigeneglobomnew "src/MultiGeneSingleOmegaNew.cpp")
 target_link_libraries(multigeneglobomnew bayescode_lib ${MPI_LIBRARIES})
 target_compile_features(multigeneglobomnew PRIVATE ${CXX_FEATURES})
-
-#TODO readdiffseldoublesparse

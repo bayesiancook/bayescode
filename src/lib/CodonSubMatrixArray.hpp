@@ -57,7 +57,7 @@ class MGOmegaCodonSubMatrixArray : public Array<SubMatrix>, public Array<MGOmega
     void UpdateCodonMatrices(const Selector<int> &occupancy) {
         if (occupancy.GetSize() != GetSize()) {
             std::cerr << "error in UpdateCodonMatrices: occupancy vector size does not "
-                    "match array size\n";
+                         "match array size\n";
             exit(1);
         }
         for (int i = 0; i < GetSize(); i++) {
@@ -124,7 +124,7 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
           matrixarray(inomegaarray->GetSize()) {
         if (aafitnessarray->GetSize() != omegaarray->GetSize()) {
             std::cerr << "error in constructor of AAMutSelOmegaCodonSubMatrixArray: "
-                    "arrays of aafitness and omega values should be of same size\n";
+                         "arrays of aafitness and omega values should be of same size\n";
             exit(1);
         }
         Create();

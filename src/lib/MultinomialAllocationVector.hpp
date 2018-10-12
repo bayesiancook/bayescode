@@ -2,8 +2,8 @@
 #define MULTINOMALLOC_H
 
 #include "Array.hpp"
-#include "Random.hpp"
 #include "OccupancySuffStat.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A multinomial allocation vector
@@ -49,7 +49,7 @@ class MultinomialAllocationVector : public SimpleArray<int> {
     void Permute(const Selector<int> &permut) override {
         if (permut.GetSize() != int(weight.size())) {
             std::cerr << "error in MultinomialAllocationVector::Permute: non matching "
-                    "array size\n";
+                         "array size\n";
             exit(1);
         }
         std::vector<int> invpermut(permut.GetSize(), 0);

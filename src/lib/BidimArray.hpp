@@ -2,7 +2,6 @@
 #ifndef BIDIMARRAY_H
 #define BIDIMARRAY_H
 
-#include <vector>
 #include "Array.hpp"
 #include "MPIBuffer.hpp"
 

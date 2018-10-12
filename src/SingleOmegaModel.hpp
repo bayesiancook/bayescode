@@ -105,7 +105,8 @@ class SingleOmegaModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(std::string datafile, std::string treefile) : datafile(datafile), treefile(treefile) {
+    SingleOmegaModel(std::string datafile, std::string treefile)
+        : datafile(datafile), treefile(treefile) {
         init();
         Update();
     }

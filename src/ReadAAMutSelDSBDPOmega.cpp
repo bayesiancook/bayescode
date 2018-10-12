@@ -11,21 +11,25 @@ using namespace TCLAP;
 class ReadAAMutSelDSBDPOmegaArgParse {
     CmdLine &cmd;
 
-public:
+  public:
     ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : cmd(cmd) {}
 
     ValueArg<int> every{
-            "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
+        "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
     ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
-                        false, -1, "int", cmd};
+        false, -1, "int", cmd};
     ValueArg<int> burnin{"b", "burnin", "Number of iterations for burnin", false, 0, "int", cmd};
-    SwitchArg ppred{"p", "ppred", "For each point of the chain (after burn-in), produces a data replicate simulated "
-                                  "from the posterior predictive distribution", cmd};
-    SwitchArg om{"o", "om", "Computes the mean predicted omega under mutation-selection balance", cmd};
-    SwitchArg ss{"s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
+    SwitchArg ppred{"p", "ppred",
+        "For each point of the chain (after burn-in), produces a data replicate simulated "
+        "from the posterior predictive distribution",
+        cmd};
+    SwitchArg om{
+        "o", "om", "Computes the mean predicted omega under mutation-selection balance", cmd};
+    SwitchArg ss{
+        "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
     SwitchArg stats{"s", "stats", "Computes the mean ", cmd};
     UnlabeledValueArg<std::string> chain_name{
-            "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
+        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -78,9 +82,7 @@ int main(int argc, char *argv[]) {
         double **sitestat = new double *[model.GetNsite()];
         for (int i = 0; i < model.GetNsite(); i++) {
             sitestat[i] = new double[model.GetNsite()];
-            for (int k = 0; k < model.GetNsite(); k++) {
-                sitestat[i][k] = 0;
-            }
+            for (int k = 0; k < model.GetNsite(); k++) { sitestat[i][k] = 0; }
         }
 
         for (int i = 0; i < size; i++) {

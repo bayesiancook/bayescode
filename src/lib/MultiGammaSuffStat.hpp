@@ -31,7 +31,7 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! add the contribution of one gamma variate (x) to this suffstat
-    void AddSuffStat(const vector<double> &x) {
+    void AddSuffStat(const std::vector<double> &x) {
         for (int k = 0; k < GetDim(); k++) {
             sum[k] += x[k];
             sumlog[k] += log(x[k]);
@@ -40,7 +40,7 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! add the contribution of one gamma variate (x) to this suffstat
-    void AddSuffStat(const vector<double> &x, const vector<int> &t) {
+    void AddSuffStat(const std::vector<double> &x, const std::vector<int> &t) {
         for (int k = 0; k < GetDim(); k++) {
             if (t[k]) {
                 sum[k] += x[k];
@@ -51,7 +51,8 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! add the contribution of one gamma variate (x) to this suffstat
-    void AddSuffStat(const vector<double> &x, const vector<int> &t1, const vector<int> &t2) {
+    void AddSuffStat(
+        const std::vector<double> &x, const std::vector<int> &t1, const std::vector<int> &t2) {
         for (int k = 0; k < GetDim(); k++) {
             if (t1[k] && t2[k]) {
                 sum[k] += x[k];
@@ -77,7 +78,8 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! get suff stats from an IIDGamma array
-    void AddSuffStat(const BidimIIDMultiGamma &array, const BidimSelector<vector<int>> &toggle) {
+    void AddSuffStat(
+        const BidimIIDMultiGamma &array, const BidimSelector<std::vector<int>> &toggle) {
         for (int i = 0; i < array.GetNrow(); i++) {
             if (!i) {
                 for (int j = 0; j < array.GetNcol(); j++) { AddSuffStat(array.GetVal(i, j)); }
@@ -90,8 +92,8 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! get suff stats from an IIDGamma array, with a double system of masks
-    void AddSuffStat(const BidimIIDMultiGamma &array, const Selector<vector<int>> &mask,
-        const BidimSelector<vector<int>> &toggle) {
+    void AddSuffStat(const BidimIIDMultiGamma &array, const Selector<std::vector<int>> &mask,
+        const BidimSelector<std::vector<int>> &toggle) {
         for (int i = 0; i < array.GetNrow(); i++) {
             if (!i) {
                 for (int j = 0; j < array.GetNcol(); j++) {
@@ -109,7 +111,7 @@ class MultiGammaSuffStat : public SuffStat {
         for (int i = 0; i < array.GetSize(); i++) { AddSuffStat(array.GetVal(i)); }
     }
 
-    void AddSuffStat(const IIDMultiGamma &array, const Selector<vector<int>> &mask) {
+    void AddSuffStat(const IIDMultiGamma &array, const Selector<std::vector<int>> &mask) {
         for (int i = 0; i < array.GetSize(); i++) { AddSuffStat(array.GetVal(i), mask.GetVal(i)); }
     }
 
@@ -141,7 +143,7 @@ class MultiGammaSuffStat : public SuffStat {
     }
 
     //! return log prob, as a function of the given shape and scale parameters
-    double GetLogProb(double shape, const vector<double> &center) const {
+    double GetLogProb(double shape, const std::vector<double> &center) const {
         double tot = 0;
         for (int k = 0; k < GetDim(); k++) {
             double alpha = shape * center[k];
@@ -164,9 +166,9 @@ class MultiGammaSuffStat : public SuffStat {
 
   private:
     int dim;
-    vector<double> sum;
-    vector<double> sumlog;
-    vector<int> n;
+    std::vector<double> sum;
+    std::vector<double> sumlog;
+    std::vector<int> n;
 };
 
 #endif

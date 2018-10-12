@@ -93,8 +93,8 @@ class Move {
     //! a log prob and an update functions, as well as a pointer to the model
     //! itself. Returns success rate.
     template <class C>
-    static double Profile(std::vector<double> &x, double tuning, int n, int nrep, LogProbF<C> logprobf,
-        UpdateF<C> updatef, C *This) {
+    static double Profile(std::vector<double> &x, double tuning, int n, int nrep,
+        LogProbF<C> logprobf, UpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         std::vector<double> bk(x.size(), 0);

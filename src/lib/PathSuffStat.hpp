@@ -60,7 +60,9 @@ class PathSuffStat : public SuffStat {
 
     void IncrementRootCount(int state) { rootcount[state]++; }
 
-    void IncrementPairCount(int state1, int state2) { paircount[std::pair<int, int>(state1, state2)]++; }
+    void IncrementPairCount(int state1, int state2) {
+        paircount[std::pair<int, int>(state1, state2)]++;
+    }
 
     void AddRootCount(int state, int in) { rootcount[state] += in; }
 
@@ -78,7 +80,8 @@ class PathSuffStat : public SuffStat {
              i != suffstat.GetRootCountMap().end(); i++) {
             AddRootCount(i->first, i->second);
         }
-        for (std::map<std::pair<int, int>, int>::const_iterator i = suffstat.GetPairCountMap().begin();
+        for (std::map<std::pair<int, int>, int>::const_iterator i =
+                 suffstat.GetPairCountMap().begin();
              i != suffstat.GetPairCountMap().end(); i++) {
             AddPairCount(i->first.first, i->first.second, i->second);
         }

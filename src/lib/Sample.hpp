@@ -66,7 +66,7 @@ class Sample {
     int until;   // reading chain until this point
     int currentpoint;
     ProbModel *model;  // the model
-    std::string name;       // the name of the chain in the filesystem
+    std::string name;  // the name of the chain in the filesystem
 };
 
 #endif  // SAMPLE_H

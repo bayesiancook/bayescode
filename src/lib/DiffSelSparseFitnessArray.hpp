@@ -38,7 +38,7 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<std::vector<double>> {
     DiffSelSparseFitnessArray(const BidimSelector<std::vector<double>> &infitness,
         const BidimSelector<std::vector<int>> &intoggle, int inNlevel)
         : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-                                                std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
+              std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           toggle(intoggle),
           Nlevel(inNlevel) {
@@ -124,7 +124,7 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
         const Selector<std::vector<int>> &inmask, const BidimSelector<std::vector<int>> &intoggle,
         int inNlevel, double inepsilon)
         : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
-                                                std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
+              std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           toggle(intoggle),

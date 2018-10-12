@@ -28,13 +28,13 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
 
     //! constructor parameterized by a bidim array of fitness profiles, a codon
     //! state space and a single nucleotide matrix.
-    AADiffSelCodonMatrixBidimArray(const BidimSelector<vector<double>> &infitnessarray,
+    AADiffSelCodonMatrixBidimArray(const BidimSelector<std::vector<double>> &infitnessarray,
         const CodonStateSpace &incodonstatespace, const SubMatrix &innucmatrix)
         : fitnessarray(infitnessarray),
           codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
           matrixarray(infitnessarray.GetNrow(),
-              vector<AAMutSelOmegaCodonSubMatrix *>(
+              std::vector<AAMutSelOmegaCodonSubMatrix *>(
                   infitnessarray.GetNcol(), (AAMutSelOmegaCodonSubMatrix *)0)) {
         Create();
     }
@@ -85,17 +85,17 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
 
     //! signal corruption for column (site) j, and only for those rows
     //! (conditions) that are flagged
-    void CorruptColumn(int j, const vector<int> &flag) {
+    void CorruptColumn(int j, const std::vector<int> &flag) {
         for (int i = 0; i < GetNrow(); i++) {
             if (flag[i]) { matrixarray[i][j]->CorruptMatrix(); }
         }
     }
 
   private:
-    const BidimSelector<vector<double>> &fitnessarray;
+    const BidimSelector<std::vector<double>> &fitnessarray;
     const CodonStateSpace &codonstatespace;
     const SubMatrix &nucmatrix;
-    vector<vector<AAMutSelOmegaCodonSubMatrix *>> matrixarray;
+    std::vector<std::vector<AAMutSelOmegaCodonSubMatrix *>> matrixarray;
 };
 
 #endif

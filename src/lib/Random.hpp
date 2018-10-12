@@ -69,7 +69,7 @@ class Random {
     static double GammaSample(double alpha, double beta);
     static double BetaSample(double alpha, double beta);
     static void DirichletSample(
-            std::vector<double> &x, const std::vector<double> &center, double concentration = 1);
+        std::vector<double> &x, const std::vector<double> &center, double concentration = 1);
 
     static double logGammaDensity(double x, double alpha, double beta);
     static double logBetaDensity(double x, double alpha, double beta);

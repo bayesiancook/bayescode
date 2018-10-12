@@ -2,9 +2,9 @@
 #define SBP_H
 
 #include "Array.hpp"
-#include "Random.hpp"
 #include "OccupancySuffStat.hpp"
 #include "Permutation.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A truncated stick-breaking weight vector
@@ -205,7 +205,7 @@ class StickBreakingProcess : public SimpleArray<double> {
         for (int k = 0; k < GetSize(); k++) { os << GetVal(k) << V[k]; }
     }
 
-private:
+  private:
     double kappa;
 };
 

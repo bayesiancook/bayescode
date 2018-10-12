@@ -2,8 +2,8 @@
 #define WHITENOISE_H
 
 #include "BranchArray.hpp"
-#include "Random.hpp"
 #include "PoissonSuffStat.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
@@ -57,8 +57,8 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
             (*this)[i] = Random::GammaSample(
                 GetAlpha(i) + suffstat.GetCount(), GetBeta(i) + suffstat.GetBeta());
             if ((*this)[i] == 0) {
-                std::cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
-                     << '\t' << blmean.GetVal(i) << '\n';
+                std::cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t'
+                          << shape << '\t' << blmean.GetVal(i) << '\n';
                 (*this)[i] = 0.001;
             }
         }
@@ -70,8 +70,8 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
             if (suffstatarray.GetVal(i).GetBeta() == 0) {
                 (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
                 if ((*this)[i] == 0) {
-                    std::cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t' << shape
-                         << '\t' << blmean.GetVal(i) << '\n';
+                    std::cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t'
+                              << shape << '\t' << blmean.GetVal(i) << '\n';
                     (*this)[i] = 0.001;
                 }
             }
