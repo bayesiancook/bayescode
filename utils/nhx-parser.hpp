@@ -26,6 +26,7 @@ The fact that you are presently reading this means that you have had knowledge o
 license and that you accept its terms.*/
 
 #include <iostream>
+#include <map>
 #include <regex>
 #include <sstream>
 #include <string>
