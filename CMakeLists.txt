@@ -34,6 +34,7 @@ set(BAYESCODE_LIB
     src/lib/StateSpace.cpp
     src/lib/SubMatrix.cpp
     src/lib/TaxonSet.cpp
+    src/CodonM2aModel.cpp
     src/tree/implem.cpp
   )
 add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
@@ -43,6 +44,11 @@ target_compile_features(bayescode_lib PUBLIC ${CXX_FEATURES})
 add_executable(globom "src/SingleOmega.cpp")
 target_link_libraries(globom bayescode_lib)
 target_compile_features(globom PRIVATE ${CXX_FEATURES})
+
+# Codon M2a
+add_executable(codonm2a "src/CodonM2a.cpp")
+target_link_libraries(codonm2a bayescode_lib)
+target_compile_features(codonm2a PRIVATE ${CXX_FEATURES})
 
 # Diffsel double sparse
 add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
