@@ -37,6 +37,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "IIDMultiBernoulli.hpp"
 #include "IIDMultiGamma.hpp"
 #include "IIDProfileMask.hpp"
+#include "InferenceAppArgParse.hpp"
 #include "MultiGammaSuffStat.hpp"
 #include "PathSuffStat.hpp"
 #include "PhyloProcess.hpp"
@@ -87,6 +88,27 @@ using namespace std;
  * site i and a given amino acid a, is quantified by the posterior probability
  * that the corresponding toggle is equal to 1.
  */
+
+
+
+ class DiffSelDoublySparseAppArgParse : public BaseArgParse {
+   public:
+     DiffSelDoublySparseAppArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
+     ValueArg<std::string> alignment{
+         "a", "alignment", "Alignment file (PHYLIP)", true, "", "string", cmd};
+     ValueArg<std::string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
+     ValueArg<int> every{
+         "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
+     ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
+         false, -1, "int", cmd};
+     SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
+     ValueArg<int> ncond{"", "ncond", "Number of conditions", false, 1, "int", cmd};
+     ValueArg<int> nlevel{"", "nlevel", "Number of levels", false, 1, "int", cmd};
+     ValueArg<double> nlevel{"", "shape", "Shape of the fitness distribution", false, 1, "double", cmd};
+
+
+ };
+
 
 class DiffSelDoublySparseModel : public ProbModel {
     // -----
