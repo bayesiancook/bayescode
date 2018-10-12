@@ -81,7 +81,6 @@ class Tracer {
         names.push_back(name);
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetSize();
-            // !!!! This should be T-dependent, must ask pveber or vlanore !!!!
             if (n > 0) {
                 os << name << "[0]";
                 for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";

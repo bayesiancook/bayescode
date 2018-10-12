@@ -1476,8 +1476,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelDSBDPOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
-        // !!!! This must go into declare model (but potential conflict with MPI), must ask pveber
-        // or vlanore !!!!
         os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean << '\t'
            << dposomhyperinvshape << '\t' << Ncat << '\t' << baseNcat << '\t';
         tracer->write_line(os);
@@ -1491,8 +1489,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             exit(1);
         }
         is >> datafile >> treefile;
-        // !!!! This must go into declare model (but potential conflict with MPI), must ask pveber
-        // or vlanore !!!!
         is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >>
             Ncat >> baseNcat;
         init();
