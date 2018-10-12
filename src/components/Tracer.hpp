@@ -88,7 +88,7 @@ class Tracer {
 
 
     void add(std::string name, StickBreakingProcess& sbp) {
-        add(name + "_array", sbp);
+        add(name + "_array", static_cast<SimpleArray<double>&>(sbp));
 
         auto& kappa = sbp.GetKappa();
         add(name + "_kappa", kappa);
