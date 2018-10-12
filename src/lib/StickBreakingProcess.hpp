@@ -207,8 +207,8 @@ class StickBreakingProcess : public SimpleArray<double> {
     }
 
   private:
-    double kappa;
     std::vector<double> V;
+    double kappa;
 };
 
 #endif
