@@ -5,7 +5,6 @@
 #include "StickBreakingProcess.hpp"
 
 class Tracer {
-    std::vector<std::string> names;
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
     std::vector<std::function<void(std::ostream&)>> data_to_stream;
     std::vector<std::function<void(std::istream&)>> set_from_stream;
@@ -49,14 +48,12 @@ class Tracer {
     }
 
     void add(std::string name, double& d) {
-        names.push_back(name);
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([&d](std::ostream& os) { os << d; });
         set_from_stream.push_back([&d](std::istream& is) { is >> d; });
     }
 
     void add(std::string name, std::vector<double>& v) {
-        names.push_back(name);
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.size();
             if (n > 0) {
@@ -78,7 +75,6 @@ class Tracer {
 
     template <class T>
     void add(std::string name, SimpleArray<T>& v) {
-        names.push_back(name);
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetSize();
             if (n > 0) {
@@ -92,7 +88,6 @@ class Tracer {
 
 
     void add(std::string name, StickBreakingProcess& sbp) {
-        names.push_back(name);
         header_to_stream.push_back([&sbp, name](std::ostream& os) {
             os << name << "_kappa"
                << "\t";
@@ -122,7 +117,6 @@ class Tracer {
 
     template <class T>
     void add(std::string name, BranchArray<T>& v) {
-        names.push_back(name);
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetNbranch();
             if (n > 0) {
@@ -144,7 +138,6 @@ class Tracer {
 
     template <class T>
     void add(std::string name, T* o, double (T::*f)() const) {
-        names.push_back(name);
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
         set_from_stream.push_back([](std::istream& is) {
@@ -154,7 +147,6 @@ class Tracer {
     }
 
     void add(std::string name, std::function<double()> f) {
-        names.push_back(name);
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([f](std::ostream& os) { os << f(); });
         set_from_stream.push_back([](std::istream& is) {
