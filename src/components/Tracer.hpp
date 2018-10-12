@@ -88,31 +88,13 @@ class Tracer {
 
 
     void add(std::string name, StickBreakingProcess& sbp) {
-        header_to_stream.push_back([&sbp, name](std::ostream& os) {
-            os << name << "_kappa"
-               << "\t";
-            os << name << "[0]"
-               << "\t" << name << "_V[0]";
-            for (int k = 1; k < sbp.GetSize(); k++) {
-                os << "\t" << name << "[" << k << "]"
-                   << "\t" << name << "_V[" << k << "]";
-            }
-        });
-        auto& V = sbp.GetBetaVariates();
-        data_to_stream.push_back([&sbp, &V](std::ostream& os) {
-            os << sbp.GetKappa() << "\t";
-            for (int k = 0; k < sbp.GetSize(); k++) {
-                os << sbp[k] << "\t";
-                os << V.at(k) << "\t";
-            }
-        });
-        set_from_stream.push_back([&sbp, &V](std::istream& is) {
-            for (int k = 0; k < sbp.GetSize(); k++) {
-                is >> sbp.GetKappa();
-                is >> sbp[k];
-                is >> V.at(k);
-            }
-        });
+        add(name + "_array", sbp);
+
+        auto& kappa = sbp.GetKappa();
+        add(name + "_kappa", kappa);
+
+        auto& beta_variates = sbp.GetBetaVariates();
+        add(name + "_betavariates", beta_variates);
     }
 
     template <class T>
