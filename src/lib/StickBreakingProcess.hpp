@@ -12,9 +12,6 @@
 
 class StickBreakingProcess : public SimpleArray<double> {
   public:
-    // !!!! This should go private, must ask pveber or vlanore !!!!
-    std::vector<double> V;
-
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
     StickBreakingProcess(int inncat, double inkappa)
@@ -28,6 +25,7 @@ class StickBreakingProcess : public SimpleArray<double> {
     void SetKappa(double inkappa) { kappa = inkappa; }
 
     //! get underlying array of Beta variates
+    std::vector<double> &GetBetaVariates() { return V; }
     const std::vector<double> &GetBetaVariates() const { return V; }
 
     //! swap the two components
@@ -207,6 +205,7 @@ class StickBreakingProcess : public SimpleArray<double> {
 
   private:
     double kappa;
+    std::vector<double> V;
 };
 
 #endif

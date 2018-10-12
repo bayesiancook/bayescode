@@ -102,16 +102,17 @@ class Tracer {
                    << "\t" << name << "_V[" << k << "]";
             }
         });
-        data_to_stream.push_back([&sbp](std::ostream& os) {
+        auto& V = sbp.GetBetaVariates();
+        data_to_stream.push_back([&sbp, &V](std::ostream& os) {
             for (int k = 0; k < sbp.GetSize(); k++) {
                 os << sbp[k] << "\t";
-                os << sbp.V[k] << "\t";
+                os << V[k] << "\t";
             }
         });
-        set_from_stream.push_back([&sbp](std::istream& is) {
+        set_from_stream.push_back([&sbp, &V](std::istream& is) {
             for (int k = 0; k < sbp.GetSize(); k++) {
                 is >> sbp[k];
-                is >> sbp.V[k];
+                is >> V[k];
             }
         });
     }
