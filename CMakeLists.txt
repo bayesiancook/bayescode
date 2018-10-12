@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors -Wno-int-in-bool-context") # normal mode
 set(CXX_FEATURES cxx_auto_type cxx_nullptr cxx_final cxx_override cxx_range_for)
 include_directories("src")
 include_directories("src/lib")
