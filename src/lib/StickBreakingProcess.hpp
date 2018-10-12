@@ -24,6 +24,9 @@ class StickBreakingProcess : public SimpleArray<double> {
     //! set concentration parameter kappa to new value
     void SetKappa(double inkappa) { kappa = inkappa; }
 
+    double &GetKappa() { return kappa; }
+    const double &GetKappa() const { return kappa; }
+
     //! get underlying array of Beta variates
     std::vector<double> &GetBetaVariates() { return V; }
     const std::vector<double> &GetBetaVariates() const { return V; }
