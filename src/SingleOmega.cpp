@@ -6,6 +6,7 @@
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
+#include "components/restart_check.hpp"
 
 using namespace std;
 
@@ -19,6 +20,7 @@ int main(int argc, char *argv[]) {
         std::ifstream is = cmd.checkpoint_file();
         chain_driver = new ChainDriver(is);
         model = new SingleOmegaModel(is);
+        check_restart(*model, cmd.chain_name() + ".trace");
     } else {
         InferenceAppArgParse args(cmd);
         cmd.parse();
