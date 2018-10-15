@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include "ChainComponent.hpp"
+#include "Tracer.hpp"
 
 class StandardTracer : public ChainComponent {
     Tracer model_tracer;
