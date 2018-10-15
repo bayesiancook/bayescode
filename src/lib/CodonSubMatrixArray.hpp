@@ -1,6 +1,4 @@
-
-#ifndef CODONMATRIXARRAY_H
-#define CODONMATRIXARRAY_H
+#pragma once
 
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "Array.hpp"
@@ -212,5 +210,3 @@ class AAMutSelOmegaCodonSubMatrixArray : public Array<SubMatrix>,
     const Selector<double> *omegaarray;
     std::vector<AAMutSelOmegaCodonSubMatrix *> matrixarray;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef CODONSUBMATRIX_H
-#define CODONSUBMATRIX_H
+#pragma once
 
 #include "CodonStateSpace.hpp"
 #include "SubMatrix.hpp"
@@ -133,5 +132,3 @@ class MGOmegaCodonSubMatrix : public MGCodonSubMatrix, public OmegaCodonSubMatri
   protected:
     void ComputeArray(int i) const /*override*/;
 };
-
-#endif

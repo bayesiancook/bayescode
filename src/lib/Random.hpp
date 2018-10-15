@@ -1,5 +1,5 @@
-#ifndef RANDOM_H
-#define RANDOM_H
+#pragma once
+
 #include "Eigen/Dense"
 //
 // c++11
@@ -81,5 +81,3 @@ class Random {
     static int mt_index;
     static unsigned long long mt_buffer[MT_LEN];
 };
-
-#endif  // RANDOM_H

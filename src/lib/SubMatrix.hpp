@@ -1,5 +1,4 @@
-#ifndef SUBMATRIX_H
-#define SUBMATRIX_H
+#pragma once
 
 // #include "Eigen/Dense"
 #include <cmath>
@@ -492,5 +491,3 @@ inline int SubMatrix::DrawFromStationary() const {
     }
     return k;
 }
-
-#endif  // SUBMATRIX_H
