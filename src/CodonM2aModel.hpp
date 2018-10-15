@@ -109,7 +109,7 @@ class CodonM2aModel : public ChainComponent {
     CodonM2aModel(istream &is) {
         std::string model_name;
         is >> model_name;
-        if (model_name != "CodonM2aOmega") {
+        if (model_name != "CodonM2a") {
             std::cerr << "Expected CodonM2a for model name, got " << model_name << "\n";
             exit(1);
         }
