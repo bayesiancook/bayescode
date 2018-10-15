@@ -28,6 +28,8 @@ conditions as regards security.
 The fact that you are presently reading this means that you have had knowledge
 of the CeCILL-C license and that you accept its terms.*/
 
+#pragma once
+
 #include "AADiffSelCodonMatrixBidimArray.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
@@ -44,6 +46,8 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
 #include "tree/implem.hpp"
+#include "components/ChainComponent.hpp"
+
 
 using namespace std;
 
@@ -91,26 +95,8 @@ using namespace std;
 
 
 
- class DiffSelDoublySparseAppArgParse : public BaseArgParse {
-   public:
-     DiffSelDoublySparseAppArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
-     ValueArg<std::string> alignment{
-         "a", "alignment", "Alignment file (PHYLIP)", true, "", "string", cmd};
-     ValueArg<std::string> treefile{"t", "tree", "Tree file (NHX)", true, "", "string", cmd};
-     ValueArg<int> every{
-         "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
-     ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
-         false, -1, "int", cmd};
-     SwitchArg force{"f", "force", "Overwrite existing output files", cmd};
-     ValueArg<int> ncond{"", "ncond", "Number of conditions", false, 1, "int", cmd};
-     ValueArg<int> nlevel{"", "nlevel", "Number of levels", false, 1, "int", cmd};
-     ValueArg<double> nlevel{"", "shape", "Shape of the fitness distribution", false, 1, "double", cmd};
 
-
- };
-
-
-class DiffSelDoublySparseModel : public ProbModel {
+class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     // -----
     // model selectors
     // -----
