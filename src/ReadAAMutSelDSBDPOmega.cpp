@@ -43,6 +43,8 @@ int main(int argc, char *argv[]) {
     int size = (until - burnin) / every;
     std::string chain_name = read_args.chain_name.getValue();
 
+    cout << chain_name << endl;
+
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
     AAMutSelDSBDPOmegaModel model{is};

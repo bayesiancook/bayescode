@@ -1491,6 +1491,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     AAMutSelDSBDPOmegaModel(std::istream &is) {
         std::string model_name;
+        is >> model_name;
         if (model_name != "AAMutSelDSBDPOmega") {
             std::cerr << "Expected AAMutSelDSBDPOmega for model name, got " << model_name << "\n";
             exit(1);
