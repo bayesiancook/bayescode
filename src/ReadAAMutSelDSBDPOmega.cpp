@@ -27,21 +27,21 @@ class ReadAAMutSelDSBDPOmegaArgParse {
         "o", "om", "Computes the mean predicted omega under mutation-selection balance", cmd};
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
-    SwitchArg stats{"s", "stats", "Computes the mean ", cmd};
     UnlabeledValueArg<std::string> chain_name{
         "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
-    CmdLine cmd{"AAMUTSELDSBDPOMEGA", ' ', "0.1"};
-    ReadAAMutSelDSBDPOmegaArgParse args(cmd);
+    CmdLine cmd{"AAMutSelDSBDPOmega", ' ', "0.1"};
+    ReadAAMutSelDSBDPOmegaArgParse read_args(cmd);
     cmd.parse(argc, argv);
 
-    int burnin = args.burnin.getValue();
-    int every = args.every.getValue();
-    int until = args.until.getValue();
+    int burnin = read_args.burnin.getValue();
+    int every = read_args.every.getValue();
+    int until = read_args.until.getValue();
+    // pveber until is set to -1, meaning to unlimited as described
     int size = (until - burnin) / every;
-    std::string chain_name = args.chain_name.getValue();
+    std::string chain_name = read_args.chain_name.getValue();
 
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     ChainReader cr{model, chain_name + ".chain"};
 
     cr.skip(burnin);
-    if (args.ppred.getValue()) {
+    if (read_args.ppred.getValue()) {
         cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';
@@ -57,13 +57,13 @@ int main(int argc, char *argv[]) {
             model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
         }
         cerr << '\n';
-    } else if (args.om.getValue()) {
+    } else if (read_args.om.getValue()) {
         cerr << size << " points to read\n";
 
         double meandnds = 0;
         double vardnds = 0;
 
-        for (int i = 0; i < size; i++) {
+        for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             double om = model.GetPredictedDNDS();
@@ -76,24 +76,18 @@ int main(int argc, char *argv[]) {
         vardnds -= meandnds * meandnds;
 
         cout << "posterior mean omega : " << meandnds << '\t' << sqrt(vardnds) << '\n';
-    } else if (args.ss.getValue()) {
+    } else if (read_args.ss.getValue()) {
         cerr << size << " points to read\n";
 
-        double **sitestat = new double *[model.GetNsite()];
-        for (int i = 0; i < model.GetNsite(); i++) {
-            sitestat[i] = new double[model.GetNsite()];
-            for (int k = 0; k < model.GetNsite(); k++) { sitestat[i][k] = 0; }
-        }
+        std::vector<std::vector<double>> sitestat{0};
 
-        for (int i = 0; i < size; i++) {
+        for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             for (int i = 0; i < model.GetNsite(); i++) {
-                // TO DO !!!!!
-                // double *p = model.GetProfile(i);
-                for (int k = 0; k < model.GetNsite(); k++) {
-                    // sitestat[i][k] += p[k];
-                    sitestat[i][k] += 0;
+                std::vector<double> const &profile = model.GetProfile(step);
+                for (unsigned k = 0; k < profile.size(); k++) {
+                    sitestat.at(i).at(k) += profile.at(k);
                 }
             }
         }
@@ -103,7 +97,7 @@ int main(int argc, char *argv[]) {
         os << model.GetNsite() << '\n';
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1;
-            for (int k = 0; k < model.GetNsite(); k++) {
+            for (unsigned k = 0; k < sitestat[i].size(); k++) {
                 sitestat[i][k] /= size;
                 os << '\t' << sitestat[i][k];
             }

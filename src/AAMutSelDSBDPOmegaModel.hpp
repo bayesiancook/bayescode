@@ -268,6 +268,12 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     template <class C>
     void declare_model(C &t) {
+        t.add("omegamode", omegamode);
+        t.add("omegaprior", omegaprior);
+        t.add("dposompi", dposompi);
+        t.add("dposomhypermean", dposomhypermean);
+        t.add("dposomhyperinvshape", dposomhyperinvshape);
+        t.add("Ncat", Ncat);
         if (blmode < 2) {
             t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
@@ -1466,6 +1472,10 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         return mean;
     }
 
+    const std::vector<double> &GetProfile(int i) const {
+        return componentcodonmatrixarray->GetVal(sitealloc->GetVal(i)).GetAAFitnessProfile();
+    }
+
     void Monitor(std::ostream &os) const {
         os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\t' << basechrono.GetTime()
            << '\n';
@@ -1476,21 +1486,16 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelDSBDPOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
-        os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean << '\t'
-           << dposomhyperinvshape << '\t' << Ncat << '\t' << baseNcat << '\t';
         tracer->write_line(os);
     }
 
     AAMutSelDSBDPOmegaModel(std::istream &is) {
         std::string model_name;
-        is >> model_name;
         if (model_name != "AAMutSelDSBDPOmega") {
             std::cerr << "Expected AAMutSelDSBDPOmega for model name, got " << model_name << "\n";
             exit(1);
         }
         is >> datafile >> treefile;
-        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >>
-            Ncat >> baseNcat;
         init();
         tracer->read_line(is);
         Update();

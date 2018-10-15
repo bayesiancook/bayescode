@@ -21,3 +21,10 @@ clean:
 .PHONY: format
 format:
 	@clang-format -i `find -name *.*pp`
+
+# Run AaMutSel
+.PHONY: aamutsel
+aamutsel: all
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 data/polymorphism/gal4_1;
+	_build/readaamutsel --om -b 0 -e 1 -u 10 data/polymorphism/gal4_1;
+	_build/readaamutsel --ss -b 0 -e 1 -u 10 data/polymorphism/gal4_1;
