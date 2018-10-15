@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-shape") {
                     i++;
                     string tmp = argv[i];
-                    if (s == "free") {
+                    if (tmp == "free") {
                         fitnessshape = 0;
                     } else {
                         fitnessshape = atof(argv[i]);
@@ -359,9 +359,9 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-center") {
                     i++;
                     string tmp = argv[i];
-                    if (s == "free") {
+                    if (tmp == "free") {
                         fitnesscentermode = 0;
-                    } else if ((s == "fixed") || (s == "uniform")) {
+                    } else if ((tmp == "fixed") || (tmp == "uniform")) {
                         fitnesscentermode = 3;
                     }
                 } else if ((s == "-eps") || (s == "-epsilon")) {
