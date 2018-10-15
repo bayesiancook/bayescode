@@ -312,7 +312,7 @@ class MultiGeneSingleOmegaModelShared {
         if (blmode == 2) {
             t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
         } else {
-            t.add("mean_length", &MultiGeneSingleOmegaModelShared::GetMeanLength);
+            t.add("mean_length", this, &MultiGeneSingleOmegaModelShared::GetMeanLength);
             t.add("sd_length", [this](){ return sqrt(GetVarLength()); });
         }
         t.add("omegaarray_mean", [this](){ return omegaarray->GetMean(); });
@@ -327,7 +327,7 @@ class MultiGeneSingleOmegaModelShared {
             t.add("nucrelratehypercenter_entropy", [this](){ return Random::GetEntropy(nucrelratehypercenter); });
             t.add("nucrelratehyperinvconc", nucrelratehyperinvconc);
             t.add("sd_nucstat", [this](){return sqrt(GetVarNucStat()); });
-            t.add("nucstathypercenter_entropy", Random::GetEntropy(nucstathypercenter));
+            t.add("nucstathypercenter_entropy", [this](){return Random::GetEntropy(nucstathypercenter);});
             t.add("nucstathyperinvconc", nucstathyperinvconc);
         }
     }
