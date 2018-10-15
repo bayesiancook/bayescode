@@ -50,6 +50,11 @@ add_executable(codonm2a "src/CodonM2a.cpp")
 target_link_libraries(codonm2a bayescode_lib)
 target_compile_features(codonm2a PRIVATE ${CXX_FEATURES})
 
+# Read Codon M2a
+add_executable(readcodonm2a "src/ReadCodonM2a.cpp")
+target_link_libraries(readcodonm2a bayescode_lib)
+target_compile_features(readcodonm2a PRIVATE ${CXX_FEATURES})
+
 # Diffsel double sparse
 add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
 target_link_libraries(diffseldsparse bayescode_lib)
