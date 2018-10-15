@@ -6,6 +6,7 @@
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
+#include "components/restart_check.hpp"
 
 using namespace std;
 
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
         std::ifstream is = cmd.checkpoint_file();
         chain_driver = new ChainDriver(is);
         model = new AAMutSelDSBDPOmegaModel(is);
+        check_restart(*model, cmd.chain_name() + ".trace");
     } else {
         InferenceAppArgParse args(cmd);
         AAMutselArgParse aamutsel_args(cmd);
@@ -76,7 +78,6 @@ int main(int argc, char *argv[]) {
             aamutsel_args.dposomhyperinvshape.getValue(), aamutsel_args.ncat.getValue(),
             aamutsel_args.basencat.getValue());
     }
-
 
     ConsoleLogger console_logger;
     ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);

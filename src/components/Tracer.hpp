@@ -47,12 +47,6 @@ class Tracer {
         for (auto& f : set_from_stream) f(is);
     }
 
-    void add(std::string name, int& d) {
-        header_to_stream.push_back([name](std::ostream& os) { os << name; });
-        data_to_stream.push_back([&d](std::ostream& os) { os << d; });
-        set_from_stream.push_back([&d](std::istream& is) { is >> d; });
-    }
-
     void add(std::string name, double& d) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([&d](std::ostream& os) { os << d; });

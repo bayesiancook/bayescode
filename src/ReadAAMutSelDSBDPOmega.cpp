@@ -43,16 +43,15 @@ int main(int argc, char *argv[]) {
     int size = (until - burnin) / every;
     std::string chain_name = read_args.chain_name.getValue();
 
-    cout << chain_name << endl;
-
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
     AAMutSelDSBDPOmegaModel model{is};
     ChainReader cr{model, chain_name + ".chain"};
 
     cr.skip(burnin);
+    cerr << size << " points to read\n";
+
     if (read_args.ppred.getValue()) {
-        cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';
             cr.skip(every);
@@ -60,7 +59,6 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
     } else if (read_args.om.getValue()) {
-        cerr << size << " points to read\n";
 
         double meandnds = 0;
         double vardnds = 0;
@@ -79,17 +77,17 @@ int main(int argc, char *argv[]) {
 
         cout << "posterior mean omega : " << meandnds << '\t' << sqrt(vardnds) << '\n';
     } else if (read_args.ss.getValue()) {
-        cerr << size << " points to read\n";
 
-        std::vector<std::vector<double>> sitestat{0};
+        std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
 
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             for (int i = 0; i < model.GetNsite(); i++) {
-                std::vector<double> const &profile = model.GetProfile(step);
-                for (unsigned k = 0; k < profile.size(); k++) {
-                    sitestat.at(i).at(k) += profile.at(k);
+                std::vector<double> const &profile = model.GetProfile(i);
+                if (sitestat[i].size() != profile.size()) {sitestat[i].resize(profile.size(), 0);};
+                for (unsigned k{0}; k < profile.size(); k++) {
+                    sitestat[i][k] += profile[k];
                 }
             }
         }
@@ -99,9 +97,9 @@ int main(int argc, char *argv[]) {
         os << model.GetNsite() << '\n';
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1;
-            for (unsigned k = 0; k < sitestat[i].size(); k++) {
-                sitestat[i][k] /= size;
-                os << '\t' << sitestat[i][k];
+            for (auto &aa: sitestat[i]) {
+                aa /= size;
+                os << '\t' << aa;
             }
             os << '\n';
         }

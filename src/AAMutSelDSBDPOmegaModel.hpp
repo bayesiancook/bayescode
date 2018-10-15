@@ -268,12 +268,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     template <class C>
     void declare_model(C &t) {
-        t.add("omegamode", omegamode);
-        t.add("omegaprior", omegaprior);
-        t.add("dposompi", dposompi);
-        t.add("dposomhypermean", dposomhypermean);
-        t.add("dposomhyperinvshape", dposomhyperinvshape);
-        t.add("Ncat", Ncat);
         if (blmode < 2) {
             t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
@@ -1486,6 +1480,8 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelDSBDPOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
+        os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean << '\t'
+           << dposomhyperinvshape << '\t' << Ncat << '\t' << baseNcat << '\t';
         tracer->write_line(os);
     }
 
@@ -1497,6 +1493,8 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             exit(1);
         }
         is >> datafile >> treefile;
+        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >>
+           Ncat >> baseNcat;
         init();
         tracer->read_line(is);
         Update();
