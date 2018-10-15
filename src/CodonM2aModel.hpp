@@ -65,7 +65,8 @@ class CodonM2aModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    CodonM2aModel(string datafile, string treefile, double pi) : datafile(datafile), treefile(treefile), pi(pi) {
+    CodonM2aModel(string datafile, string treefile, double pi)
+        : datafile(datafile), treefile(treefile), pi(pi) {
         init();
         Update();
     }
@@ -181,13 +182,12 @@ class CodonM2aModel : public ChainComponent {
     void GetBranchLengths(BranchArray<double> &inbranchlength) const;
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmean,
-                                         double inblinvshape);
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmean, double inblinvshape);
 
-    //! resample all branches not conditioned by sequence data from prior (as indicated by lengthpathsuffstats)
-    void ResampleEmptyBranches()    {
-        branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
-    }
+    //! resample all branches not conditioned by sequence data from prior (as indicated by
+    //! lengthpathsuffstats)
+    void ResampleEmptyBranches() { branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray); }
 
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
@@ -198,22 +198,20 @@ class CodonM2aModel : public ChainComponent {
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-                                    double innucrelratehyperinvconc,
-                                    const std::vector<double> &innucstathypercenter,
-                                    double innucstathyperinvconc);
+        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+        double innucstathyperinvconc);
 
     //! set omega mixture parameters to a new value
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
 
     //! get omega mixture parameter values
-    void GetMixtureParameters(double &inpurom, double &indposom, double &inpurw,
-                              double &inposw) const;
+    void GetMixtureParameters(
+        double &inpurom, double &indposom, double &inpurw, double &inposw) const;
 
     //! set omega mixture hyperparameters to a new value
     void SetMixtureHyperParameters(double inpuromhypermean, double inpuromhyperinvconc,
-                                   double indposomhypermean, double indposomhyperinvshape,
-                                   double inpi, double inpurwhypermean, double inpurwhyperinvconc,
-                                   double inposwhypermean, double inposwhyperinvconc);
+        double indposomhypermean, double indposomhyperinvshape, double inpi, double inpurwhypermean,
+        double inpurwhyperinvconc, double inposwhypermean, double inposwhyperinvconc);
 
     //-------------------
     // Matrices
@@ -225,7 +223,7 @@ class CodonM2aModel : public ChainComponent {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) ;
+    void PostPred(string name);
 
     //! \brief tell the nucleotide matrix that its parameters have changed and
     //! that it should be updated
@@ -495,7 +493,6 @@ class CodonM2aModel : public ChainComponent {
     // ------------------
 
   private:
-
     std::string datafile, treefile;
     std::unique_ptr<Tracer> tracer;
     std::unique_ptr<const Tree> tree;

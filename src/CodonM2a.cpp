@@ -1,7 +1,7 @@
 #include <cmath>
 #include <fstream>
-#include "InferenceAppArgParse.hpp"
 #include "CodonM2aModel.hpp"
+#include "InferenceAppArgParse.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
@@ -20,16 +20,17 @@ int main(int argc, char *argv[]) {
         chain_driver = new ChainDriver(is);
         model = new CodonM2aModel(is);
     } else {
-
         InferenceAppArgParse args(cmd);
 
-        TCLAP::ValueArg<double> pi{"p", "pi", "prior prob of being under positive selection (default: 0.1)",
-            false, 0.1, "double", cmd.get()};
+        TCLAP::ValueArg<double> pi{"p", "pi",
+            "prior prob of being under positive selection (default: 0.1)", false, 0.1, "double",
+            cmd.get()};
 
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
-        model = new CodonM2aModel(args.alignment.getValue(), args.treefile.getValue(), pi.getValue());
+        model =
+            new CodonM2aModel(args.alignment.getValue(), args.treefile.getValue(), pi.getValue());
     }
 
     ConsoleLogger console_logger;
