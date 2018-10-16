@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors -Wno-int-in-bool-context") # normal mode
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors -Wno-unknown-warning-option -Wno-int-in-bool-context") # normal mode
 
 # Sanitize: runtime checks for various forms of undefined or suspicious behavior (clang++).
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory -g")
