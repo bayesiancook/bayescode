@@ -59,7 +59,6 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
     } else if (read_args.om.getValue()) {
-
         double meandnds = 0;
         double vardnds = 0;
 
@@ -77,7 +76,6 @@ int main(int argc, char *argv[]) {
 
         cout << "posterior mean omega : " << meandnds << '\t' << sqrt(vardnds) << '\n';
     } else if (read_args.ss.getValue()) {
-
         std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
 
         for (int step = 0; step < size; step++) {
@@ -85,10 +83,10 @@ int main(int argc, char *argv[]) {
             cr.skip(every);
             for (int i = 0; i < model.GetNsite(); i++) {
                 std::vector<double> const &profile = model.GetProfile(i);
-                if (sitestat[i].size() != profile.size()) {sitestat[i].resize(profile.size(), 0);};
-                for (unsigned k{0}; k < profile.size(); k++) {
-                    sitestat[i][k] += profile[k];
-                }
+                if (sitestat[i].size() != profile.size()) {
+                    sitestat[i].resize(profile.size(), 0);
+                };
+                for (unsigned k{0}; k < profile.size(); k++) { sitestat[i][k] += profile[k]; }
             }
         }
         cerr << '\n';
@@ -97,7 +95,7 @@ int main(int argc, char *argv[]) {
         os << model.GetNsite() << '\n';
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1;
-            for (auto &aa: sitestat[i]) {
+            for (auto &aa : sitestat[i]) {
                 aa /= size;
                 os << '\t' << aa;
             }

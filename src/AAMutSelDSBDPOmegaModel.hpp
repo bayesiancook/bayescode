@@ -1492,9 +1492,8 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             std::cerr << "Expected AAMutSelDSBDPOmega for model name, got " << model_name << "\n";
             exit(1);
         }
-        is >> datafile >> treefile;
-        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >>
-           Ncat >> baseNcat;
+        is >> datafile >> treefile >> omegamode >> omegaprior >> dposompi;
+        is >> dposomhypermean >> dposomhyperinvshape >> Ncat >> baseNcat;
         init();
         tracer->read_line(is);
         Update();
