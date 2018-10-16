@@ -10,6 +10,8 @@
 #include "MultinomialAllocationVector.hpp"
 #include "Permutation.hpp"
 #include "PhyloProcess.hpp"
+#include "PolyProcess.hpp"
+#include "PolySuffStat.hpp"
 #include "StickBreakingProcess.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
@@ -67,12 +69,16 @@
 
 class AAMutSelDSBDPOmegaModel : public ChainComponent {
     std::string datafile, treefile;
+
+    bool polymorphism_aware;
+
     std::unique_ptr<Tracer> tracer;
     std::unique_ptr<const Tree> tree;
 
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
+    PolyData *polydata{nullptr};
 
     int Nsite;
     int Ntaxa;
@@ -139,10 +145,23 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     // this one is used by PhyloProcess: has to be a Selector<SubMatrix>
     MixtureSelector<SubMatrix> *sitesubmatrixarray;
 
+    // this one is used by PolyProcess: has to be a Selector<vector<double>>
+    MixtureSelector<std::vector<double>> *siteaafitnessarray;
+
     PhyloProcess *phyloprocess;
+
+    // global theta (4*Ne*u) used for polymorphism
+    double theta;
+    double thetamax;
+
+    PolyProcess *polyprocess{nullptr};
+    PoissonRandomField *poissonrandomfield{nullptr};
 
     PathSuffStatArray *sitepathsuffstatarray;
     PathSuffStatArray *componentpathsuffstatarray;
+
+    PolySuffStatArray *sitepolysuffstatarray{nullptr};
+    PolySuffStatArray *componentpolysuffstatarray{nullptr};
 
     // 0: free wo shrinkage
     // 1: free with shrinkage
@@ -194,11 +213,13 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
+    //! - polymorphism_aware: boolean to force using polymorphism data
     AAMutSelDSBDPOmegaModel(std::string indatafile, std::string intreefile, int inomegamode,
         int inomegaprior, double indposompi, double indposomhypermean, double indposomhyperinvshape,
-        int inNcat, int inbaseNcat)
+        int inNcat, int inbaseNcat, bool polymorphism_aware)
         : datafile(indatafile),
           treefile(intreefile),
+          polymorphism_aware(polymorphism_aware),
           baseNcat(inbaseNcat),
           Ncat(inNcat),
           omegaprior(inomegaprior),
@@ -220,13 +241,14 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
 
+        if (polymorphism_aware) { polydata = new PolyData(codondata, datafile); }
+
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
 
-        if (Ncat == -1) {
-            Ncat = Nsite;
-            if (Ncat > 100) { Ncat = 100; }
-        }
+        if (Ncat == -1) { Ncat = Nsite; }
+        if (Ncat > Nsite) { Ncat = Nsite; }
+        if (Ncat > 100) { Ncat = 100; }
 
         basemin = 0;
         if (baseNcat < 0) {
@@ -288,6 +310,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         t.add("componentaafitnessarray", *componentaafitnessarray);
         t.add("sitealloc", *sitealloc);
         if (omegamode < 2) { t.add("omega; ", omega); }
+        if (polyprocess != nullptr) { t.add("theta; ", theta); }
     }
 
     template <class C>
@@ -297,6 +320,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         // 3x: per coding site (and not per nucleotide site)
         t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); });
         t.add("omega", omega);
+        t.add("theta", theta);
         t.add("ncluster", [this]() { return GetNcluster(); });
         t.add("kappa", kappa);
         if (baseNcat > 1) {
@@ -450,9 +474,24 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         // selector, specifying which codon matrix should be used for each site
         sitesubmatrixarray = new MixtureSelector<SubMatrix>(componentcodonmatrixarray, sitealloc);
 
-        // create polyprocess
+        // selector, specifying which aa fitness array should be used for each site
+        siteaafitnessarray =
+            new MixtureSelector<std::vector<double>>(componentaafitnessarray, sitealloc);
 
-        phyloprocess = new PhyloProcess(tree.get(), codondata, branchlength, 0, sitesubmatrixarray);
+        // global theta (4*Ne*u = 1e-5 by default, and maximum value 0.1)
+        theta = 1e-5;
+        thetamax = 0.1;
+        if (polydata != nullptr) {
+            poissonrandomfield =
+                new PoissonRandomField(polydata->GetSampleSizeSet(), GetCodonStateSpace());
+            polyprocess = new PolyProcess(GetCodonStateSpace(), polydata, poissonrandomfield,
+                siteaafitnessarray, nucmatrix, &theta);
+            sitepolysuffstatarray = new PolySuffStatArray(Nsite);
+            componentpolysuffstatarray = new PolySuffStatArray(Ncat);
+        }
+
+        phyloprocess = new PhyloProcess(
+            tree.get(), codondata, branchlength, 0, sitesubmatrixarray, polyprocess);
         phyloprocess->Unfold();
 
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -473,6 +512,9 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     //! return current omega value
     double GetOmega() const { return omega; }
+
+    //! return current theta value
+    double GetTheta() const { return theta; }
 
     //! \brief const access to array of length-pathsuffstats across branches
     const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
@@ -634,6 +676,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         total += StickBreakingLogPrior();
         total += AALogPrior();
         if (omegamode < 2) { total += OmegaLogPrior(); }
+        if (polyprocess != nullptr) { total += ThetaLogPrior(); }
         return total;
     }
 
@@ -687,6 +730,15 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             exit(1);
         }
         return ret;
+    }
+
+    //! log prior over theta
+    double ThetaLogPrior() const {
+        if (theta > thetamax) {
+            return -std::numeric_limits<double>::infinity();
+        } else {
+            return -log(theta);
+        }
     }
 
     //! log prior over nuc rates rho and pi (uniform)
@@ -744,17 +796,45 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
+    //! return log prob only at the tips due to polymorphism of the substitution mapping,
+    //! as a function of the current codon substitution process
+    double PolySuffStatLogProb() const {
+        //! sum over all components to get log prob
+        if (polyprocess != nullptr) {
+            return componentpolysuffstatarray->GetLogProb(
+                *poissonrandomfield, *componentaafitnessarray, *nucmatrix, theta);
+        } else {
+            return 0;
+        }
+    }
+
+    //! return log prob only at the tips due to polymorphism of the substitution
+    //! mapping, over sites allocated to component k of the mixture
+    double ComponentPolySuffStatLogProb(int k) const {
+        // sum over all sites allocated to component k
+        if (polyprocess != nullptr) {
+            return componentpolysuffstatarray->GetVal(k).GetLogProb(
+                *poissonrandomfield, componentaafitnessarray->GetVal(k), *nucmatrix, theta);
+        } else {
+            return 0.0;
+        }
+    }
+
     //! return log prob of the current substitution mapping, as a function of the
     //! current codon substitution process
     double PathSuffStatLogProb() const {
-        return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
+        return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray) +
+               PolySuffStatLogProb();
+        ;
     }
 
     //! return log prob of the substitution mappings over sites allocated to
     //! component k of the mixture
     double PathSuffStatLogProb(int k) const {
         return componentpathsuffstatarray->GetVal(k).GetLogProb(
-            componentcodonmatrixarray->GetVal(k));
+                   componentcodonmatrixarray->GetVal(k)) +
+               ComponentPolySuffStatLogProb(k);
+        ;
     }
 
     //! return log prob of current branch lengths, as a function of branch lengths
@@ -768,7 +848,9 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     //! of the center and concentration parameters of this component
     double BaseSuffStatLogProb(int k) const {
         return basesuffstatarray->GetVal(k).GetLogProb(
-            basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k));
+                   basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k)) +
+               ComponentPolySuffStatLogProb(k);
+        ;
     }
 
     //-------------------
@@ -780,6 +862,9 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     double LambdaHyperLogProb() const {
         return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
+
+    //! log prob factor to be recomputed when Theta=4*Ne*u
+    double ThetaLogProb() const { return ThetaLogPrior() + PolySuffStatLogProb(); }
 
     //! log prob factor to be recomputed when moving nucleotide mutation rate
     //! parameters (nucrelrate and nucstat)
@@ -809,12 +894,20 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void CollectSitePathSuffStat() {
         sitepathsuffstatarray->Clear();
         sitepathsuffstatarray->AddSuffStat(*phyloprocess);
+        if (polyprocess != nullptr) {
+            sitepolysuffstatarray->Clear();
+            sitepolysuffstatarray->AddSuffStat(*phyloprocess);
+        }
     }
 
     //! gather site-specific sufficient statistics component-wise
     void CollectComponentPathSuffStat() {
         componentpathsuffstatarray->Clear();
         componentpathsuffstatarray->Add(*sitepathsuffstatarray, *sitealloc);
+        if (polyprocess != nullptr) {
+            componentpolysuffstatarray->Clear();
+            componentpolysuffstatarray->Add(*sitepolysuffstatarray, *sitealloc);
+        }
     }
 
     //! collect sufficient statistics for moving branch lengths (directly from the
@@ -840,6 +933,27 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void ResampleSub(double frac) {
         UpdateMatrices();
         phyloprocess->Move(frac);
+        CheckMapping();
+    }
+
+    void CheckMapping() const {
+        for (int taxon = 0; taxon < Ntaxa; taxon++) {
+            for (int site = 0; site < Nsite; site++) {
+                int sub_state = phyloprocess->GetPathState(taxon, site);
+                int data_state = codondata->GetState(taxon, site);
+                std::vector<int> path_state_neighbors =
+                    codondata->GetCodonStateSpace()->GetNeighbors(sub_state);
+                auto find_data_in_sub_neighbor =
+                    find(path_state_neighbors.begin(), path_state_neighbors.end(), data_state);
+                bool data_sub_not_neighbors =
+                    (find_data_in_sub_neighbor == path_state_neighbors.end());
+                if (sub_state != data_state and data_sub_not_neighbors) {
+                    std::cerr << "Substitution mapping final state is not even a neighbor of "
+                                 "the state given by the alignment"
+                              << std::endl;
+                }
+            }
+        }
     }
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
@@ -854,6 +968,8 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             if (nucmode < 2) { MoveNucRates(); }
 
             if (omegamode < 2) { MoveOmega(); }
+
+            if (polyprocess != nullptr) { MoveTheta(); }
 
             aachrono.Start();
             MoveAAMixture(3);
@@ -896,6 +1012,15 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         Move::Scaling(lambda, 0.3, 10, &AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,
             &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
+    }
+
+    //! MH move on theta
+    void MoveTheta() {
+        Move::Scaling(theta, 1.0, 10, &AAMutSelDSBDPOmegaModel::ThetaLogProb,
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+        Move::Scaling(theta, 0.3, 10, &AAMutSelDSBDPOmegaModel::ThetaLogProb,
+            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
+        assert(theta <= thetamax);
     }
 
     //! MH move on omega
@@ -1466,9 +1591,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         return mean;
     }
 
-    const std::vector<double> &GetProfile(int i) const {
-        return componentcodonmatrixarray->GetVal(sitealloc->GetVal(i)).GetAAFitnessProfile();
-    }
+    const std::vector<double> &GetProfile(int i) const { return siteaafitnessarray->GetVal(i); }
 
     void Monitor(std::ostream &os) const {
         os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\t' << basechrono.GetTime()
@@ -1480,8 +1603,10 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelDSBDPOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
-        os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean << '\t'
-           << dposomhyperinvshape << '\t' << Ncat << '\t' << baseNcat << '\t';
+        os << omegamode << '\t' << omegaprior << '\t';
+        os << dposompi << '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
+        os << Ncat << '\t' << baseNcat << '\t';
+        os << polymorphism_aware << '\t';
         tracer->write_line(os);
     }
 
@@ -1492,8 +1617,12 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             std::cerr << "Expected AAMutSelDSBDPOmega for model name, got " << model_name << "\n";
             exit(1);
         }
-        is >> datafile >> treefile >> omegamode >> omegaprior >> dposompi;
-        is >> dposomhypermean >> dposomhyperinvshape >> Ncat >> baseNcat;
+        is >> datafile >> treefile;
+        is >> omegamode >> omegaprior;
+        is >> dposompi >> dposomhypermean >> dposomhyperinvshape;
+        is >> Ncat >> baseNcat;
+        is >> polymorphism_aware;
+
         init();
         tracer->read_line(is);
         Update();

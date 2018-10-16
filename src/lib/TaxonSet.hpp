@@ -47,6 +47,7 @@ class TaxonSet {
     void ToStream(std::ostream &os) const;
 
     std::vector<int> get_index_table(const Tree *tree) const;
+    std::vector<int> get_reverse_index_table(const Tree *tree) const;
 
   private:
     int Ntaxa;

@@ -7,6 +7,7 @@
 class SuffStat;
 class PoissonSuffStat;
 class PathSuffStat;
+class PolySuffStat;
 class SubMatrix;
 
 /**

@@ -25,7 +25,12 @@ format:
 # Run AaMutSel
 .PHONY: aamutsel
 aamutsel: all
-	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 gal4_1
-	_build/aamutsel gal4_1
-	_build/readaamutsel --om -b 0 -e 1 -u 10 gal4_1
-	_build/readaamutsel --ss -b 0 -e 1 -u 10 gal4_1
+	@rm -f gal4*.*
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 gal4
+	_build/aamutsel gal4
+	_build/readaamutsel --om -b 0 -e 1 -u 10 gal4
+	_build/readaamutsel --ss -b 0 -e 1 -u 10 gal4
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 -p gal4_poly
+	_build/aamutsel gal4_poly
+	_build/readaamutsel --om -b 0 -e 1 -u 10 gal4_poly
+	_build/readaamutsel --ss -b 0 -e 1 -u 10 gal4_poly

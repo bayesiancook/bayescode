@@ -48,6 +48,9 @@ set(BAYESCODE_LIB
     src/lib/StateSpace.cpp
     src/lib/SubMatrix.cpp
     src/lib/TaxonSet.cpp
+    src/lib/PolyData.cpp
+    src/lib/PolyProcess.cpp
+    src/lib/PoissonRandomField.cpp
     src/CodonM2aModel.cpp
     src/tree/implem.cpp
   )

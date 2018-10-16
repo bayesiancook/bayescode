@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
-    AAMutSelDSBDPOmegaModel model{is};
+    AAMutSelDSBDPOmegaModel model(is);
     ChainReader cr{model, chain_name + ".chain"};
 
     cr.skip(burnin);

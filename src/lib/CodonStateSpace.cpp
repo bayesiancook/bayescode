@@ -112,6 +112,15 @@ CodonStateSpace::CodonStateSpace(GeneticCodeType type) {
         cerr << type << '\n';
         exit(1);
     }
+
+    neighbors_vector.resize(Nstate);
+    for (int from{0}; from < Nstate; from++) {
+        for (int to{0}; to < Nstate; to++) {
+            if (to != from and GetDifferingPosition(from, to) != 3) {
+                neighbors_vector[from].push_back(to);
+            }
+        }
+    }
 }
 
 CodonStateSpace::~CodonStateSpace() throw() {
@@ -215,3 +224,5 @@ int CodonStateSpace::GetDifferingPosition(int i, int j) const {
     }
     return 3;
 }
+
+vector<int> CodonStateSpace::GetNeighbors(int i) { return neighbors_vector[i]; }

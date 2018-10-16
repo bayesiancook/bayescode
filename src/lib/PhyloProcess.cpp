@@ -1,20 +1,29 @@
 #include "PhyloProcess.hpp"
 #include <algorithm>
 #include "PathSuffStat.hpp"
+#include "PolySuffStat.hpp"
+
 using namespace std;
 
 PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
     const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-    const BranchSiteSelector<SubMatrix> *insubmatrixarray,
-    const Selector<SubMatrix> *inrootsubmatrixarray) {
+    PolyProcess *inpolyprocess) {
     tree = intree;
     data = indata;
     Nstate = data->GetNstate();
     taxon_table = data->GetTaxonSet()->get_index_table(tree);
+    reverse_taxon_table = data->GetTaxonSet()->get_reverse_index_table(tree);
     maxtrial = DEFAULTMAXTRIAL;
-
     branchlength = inbranchlength;
     siterate = insiterate;
+    polyprocess = inpolyprocess;
+}
+
+PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
+    const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+    const BranchSiteSelector<SubMatrix> *insubmatrixarray,
+    const Selector<SubMatrix> *inrootsubmatrixarray, PolyProcess *inpolyprocess)
+    : PhyloProcess(intree, indata, inbranchlength, insiterate, inpolyprocess) {
     submatrixarray = insubmatrixarray;
     allocsubmatrixarray = false;
     rootsubmatrixarray = inrootsubmatrixarray;
@@ -23,14 +32,8 @@ PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
 
 PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
     const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-    const SubMatrix *insubmatrix) {
-    tree = intree;
-    data = indata;
-    Nstate = data->GetNstate();
-    taxon_table = data->GetTaxonSet()->get_index_table(tree);
-    maxtrial = DEFAULTMAXTRIAL;
-    branchlength = inbranchlength;
-    siterate = insiterate;
+    const SubMatrix *insubmatrix, PolyProcess *inpolyprocess)
+    : PhyloProcess(intree, indata, inbranchlength, insiterate, inpolyprocess) {
     submatrixarray =
         new BranchHomogeneousSiteHomogeneousSelector<SubMatrix>(*tree, GetNsite(), *insubmatrix);
     allocsubmatrixarray = true;
@@ -40,14 +43,8 @@ PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
 
 PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
     const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-    const Selector<SubMatrix> *insubmatrixarray) {
-    tree = intree;
-    data = indata;
-    Nstate = data->GetNstate();
-    taxon_table = data->GetTaxonSet()->get_index_table(tree);
-    maxtrial = DEFAULTMAXTRIAL;
-    branchlength = inbranchlength;
-    siterate = insiterate;
+    const Selector<SubMatrix> *insubmatrixarray, PolyProcess *inpolyprocess)
+    : PhyloProcess(intree, indata, inbranchlength, insiterate, inpolyprocess) {
     if (insubmatrixarray->GetSize() != GetNsite()) {
         std::cerr << "error in PhyloProcess constructor: size of matrix array does "
                      "not match alignment size\n";
@@ -62,14 +59,9 @@ PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
 
 PhyloProcess::PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
     const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-    const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *insubmatrix) {
-    tree = intree;
-    data = indata;
-    Nstate = data->GetNstate();
-    taxon_table = data->GetTaxonSet()->get_index_table(tree);
-    maxtrial = DEFAULTMAXTRIAL;
-    branchlength = inbranchlength;
-    siterate = insiterate;
+    const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *insubmatrix,
+    PolyProcess *inpolyprocess)
+    : PhyloProcess(intree, indata, inbranchlength, insiterate, inpolyprocess) {
     submatrixarray = new BranchHeterogeneousSiteHomogeneousSelector<SubMatrix>(
         *insubmatrixbrancharray, GetNsite());
     allocsubmatrixarray = true;
@@ -274,12 +266,21 @@ void PhyloProcess::Pruning(Tree::NodeIndex from, int site) const {
     if (tree->is_leaf(from)) {
         int totcomp = 0;
         for (int k = 0; k < GetNstate(); k++) {
-            // polyprocess here
-            if (isDataCompatible(from, site, k)) {
-                t[k] = 1;
-                totcomp++;
+            if (polyprocess != nullptr) {
+                double prob = polyprocess->GetProb(taxon_table[from], site, k);
+                if (prob > 0.0) {
+                    totcomp++;
+                    t[k] = prob;
+                } else {
+                    t[k] = 0.0;
+                }
             } else {
-                t[k] = 0;
+                if (isDataCompatible(from, site, k)) {
+                    t[k] = 1.0;
+                    totcomp++;
+                } else {
+                    t[k] = 0.0;
+                }
             }
         }
         if (totcomp == 0) {
@@ -639,6 +640,25 @@ BranchSitePath *PhyloProcess::ResampleUniformized(
     }
     path->Last()->SetRelativeTime(t);
     return path;
+}
+
+void PhyloProcess::AddPolySuffStat(PolySuffStat &polysuffstat) const {
+    assert(polyprocess != nullptr);
+    for (int site = 0; site < GetNsite(); site++) {
+        for (int taxon = 0; taxon < GetNtaxa(); taxon++) {
+            int anc_state = GetPathState(taxon, site);
+            polysuffstat.IncrementPolyCount(polyprocess->GetDerivedTuple(taxon, site, anc_state));
+        }
+    }
+}
+void PhyloProcess::AddPolySuffStat(Array<PolySuffStat> &suffstatarray) const {
+    assert(polyprocess != nullptr);
+    for (int site = 0; site < GetNsite(); site++) {
+        for (int taxon = 0; taxon < GetNtaxa(); taxon++) {
+            suffstatarray[site].IncrementPolyCount(
+                polyprocess->GetDerivedTuple(taxon, site, GetPathState(taxon, site)));
+        }
+    }
 }
 
 void PhyloProcess::AddPathSuffStat(PathSuffStat &suffstat) const {

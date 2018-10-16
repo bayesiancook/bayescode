@@ -29,12 +29,13 @@ class AAMutselArgParse : public BaseArgParse {
         "double", cmd};
     ValueArg<double> dposomhypermean{"", "dposomhypermean",
         "inverse shape of the gamma distribution "
-        "(if -mixomega is switched on)",
+        "(if --mixomega is switched on)",
         false, 1.0, "double", cmd};
     ValueArg<double> dposomhyperinvshape{"", "dposomhyperinvshape",
         "inverse shape of the gamma distribution "
-        "(if -mixomega is switched on)",
+        "(if --mixomega is switched on)",
         false, 0.5, "double", cmd};
+    SwitchArg polymorphism_aware{"p", "polymorphism_aware", "Use polymorphic data", cmd, false};
 
     //! - omegamode: omega fixed (3), shared across genes (2) or estimated with
     //! shrinkage across genes (1) or without shrinkage (0)
@@ -76,7 +77,7 @@ int main(int argc, char *argv[]) {
             aamutsel_args.omegamode(), aamutsel_args.omegaprior(),
             aamutsel_args.dposompi.getValue(), aamutsel_args.dposomhypermean.getValue(),
             aamutsel_args.dposomhyperinvshape.getValue(), aamutsel_args.ncat.getValue(),
-            aamutsel_args.basencat.getValue());
+            aamutsel_args.basencat.getValue(), aamutsel_args.polymorphism_aware.getValue());
     }
 
     ConsoleLogger console_logger;

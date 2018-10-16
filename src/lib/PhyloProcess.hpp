@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <fstream>
@@ -8,6 +7,7 @@
 #include "BranchSiteSelector.hpp"
 #include "Chrono.hpp"
 #include "NodeArray.hpp"
+#include "PolyProcess.hpp"
 #include "SequenceAlignment.hpp"
 #include "SubMatrix.hpp"
 #include "tree/implem.hpp"
@@ -24,7 +24,9 @@
  * branch lengths, of site-specific rates and a selector of substitution
  * matrices across sites and branches. It is then responsible for organizing all
  * likelihood calculations by pruning, as stochastic mapping of substitution
- * histories.
+ * histories. If polymorphism data is available (polyprocess is not a null pointer),
+ * the likelihood of the data (number of occurrences in the population of the reference
+ * and derived alleles at each site) is calculated using diffusion equations.
  */
 
 class PhyloProcess {
@@ -32,9 +34,26 @@ class PhyloProcess {
     friend class PathSuffStat;
     friend class PathSuffStatArray;
     friend class PathSuffStatBidimArray;
+    friend class PolySuffStat;
+    friend class PolySuffStatArray;
     friend class PoissonSuffStatBranchArray;
     friend class PoissonSuffStatArray;
     friend class PathSuffStatNodeArray;
+
+    //! \brief delegated constructor
+    //!
+    //! Constructor takes as parameters (pointers):
+    //! - tree
+    //! - sequence alignment
+    //! - a BranchSelector of branch lengths
+    //! - a site Selector of site rates (if pointer is null, then rates across
+    //! sites are all equal to 1)
+    //! - a PolyProcess to compute the likelihood of the data taking into account
+    //! occurrences in the population of the reference and derived alleles
+    PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
+        const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
+        PolyProcess *inpolyprocess);
+
 
     //! \brief generic constructor
     //!
@@ -49,10 +68,13 @@ class PhyloProcess {
     //! - a site Selector of substitution matrices, specifying which matrix should
     //! be used for getting the equilibrium frequencies at each site, from which
     //! to draw the root state
+    //! - a PolyProcess to compute the likelihood of the data taking into account
+    //! occurrences in the population of the reference and derived alleles,
+    //! this is nullpointer if no data could be found
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
         const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
         const BranchSiteSelector<SubMatrix> *insubmatrixarray,
-        const Selector<SubMatrix> *inrootsubmatrixarray);
+        const Selector<SubMatrix> *inrootsubmatrixarray, PolyProcess *inpolyprocess = nullptr);
 
     //! \brief special (short-cut) constructor for branch-homogeneous and
     //! site-homogeneous model
@@ -62,9 +84,12 @@ class PhyloProcess {
     //! substitution matrices (submatrixarray and rootsubmatrixarray) are then
     //! internally allocated by PhyloProcess based on this matrix. If insiterate
     //! pointer is null, then rates across sites are all equal to 1.
+    //! - a PolyProcess to compute the likelihood of the data taking into account
+    //! occurrences in the population of the reference and derived alleles,
+    //! this is nullpointer if no data could be found
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
         const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-        const SubMatrix *insubmatrix);
+        const SubMatrix *insubmatrix, PolyProcess *inpolyprocess = nullptr);
 
     //! \brief special (short-cut) constructor for branch-homogeneous and
     //! site-heterogeneous model
@@ -75,9 +100,12 @@ class PhyloProcess {
     //! PhyloProcess based on this matrix based on this array, while
     //! rootmatrixarray is set to insubmatrixarray. If insiterate pointer is null,
     //! then rates across sites are all equal to 1.
+    //! - a PolyProcess to compute the likelihood of the data taking into account
+    //! occurrences in the population of the reference and derived alleles,
+    //! this is nullpointer if no data could be found
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
         const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-        const Selector<SubMatrix> *insubmatrixarray);
+        const Selector<SubMatrix> *insubmatrixarray, PolyProcess *inpolyprocess = nullptr);
 
     //! \brief special (short-cut) constructor for branch-heterogeneous and
     //! site-homogeneous model
@@ -88,9 +116,13 @@ class PhyloProcess {
     //! substitution matrices (submatrixarray and rootsubmatrixarray) are then
     //! internally allocated by PhyloProcess based on these parameters. If
     //! insiterate pointer is null, then rates across sites are all equal to 1.
+    //! - a PolyProcess to compute the likelihood of the data taking into account
+    //! occurrences in the population of the reference and derived alleles,
+    //! this is nullpointer if no data could be found
     PhyloProcess(const Tree *intree, const SequenceAlignment *indata,
         const BranchSelector<double> *inbranchlength, const Selector<double> *insiterate,
-        const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *inrootsubmatrix);
+        const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *inrootsubmatrix,
+        PolyProcess *inpolyprocess = nullptr);
 
     ~PhyloProcess();
 
@@ -120,6 +152,12 @@ class PhyloProcess {
 
     //! get data from tips (after simulation) and put in into sequence alignment
     void GetLeafData(SequenceAlignment *data);
+
+    int GetPathState(int taxon, int site) const {
+        int node = reverse_taxon_table[taxon];
+        auto site_leaf_path_map = pathmap[node][site];
+        return site_leaf_path_map->GetFinalState();
+    }
 
   private:
     int GetBranchIndex(int index) const {
@@ -202,6 +240,13 @@ class PhyloProcess {
     //! conditions
     void AddPathSuffStat(
         BidimArray<PathSuffStat> &suffstatarray, const BranchSelector<int> &branchalloc) const;
+
+    //! compute path sufficient statistics across all sites and branches and add
+    //! them to suffstat (site-branch-homogeneous model)
+    void AddPolySuffStat(PolySuffStat &suffstat) const;
+    //! compute path sufficient statistics across all sites and branches and add
+    //! them to suffstatarray (site-heterogeneous branch-homogeneous model)
+    void AddPolySuffStat(Array<PolySuffStat> &suffstatarray) const;
 
     //! compute path sufficient statistics for resampling branch lengths add them
     //! to branchlengthpathsuffstatarray
@@ -289,7 +334,8 @@ class PhyloProcess {
     const Tree *tree;
     const SequenceAlignment *data;
     std::vector<int> taxon_table;
-    // const PolyProcess* polyprocess;
+    std::vector<int> reverse_taxon_table;
+    PolyProcess *polyprocess;
     const BranchSelector<double> *branchlength;
     const Selector<double> *siterate;
     const BranchSiteSelector<SubMatrix> *submatrixarray;
