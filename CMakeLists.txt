@@ -101,3 +101,13 @@ target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 add_executable(multigeneglobomnew "src/MultiGeneSingleOmegaNew.cpp")
 target_link_libraries(multigeneglobomnew bayescode_lib ${MPI_LIBRARIES})
 target_compile_features(multigeneglobomnew PRIVATE ${CXX_FEATURES})
+
+# tests
+add_executable(tree_test "src/tree/test.cpp")
+target_link_libraries(tree_test bayescode_lib)
+target_compile_features(tree_test PRIVATE ${CXX_FEATURES})
+add_executable(mpi_seq_test "src/mpi_components/seq_test.cpp")
+target_compile_features(mpi_seq_test PRIVATE ${CXX_FEATURES})
+add_executable(mpi_par_test "src/mpi_components/mpi_test.cpp")
+target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
+target_compile_features(mpi_par_test PRIVATE ${CXX_FEATURES})

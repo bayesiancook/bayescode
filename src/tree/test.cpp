@@ -11,7 +11,7 @@ int tree_size(const Tree* tree, Tree::NodeIndex from) {
 
 int main() {
     // parsing file
-    std::ifstream file("../data/besnard/cyp_coding.Chrysithr_root.nhx");
+    std::ifstream file("data/besnard/cyp_coding.Chrysithr_root.nhx");
     NHXParser parser{file};
 
     // creating topology
@@ -22,12 +22,10 @@ int main() {
     const Tree* tree2 = tree.get();
 
     std::cout << "tree size : " << tree_size(tree2, tree2->root()) << '\n';
-    exit(1);
 
     for (size_t i = 0; i < tree->nb_nodes(); i++) {
         std::cout << i << '\t' << tree->node_name(i) << '\n';
     }
-    exit(1);
 
     // creating vector of node names
     auto node_names = node_container_from_parser<std::string>(

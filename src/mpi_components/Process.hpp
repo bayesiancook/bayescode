@@ -51,7 +51,7 @@ void mpi_run(int argc, char** argv, F f) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI::p = std::make_unique<Process>(rank, size);
+    MPI::p = std::unique_ptr<Process>(new Process(rank, size));
     MPI::p->message("Started MPI process");
     f(argc, argv);
     MPI::p->message("End of MPI process");

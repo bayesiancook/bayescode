@@ -1,6 +1,6 @@
 # COMPILATION
 # Requires: cmake 3.1.0 or better
-.PHONY:all
+.PHONY: all
 all: cmake
 	@cd _build ; make --no-print-directory -j8
 
@@ -12,9 +12,21 @@ _build/Makefile: CMakeLists.txt
 	@mkdir _build
 	@cd _build ; cmake ..
 
-.PHONY:clean
+.PHONY: clean
 clean:
 	@rm -rf _build
+
+.PHONY: test
+test: cmake
+	@cd _build ; make --no-print-directory -j8 tree_test
+	@cd _build ; make --no-print-directory -j8 mpi_seq_test
+	@cd _build ; make --no-print-directory -j8 mpi_par_test
+	@echo "\n== Tree test ====================================================="
+	_build/tree_test
+	@echo "\n\n== MPI seq test =================================================="
+	_build/mpi_seq_test
+	@echo "\n\n== MPI par test =================================================="
+	_build/mpi_par_test
 
 # CODE QUALITY
 # Requires: clang-format
