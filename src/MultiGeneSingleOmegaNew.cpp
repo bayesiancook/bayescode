@@ -69,7 +69,7 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         AppData<D, M> d;
         std::ifstream is = cmd.checkpoint_file();
         d.chain_driver = unique_ptr<D>(new D(is));
-        // model = new SingleOmegaModel(is);
+        d.model = model_from_stream<M>(is, myid, nprocs);
         return d;
     } else {
         AppData<D, M> d;

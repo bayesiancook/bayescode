@@ -29,6 +29,37 @@ struct omega_param_t {
     double hypermean{1.0}, hyperinvshape{1.0};
 };
 
+std::istream& operator >>(std::istream& is, omega_param_t& t) {
+    is >> t.variable >> t.hypermean >> t.hyperinvshape;
+    return is;
+}
+
+template <class M>
+unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
+    std::string model_name, datafile, treefile;
+    int blmode, nucmode;
+    omega_param_t omega_param;
+
+    is >> model_name;
+    if (model_name != "MultiGeneSingleOmega") {
+        std::cerr << "Expected MultiGeneSingleOmega for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> blmode >> nucmode;
+    is >> omega_param;
+    unique_ptr<M> model(new M(datafile, treefile, inmyid, innprocs,
+                              param_mode_t(blmode), param_mode_t(nucmode),
+                              omega_param));
+
+    model->Allocate(treefile);
+    Tracer tracer{*model, &M::declare_model};
+    tracer.read_line(is);
+    model->Update();
+    return model;
+}
+
 class MultiGeneSingleOmegaModelShared {
   public:
     MultiGeneSingleOmegaModelShared(string datafile, string treefile, int inmyid, int innprocs,
