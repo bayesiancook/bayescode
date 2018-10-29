@@ -31,11 +31,10 @@ struct omega_param_t {
 
 class MultiGeneSingleOmegaModelShared {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string intreefile, int inmyid, int innprocs,
+    MultiGeneSingleOmegaModelShared(string datafile, string treefile, int inmyid, int innprocs,
                                     param_mode_t blmode, param_mode_t nucmode,
                                     omega_param_t omega_param)
         : mpi(inmyid, innprocs),
-          treefile(intreefile),
           blmode(blmode),
           nucmode(nucmode),
           omega_param(omega_param),
@@ -329,8 +328,6 @@ protected:
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
 
-    string treefile;
-
     param_mode_t blmode;
     param_mode_t nucmode;
     omega_param_t omega_param;
@@ -449,7 +446,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         cerr << "tree and data fit together\n";
     }
 
-    void Allocate() { MultiGeneSingleOmegaModelShared::Allocate(); }
+    void Allocate(std::string) { MultiGeneSingleOmegaModelShared::Allocate(); }
 
     void start() override {}
     void move(int) override {
@@ -843,7 +840,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void savepoint(int) override {}
     void end() override {}
 
-    void Allocate() {
+    void Allocate(std::string treefile) {
         MultiGeneSingleOmegaModelShared::Allocate();
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
