@@ -8,6 +8,4 @@ void compute(int, char**) {
     p->message("Goodbye world!");
 }
 
-int main(int argc, char** argv) {
-    mpi_run(argc, argv, compute);
-}
+int main(int argc, char** argv) { mpi_run(argc, argv, compute); }

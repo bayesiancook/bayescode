@@ -24,7 +24,7 @@ int main() {
     std::cout << "tree size : " << tree_size(tree2, tree2->root()) << '\n';
 
     for (size_t i = 0; i < tree->nb_nodes(); i++) {
-        std::cout << "[" <<  i << ": " << tree->node_name(i) << "] ";
+        std::cout << "[" << i << ": " << tree->node_name(i) << "] ";
     }
     std::cout << "\n\n";
 
