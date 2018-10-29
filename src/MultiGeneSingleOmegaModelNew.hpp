@@ -46,13 +46,14 @@ class MultiGeneSingleOmegaModelShared {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        Nbranch = tree->nb_nodes() - 1;
         mpi.AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
         taxonset = mpi.refdata->GetTaxonSet();
-        Ntaxa = mpi.refdata->GetNtaxa();
     }
+
+    int GetNtaxa() const { return mpi.refdata->GetNtaxa(); }
+    int GetNbranch() const { return tree->nb_nodes() - 1; }
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
 
@@ -198,7 +199,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double GetMeanTotalLength() const {
         double tot = 0;
-        for (int j = 0; j < Nbranch; j++) { tot += branchlength->GetVal(j); }
+        for (int j = 0; j < GetNbranch(); j++) { tot += branchlength->GetVal(j); }
         return tot;
     }
 
@@ -330,9 +331,6 @@ protected:
 
     string treefile;
 
-    int Ntaxa;
-    int Nbranch;
-
     param_mode_t blmode;
     param_mode_t nucmode;
     omega_param_t omega_param;
@@ -446,8 +444,8 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs,
                                     param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
-        cerr << "number of taxa : " << Ntaxa << '\n';
-        cerr << "number of branches : " << Nbranch << '\n';
+        cerr << "number of taxa : " << GetNtaxa() << '\n';
+        cerr << "number of branches : " << GetNbranch() << '\n';
         cerr << "tree and data fit together\n";
     }
 
@@ -640,7 +638,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
-            for (int j = 0; j < Nbranch; j++) {
+            for (int j = 0; j < GetNbranch(); j++) {
                 double deltalogprob =
                     -branchlength->GetLogProb(j) -
                     lengthhypersuffstatarray->GetVal(j).GetLogProb(
