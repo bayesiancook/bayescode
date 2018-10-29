@@ -22,34 +22,36 @@ class MultiGeneSingleOmegaArgParse : public BaseArgParse {
     ValueArg<string> bl{"", "blmode", "Possible values are, shared, shrunken, independent(ind)",
         false, "shrunken", "string", cmd};
 
-    int blmode() { return decode_mode("bl", bl.getValue()); }
-    int nucmode() { return decode_mode("nucrates", bl.getValue()); }
-    int omegamode(double& omegahypermean, double& omegahyperinvshape) {
+    param_mode_t blmode() { return decode_mode("bl", bl.getValue()); }
+    param_mode_t nucmode() { return decode_mode("nucrates", bl.getValue()); }
+    omega_param_t omega_param() {
+        omega_param_t omega_param;
         if (omega.getValue() != "uninf") {
             std::stringstream ss(omega.getValue());
             std::string item;
             std::getline(ss, item, ',');
-            omegahypermean = atof(item.c_str());
+            omega_param.hypermean = atof(item.c_str());
             std::getline(ss, item, ',');
-            omegahyperinvshape = atof(item.c_str());
-            return 0;
+            omega_param.hyperinvshape = atof(item.c_str());
+            omega_param.variable = false;
         } else {
-            omegahypermean = 1.0;
-            omegahyperinvshape = 1.0;
-            return 1;
+            omega_param.hypermean = 1.0;
+            omega_param.hyperinvshape = 1.0;
+            omega_param.variable = true;
         }
+        return omega_param;
     }
 
   private:
-    int decode_mode(std::string option_name, std::string mode) {
+    param_mode_t decode_mode(std::string option_name, std::string mode) {
         if (mode == "shared") {
-            return 2;
+            return shared;
         } else if (mode == "shrunken") {
-            return 1;
+            return shrunken;
         } else if ((mode == "ind") || (mode == "independent")) {
-            return 0;
+            return independent;
         } else {
-            cerr << "error: does not recongnize command after -" << option_name << "\n";
+            cerr << "error: does not recognize command after -" << option_name << "\n";
             exit(1);
         }
     }
@@ -77,13 +79,8 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         d.chain_driver =
             unique_ptr<D>(new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
         d.model =
-            unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs));
-
-        double omegahypermean;
-        double omegahyperinvshape;
-        d.model->SetAcrossGenesModes(
-            args.blmode(), args.nucmode(), args.omegamode(omegahypermean, omegahyperinvshape));
-        d.model->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
+            unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs,
+                                args.blmode(), args.nucmode(), args.omega_param()));
         d.model->Allocate();
         d.model->Update();
         return d;

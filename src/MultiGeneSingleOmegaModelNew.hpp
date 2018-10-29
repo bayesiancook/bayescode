@@ -23,13 +23,22 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
 
-using namespace std;
+enum param_mode_t { shared, shrunken, independent };
+struct omega_param_t {
+    bool variable{false};
+    double hypermean{1.0}, hyperinvshape{1.0};
+};
 
 class MultiGeneSingleOmegaModelShared {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string intreefile, int inmyid, int innprocs)
+    MultiGeneSingleOmegaModelShared(string datafile, string intreefile, int inmyid, int innprocs,
+                                    param_mode_t blmode, param_mode_t nucmode,
+                                    omega_param_t omega_param)
         : mpi(inmyid, innprocs),
           treefile(intreefile),
+          blmode(blmode),
+          nucmode(nucmode),
+          omega_param(omega_param),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
         // get tree from file (newick format)
@@ -43,37 +52,18 @@ class MultiGeneSingleOmegaModelShared {
         refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
         taxonset = mpi.refdata->GetTaxonSet();
         Ntaxa = mpi.refdata->GetNtaxa();
-
-        blmode = 1;
-        nucmode = 1;
-        omegamode = 1;
     }
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
 
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
-        omegahypermean = inomegahypermean;
-        omegahyperinvshape = inomegahyperinvshape;
-    }
-
-    // called upon constructing the model
-    // mode == 2: global
-    // mode == 1: gene specific, with hyperparameters estimated across genes
-    // mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode, int inomegamode) {
-        blmode = inblmode;
-        nucmode = innucmode;
-        omegamode = inomegamode;
-    }
-
     void FastUpdate() {
         branchlength->SetScale(lambda);
-        if (blmode == 1) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
+        if (blmode == shrunken) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
+        double alpha = 1.0 / omega_param.hyperinvshape;
+        double beta = alpha / omega_param.hypermean;
         omegaarray->SetShape(alpha);
         omegaarray->SetScale(beta);
     }
@@ -87,24 +77,24 @@ class MultiGeneSingleOmegaModelShared {
         double total = GeneLogPrior;
 
         // branch lengths
-        if (blmode == 2) {
+        if (blmode == shared) {
             total += GlobalBranchLengthsLogPrior();
-        } else if (blmode == 1) {
+        } else if (blmode == shrunken) {
             total += GeneBranchLengthsHyperLogPrior();
         } else {
             // nothing: everything accounted for by gene component
         }
 
         // nuc rates
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             total += GlobalNucRatesLogPrior();
-        } else if (nucmode == 1) {
+        } else if (nucmode == shrunken) {
             total += GeneNucRatesHyperLogPrior();
         } else {
             // nothing: everything accounted for by gene component
         }
 
-        if (omegamode == 1) { total += OmegaHyperLogPrior(); }
+        if (omega_param.variable) { total += OmegaHyperLogPrior(); }
         // already accounted for in GeneLogPrior
         // total += OmegaLogPrior();
         return total;
@@ -146,8 +136,8 @@ class MultiGeneSingleOmegaModelShared {
 
     double OmegaHyperLogPrior() const {
         double total = 0;
-        total -= omegahypermean;
-        total -= omegahyperinvshape;
+        total -= omega_param.hypermean;
+        total -= omega_param.hyperinvshape;
         return total;
     }
 
@@ -193,8 +183,8 @@ class MultiGeneSingleOmegaModelShared {
 
     // suff stats for moving omega hyper parameters
     double OmegaHyperSuffStatLogProb() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
+        double alpha = 1.0 / omega_param.hyperinvshape;
+        double beta = alpha / omega_param.hypermean;
         return omegahypersuffstat.GetLogProb(alpha, beta);
     }
 
@@ -213,7 +203,7 @@ class MultiGeneSingleOmegaModelShared {
     }
 
     double GetMeanLength() const {
-        if (blmode == 2) {
+        if (blmode == shared) {
             cerr << "error: in getvarlength\n";
             exit(1);
         }
@@ -222,7 +212,7 @@ class MultiGeneSingleOmegaModelShared {
     }
 
     double GetVarLength() const {
-        if (blmode == 2) {
+        if (blmode == shared) {
             cerr << "error: in getvarlength\n";
             exit(1);
         }
@@ -233,7 +223,7 @@ class MultiGeneSingleOmegaModelShared {
     // Nucleotide rates
 
     double GetVarNucRelRate() const {
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             cerr << "error in getvarnucrelrate\n";
             exit(1);
         }
@@ -257,7 +247,7 @@ class MultiGeneSingleOmegaModelShared {
     }
 
     double GetVarNucStat() const {
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             cerr << "error in getvarnucstat\n";
             exit(1);
         }
@@ -282,7 +272,7 @@ class MultiGeneSingleOmegaModelShared {
 
     template <class C>
     void declare_model(C &t) {
-        if (blmode == 2) {
+        if (blmode == shared) {
             t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
         } else {
@@ -299,8 +289,8 @@ class MultiGeneSingleOmegaModelShared {
         t.add("nucrelratearray", *nucrelratearray);
         t.add("nucstatarray", *nucstatarray);
 
-        t.add("omegahypermean", omegahypermean);
-        t.add("omegahyperinvshape", omegahyperinvshape);
+        t.add("omegahypermean", omega_param.hypermean);
+        t.add("omegahyperinvshape", omega_param.hyperinvshape);
         t.add("omegaarray", *omegaarray);
     }
 
@@ -309,7 +299,7 @@ class MultiGeneSingleOmegaModelShared {
         t.add("logprior", this, &MultiGeneSingleOmegaModelShared::GetLogPrior);
         t.add("lnL", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
 
-        if (blmode == 2) {
+        if (blmode == shared) {
             t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
         } else {
             t.add("mean_length", this, &MultiGeneSingleOmegaModelShared::GetMeanLength);
@@ -317,12 +307,12 @@ class MultiGeneSingleOmegaModelShared {
         }
         t.add("omegaarray_mean", [this](){ return omegaarray->GetMean(); });
         t.add("omegaarray_var", [this](){ return omegaarray->GetVar(); });
-        t.add("omegahypermean", omegahypermean);
-        t.add("omegahyperinvshape", omegahyperinvshape);
+        t.add("omegahypermean", omega_param.hypermean);
+        t.add("omegahyperinvshape", omega_param.hyperinvshape);
 
         t.add("nucstatarray_mean_entropy", [this](){ return nucstatarray->GetMeanEntropy(); });
         t.add("nucrelratearray_mean_entropy", [this](){ return nucrelratearray->GetMeanEntropy(); });
-        if (nucmode != 2) {
+        if (nucmode != shared) {
             t.add("sqrt_varnucrelrate", [this](){ return sqrt(GetVarNucRelRate()); });
             t.add("nucrelratehypercenter_entropy", [this](){ return Random::GetEntropy(nucrelratehypercenter); });
             t.add("nucrelratehyperinvconc", nucrelratehyperinvconc);
@@ -343,9 +333,9 @@ protected:
     int Ntaxa;
     int Nbranch;
 
-    int blmode;
-    int nucmode;
-    int omegamode;
+    param_mode_t blmode;
+    param_mode_t nucmode;
+    omega_param_t omega_param;
 
     // Branch lengths
 
@@ -380,8 +370,6 @@ protected:
     // each gene has its own omega
     // omegaarray[gene], for gene=1..Ngene
     // iid gamma, with hyperparameters omegahypermean and hyperinvshape
-    double omegahypermean;
-    double omegahyperinvshape;
     IIDGamma *omegaarray;
 
     // suffstat for gene-specific omega's
@@ -400,7 +388,7 @@ protected:
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
         blhyperinvshape = 0.1;
-        if (blmode == 2) {
+        if (blmode == shared) {
             lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
             lengthhypersuffstatarray = 0;
         } else {
@@ -419,7 +407,7 @@ protected:
         nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
         nucstathyperinvconc = 0.1 / Nnuc;
 
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             nucrelratearray =
                 new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
@@ -438,7 +426,7 @@ protected:
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
         */
-        omegaarray = new IIDGamma(mpi.GetLocalNgene(), omegahypermean, omegahyperinvshape);
+        omegaarray = new IIDGamma(mpi.GetLocalNgene(), omega_param.hypermean, omega_param.hyperinvshape);
 
         // Gene processes
 
@@ -455,8 +443,9 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs) {
+    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs,
+                                    param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
         cerr << "number of taxa : " << Ntaxa << '\n';
         cerr << "number of branches : " << Nbranch << '\n';
         cerr << "tree and data fit together\n";
@@ -481,13 +470,13 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
-            if (blmode == 2) {
+            if (blmode == shared) {
                 SendGlobalBranchLengths();
             } else {
                 SendGeneBranchLengths();
             }
 
-            if (nucmode == 2) {
+            if (nucmode == shared) {
                 SendGlobalNucRates();
             } else {
                 SendGeneNucRates();
@@ -505,13 +494,13 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
-            if (blmode == 2) {
+            if (blmode == shared) {
                 SendGlobalBranchLengths();
             } else {
                 SendGeneBranchLengths();
             }
 
-            if (nucmode == 2) {
+            if (nucmode == shared) {
                 SendGlobalNucRates();
             } else {
                 SendGeneNucRates();
@@ -580,30 +569,30 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            if (omegamode == 1) {
+            if (omega_param.variable) {
                 ReceiveOmega();
                 MoveOmegaHyperParameters();
                 SendOmegaHyperParameters();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == 2) {
+            if (blmode == shared) {
                 ReceiveBranchLengthsSuffStat();
                 ResampleBranchLengths();
                 MoveLambda();
                 SendGlobalBranchLengths();
-            } else if (blmode == 1) {
+            } else if (blmode == shrunken) {
                 ReceiveBranchLengthsHyperSuffStat();
                 MoveBranchLengthsHyperParameters();
                 SendBranchLengthsHyperParameters();
             }
 
             // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == 2) {
+            if (nucmode == shared) {
                 ReceiveNucPathSuffStat();
                 MoveNucRates();
                 SendGlobalNucRates();
-            } else if (nucmode == 1) {
+            } else if (nucmode == shrunken) {
                 ReceiveNucRatesHyperSuffStat();
                 MoveNucRatesHyperParameters();
                 SendNucRatesHyperParameters();
@@ -611,8 +600,8 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         }
 
         // collect current state
-        if (blmode != 2) { ReceiveGeneBranchLengths(); }
-        if (nucmode != 2) { ReceiveGeneNucRates(); }
+        if (blmode != shared) { ReceiveGeneBranchLengths(); }
+        if (nucmode != shared) { ReceiveGeneNucRates(); }
         ReceiveOmega();
         ReceiveLogProbs();
         return 1;
@@ -743,19 +732,19 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         omegahypersuffstat.Clear();
         omegahypersuffstat.AddSuffStat(*omegaarray);
 
-        Move::Scaling(omegahypermean, 1.0, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
+        Move::Scaling(omega_param.hypermean, 1.0, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        Move::Scaling(omegahypermean, 0.3, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
+        Move::Scaling(omega_param.hypermean, 0.3, 10, &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 1.0, 10,
+        Move::Scaling(omega_param.hyperinvshape, 1.0, 10,
             &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
-        Move::Scaling(omegahyperinvshape, 0.3, 10,
+        Move::Scaling(omega_param.hyperinvshape, 0.3, 10,
             &MultiGeneSingleOmegaModelMaster::OmegaHyperLogProb,
             &MultiGeneSingleOmegaModelMaster::NoUpdate, this);
 
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
+        double alpha = 1.0 / omega_param.hyperinvshape;
+        double beta = alpha / omega_param.hypermean;
         omegaarray->SetShape(alpha);
         omegaarray->SetScale(beta);
     }
@@ -822,7 +811,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
     // omega hyperparameters
 
-    void SendOmegaHyperParameters() { mpi.MasterSendGlobal(omegahypermean, omegahyperinvshape); }
+    void SendOmegaHyperParameters() { mpi.MasterSendGlobal(omega_param.hypermean, omega_param.hyperinvshape); }
 
     // log probs
 
@@ -846,8 +835,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs) {}
+    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs,
+                                   param_mode_t blmode, param_mode_t nucmode,
+                                   omega_param_t omega_param)
+        : MultiGeneSingleOmegaModelShared(datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {}
 
     void start() override {}
     void move(int) override { Move(); }
@@ -868,12 +859,12 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         ReceiveBranchLengthsHyperParameters();
         ReceiveNucRatesHyperParameters();
 
-        if (blmode == 2) {
+        if (blmode == shared) {
             ReceiveGlobalBranchLengths();
         } else {
             ReceiveGeneBranchLengths();
         }
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             ReceiveGlobalNucRates();
         } else {
             ReceiveGeneNucRates();
@@ -893,12 +884,12 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         ReceiveBranchLengthsHyperParameters();
         ReceiveNucRatesHyperParameters();
 
-        if (blmode == 2) {
+        if (blmode == shared) {
             ReceiveGlobalBranchLengths();
         } else {
             ReceiveGeneBranchLengths();
         }
-        if (nucmode == 2) {
+        if (nucmode == shared) {
             ReceiveGlobalNucRates();
         } else {
             ReceiveGeneNucRates();
@@ -928,33 +919,33 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         for (int rep = 0; rep < nrep; rep++) {
             MoveGeneParameters(1.0);
 
-            if (omegamode == 1) {
+            if (omega_param.variable) {
                 SendOmega();
                 ReceiveOmegaHyperParameters();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == 2) {
+            if (blmode == shared) {
                 SendBranchLengthsSuffStat();
                 ReceiveGlobalBranchLengths();
-            } else if (blmode == 1) {
+            } else if (blmode == shrunken) {
                 SendBranchLengthsHyperSuffStat();
                 ReceiveBranchLengthsHyperParameters();
             }
 
             // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == 2) {
+            if (nucmode == shared) {
                 SendNucPathSuffStat();
                 ReceiveGlobalNucRates();
-            } else if (nucmode == 1) {
+            } else if (nucmode == shrunken) {
                 SendNucRatesHyperSuffStat();
                 ReceiveNucRatesHyperParameters();
             }
         }
 
         // collect current state
-        if (blmode != 2) { SendGeneBranchLengths(); }
-        if (nucmode != 2) { SendGeneNucRates(); }
+        if (blmode != shared) { SendGeneBranchLengths(); }
+        if (nucmode != shared) { SendGeneNucRates(); }
         SendOmega();
         SendLogProbs();
         return 1;
@@ -971,8 +962,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             geneprocess[gene]->MoveParameters(nrep);
 
             (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            if (blmode != 2) { geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]); }
-            if (nucmode != 2) {
+            if (blmode != shared) { geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]); }
+            if (nucmode != shared) {
                 geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
             }
         }
@@ -1103,9 +1094,9 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     // omega hyperparameters
 
     void ReceiveOmegaHyperParameters() {
-        mpi.SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
+        mpi.SlaveReceiveGlobal(omega_param.hypermean, omega_param.hyperinvshape);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
+            geneprocess[gene]->SetOmegaHyperParameters(omega_param.hypermean, omega_param.hyperinvshape);
         }
     }
 
