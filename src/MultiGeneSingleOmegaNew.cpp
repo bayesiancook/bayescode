@@ -7,6 +7,7 @@
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
+#include "components/ChainCheckpoint.hpp"
 
 using namespace std;
 using std::unique_ptr;
@@ -101,9 +102,11 @@ int main(int argc, char* argv[]) {
     if (!myid) {
         auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
         ConsoleLogger console_logger;
+        ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *d.chain_driver, *d.model);
         StandardTracer trace(*d.model, cmd.chain_name());
         d.chain_driver->add(*d.model);
         d.chain_driver->add(console_logger);
+        d.chain_driver->add(chain_checkpoint);
         d.chain_driver->add(trace);
         d.chain_driver->go();
     } else {

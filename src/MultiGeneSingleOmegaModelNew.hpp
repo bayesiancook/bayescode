@@ -34,6 +34,11 @@ std::istream &operator>>(std::istream &is, omega_param_t &t) {
     return is;
 }
 
+std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
+    os << t.variable << '\t' << t.hypermean << '\t' << t.hyperinvshape;
+    return os;
+}
+
 template <class M>
 unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
     std::string model_name, datafile, treefile;
@@ -63,7 +68,9 @@ class MultiGeneSingleOmegaModelShared {
   public:
     MultiGeneSingleOmegaModelShared(string datafile, string treefile, int inmyid, int innprocs,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
-        : mpi(inmyid, innprocs),
+        : datafile(datafile),
+          treefile(treefile),
+          mpi(inmyid, innprocs),
           blmode(blmode),
           nucmode(nucmode),
           omega_param(omega_param),
@@ -355,6 +362,7 @@ class MultiGeneSingleOmegaModelShared {
     }
 
   protected:
+    std::string datafile, treefile;
     MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
@@ -819,6 +827,15 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         mpi.MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
         mpi.MasterReceiveAdditive(lnL);
+    }
+
+    void ToStream(ostream &os) {
+        Tracer tracer{*this, &M::declare_model};
+        os << "MultiGeneSingleOmega" << "\t";
+        os << datafile << '\t' << treefile << '\t';
+        os << blmode << '\t' << nucmode << '\t';
+        os << omega_param << '\t';
+        tracer.write_line(os);
     }
 };
 
