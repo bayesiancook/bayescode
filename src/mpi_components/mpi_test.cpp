@@ -1,11 +1,11 @@
 #include "Process.hpp"
 
-using namespace MPI;
+using MPI::p;
 
 void compute(int, char**) {
-    p.message("Hello world!");
+    p->message("Hello world!");
     MPI_Barrier(MPI_COMM_WORLD);
-    p.message("Goodbye world!");
+    p->message("Goodbye world!");
 }
 
 int main(int argc, char** argv) {
