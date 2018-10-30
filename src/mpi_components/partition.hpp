@@ -1,3 +1,5 @@
+#pragma once
+
 #include <map>
 #include <numeric>
 #include <set>
@@ -71,6 +73,7 @@ class Partition {
         for (auto subset : partition) { result += subset.second.size(); }
         return result;
     }
+
     size_t size() const { return partition.size(); }
 
     size_t max_partition_size() const {
