@@ -1,6 +1,7 @@
-# COMPILATION
-# Requires: cmake 3.1.0 or better
-.PHONY: all
+# ==============================================================================================================
+#  COMPILATION
+# ==============================================================================================================
+.PHONY: all # Requires: cmake 3.1.0 or better
 all: cmake
 	@cd _build ; make --no-print-directory -j8
 
@@ -16,25 +17,26 @@ _build/Makefile: CMakeLists.txt
 clean:
 	@rm -rf _build
 
-.PHONY: test
-test: cmake
-	@cd _build ; make --no-print-directory -j8 tree_test
-	@cd _build ; make --no-print-directory -j8 mpi_seq_test
-	@cd _build ; make --no-print-directory -j8 mpi_par_test
-	@echo "\n== Tree test ====================================================="
-	_build/tree_test
-	@echo "\n\n== MPI seq test =================================================="
-	_build/mpi_seq_test
-	@echo "\n\n== MPI par test =================================================="
-	_build/mpi_par_test
-
-# CODE QUALITY
-# Requires: clang-format
-.PHONY: format
+# ==============================================================================================================
+#  CODE QUALITY
+# ==============================================================================================================
+.PHONY: format # Requires: clang-format
 format:
 	@clang-format -i `find -name *.*pp`
 
-# Run AaMutSel
+# ==============================================================================================================
+#  TESTING
+# ==============================================================================================================
+.PHONY: test
+test: cmake
+	@cd _build ; make --no-print-directory -j8 tree_test mpi_seq_test mpi_par_test
+	@echo "\n\e[35m\e[1m== Tree test ==================================================================\e[0m"
+	_build/tree_test
+	@echo "\n\n\e[35m\e[1m== MPI seq test ===============================================================\e[0m"
+	_build/mpi_seq_test
+	@echo "\n\n\e[35m\e[1m== MPI par test ===============================================================\e[0m"
+	_build/mpi_par_test
+
 .PHONY: aamutsel
 aamutsel: all
 	@rm -f gal4*.*
