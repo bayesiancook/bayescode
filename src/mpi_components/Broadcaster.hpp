@@ -54,7 +54,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
           datatype(get_datatype<T>()) {}
 
     void register_element(std::string, T& target) {
-        readers.push_back([&target, this](buf_it it) {
+        readers.push_back([&target](buf_it it) {
             target = *it;
             return it + 1;
         });

@@ -16,4 +16,9 @@ class RegistrarBase {
             static_cast<T*>(this)->register_element(name, std::forward<Args>(args)...);
         }
     }
+
+    template <class M>
+    void register_from_method(M* ptr, void (M::*f)(RegistrarBase<T>&)) {
+        (ptr->*f)(*this);
+    }
 };

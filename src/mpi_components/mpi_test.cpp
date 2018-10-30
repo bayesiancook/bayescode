@@ -2,27 +2,29 @@
 
 using MPI::p;
 
+struct DummyModel {
+    double a, b, c;
+
+    template <class C>
+    void declare_model(C& ref) {
+        ref.add("a", a);
+        ref.add("b", b);
+        ref.add("c", c);
+    }
+};
+
 void compute(int, char**) {
-    p->message("Hello world!");
-    MPI_Barrier(MPI_COMM_WORLD);
-    p->message("Goodbye world!");
-
-
     if (!p->rank) {
+        DummyModel m = {2.3, 2.4, 5.2};
         BroadcasterMaster<double> bcast({"a", "c"});
-        double a{3.1}, b{2.3}, c{4.5};
-        bcast.add("a", a);
-        bcast.add("b", b);
-        bcast.add("c", c);
+        bcast.register_from_method(&m, &DummyModel::declare_model);
         bcast.release();
     } else {
+        DummyModel m = {-1, -1, -1};
         BroadcasterSlave<double> bcast({"a", "c"});
-        double a{-1}, b{-1}, c{-1};
-        bcast.add("a", a);
-        bcast.add("b", b);
-        bcast.add("c", c);
+        bcast.register_from_method(&m, &DummyModel::declare_model);
         bcast.acquire();
-        p->message("Got values %f, %f and %f", a, b, c);
+        p->message("Got values %f, %f and %f", m.a, m.b, m.c);
     }
 }
 
