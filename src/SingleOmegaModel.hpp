@@ -601,12 +601,8 @@ class SingleOmegaModel : public ChainComponent {
         TouchCodonMatrix();
     }
 
-<<<<<<< HEAD
-    void ToStream(std::ostream &os) const {
-=======
-    void ToStream(ostream &os) {
+    void ToStream(std::ostream &os) {
         Tracer tracer{*this, &SingleOmegaModel::declare_model};
->>>>>>> singleomegamodel: create tracer when needed
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
