@@ -4,10 +4,10 @@
 #include "MultiGeneChain.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
 #include "SlaveChainDriver.hpp"
+#include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/StandardTracer.hpp"
-#include "components/ChainCheckpoint.hpp"
 
 using namespace std;
 using std::unique_ptr;
@@ -79,9 +79,8 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         cmd.parse();
         d.chain_driver =
             unique_ptr<D>(new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
-        d.model =
-            unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs,
-                                args.blmode(), args.nucmode(), args.omega_param()));
+        d.model = unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid,
+            nprocs, args.blmode(), args.nucmode(), args.omega_param()));
         d.model->Update();
         return d;
     }

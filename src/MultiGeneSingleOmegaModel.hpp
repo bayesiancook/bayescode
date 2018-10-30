@@ -817,7 +817,8 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
     void ToStream(ostream &os) {
         Tracer tracer{*this, &M::declare_model};
-        os << "MultiGeneSingleOmega" << "\t";
+        os << "MultiGeneSingleOmega"
+           << "\t";
         os << datafile << '\t' << treefile << '\t';
         os << blmode << '\t' << nucmode << '\t';
         os << omega_param << '\t';
@@ -841,7 +842,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(
               datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
-
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
