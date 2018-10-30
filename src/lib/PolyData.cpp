@@ -139,7 +139,8 @@ PolyData::PolyData(CodonSequenceAlignment *from_alignment, string const &ali_pat
                 assert(alt_nuc != -1);
 
                 // Assert the alternate count is within the sample size
-                assert(alt_count >= 0 and alt_count <= sample_size);
+                // VL removed "alt_count >= 0" because it was always true
+                assert(alt_count <= sample_size);
                 unsigned ref_count = sample_size - alt_count;
 
                 int site = nuc_site / 3;
