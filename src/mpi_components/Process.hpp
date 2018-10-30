@@ -24,8 +24,25 @@ class Process {
 
     template <class... Args>
     void message(const std::string& format, Args&&... args) {
+        message(std::cout, format, std::forward<Args>(args)...);
+    }
+
+    template <class... Args>
+    void message(std::ostream& os, const std::string& format, Args&&... args) {
         std::string format2 = prefix + format + "\n";
-        printf(format2.c_str(), rank, size, std::forward<Args>(args)...);
+
+        // formatting to intermediate string
+        char* buf = nullptr;
+        int res = asprintf(&buf, format2.c_str(), rank, size, std::forward<Args>(args)...);
+        if (res == -1) {
+            fprintf(stderr,
+                "[%d/%d] Error in Process::message: something went wrong in asprintf!\n", size,
+                rank);
+        }
+        std::string formatted_message(buf);
+        free(buf);
+
+        os << formatted_message;
     }
 };
 
