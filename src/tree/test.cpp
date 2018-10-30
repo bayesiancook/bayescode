@@ -11,7 +11,7 @@ int tree_size(const Tree* tree, Tree::NodeIndex from) {
 
 int main() {
     // parsing file
-    std::ifstream file("../data/besnard/cyp_coding.Chrysithr_root.nhx");
+    std::ifstream file("data/besnard/cyp_coding.Chrysithr_root.nhx");
     NHXParser parser{file};
 
     // creating topology
@@ -22,19 +22,19 @@ int main() {
     const Tree* tree2 = tree.get();
 
     std::cout << "tree size : " << tree_size(tree2, tree2->root()) << '\n';
-    exit(1);
 
     for (size_t i = 0; i < tree->nb_nodes(); i++) {
-        std::cout << i << '\t' << tree->node_name(i) << '\n';
+        std::cout << "[" << i << ": " << tree->node_name(i) << "] ";
     }
-    exit(1);
+    std::cout << "\n\n";
 
     // creating vector of node names
     auto node_names = node_container_from_parser<std::string>(
         parser, [](int i, const AnnotatedTree& t) { return t.tag(i, "name"); });
     for (auto e : node_names) {
-        if (e != "") std::cout << "Node name: " << e << std::endl;
+        if (e != "") std::cout << e << " ";
     }
+    std::cout << "\n\n";
 
     // slightly shuffled taxa list for example tree
     std::vector<std::string> taxa = {"Ele.bald", "Ele.bal2", "Ele.bal4", "Ele.vivi", "Ele.vivA",
@@ -51,12 +51,13 @@ int main() {
         "Coleochlo", "Microdra", "Chrysithr"};
     auto taxa_index = taxa_index_from_parser(parser, taxa);
     for (auto i : taxa_index) { std::cout << i << " "; }
-    std::cout << "\n";
+    std::cout << "\n\n";
 
     auto taxa_conditions = taxa_container_from_parser<int>(
         parser, taxa, [](int i, const AnnotatedTree& t) { return stoi(t.tag(i, "Condition")); });
     for (size_t i = 0; i < taxa_conditions.vector().size(); i++) {
-        std::cout << "Taxa " << taxa.at(i) << "\tcondition " << taxa_conditions.vector().at(i)
-                  << "\ttopology index " << taxa_conditions.topology_index(i) << "\n";
+        std::cout << "[" << taxa.at(i) << ", cond:" << taxa_conditions.vector().at(i)
+                  << ", top:" << taxa_conditions.topology_index(i) << "] ";
     }
+    std::cout << "\n";
 }
