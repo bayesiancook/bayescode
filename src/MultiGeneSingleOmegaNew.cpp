@@ -82,7 +82,6 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         d.model =
             unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid, nprocs,
                                 args.blmode(), args.nucmode(), args.omega_param()));
-        d.model->Allocate(app.treefile.getValue());
         d.model->Update();
         return d;
     }

@@ -57,7 +57,6 @@ unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
     unique_ptr<M> model(new M(datafile, treefile, inmyid, innprocs, param_mode_t(blmode),
         param_mode_t(nucmode), omega_param));
 
-    model->Allocate(treefile);
     Tracer tracer{*model, &M::declare_model};
     tracer.read_line(is);
     model->Update();
@@ -85,6 +84,48 @@ class MultiGeneSingleOmegaModelShared {
 
         refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
         taxonset = mpi.refdata->GetTaxonSet();
+
+        // Branch lengths
+
+        lambda = 10;
+        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
+        blhyperinvshape = 0.1;
+        if (blmode == shared) {
+            lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+            lengthhypersuffstatarray = 0;
+        } else {
+            branchlength->SetAllBranches(1.0 / lambda);
+            branchlengtharray = new GammaWhiteNoiseArray(
+                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+            lengthpathsuffstatarray = 0;
+            lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
+        }
+
+        // Nucleotide rates
+
+        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
+        nucrelratehyperinvconc = 0.1 / Nrr;
+
+        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
+        nucstathyperinvconc = 0.1 / Nnuc;
+
+        if (nucmode == shared) {
+            nucrelratearray =
+                new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
+            nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
+        } else {
+            nucrelratearray = new IIDDirichlet(
+                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucstatarray = new IIDDirichlet(
+                mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+            nucmatrix = 0;
+        }
+
+        // Omega
+
+        omegaarray =
+            new IIDGamma(mpi.GetLocalNgene(), omega_param.hypermean, omega_param.hyperinvshape);
     }
 
     int GetNtaxa() const { return mpi.refdata->GetNtaxa(); }
@@ -416,59 +457,6 @@ class MultiGeneSingleOmegaModelShared {
     // total logprior for gene-specific variables (here, omega only)
     // summed over all genes
     double GeneLogPrior;
-
-    void Allocate() {
-        // Branch lengths
-
-        lambda = 10;
-        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhyperinvshape = 0.1;
-        if (blmode == shared) {
-            lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-            lengthhypersuffstatarray = 0;
-        } else {
-            branchlength->SetAllBranches(1.0 / lambda);
-            branchlengtharray = new GammaWhiteNoiseArray(
-                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
-            lengthpathsuffstatarray = 0;
-            lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
-        }
-
-        // Nucleotide rates
-
-        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
-        nucrelratehyperinvconc = 0.1 / Nrr;
-
-        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
-        nucstathyperinvconc = 0.1 / Nnuc;
-
-        if (nucmode == shared) {
-            nucrelratearray =
-                new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-            nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
-            nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
-        } else {
-            nucrelratearray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-            nucstatarray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
-            nucmatrix = 0;
-        }
-
-        // Omega
-
-        /*
-        omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
-        */
-        omegaarray =
-            new IIDGamma(mpi.GetLocalNgene(), omega_param.hypermean, omega_param.hyperinvshape);
-
-        // Gene processes
-
-        lnL = 0;
-        GeneLogPrior = 0;
-    }
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
@@ -488,8 +476,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         cerr << "number of branches : " << GetNbranch() << '\n';
         cerr << "tree and data fit together\n";
     }
-
-    void Allocate(std::string) { MultiGeneSingleOmegaModelShared::Allocate(); }
 
     void start() override {}
     void move(int) override {
@@ -854,15 +840,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(
-              datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {}
+              datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
 
-    void start() override {}
-    void move(int) override { Move(); }
-    void savepoint(int) override {}
-    void end() override {}
-
-    void Allocate(std::string treefile) {
-        MultiGeneSingleOmegaModelShared::Allocate();
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
@@ -870,6 +849,11 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             geneprocess[gene]->Allocate();
         }
     }
+
+    void start() override {}
+    void move(int) override { Move(); }
+    void savepoint(int) override {}
+    void end() override {}
 
     void Update() {
         ReceiveBranchLengthsHyperParameters();
