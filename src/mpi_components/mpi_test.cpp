@@ -9,18 +9,18 @@ void compute(int, char**) {
 
 
     if (!p->rank) {
-        BroadcasterMaster<double> bcast;
+        BroadcasterMaster<double> bcast({"a", "c"});
         double a{3.1}, b{2.3}, c{4.5};
-        bcast.add(a);
-        bcast.add(b);
-        bcast.add(c);
+        bcast.add("a", a);
+        bcast.add("b", b);
+        bcast.add("c", c);
         bcast.release();
     } else {
-        BroadcasterSlave<double> bcast;
+        BroadcasterSlave<double> bcast({"a", "c"});
         double a{-1}, b{-1}, c{-1};
-        bcast.add(a);
-        bcast.add(b);
-        bcast.add(c);
+        bcast.add("a", a);
+        bcast.add("b", b);
+        bcast.add("c", c);
         bcast.acquire();
         p->message("Got values %f, %f and %f", a, b, c);
     }

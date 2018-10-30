@@ -2,6 +2,7 @@
 
 #include <functional>
 #include "Process.hpp"
+#include "components/RegistrarBase.hpp"
 #include "interfaces.hpp"
 
 /*==================================================================================================
@@ -9,16 +10,18 @@
   An object responsible for broadcasting the values of specified fields from one process to others
 ==================================================================================================*/
 template <typename T>
-class BroadcasterMaster : public Proxy {
+class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T>> {
     Process& p;
     MPI_Datatype datatype;
     std::vector<T> buf;
     std::vector<std::function<void()>> writers;
 
-  public:
-    BroadcasterMaster(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
 
-    void add(T& target) {
+  public:
+    BroadcasterMaster(std::set<std::string> filter, Process& p = *MPI::p)
+        : RegistrarBase<BroadcasterMaster<T>>(filter), p(p), datatype(get_datatype<T>()) {}
+
+    void register_element(std::string, T& target) {
         writers.push_back([&target, this]() { buf.push_back(target); });
     }
 
@@ -34,7 +37,7 @@ class BroadcasterMaster : public Proxy {
 };
 
 template <typename T>
-class BroadcasterSlave : public Proxy {
+class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>> {
     using buf_it = typename std::vector<T>::iterator;
 
     Process& p;
@@ -44,10 +47,13 @@ class BroadcasterSlave : public Proxy {
     std::vector<std::function<buf_it(buf_it)>> readers;
 
   public:
-    BroadcasterSlave(int origin = 0, Process& p = *MPI::p)
-        : p(p), origin(0), datatype(get_datatype<T>()) {}
+    BroadcasterSlave(std::set<std::string> filter, int origin = 0, Process& p = *MPI::p)
+        : RegistrarBase<BroadcasterSlave<T>>(filter),
+          p(p),
+          origin(0),
+          datatype(get_datatype<T>()) {}
 
-    void add(T& target) {
+    void register_element(std::string, T& target) {
         readers.push_back([&target, this](buf_it it) {
             target = *it;
             return it + 1;
