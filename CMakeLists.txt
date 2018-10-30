@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors -Wno-unknown-warning-option -Wno-int-in-bool-context") # normal mode
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
 
 # Sanitize: runtime checks for various forms of undefined or suspicious behavior (clang++).
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory -g")
@@ -107,6 +107,7 @@ add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test bayescode_lib)
 target_compile_features(tree_test PRIVATE ${CXX_FEATURES})
 add_executable(mpi_seq_test "src/mpi_components/seq_test.cpp")
+target_link_libraries(mpi_seq_test ${MPI_LIBRARIES})
 target_compile_features(mpi_seq_test PRIVATE ${CXX_FEATURES})
 add_executable(mpi_par_test "src/mpi_components/mpi_test.cpp")
 target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
