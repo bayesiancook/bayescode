@@ -7,7 +7,7 @@ void compute(int, char**) {
     MPI_Barrier(MPI_COMM_WORLD);
     p->message("Goodbye world!");
 
-    
+
     if (!p->rank) {
         BroadcasterMaster<double> bcast;
         double a{3.1}, b{2.3}, c{4.5};
@@ -23,7 +23,6 @@ void compute(int, char**) {
         bcast.add(c);
         bcast.broadcast();
         p->message("Got values %f, %f and %f", a, b, c);
-
     }
 }
 

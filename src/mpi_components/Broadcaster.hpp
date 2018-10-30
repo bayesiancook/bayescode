@@ -2,6 +2,7 @@
 
 #include <functional>
 #include "Process.hpp"
+#include "utils.hpp"
 
 /*==================================================================================================
   Broadcaster
@@ -15,16 +16,7 @@ class BroadcasterMaster {
     std::vector<std::function<void()>> writers;
 
   public:
-    BroadcasterMaster(Process& p = *MPI::p) : p(p) {
-        if (std::is_same<T, double>()) {
-            datatype = MPI_DOUBLE;
-        } else if (std::is_same<T, int>()) {
-            datatype = MPI_INT;
-        } else {
-            p.message("Error: template parameter T is not a supported datatype!");
-            exit(1);
-        }
-    }
+    BroadcasterMaster(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
 
     void add(T& target) {
         writers.push_back([&target, this]() { buf.push_back(target); });
@@ -33,8 +25,6 @@ class BroadcasterMaster {
     void write_buffer() {
         buf.clear();
         for (auto writer : writers) { writer(); }
-        for (auto e : buf) { std::cout << e << " "; }
-        std::cout << "\n";
     }
 
     void broadcast() {
@@ -53,16 +43,7 @@ class BroadcasterSlave {
     std::vector<std::function<buf_it(buf_it)>> readers;
 
   public:
-    BroadcasterSlave(Process& p = *MPI::p) : p(p) {
-        if (std::is_same<T, double>()) {
-            datatype = MPI_DOUBLE;
-        } else if (std::is_same<T, int>()) {
-            datatype = MPI_INT;
-        } else {
-            p.message("Error: template parameter T is not a supported datatype!");
-            exit(1);
-        }
-    }
+    BroadcasterSlave(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
 
     void add(T& target) {
         readers.push_back([&target, this](buf_it it) {
