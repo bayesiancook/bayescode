@@ -2,14 +2,14 @@
 
 #include <functional>
 #include "Process.hpp"
-#include "utils.hpp"
+#include "interfaces.hpp"
 
 /*==================================================================================================
   Broadcaster
   An object responsible for broadcasting the values of specified fields from one process to others
 ==================================================================================================*/
 template <typename T>
-class BroadcasterMaster {
+class BroadcasterMaster : public Proxy {
     Process& p;
     MPI_Datatype datatype;
     std::vector<T> buf;
@@ -27,23 +27,25 @@ class BroadcasterMaster {
         for (auto writer : writers) { writer(); }
     }
 
-    void broadcast() {
+    void release() final {
         write_buffer();
         MPI_Bcast(buf.data(), buf.size(), datatype, p.rank, MPI_COMM_WORLD);
     }
 };
 
 template <typename T>
-class BroadcasterSlave {
+class BroadcasterSlave : public Proxy {
     using buf_it = typename std::vector<T>::iterator;
 
     Process& p;
+    int origin;
     MPI_Datatype datatype;
     std::vector<T> buf;
     std::vector<std::function<buf_it(buf_it)>> readers;
 
   public:
-    BroadcasterSlave(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
+    BroadcasterSlave(int origin = 0, Process& p = *MPI::p)
+        : p(p), origin(0), datatype(get_datatype<T>()) {}
 
     void add(T& target) {
         readers.push_back([&target, this](buf_it it) {
@@ -58,8 +60,8 @@ class BroadcasterSlave {
         for (auto reader : readers) { it = reader(it); }
     }
 
-    void broadcast() {
-        MPI_Bcast(buf.data(), buf.size(), datatype, 0, MPI_COMM_WORLD);
+    void acquire() final {
+        MPI_Bcast(buf.data(), buf.size(), datatype, origin, MPI_COMM_WORLD);
         read_buffer();
     }
 };

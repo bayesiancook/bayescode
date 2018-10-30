@@ -14,14 +14,14 @@ void compute(int, char**) {
         bcast.add(a);
         bcast.add(b);
         bcast.add(c);
-        bcast.broadcast();
+        bcast.release();
     } else {
         BroadcasterSlave<double> bcast;
         double a{-1}, b{-1}, c{-1};
         bcast.add(a);
         bcast.add(b);
         bcast.add(c);
-        bcast.broadcast();
+        bcast.acquire();
         p->message("Got values %f, %f and %f", a, b, c);
     }
 }
