@@ -116,7 +116,6 @@ class SingleOmegaModel : public ChainComponent {
                      param_mode_t nucmode = independent)
         : datafile(datafile), treefile(treefile) {
         init(blmode, nucmode);
-        Update();
     }
 
     virtual ~SingleOmegaModel() = default;
@@ -610,25 +609,27 @@ class SingleOmegaModel : public ChainComponent {
     }
 
     void ToStream(std::ostream &os) { os << this; }
-
-    SingleOmegaModel(std::istream &is) {
-        std::string model_name;
-        int blmode, nucmode;
-        is >> model_name;
-        if (model_name != "SingleOmega") {
-            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-            exit(1);
-        }
-        is >> datafile;
-        is >> treefile;
-        is >> blmode >> nucmode;
-        init(static_cast<param_mode_t>(blmode),
-             static_cast<param_mode_t>(nucmode));
-        Tracer tracer{*this, &SingleOmegaModel::declare_model};
-        tracer.read_line(is);
-        Update();
-    }
 };
+
+std::istream &operator>>(std::istream &is, std::unique_ptr<SingleOmegaModel> &m) {
+    std::string model_name;
+    std::string datafile;
+    std::string treefile;
+    int blmode, nucmode;
+
+    is >> model_name;
+    if (model_name != "SingleOmega") {
+        std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> blmode >> nucmode;
+    m.reset(new SingleOmegaModel(datafile, treefile));
+    Tracer tracer{*m, &SingleOmegaModel::declare_model};
+    tracer.read_line(is);
+    return is;
+}
 
 std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m) {
     Tracer tracer{*m, &SingleOmegaModel::declare_model};
