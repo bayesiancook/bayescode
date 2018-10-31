@@ -114,15 +114,9 @@ class SingleOmegaModel : public ChainComponent {
     SingleOmegaModel(std::string datafile, std::string treefile,
                      param_mode_t blmode = independent,
                      param_mode_t nucmode = independent)
-        : datafile(datafile), treefile(treefile) {
-        init(blmode, nucmode);
-    }
+        : datafile(datafile), treefile(treefile),
+          blmode(blmode), nucmode(nucmode) {
 
-    virtual ~SingleOmegaModel() = default;
-
-    void init(param_mode_t blmode, param_mode_t nucmode) {
-        this->blmode = blmode;
-        this->nucmode = nucmode;
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
 
@@ -137,32 +131,7 @@ class SingleOmegaModel : public ChainComponent {
         tree = make_from_parser(parser);
 
         Nbranch = tree->nb_nodes() - 1;
-        Allocate();
-    }
 
-    void move(int it) override { Move(); }
-
-    template <class C>
-    void declare_model(C &t) {
-        t.add("omega", omega);
-        t.add("nucstat", nucstat);
-        t.add("nucrelrate", nucrelrate);
-        t.add("lambda", lambda);
-        t.add("branchlength", *branchlength);
-    }
-
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
-        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
-        t.add("length", [this]() { return branchlength->GetTotalLength(); });
-        t.add("omega", omega);
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
-    }
-
-    //! model allocation
-    void Allocate() {
         // Branch lengths
 
         lambda = 10.0;
@@ -197,6 +166,29 @@ class SingleOmegaModel : public ChainComponent {
 
         phyloprocess = new PhyloProcess(tree.get(), codondata, branchlength, 0, codonmatrix);
         phyloprocess->Unfold();
+    }
+
+    virtual ~SingleOmegaModel() = default;
+
+    void move(int it) override { Move(); }
+
+    template <class C>
+    void declare_model(C &t) {
+        t.add("omega", omega);
+        t.add("nucstat", nucstat);
+        t.add("nucrelrate", nucrelrate);
+        t.add("lambda", lambda);
+        t.add("branchlength", *branchlength);
+    }
+
+    template <class C>
+    void declare_stats(C &t) {
+        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
+        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
+        t.add("length", [this]() { return branchlength->GetTotalLength(); });
+        t.add("omega", omega);
+        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
+        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
     }
 
     //-------------------
