@@ -97,11 +97,6 @@ add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
 target_link_libraries(multigeneglobom bayescode_lib ${MPI_LIBRARIES})
 target_compile_features(multigeneglobom PRIVATE ${CXX_FEATURES})
 
-# New Multi-gene single omega (multigeneglobomnew)
-add_executable(multigeneglobomnew "src/MultiGeneSingleOmegaNew.cpp")
-target_link_libraries(multigeneglobomnew bayescode_lib ${MPI_LIBRARIES})
-target_compile_features(multigeneglobomnew PRIVATE ${CXX_FEATURES})
-
 # tests
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test bayescode_lib)

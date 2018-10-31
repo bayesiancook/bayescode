@@ -31,7 +31,6 @@
 class SingleOmegaModel : public ChainComponent {
     // tree and data
     std::string datafile, treefile;
-    std::unique_ptr<Tracer> tracer;
     std::unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
@@ -132,7 +131,6 @@ class SingleOmegaModel : public ChainComponent {
 
         Nbranch = tree->nb_nodes() - 1;
         Allocate();
-        tracer = std::unique_ptr<Tracer>(new Tracer(*this, &SingleOmegaModel::declare_model));
     }
 
     void move(int it) override { Move(); }
@@ -603,11 +601,12 @@ class SingleOmegaModel : public ChainComponent {
         TouchCodonMatrix();
     }
 
-    void ToStream(std::ostream &os) const {
+    void ToStream(std::ostream &os) {
+        Tracer tracer{*this, &SingleOmegaModel::declare_model};
         os << "SingleOmega" << '\t';
         os << datafile << '\t';
         os << treefile << '\t';
-        tracer->write_line(os);
+        tracer.write_line(os);
     }
 
     SingleOmegaModel(std::istream &is) {
@@ -620,7 +619,8 @@ class SingleOmegaModel : public ChainComponent {
         is >> datafile;
         is >> treefile;
         init();
-        tracer->read_line(is);
+        Tracer tracer{*this, &SingleOmegaModel::declare_model};
+        tracer.read_line(is);
         Update();
     }
 };

@@ -119,6 +119,13 @@ class Tracer {
     }
 
     template <class T>
+    void add(std::string name, Array<T>& v) {
+        for(int i = 0; i < v.GetSize(); i++) {
+            add(name + "[" + std::to_string(i) + "]", v[i]);
+        }
+    }
+
+    template <class T>
     void add(std::string name, T* o, double (T::*f)() const) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
