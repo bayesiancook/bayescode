@@ -120,9 +120,7 @@ class Tracer {
 
     template <class T>
     void add(std::string name, Array<T>& v) {
-        for(int i = 0; i < v.GetSize(); i++) {
-            add(name + "[" + std::to_string(i) + "]", v[i]);
-        }
+        for (int i = 0; i < v.GetSize(); i++) { add(name + "[" + std::to_string(i) + "]", v[i]); }
     }
 
     template <class T>

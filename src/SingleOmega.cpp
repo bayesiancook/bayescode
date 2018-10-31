@@ -26,7 +26,8 @@ int main(int argc, char *argv[]) {
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
-        model = unique_ptr<SingleOmegaModel>(new SingleOmegaModel(args.alignment.getValue(), args.treefile.getValue()));
+        model = unique_ptr<SingleOmegaModel>(
+            new SingleOmegaModel(args.alignment.getValue(), args.treefile.getValue()));
     }
 
     model->Update();

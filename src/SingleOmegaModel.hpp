@@ -111,12 +111,9 @@ class SingleOmegaModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(std::string datafile, std::string treefile,
-                     param_mode_t blmode = independent,
-                     param_mode_t nucmode = independent)
-        : datafile(datafile), treefile(treefile),
-          blmode(blmode), nucmode(nucmode) {
-
+    SingleOmegaModel(std::string datafile, std::string treefile, param_mode_t blmode = independent,
+        param_mode_t nucmode = independent)
+        : datafile(datafile), treefile(treefile), blmode(blmode), nucmode(nucmode) {
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
 

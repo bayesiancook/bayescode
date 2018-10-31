@@ -843,7 +843,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
               datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
+            geneprocess[gene] =
+                new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
             geneprocess[gene]->Update();
         }
     }
