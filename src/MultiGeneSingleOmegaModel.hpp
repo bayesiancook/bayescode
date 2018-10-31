@@ -23,7 +23,6 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
 
-enum param_mode_t { shared, shrunken, independent };
 struct omega_param_t {
     bool variable{false};
     double hypermean{1.0}, hyperinvshape{1.0};

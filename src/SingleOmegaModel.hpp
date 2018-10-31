@@ -28,6 +28,11 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
+// mode shared:      global
+// mode shrunken:    gene specific, with hyperparameters estimated across genes
+// mode independent: gene-specific, with fixed hyperparameters
+enum param_mode_t { shared, shrunken, independent };
+
 class SingleOmegaModel : public ChainComponent {
     // tree and data
     std::string datafile, treefile;
@@ -40,8 +45,8 @@ class SingleOmegaModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    int blmode;
-    int nucmode;
+    param_mode_t blmode;
+    param_mode_t nucmode;
 
     // Branch lengths
 
@@ -113,8 +118,8 @@ class SingleOmegaModel : public ChainComponent {
     virtual ~SingleOmegaModel() = default;
 
     void init() {
-        blmode = 0;
-        nucmode = 0;
+        blmode = independent;
+        nucmode = independent;
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -214,7 +219,7 @@ class SingleOmegaModel : public ChainComponent {
     //! - mode == 2: global
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode) {
+    void SetAcrossGenesModes(param_mode_t inblmode, param_mode_t innucmode) {
         blmode = inblmode;
         nucmode = innucmode;
     }
@@ -223,7 +228,7 @@ class SingleOmegaModel : public ChainComponent {
 
     //! whether branch lengths are fixed externally (e.g. when branch lengths are
     //! shared across genes in a multi-gene context)
-    bool FixedBranchLengths() const { return blmode == 2; }
+    bool FixedBranchLengths() const { return blmode == shared; }
 
     //! set branch lengths to a new value (multi-gene analyses)
     void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
@@ -334,7 +339,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -346,7 +351,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(std::string name) {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -379,7 +384,7 @@ class SingleOmegaModel : public ChainComponent {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double total = 0;
-        if (blmode == 0) { total += LambdaHyperLogPrior(); }
+        if (blmode == independent) { total += LambdaHyperLogPrior(); }
         total += branchlength->GetLogProb();
         return total;
     }
@@ -543,7 +548,7 @@ class SingleOmegaModel : public ChainComponent {
     //! overall schedule branch length updatdes
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
+        if (blmode == independent) { MoveLambda(); }
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
