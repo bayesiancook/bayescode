@@ -39,30 +39,6 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-template <class M>
-unique_ptr<M> model_from_stream(istream &is) {
-    std::string model_name, datafile, treefile;
-    int blmode, nucmode;
-    omega_param_t omega_param;
-
-    is >> model_name;
-    if (model_name != "MultiGeneSingleOmega") {
-        std::cerr << "Expected MultiGeneSingleOmega for model name, got " << model_name << "\n";
-        exit(1);
-    }
-    is >> datafile;
-    is >> treefile;
-    is >> blmode >> nucmode;
-    is >> omega_param;
-    unique_ptr<M> model(new M(datafile, treefile, param_mode_t(blmode),
-        param_mode_t(nucmode), omega_param));
-
-    Tracer tracer{*model, &M::declare_model};
-    tracer.read_line(is);
-    model->Update();
-    return model;
-}
-
 class MultiGeneSingleOmegaModelShared {
   public:
     MultiGeneSingleOmegaModelShared(string datafile, string treefile,
@@ -1116,3 +1092,25 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         mpi.SlaveSendAdditive(lnL);
     }
 };
+
+template<class M>
+std::istream &operator>>(istream &is, unique_ptr<M>& m) {
+    std::string model_name, datafile, treefile;
+    int blmode, nucmode;
+    omega_param_t omega_param;
+
+    is >> model_name;
+    if (model_name != "MultiGeneSingleOmega") {
+        std::cerr << "Expected MultiGeneSingleOmega for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> blmode >> nucmode;
+    is >> omega_param;
+    m.reset(new M(datafile, treefile, param_mode_t(blmode),
+                  param_mode_t(nucmode), omega_param));
+    Tracer tracer{*m, &M::declare_model};
+    tracer.read_line(is);
+    return is;
+}

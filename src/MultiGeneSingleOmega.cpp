@@ -70,7 +70,7 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd) {
         AppData<D, M> d;
         std::ifstream is = cmd.checkpoint_file();
         d.chain_driver = unique_ptr<D>(new D(is));
-        d.model = model_from_stream<M>(is);
+        is >> d.model;
         return d;
     } else {
         AppData<D, M> d;
