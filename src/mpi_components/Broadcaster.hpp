@@ -6,8 +6,9 @@
 #include "interfaces.hpp"
 
 /*==================================================================================================
-  Broadcaster
-  An object responsible for broadcasting the values of specified fields from one process to others
+  BroadcasterMaster
+  An object responsible for broadcasting the values of specified fields to other processes
+  is meant to communicate with one BroadcasterSlave per other process
 ==================================================================================================*/
 template <typename T>
 class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T>> {
@@ -16,13 +17,17 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T
     std::vector<T> buf;
     std::vector<std::function<void()>> writers;
 
-
   public:
     BroadcasterMaster(std::set<std::string> filter, Process& p = *MPI::p)
         : RegistrarBase<BroadcasterMaster<T>>(filter), p(p), datatype(get_datatype<T>()) {}
 
     void register_element(std::string, T& target) {
         writers.push_back([&target, this]() { buf.push_back(target); });
+    }
+
+    void register_element(std::string, std::vector<T>& target) {
+        writers.push_back(
+            [&target, this]() { buf.insert(buf.end(), target.begin(), target.end()); });
     }
 
     void write_buffer() {
@@ -36,6 +41,9 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T
     }
 };
 
+/*==================================================================================================
+  BroadcasterSlave
+==================================================================================================*/
 template <typename T>
 class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>> {
     using buf_it = typename std::vector<T>::iterator;
@@ -61,6 +69,14 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
         buf.push_back(-1);
     }
 
+    void register_element(std::string, std::vector<T>& target) {
+        readers.push_back([&target](buf_it it) {
+            target = std::vector<T>(it, it + target.size());
+            return it + target.size();
+        });
+        for (size_t i = 0; i < target.size(); i++) { buf.push_back(-1); }
+    }
+
     void read_buffer() {
         buf_it it = buf.begin();
         for (auto reader : readers) { it = reader(it); }
@@ -72,6 +88,11 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
     }
 };
 
+/*==================================================================================================
+  Broadcast functions
+  Functions that are meant to be called globally and that will create either a master or slave
+  component depending on the process
+==================================================================================================*/
 template <class Model, class T = double>
 std::unique_ptr<Proxy> broadcast(Model& m,
     void (Model::*f_master)(RegistrarBase<BroadcasterMaster<T>>&),
