@@ -1,3 +1,5 @@
+#pragma once
+
 #include <map>
 #include <numeric>
 #include <set>
@@ -32,6 +34,8 @@ class Partition {
         }
     }
 
+    /*==============================================================================================
+      Partition getters */
     IndexSet get_partition(int i) const {
         if (partition.find(i) != partition.end()) {
             return partition.at(i);
@@ -40,6 +44,7 @@ class Partition {
             exit(1);
         }
     }
+
     IndexSet get_all() const {
         IndexSet result;
         for (auto subpartition : partition) {
@@ -47,8 +52,11 @@ class Partition {
         }
         return result;
     }
+
     IndexSet my_partition() const { return get_partition(process.rank); }
 
+    /*==============================================================================================
+      Size information */
     size_t partition_size(int i) const {
         if (partition.find(i) != partition.end()) {
             return partition.at(i).size();
@@ -57,12 +65,15 @@ class Partition {
             exit(1);
         }
     }
+
     size_t my_partition_size() const { return partition_size(process.rank); }
+
     size_t size_all() const {
         size_t result = 0;
         for (auto subset : partition) { result += subset.second.size(); }
         return result;
     }
+
     size_t size() const { return partition.size(); }
 
     size_t max_partition_size() const {
@@ -73,6 +84,8 @@ class Partition {
         return result;
     }
 
+    /*==============================================================================================
+      Other */
     int owner(Index index) const {
         for (auto subset : partition) {
             if (subset.second.find(index) != subset.second.end()) { return subset.first; }

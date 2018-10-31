@@ -35,7 +35,7 @@ test: cmake
 	@echo "\n\n\e[35m\e[1m== MPI seq test ===============================================================\e[0m"
 	_build/mpi_seq_test
 	@echo "\n\n\e[35m\e[1m== MPI par test ===============================================================\e[0m"
-	_build/mpi_par_test
+	mpirun -np 3 _build/mpi_par_test
 
 .PHONY: aamutsel
 aamutsel: all

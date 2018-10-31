@@ -63,3 +63,23 @@ TEST_CASE("Full Partition test") {
     CHECK(p2.owner("e") == 2);
     CHECK(p2.owner("k") == 3);
 }
+
+TEST_CASE("Partition: obtain local process") {
+    IndexSet s{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n"};
+    IndexSet ss2{"e", "f", "g", "h", "i"};
+
+    // partition as if there was 1 master and 3 slaves
+    MPI::p = std::unique_ptr<Process>(new Process(2, 4));
+    Partition p(s, 3, 1);
+    CHECK(p.my_partition_size() == 5);
+    CHECK(p.my_partition() == ss2);
+}
+
+TEST_CASE("Process::message") {
+    stringstream ss;
+    Process p(1, 2);
+    p.message(ss, "Hello %d - %s", 3, "aa");
+
+    CHECK(ss.str() ==
+          "\e[0m\e[1m[\e[0m\e[32m1\e[0m\e[1m/\e[0m\e[32m2\e[0m\e[1m] \e[0mHello 3 - aa\n");
+}
