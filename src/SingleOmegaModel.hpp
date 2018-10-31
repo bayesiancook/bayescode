@@ -28,6 +28,11 @@
  * omegahypermean and hyperinvshape are estimated across genes.
  */
 
+// mode shared:      global
+// mode shrunken:    gene specific, with hyperparameters estimated across genes
+// mode independent: gene-specific, with fixed hyperparameters
+enum param_mode_t { shared, shrunken, independent };
+
 class SingleOmegaModel : public ChainComponent {
     // tree and data
     std::string datafile, treefile;
@@ -40,8 +45,8 @@ class SingleOmegaModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    int blmode;
-    int nucmode;
+    param_mode_t blmode;
+    param_mode_t nucmode;
 
     // Branch lengths
 
@@ -96,6 +101,8 @@ class SingleOmegaModel : public ChainComponent {
 
 
   public:
+    friend std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m);
+
     //-------------------
     // Construction and allocation
     // ------------------
@@ -104,17 +111,11 @@ class SingleOmegaModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(std::string datafile, std::string treefile)
-        : datafile(datafile), treefile(treefile) {
-        init();
-        Update();
-    }
-
-    virtual ~SingleOmegaModel() = default;
-
-    void init() {
-        blmode = 0;
-        nucmode = 0;
+    SingleOmegaModel(std::string datafile, std::string treefile,
+                     param_mode_t blmode = independent,
+                     param_mode_t nucmode = independent)
+        : datafile(datafile), treefile(treefile),
+          blmode(blmode), nucmode(nucmode) {
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -130,32 +131,7 @@ class SingleOmegaModel : public ChainComponent {
         tree = make_from_parser(parser);
 
         Nbranch = tree->nb_nodes() - 1;
-        Allocate();
-    }
 
-    void move(int it) override { Move(); }
-
-    template <class C>
-    void declare_model(C &t) {
-        t.add("omega", omega);
-        t.add("nucstat", nucstat);
-        t.add("nucrelrate", nucrelrate);
-        t.add("lambda", lambda);
-        t.add("branchlength", *branchlength);
-    }
-
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
-        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
-        t.add("length", [this]() { return branchlength->GetTotalLength(); });
-        t.add("omega", omega);
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
-    }
-
-    //! model allocation
-    void Allocate() {
         // Branch lengths
 
         lambda = 10.0;
@@ -192,6 +168,29 @@ class SingleOmegaModel : public ChainComponent {
         phyloprocess->Unfold();
     }
 
+    virtual ~SingleOmegaModel() = default;
+
+    void move(int it) override { Move(); }
+
+    template <class C>
+    void declare_model(C &t) {
+        t.add("omega", omega);
+        t.add("nucstat", nucstat);
+        t.add("nucrelrate", nucrelrate);
+        t.add("lambda", lambda);
+        t.add("branchlength", *branchlength);
+    }
+
+    template <class C>
+    void declare_stats(C &t) {
+        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
+        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
+        t.add("length", [this]() { return branchlength->GetTotalLength(); });
+        t.add("omega", omega);
+        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
+        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+    }
+
     //-------------------
     // Accessors
     // ------------------
@@ -214,7 +213,7 @@ class SingleOmegaModel : public ChainComponent {
     //! - mode == 2: global
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(int inblmode, int innucmode) {
+    void SetAcrossGenesModes(param_mode_t inblmode, param_mode_t innucmode) {
         blmode = inblmode;
         nucmode = innucmode;
     }
@@ -223,7 +222,7 @@ class SingleOmegaModel : public ChainComponent {
 
     //! whether branch lengths are fixed externally (e.g. when branch lengths are
     //! shared across genes in a multi-gene context)
-    bool FixedBranchLengths() const { return blmode == 2; }
+    bool FixedBranchLengths() const { return blmode == shared; }
 
     //! set branch lengths to a new value (multi-gene analyses)
     void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
@@ -334,7 +333,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -346,7 +345,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(std::string name) {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -379,7 +378,7 @@ class SingleOmegaModel : public ChainComponent {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double total = 0;
-        if (blmode == 0) { total += LambdaHyperLogPrior(); }
+        if (blmode == independent) { total += LambdaHyperLogPrior(); }
         total += branchlength->GetLogProb();
         return total;
     }
@@ -543,7 +542,7 @@ class SingleOmegaModel : public ChainComponent {
     //! overall schedule branch length updatdes
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
+        if (blmode == independent) { MoveLambda(); }
     }
 
     //! Gibbs resample branch lengths (based on sufficient statistics and current
@@ -601,26 +600,36 @@ class SingleOmegaModel : public ChainComponent {
         TouchCodonMatrix();
     }
 
-    void ToStream(std::ostream &os) {
-        Tracer tracer{*this, &SingleOmegaModel::declare_model};
-        os << "SingleOmega" << '\t';
-        os << datafile << '\t';
-        os << treefile << '\t';
-        tracer.write_line(os);
-    }
-
-    SingleOmegaModel(std::istream &is) {
-        std::string model_name;
-        is >> model_name;
-        if (model_name != "SingleOmega") {
-            std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-            exit(1);
-        }
-        is >> datafile;
-        is >> treefile;
-        init();
-        Tracer tracer{*this, &SingleOmegaModel::declare_model};
-        tracer.read_line(is);
-        Update();
-    }
+    void ToStream(std::ostream &os) { os << this; }
 };
+
+std::istream &operator>>(std::istream &is, std::unique_ptr<SingleOmegaModel> &m) {
+    std::string model_name;
+    std::string datafile;
+    std::string treefile;
+    int blmode, nucmode;
+
+    is >> model_name;
+    if (model_name != "SingleOmega") {
+        std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> blmode >> nucmode;
+    m.reset(new SingleOmegaModel(datafile, treefile));
+    Tracer tracer{*m, &SingleOmegaModel::declare_model};
+    tracer.read_line(is);
+    return is;
+}
+
+std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m) {
+    Tracer tracer{*m, &SingleOmegaModel::declare_model};
+    os << "SingleOmega" << '\t';
+    os << m->datafile << '\t';
+    os << m->treefile << '\t';
+    os << m->blmode << '\t';
+    os << m->nucmode << '\t';
+    tracer.write_line(os);
+    return os;
+}

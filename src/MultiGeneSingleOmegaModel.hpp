@@ -23,7 +23,6 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
 
-enum param_mode_t { shared, shrunken, independent };
 struct omega_param_t {
     bool variable{false};
     double hypermean{1.0}, hyperinvshape{1.0};
@@ -844,9 +843,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
               datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile);
-            geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
-            geneprocess[gene]->Allocate();
+            geneprocess[gene] = new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
+            geneprocess[gene]->Update();
         }
     }
 
