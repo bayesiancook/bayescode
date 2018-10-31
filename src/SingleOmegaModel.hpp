@@ -101,6 +101,8 @@ class SingleOmegaModel : public ChainComponent {
 
 
   public:
+    friend std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m);
+
     //-------------------
     // Construction and allocation
     // ------------------
@@ -606,13 +608,7 @@ class SingleOmegaModel : public ChainComponent {
         TouchCodonMatrix();
     }
 
-    void ToStream(std::ostream &os) {
-        Tracer tracer{*this, &SingleOmegaModel::declare_model};
-        os << "SingleOmega" << '\t';
-        os << datafile << '\t';
-        os << treefile << '\t';
-        tracer.write_line(os);
-    }
+    void ToStream(std::ostream &os) { os << this; }
 
     SingleOmegaModel(std::istream &is) {
         std::string model_name;
@@ -629,3 +625,12 @@ class SingleOmegaModel : public ChainComponent {
         Update();
     }
 };
+
+std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m) {
+    Tracer tracer{*m, &SingleOmegaModel::declare_model};
+    os << "SingleOmega" << '\t';
+    os << m->datafile << '\t';
+    os << m->treefile << '\t';
+    tracer.write_line(os);
+    return os;
+}
