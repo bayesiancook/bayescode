@@ -22,6 +22,7 @@
 #include "MultiGeneMPIModule.hpp"
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
+#include "mpi_components/Process.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -39,7 +40,7 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
 }
 
 template <class M>
-unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
+unique_ptr<M> model_from_stream(istream &is) {
     std::string model_name, datafile, treefile;
     int blmode, nucmode;
     omega_param_t omega_param;
@@ -53,7 +54,7 @@ unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
     is >> treefile;
     is >> blmode >> nucmode;
     is >> omega_param;
-    unique_ptr<M> model(new M(datafile, treefile, inmyid, innprocs, param_mode_t(blmode),
+    unique_ptr<M> model(new M(datafile, treefile, param_mode_t(blmode),
         param_mode_t(nucmode), omega_param));
 
     Tracer tracer{*model, &M::declare_model};
@@ -64,11 +65,11 @@ unique_ptr<M> model_from_stream(istream &is, int inmyid, int innprocs) {
 
 class MultiGeneSingleOmegaModelShared {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string treefile, int inmyid, int innprocs,
+    MultiGeneSingleOmegaModelShared(string datafile, string treefile,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
-          mpi(inmyid, innprocs),
+          mpi(MPI::p->rank, MPI::p->size),
           blmode(blmode),
           nucmode(nucmode),
           omega_param(omega_param),
@@ -467,10 +468,10 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, int inmyid, int innprocs,
+    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(
-              datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
+              datafile, intreefile, blmode, nucmode, omega_param) {
         cerr << "number of taxa : " << GetNtaxa() << '\n';
         cerr << "number of branches : " << GetNbranch() << '\n';
         cerr << "tree and data fit together\n";
@@ -837,10 +838,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, int inmyid, int innprocs,
+    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile,
         param_mode_t blmode, param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(
-              datafile, intreefile, inmyid, innprocs, blmode, nucmode, omega_param) {
+              datafile, intreefile, blmode, nucmode, omega_param) {
         geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
         for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
             geneprocess[gene] =
