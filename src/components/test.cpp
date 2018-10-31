@@ -1,5 +1,6 @@
 #include "doctest.h"
 
+#include "BaseArgParse.hpp"
 #include "Tracer.hpp"
 
 using namespace std;
@@ -42,3 +43,7 @@ TEST_CASE("Tracer writing test") {
     CHECK(ss.str() ==
           "a\tv[0]\tv[1]\tv[2]\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
 }
+
+struct MyArgs : public BaseArgParse {};
+
+TEST_CASE("Arg parse test") {}
