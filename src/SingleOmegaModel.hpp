@@ -111,18 +111,19 @@ class SingleOmegaModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    SingleOmegaModel(std::string datafile, std::string treefile)
+    SingleOmegaModel(std::string datafile, std::string treefile,
+                     param_mode_t blmode = independent,
+                     param_mode_t nucmode = independent)
         : datafile(datafile), treefile(treefile) {
-        init();
+        init(blmode, nucmode);
         Update();
     }
 
     virtual ~SingleOmegaModel() = default;
 
-    void init() {
-        blmode = independent;
-        nucmode = independent;
-
+    void init(param_mode_t blmode, param_mode_t nucmode) {
+        this->blmode = blmode;
+        this->nucmode = nucmode;
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
 
@@ -612,6 +613,7 @@ class SingleOmegaModel : public ChainComponent {
 
     SingleOmegaModel(std::istream &is) {
         std::string model_name;
+        int blmode, nucmode;
         is >> model_name;
         if (model_name != "SingleOmega") {
             std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
@@ -619,7 +621,9 @@ class SingleOmegaModel : public ChainComponent {
         }
         is >> datafile;
         is >> treefile;
-        init();
+        is >> blmode >> nucmode;
+        init(static_cast<param_mode_t>(blmode),
+             static_cast<param_mode_t>(nucmode));
         Tracer tracer{*this, &SingleOmegaModel::declare_model};
         tracer.read_line(is);
         Update();
@@ -631,6 +635,8 @@ std::ostream &operator<<(std::ostream &os, std::unique_ptr<SingleOmegaModel> &m)
     os << "SingleOmega" << '\t';
     os << m->datafile << '\t';
     os << m->treefile << '\t';
+    os << m->blmode << '\t';
+    os << m->nucmode << '\t';
     tracer.write_line(os);
     return os;
 }
