@@ -18,7 +18,7 @@ class RegistrarBase {
     }
 
     template <class M>
-    void register_from_method(M* ptr, void (M::*f)(RegistrarBase<T>&)) {
-        (ptr->*f)(*this);
+    void register_from_method(M& ref, void (M::*f)(RegistrarBase<T>&)) {
+        (ref.*f)(*this);
     }
 };

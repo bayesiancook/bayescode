@@ -71,3 +71,25 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
         read_buffer();
     }
 };
+
+template <class Model, class T = double>
+std::unique_ptr<Proxy> broadcast(Model& m,
+    void (Model::*f_master)(RegistrarBase<BroadcasterMaster<T>>&),
+    void (Model::*f_slave)(RegistrarBase<BroadcasterSlave<T>>&), std::set<std::string> filter) {
+    std::unique_ptr<Proxy> result{nullptr};
+    if (!MPI::p->rank) {
+        auto component = new BroadcasterMaster<T>(filter);
+        component->register_from_method(m, f_master);
+        result.reset(dynamic_cast<Proxy*>(component));
+    } else {
+        auto component = new BroadcasterSlave<T>(filter);
+        component->register_from_method(m, f_slave);
+        result.reset(dynamic_cast<Proxy*>(component));
+    }
+    return result;
+}
+
+template <class Model, class T = double>
+std::unique_ptr<Proxy> broadcast_model(Model& m, std::set<std::string> filter) {
+    return broadcast(m, &Model::declare_model, &Model::declare_model, filter);
+}

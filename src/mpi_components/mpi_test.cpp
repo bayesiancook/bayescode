@@ -11,21 +11,20 @@ struct DummyModel {
         ref.add("b", b);
         ref.add("c", c);
     }
+
+    void print() { p->message("Model state is %f, %f, %f", a, b, c); }
 };
 
 void compute(int, char**) {
-    if (!p->rank) {
-        DummyModel m = {2.3, 2.4, 5.2};
-        BroadcasterMaster<double> bcast({"a", "c"});
-        bcast.register_from_method(&m, &DummyModel::declare_model);
-        bcast.release();
-    } else {
-        DummyModel m = {-1, -1, -1};
-        BroadcasterSlave<double> bcast({"a", "c"});
-        bcast.register_from_method(&m, &DummyModel::declare_model);
-        bcast.acquire();
-        p->message("Got values %f, %f and %f", m.a, m.b, m.c);
-    }
+    DummyModel m = {-1, -1, -1};
+    if (!p->rank) { m = {12.2, 15.5, 16.8}; }
+
+    auto bcaster = broadcast_model(m, {"a", "c"});
+
+    if (p->rank) { bcaster->acquire(); }
+    bcaster->release();
+
+    m.print();
 }
 
 int main(int argc, char** argv) { mpi_run(argc, argv, compute); }
