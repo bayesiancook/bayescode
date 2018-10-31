@@ -22,12 +22,11 @@ TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxl
     }
 }
 
+// @Thibault: check this function
 std::vector<int> TaxonSet::get_reverse_index_table(const Tree *tree) const {
-    std::vector<int> ret(0, -1);
+    std::vector<int> ret(tree->nb_nodes(), -1);
     for (size_t node = 0; node < tree->nb_nodes(); node++) {
-        if (tree->is_leaf(node)) {
-            ret.emplace(ret.begin() + GetTaxonIndex(tree->node_name(node)), node);
-        }
+        if (tree->is_leaf(node)) { ret.at(GetTaxonIndex(tree->node_name(node))) = node; }
     }
     return ret;
 }
