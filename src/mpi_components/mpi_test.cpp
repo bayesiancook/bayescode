@@ -1,4 +1,4 @@
-#include "Broadcaster.hpp"
+#include "broadcast.hpp"
 
 using MPI::p;
 using namespace std;
