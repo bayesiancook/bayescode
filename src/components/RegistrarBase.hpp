@@ -5,20 +5,23 @@
 
 template <class T>
 class RegistrarBase {
-    std::set<std::string> filter;
+    mutable std::set<std::string> _filter;
 
   public:
-    RegistrarBase(std::set<std::string> filter) : filter(filter) {}
+    RegistrarBase() {}
 
     template <class... Args>
     void add(std::string name, Args&&... args) {
-        if (filter.find(name) != filter.end()) {
+        if ((_filter.size() == 0) or (_filter.find(name) != _filter.end())) {
             static_cast<T*>(this)->register_element(name, std::forward<Args>(args)...);
         }
     }
 
     template <class M>
-    void register_from_method(M& ref, void (M::*f)(RegistrarBase<T>&)) {
+    void register_from_method(
+        M& ref, void (M::*f)(RegistrarBase<T>&), std::set<std::string> filter = {}) {
+        _filter = filter;
         (ref.*f)(*this);
+        _filter.clear();
     }
 };
