@@ -8,7 +8,7 @@ class RegistrarBase {
     mutable std::set<std::string> _filter;
 
   public:
-    RegistrarBase() {}
+    RegistrarBase() = default;
 
     template <class... Args>
     void add(std::string name, Args&&... args) {

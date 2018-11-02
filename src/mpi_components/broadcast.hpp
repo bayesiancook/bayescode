@@ -53,7 +53,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
     int origin;
     MPI_Datatype datatype;
     std::vector<T> buf;
-    std::vector<std::function<buf_it(buf_it)>> readers;
+    std::vector<std::function<buf_it(buf_it)>> readers;  // TODO work on buf_it&
 
     friend RegistrarBase<BroadcasterSlave<T>>;
 
