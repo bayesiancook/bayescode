@@ -5,23 +5,34 @@
 
 class Partition;
 
+// TODO move into a logger class somewhere
+#ifdef __GNUG__
+#include <cxxabi.h>
+static std::string demangle(const char* name) {
+    int status{0};
+    std::unique_ptr<char, void (*)(void*)> res{
+        abi::__cxa_demangle(name, NULL, NULL, &status), std::free};
+    return (status == 0) ? res.get() : name;
+}
+#else
+static std::string demangle(const char* name) { return name; }
+#endif
+
 template <class T>
 class RegistrarBase {
     mutable std::set<std::string> _filter;
 
   public:
-    void register_element(std::string, double&) {
-        std::cerr << "Error: register_element(std::string, double&) not implemented!\n";
-        exit(1);
-    }
-    void register_element(std::string, std::vector<double>&) {
-        std::cerr
-            << "Error: register_element(std::string, std::vector<double>&) not implemented!\n";
-        exit(1);
-    }
-    void register_element(std::string, std::vector<double>&, const Partition&) {
-        std::cerr << "Error: register_element(std::string, std::vector<double>&, const Partition&) "
-                     "not implemented!\n";
+    template <class... Args>
+    void register_element(std::string s, Args... args) {
+        std::stringstream ss;
+        ss << "\e[1m\e[31mError\e[0m| \e[33mregister_element\e[0m overload for element \e[32m" << s
+           << "\e[0m not implemented for class \e[32m" << demangle(typeid(T).name())
+           << "\e[0m\n     \\ overload parameters are: \e[32m";
+        std::vector<std::string> types{demangle(typeid(Args).name())...};
+        for (auto t : types) { ss << t << " "; }
+        ss << "\e[0m\n";
+        std::cerr << ss.str();
         exit(1);
     }
 
