@@ -18,6 +18,7 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T
     std::vector<std::function<void()>> writers;
 
     friend RegistrarBase<BroadcasterMaster<T>>;
+    using RegistrarBase<BroadcasterMaster<T>>::register_element;
 
     void register_element(std::string, T& target) {
         writers.push_back([&target, this]() { buf.push_back(target); });
@@ -56,6 +57,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
     std::vector<std::function<buf_it(buf_it)>> readers;  // TODO work on buf_it&
 
     friend RegistrarBase<BroadcasterSlave<T>>;
+    using RegistrarBase<BroadcasterSlave<T>>::register_element;
 
     void register_element(std::string, T& target) {
         readers.push_back([&target](buf_it it) {

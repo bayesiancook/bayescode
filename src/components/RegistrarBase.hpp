@@ -3,11 +3,28 @@
 #include <set>
 #include <string>
 
+class Partition;
+
 template <class T>
 class RegistrarBase {
     mutable std::set<std::string> _filter;
 
   public:
+    void register_element(std::string, double&) {
+        std::cerr << "Error: register_element(std::string, double&) not implemented!\n";
+        exit(1);
+    }
+    void register_element(std::string, std::vector<double>&) {
+        std::cerr
+            << "Error: register_element(std::string, std::vector<double>&) not implemented!\n";
+        exit(1);
+    }
+    void register_element(std::string, std::vector<double>&, const Partition&) {
+        std::cerr << "Error: register_element(std::string, std::vector<double>&, const Partition&) "
+                     "not implemented!\n";
+        exit(1);
+    }
+
     RegistrarBase() = default;
 
     template <class... Args>

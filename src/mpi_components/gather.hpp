@@ -1,5 +1,6 @@
 #pragma once
 
+#include "components/RegistrarBase.hpp"
 #include "interfaces.hpp"
 #include "partition.hpp"
 
@@ -17,6 +18,7 @@ class GatherMaster : public Proxy, public RegistrarBase<GatherMaster<T>> {
     std::vector<std::function<void(std::vector<buf_it>&)>> readers;
 
     friend RegistrarBase<GatherMaster<T>>;
+    using RegistrarBase<GatherMaster<T>>::register_element;
 
     void register_element(std::string, std::vector<T>& target, const Partition& partition) {
         for (int i = 1; i < p.size; i++) {
@@ -24,12 +26,15 @@ class GatherMaster : public Proxy, public RegistrarBase<GatherMaster<T>> {
             revcounts.at(i) += p_size;
             for (int j = i + 1; j < p.size; j++) { displs.at(j) += p_size; }
         }
-        for (int i = 0; i < partition.size_all(); i++) { buf.push_back(-1); }
+        for (size_t i = 0; i < partition.size_all(); i++) { buf.push_back(-1); }
+
+        // FIXME not very efficient
         readers.push_back([&target, partition, this](std::vector<buf_it>& its) {
             for (int i = 1; i < p.size; i++) {
-                buf_it end = it.at(i) + partition.partition_size(i);
-                target = std::vector<T>(it.at(i), end);
-                it.at(i) = end;
+                buf_it end = its.at(i) + partition.partition_size(i);
+                std::vector<T> tmp(its.at(i), end);
+                target.insert(target.end(), tmp.begin(), tmp.end());
+                its.at(i) = end;
             }
         });
     }
@@ -62,8 +67,9 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
     std::vector<std::function<void()>> writers;
 
     friend RegistrarBase<GatherSlave<T>>;
+    using RegistrarBase<GatherSlave<T>>::register_element;
 
-    void register_element(std::string, std::vector<T>& target) {
+    void register_element(std::string, std::vector<T>& target, Partition&) {
         writers.push_back(
             [&target, this]() { buf.insert(buf.end(), target.begin(), target.end()); });
     }
@@ -74,8 +80,7 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
     }
 
   public:
-    GatherSlave(Process& p = *MPI::p)
-        : p(p), datatype(get_datatype<T>()), displs(p.size, 0), revcounts(p.size, 0) {}
+    GatherSlave(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
 
     void release() final {
         write_buffer();
@@ -83,3 +88,30 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
             buf.data(), buf.size(), datatype, NULL, NULL, NULL, datatype, 0, MPI_COMM_WORLD);
     }
 };
+
+
+/*==================================================================================================
+  Gather functions
+  Functions that are meant to be called globally and that will create either a master or slave
+  component depending on the process
+==================================================================================================*/
+template <class Model, class T = double>
+std::unique_ptr<Proxy> gather(Model& m, void (Model::*f_master)(RegistrarBase<GatherMaster<T>>&),
+    void (Model::*f_slave)(RegistrarBase<GatherSlave<T>>&), std::set<std::string> filter = {}) {
+    std::unique_ptr<Proxy> result{nullptr};
+    if (!MPI::p->rank) {
+        auto component = new GatherMaster<T>();
+        component->register_from_method(m, f_master, filter);
+        result.reset(dynamic_cast<Proxy*>(component));
+    } else {
+        auto component = new GatherSlave<T>();
+        component->register_from_method(m, f_slave, filter);
+        result.reset(dynamic_cast<Proxy*>(component));
+    }
+    return result;
+}
+
+template <class Model, class T = double>
+std::unique_ptr<Proxy> gather_model(Model& m, std::set<std::string> filter = {}) {
+    return gather(m, &Model::declare_model, &Model::declare_model, filter);
+}
