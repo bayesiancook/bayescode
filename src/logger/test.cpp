@@ -2,9 +2,12 @@
 
 int main() {
     MessageFormat error(
-        {Token({1}, "["), Token({1, 31}, "error"), Token({1}, "]: ")}, {Token({}, "\n")});
+        {bold("========================================================================\n"),
+            bold_red("ERROR"), bold(" | ")},
+        {bold("\n========================================================================\n")},
+        {bold("      | ")});
 
     Logger l;
     l.print("Hello %d!\n", 13);
-    l.message(error, "Something failed!");
+    l.message(error, "Something failed!\nbadly!");
 }

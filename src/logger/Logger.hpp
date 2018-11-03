@@ -35,6 +35,22 @@ class Token {
     size_t size() const { return _size; }
 };
 
+// quick functions for specific token types
+template <class... Args>
+Token bold(std::string format, Args&&... args) {
+    return Token({1}, format, std::forward<Args>(args)...);
+}
+
+template <class... Args>
+Token red(std::string format, Args&&... args) {
+    return Token({31}, format, std::forward<Args>(args)...);
+}
+
+template <class... Args>
+Token bold_red(std::string format, Args&&... args) {
+    return Token({1, 31}, format, std::forward<Args>(args)...);
+}
+
 class MessageFormat {
     std::vector<Token> _prefix, _suffix, _line_prefix;
 
@@ -66,7 +82,16 @@ class Logger {
 
     template <class... Args>
     void message(MessageFormat& message_format, std::string format, Args&&... args) const {
-        std::cout << message_format.prefix() << Token({}, format, std::forward<Args>(args)...).str()
-                  << message_format.suffix();
+        // replace all \n with \n + line_prefix
+        auto message = Token({}, format, std::forward<Args>(args)...).str();
+        auto line_prefix = "\n" + message_format.line_prefix();
+        size_t pos = 0;
+        while (true) {
+            pos = message.find('\n', pos + 1);
+            if (pos == std::string::npos) { break; }
+            message.replace(pos, 1, line_prefix);
+        }
+
+        std::cout << message_format.prefix() << message << message_format.suffix();
     }
 };
