@@ -7,7 +7,7 @@ int main() {
         {bold("\n========================================================================\n")},
         {bold("      | ")});
 
-    Logger l;
+    Logger l(std::cout);
     l.print("Hello %d!\n", 13);
-    l.message(error, "Something failed!\nbadly!");
+    l.message(error, "Something failed!\nbadly!\nlike, very badly!");
 }

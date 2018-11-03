@@ -74,7 +74,11 @@ class MessageFormat {
 };
 
 class Logger {
+    std::ostream& os;
+
   public:
+    Logger(std::ostream& os) : os(os) {}
+
     template <class... Args>
     void print(const std::string& format, Args&&... args) const {
         std::cout << Token({}, format, std::forward<Args>(args)...).str();
