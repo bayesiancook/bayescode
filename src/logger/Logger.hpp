@@ -1,7 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <numeric>
 #include <set>
+#include <vector>
 
 class Token {
     size_t _size;
@@ -33,11 +35,38 @@ class Token {
     size_t size() const { return _size; }
 };
 
+class MessageFormat {
+    std::vector<Token> _prefix, _suffix, _line_prefix;
+
+  public:
+    MessageFormat(std::vector<Token> prefix, std::vector<Token> suffix = {},
+        std::vector<Token> line_prefix = {})
+        : _prefix(prefix), _suffix(suffix), _line_prefix(line_prefix) {}
+
+    std::string prefix() const {
+        return std::accumulate(_prefix.begin(), _prefix.end(), std::string(),
+            [](std::string acc, Token t) { return acc + t.str(); });
+    }
+    std::string suffix() const {
+        return std::accumulate(_suffix.begin(), _suffix.end(), std::string(),
+            [](std::string acc, Token t) { return acc + t.str(); });
+    }
+    std::string line_prefix() const {
+        return std::accumulate(_line_prefix.begin(), _line_prefix.end(), std::string(),
+            [](std::string acc, Token t) { return acc + t.str(); });
+    }
+};
 
 class Logger {
   public:
     template <class... Args>
-    void print(std::ostream& os, const std::string& format, Args&&... args) {
-        os << Token({1, 31}, format, std::forward<Args>(args)...).str();
+    void print(const std::string& format, Args&&... args) const {
+        std::cout << Token({}, format, std::forward<Args>(args)...).str();
+    }
+
+    template <class... Args>
+    void message(MessageFormat& message_format, std::string format, Args&&... args) const {
+        std::cout << message_format.prefix() << Token({}, format, std::forward<Args>(args)...).str()
+                  << message_format.suffix();
     }
 };
