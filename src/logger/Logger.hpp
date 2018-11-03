@@ -6,8 +6,8 @@
 #include <vector>
 
 class Token {
-    size_t _size;
     std::string _value;
+    size_t _size;
 
   public:
     template <class... Args>
@@ -29,6 +29,9 @@ class Token {
             _value += "\e[0m";
         }
     }
+
+    Token(std::string s) : _value(s), _size(_value.size()) {}
+    Token(const char* s) : _value(s), _size(_value.size()) {}
 
     std::string str() const { return _value; }
 
