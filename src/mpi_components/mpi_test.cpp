@@ -1,33 +1,45 @@
-#include "Broadcaster.hpp"
+#include <sstream>
+#include "broadcast.hpp"
+#include "gather.hpp"
 
 using MPI::p;
 using namespace std;
 
 struct DummyModel {
-    double a, b, c;
+    double a{-1}, b{-1}, c{-1};
     vector<double> v;
+    Partition partition{{"d", "e", "f"}, static_cast<size_t>(p->size) - 1, 1};
 
     template <class C>
     void declare_model(C& ref) {
         ref.add("a", a);
         ref.add("b", b);
         ref.add("c", c);
-        ref.add("v", v);
+        ref.add("v", v, partition);
     }
 
     void print() {
-        p->message("Model state is %f, %f, %f, {%f, %f, %f}", a, b, c, v[0], v[1], v[2]);
+        stringstream ss;
+        for (auto e : v) { ss << e << " "; }
+        p->message("Model state is %f, %f, %f, {%s}", a, b, c, ss.str().c_str());
     }
 };
 
 void compute(int, char**) {
-    DummyModel m = {-1, -1, -1, {-1, -1, -1}};
-    if (!p->rank) { m = {12.2, 15.5, 16.8, {7.7, 8.8, 9.9}}; }
+    DummyModel m;
+    if (!p->rank) {  // master
+        m.a = 2.2;
+        m.b = 3.3;
+        m.c = 4.4;
+    } else {  // slave
+        m.v = std::vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
+    }
 
-    auto bcaster = broadcast_model(m, {"a", "c", "v"});
+    auto gatherer = gather_model(m, {"v"});
+    auto bcaster = broadcast_model(m, {"a", "c"});
 
-    if (p->rank) { bcaster->acquire(); }
-    bcaster->release();
+    p->rank ? bcaster->acquire() : bcaster->release();
+    p->rank ? gatherer->release() : gatherer->acquire();
 
     m.print();
 }
