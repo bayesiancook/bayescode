@@ -17,8 +17,8 @@ using namespace std;
      ValueArg<int> nlevel{"", "nlevel", "Number of levels", false, 1, "int", cmd};
      ValueArg<double> fitnessshape{"", "shape", "Shape of the fitness distribution", false, 1, "double", cmd}; // We don't do the "free" option that was available in the previous version
      ValueArg<double> fitnesscentermode{"", "center", "Center mode of the fitness distribution", false, 3, "double", cmd};
-     ValueArg<double> epsilon{"eps", "epsilon", "Epsilon value for rare amino acids", false, -1, "double", cmd};
-     ValueArg<double> pihypermean{"pi", "pihypermean", "Probability that there is a differential effect in a condition", false, 0.1, "double", cmd};
+     ValueArg<double> epsilon{"", "epsilon", "Epsilon value for rare amino acids", false, -1, "double", cmd};
+     ValueArg<double> pihypermean{"", "pihypermean", "Probability that there is a differential effect in a condition", false, 0.1, "double", cmd};
      ValueArg<double> shiftprobmean{"", "shiftprobmean", "Mean of the Beta probability of profile change", false, 0.1, "double", cmd};
      ValueArg<double> shiftprobinvconc{"", "shiftprobinvconc", "Inverse concentration of the Beta probability of profile change (0 means very pointed probability)", false, 0.1, "double", cmd};
 //     ValueArg<int> burnin{"b", "burnin", "Burnin iterations that will be discarded", false, 0, "int", cmd}; No more burnin: if the model has difficulty starting, we'll think about it again.
