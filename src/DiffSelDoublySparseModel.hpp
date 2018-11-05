@@ -236,16 +236,15 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     //! shape parameter is estimated
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
-        int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc, bool withtoggle)
-        : withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
-        fitnesscentermode = 3;
-        fitnessshapemode = 3;
-        fitnessshape = 20.0;
+			     int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
+			     double inshiftprobmean, double inshiftprobinvconc,
+			     int fitnesscentermode = 3, bool withtoggle = true)
+      : fitnesscentermode(fitnesscentermode),
+	withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
 
-        pihypermean = inpihypermean;
-        shiftprobmean = inshiftprobmean;
-        shiftprobinvconc = inshiftprobinvconc;
+      pihypermean = inpihypermean;
+      shiftprobmean = inshiftprobmean;
+      shiftprobinvconc = inshiftprobinvconc;
 
         codonmodel = incodonmodel;
 
