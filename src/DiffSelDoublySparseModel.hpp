@@ -44,8 +44,8 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
-#include "tree/implem.hpp"
 #include "components/ChainComponent.hpp"
+#include "tree/implem.hpp"
 
 
 using namespace std;
@@ -91,8 +91,6 @@ using namespace std;
  * site i and a given amino acid a, is quantified by the posterior probability
  * that the corresponding toggle is equal to 1.
  */
-
-
 
 
 class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
@@ -235,15 +233,13 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     //! shape parameter is estimated
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
-			     int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-			     double inshiftprobmean, double inshiftprobinvconc,
-			     int fitnesscentermode = 3, bool withtoggle = true)
-      : fitnesscentermode(fitnesscentermode),
-	withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
-
-      pihypermean = inpihypermean;
-      shiftprobmean = inshiftprobmean;
-      shiftprobinvconc = inshiftprobinvconc;
+        int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
+        double inshiftprobmean, double inshiftprobinvconc, int fitnesscentermode = 3,
+        bool withtoggle = true)
+        : fitnesscentermode(fitnesscentermode), withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
+        pihypermean = inpihypermean;
+        shiftprobmean = inshiftprobmean;
+        shiftprobinvconc = inshiftprobinvconc;
 
         codonmodel = incodonmodel;
 
