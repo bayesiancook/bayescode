@@ -52,11 +52,10 @@ int main(int argc, char *argv[]) {
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
                             model = new DiffSelDoublySparseModel(args.alignment.getValue(), args.treefile.getValue(),
-                            ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel, ddargs.epsilon.getValue(),
-                            ddargs.fitnessshape.getValue(), ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(), ddargs.shiftprobinvconc.getValue(),
-                            true );
-
-        model->SetFitnessCenterMode(ddargs.fitnesscentermode.getValue());
+								 ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel, ddargs.epsilon.getValue(),
+								 ddargs.fitnessshape.getValue(), ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
+								 ddargs.shiftprobinvconc.getValue(),
+								 ddargs.fitnesscentermode.getValue(), true);
         model->Allocate();
         model->Update();
 
