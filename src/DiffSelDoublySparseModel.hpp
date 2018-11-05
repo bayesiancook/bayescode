@@ -115,7 +115,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     int maskmode;
     int maskepsilonmode;
 
-    int withtoggle;
+    bool withtoggle;
 
     // -----
     // external parameters
@@ -234,11 +234,11 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     //! - inshape: shape parameter of the Gamma distribution of pre-fitness
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
+    //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc)
-        : hyperfitnesssuffstat(Naa) {
-        withtoggle = 0;
+        double inshiftprobmean, double inshiftprobinvconc, bool withtoggle)
+        : withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
         fitnesscentermode = 3;
         fitnessshapemode = 3;
         fitnessshape = 20.0;
@@ -403,9 +403,6 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
         // create suffstat arrays
         suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
     }
-
-    //! \brief set toggle status: 0: toggles all fixed to 0, 1:random toggles,i
-    void SetWithToggles(int in) { withtoggle = in; }
 
     //! \brief set estimation method for branch lengths
     //!
