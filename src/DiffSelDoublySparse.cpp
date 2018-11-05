@@ -96,7 +96,6 @@ int main(int argc, char *argv[]) {
             ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
             ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
             ddargs.shiftprobinvconc.getValue(), ddargs.fitnesscentermode.getValue(), true);
-        model->Allocate();
         model->Update();
     }
 

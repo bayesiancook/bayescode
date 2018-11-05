@@ -274,6 +274,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
         if (Ncond <= 2) { Nlevel = 1; }
 
         ReadFiles(datafile, treefile);
+	Allocate();
     }
 
     DiffSelDoublySparseModel(const DiffSelDoublySparseModel &) = delete;
