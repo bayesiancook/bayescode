@@ -802,11 +802,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // ---------------
 
     //! \brief complete MCMC move schedule
-    double Move() {
+    void move(int) override {
         gammanullcount = 0;
         ResampleSub(1.0);
         MoveParameters(3, 20);
-        return 1.;
     }
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
