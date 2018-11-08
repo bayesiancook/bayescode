@@ -54,7 +54,7 @@ const std::string Process::bold{"\e[0m\e[1m"}, Process::normal{"\e[0m"};
   Global Process object.
 ==================================================================================================*/
 namespace MPI {
-    std::unique_ptr<Process> p{nullptr};
+    std::unique_ptr<Process> p;
 };
 
 /*==================================================================================================
