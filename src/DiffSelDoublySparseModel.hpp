@@ -1756,6 +1756,48 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
         }
     }
 
+  template <class C>
+  void declare_model(C &t) {
+    if (blmode < 2) {
+      t.add("lambda", lambda);
+      t.add("branchlength", *branchlength);
+    }
+    if (nucmode < 2) {
+      t.add("nucrelrate", nucrelrate);
+      t.add("nucstat", nucstat);
+    }
+    if (fitnessshapemode < 2) { t.add("fitnessshape", fitnessshape); }
+    if (fitnesscentermode < 2) { t.add("fitnesscenter", fitnesscenter); }
+    t.add("fitness", *fitness);
+    if (maskmode < 2) { t.add("maskprob", maskprob); }
+    if (maskmode < 3) { t.add("sitemaskarray", *sitemaskarray); }
+    if (maskepsilonmode < 2) { t.add("maskepsilon", maskepsilon); }
+    if (Ncond > 1) {
+      t.add("shiftprob", shiftprob);
+      t.add("toggle", *toggle);
+    }
+  }
+
+  template <class C>
+  void declare_stats(C &t) {
+    t.add("logprior", this, &DiffSelDoublySparseModel::GetLogPrior);
+    t.add("lnL", this, &DiffSelDoublySparseModel::GetLogLikelihood);
+    t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); }); // why 3 times?
+    t.add("maskprob", maskprob);
+    t.add("meanwidth", this, &DiffSelDoublySparseModel::GetMeanWidth);
+    t.add("maskepsilon", maskepsilon);
+    t.add("fitnessshape", fitnessshape);
+    t.add("fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
+    for (int k = 1; k < Ncond; k++) {
+      t.add("shiftprob_" + std::to_string(k), shiftprob[k - 1]);
+      t.add("propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
+    }
+    t.add("nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
+    t.add("nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
+    t.add("gammanullcount", gammanullcount );
+  }
+
+
     //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
