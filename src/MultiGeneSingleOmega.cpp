@@ -80,7 +80,7 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd) {
         d.chain_driver =
             unique_ptr<D>(new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
         d.model = unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(),
-                                      args.blmode(), args.nucmode(), args.omega_param()));
+            args.blmode(), args.nucmode(), args.omega_param()));
         d.model->Update();
         return d;
     }
