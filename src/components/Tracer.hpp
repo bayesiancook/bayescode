@@ -53,6 +53,12 @@ class Tracer {
         set_from_stream.push_back([&d](std::istream& is) { is >> d; });
     }
 
+    void add(std::string name, int& d) {
+        header_to_stream.push_back([name](std::ostream& os) { os << name; });
+        data_to_stream.push_back([&d](std::ostream& os) { os << d; });
+        set_from_stream.push_back([&d](std::istream& is) { is >> d; });
+    }
+
     void add(std::string name, std::vector<double>& v) {
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.size();
@@ -86,6 +92,24 @@ class Tracer {
         set_from_stream.push_back([&v](std::istream& is) { is >> v; });
     }
 
+    template <class T>
+    void add(std::string name, SimpleBidimArray<T>& mat) {
+      header_to_stream.push_back([&mat, name](std::ostream& os) {
+        int m = mat.GetNrow();
+        int n = mat.GetNcol();
+        if (m > 0 && n > 0) {
+          os << name << "[0][0]";
+          for (int i = 0; i < m; i++) {
+            for(int j = 0; j < n; j++) {
+              if(!(i == 0 && j == 0))
+              os << "\t" << name << "[" << i << "][" << j << "]";
+            }
+          }
+        }
+      });
+      data_to_stream.push_back([&mat](std::ostream& os) { os << mat; });
+      set_from_stream.push_back([&mat](std::istream& is) { is >> mat; });
+    }
 
     void add(std::string name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
