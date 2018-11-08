@@ -42,10 +42,10 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "MultiGammaSuffStat.hpp"
 #include "PathSuffStat.hpp"
 #include "PhyloProcess.hpp"
-#include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
 #include "components/ChainComponent.hpp"
 #include "tree/implem.hpp"
+#include "Move.hpp"
 
 
 using namespace std;
@@ -93,7 +93,7 @@ using namespace std;
  */
 
 
-class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
+class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
@@ -557,7 +557,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     //! const access to low-fitness background value (mask epsilon)
     double GetMaskEpsilon() const { return maskepsilon; }
 
-    void Update() override {
+    void Update() {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
@@ -565,7 +565,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
         ResampleSub(1.0);
     }
 
-    void PostPred(string name) override {
+    void PostPred(string name) {
         if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
@@ -578,7 +578,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
 
     //! \brief dummy function that does not do anything.
     //!
-    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove
+    //! Used for the templates of Move::Scaling, Move::Sliding and Move::Profile
     //! (defined in ProbModel), all of which require a void (*f)(void) function
     //! pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
@@ -725,7 +725,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
     // ---------------
     // collecting suff stats
@@ -802,11 +802,11 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     // ---------------
 
     //! \brief complete MCMC move schedule
-    double Move() override {
+    double Move() {
         gammanullcount = 0;
         ResampleSub(1.0);
         MoveParameters(3, 20);
-        return 1.0;
+        return 1.;
     }
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
@@ -865,28 +865,28 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+        Move::Scaling(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
             &DiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+        Move::Scaling(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
             &DiffSelDoublySparseModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
-    //! ProfileMove)
+    //! Move::Profile)
     void MoveNucRates(int nrep) {
         CorruptMatrices();
 
-        ProfileMove(nucrelrate, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.03, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.03, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.01, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.01, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
 
-        ProfileMove(nucstat, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucstat, 0.01, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.01, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
 
         CorruptMatrices();
@@ -1142,21 +1142,21 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
         hyperfitnesssuffstat.AddSuffStat(*fitness, *sitemaskarray, *toggle);
 
         if (fitnessshapemode < 2) {
-            ScalingMove(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Scaling(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Scaling(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Scaling(fitnessshape, 0.1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
         }
         fitness->SetShape(fitnessshape);
 
         if (fitnesscentermode < 2) {
-            ProfileMove(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Profile(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Profile(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Profile(fitnesscenter, 0.1, 3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
         }
     }
@@ -1339,21 +1339,21 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
 
     //! MH move schedule on mask hyperparameter (maskprob)
     void MoveMaskHyperParameters(int nrep) {
-        SlidingMove(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
+        Move::Sliding(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
             &DiffSelDoublySparseModel::UpdateMask, this);
-        SlidingMove(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
+        Move::Sliding(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
             &DiffSelDoublySparseModel::UpdateMask, this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon(int nrep) {
-        SlidingMove(maskepsilon, 1.0, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Sliding(maskepsilon, 1.0, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        SlidingMove(maskepsilon, 0.1, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Sliding(maskepsilon, 0.1, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 1.0, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Scaling(maskepsilon, 1.0, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 0.1, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Scaling(maskepsilon, 0.1, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
     }
 
@@ -1638,7 +1638,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     double GetMeanWidth() const { return sitemaskarray->GetMeanWidth(); }
 
     //! write header of trace file
-    void TraceHeader(ostream &os) const override {
+    void TraceHeader(ostream &os) const {
         os << "#logprior\tlnL\tlength\t";
         os << "pi\t";
         os << "width\t";
@@ -1664,7 +1664,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     }
 
     //! write trace (one line summarizing current state) into trace file
-    void Trace(ostream &os) const override {
+    void Trace(ostream &os) const {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << 3 * branchlength->GetTotalLength() << '\t';
@@ -1709,10 +1709,10 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     }
 
     //! monitoring MCMC statistics
-    void Monitor(ostream &) const override {}
+    void Monitor(ostream &) const {}
 
     //! get complete parameter configuration from stream
-    void FromStream(istream &is) override {
+    void FromStream(istream &is) {
         if (blmode < 2) {
             is >> lambda;
             is >> *branchlength;
@@ -1734,7 +1734,7 @@ class DiffSelDoublySparseModel : public ProbModel, public ChainComponent {
     }
 
     //! write complete current parameter configuration to stream
-    void ToStream(ostream &os) const override {
+    void ToStream(ostream &os) const {
         if (blmode < 2) {
             os << lambda << '\t';
             os << *branchlength << '\t';
