@@ -48,3 +48,9 @@ aamutsel: all
 	_build/aamutsel gal4_poly
 	_build/readaamutsel --om -b 0 -e 1 -u 10 gal4_poly
 	_build/readaamutsel --ss -b 0 -e 1 -u 10 gal4_poly
+
+
+.PHONY: diffseldsparse
+diffseldsparse: all
+		@rm -f delme*.*
+		_build/diffseldsparse -a data/besnard/cyp_coding.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx -e 1 -u 4 delme
