@@ -47,6 +47,7 @@ class MultiGeneSingleOmegaModelShared {
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
+          codonstatespace(Universal),
           gene_set(parse_datafile(datafile)),
           partition(gene_set, MPI::p->size - 1, 1),
           mpi(MPI::p->rank, MPI::p->size),
@@ -60,12 +61,9 @@ class MultiGeneSingleOmegaModelShared {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        mpi.AllocateAlignments(datafile);  // marked for deletion
+        // mpi.AllocateAlignments(datafile);  // marked for deletion
 
         // GeneLengths gene_lengths = parse_geneset_alignments(gene_set);
-
-        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
-        taxonset = mpi.refdata->GetTaxonSet();
 
         // Branch lengths
 
@@ -110,7 +108,6 @@ class MultiGeneSingleOmegaModelShared {
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
     }
 
-    int GetNtaxa() const { return mpi.refdata->GetNtaxa(); }
     int GetNbranch() const { return tree->nb_nodes() - 1; }
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
@@ -226,7 +223,7 @@ class MultiGeneSingleOmegaModelShared {
     // suff stat for global nuc rates, as a function of nucleotide matrix
     // (which itself depends on nucstat and nucrelrate)
     double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
+        return nucpathsuffstat.GetLogProb(*nucmatrix, codonstatespace);
     }
 
     // suff stat for gene-specific nuc rates, as a function of nucrate
@@ -245,10 +242,6 @@ class MultiGeneSingleOmegaModelShared {
         double alpha = 1.0 / omega_param.hyperinvshape;
         double beta = alpha / omega_param.hypermean;
         return omegahypersuffstat.GetLogProb(alpha, beta);
-    }
-
-    CodonStateSpace *GetCodonStateSpace() const {
-        return (CodonStateSpace *)refcodondata->GetStateSpace();
     }
 
     const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
@@ -386,12 +379,11 @@ class MultiGeneSingleOmegaModelShared {
 
   protected:
     std::string datafile, treefile;
+    CodonStateSpace codonstatespace;
     GeneSet gene_set;
     Partition partition;
     MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
-    CodonSequenceAlignment *refcodondata;
-    const TaxonSet *taxonset;
 
     param_mode_t blmode;
     param_mode_t nucmode;
@@ -457,7 +449,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        cerr << "number of taxa : " << GetNtaxa() << '\n';
         cerr << "number of branches : " << GetNbranch() << '\n';
         cerr << "tree and data fit together\n";
     }
