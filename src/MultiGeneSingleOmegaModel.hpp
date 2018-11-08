@@ -440,6 +440,8 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     using M = MultiGeneSingleOmegaModelMaster;
 
   public:
+    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelMaster& m);
+
     //-------------------
     // Construction and allocation
     //-------------------
@@ -791,15 +793,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         mpi.MasterReceiveAdditive(lnL);
     }
 
-    void ToStream(ostream &os) {
-        Tracer tracer{*this, &M::declare_model};
-        os << "MultiGeneSingleOmega"
-           << "\t";
-        os << datafile << '\t' << treefile << '\t';
-        os << blmode << '\t' << nucmode << '\t';
-        os << omega_param << '\t';
-        tracer.write_line(os);
-    }
+    void ToStream(ostream &os) { os << *this; }
 };
 
 
@@ -1113,4 +1107,15 @@ std::istream &operator>>(istream &is, unique_ptr<M>& m) {
     Tracer tracer{*m, &M::declare_model};
     tracer.read_line(is);
     return is;
+}
+
+std::ostream &operator<<(ostream &os, MultiGeneSingleOmegaModelMaster& m) {
+    Tracer tracer{m, &MultiGeneSingleOmegaModelShared::declare_model};
+    os << "MultiGeneSingleOmega"
+       << "\t";
+    os << m.datafile << '\t' << m.treefile << '\t';
+    os << m.blmode << '\t' << m.nucmode << '\t';
+    os << m.omega_param << '\t';
+    tracer.write_line(os);
+    return os;
 }
