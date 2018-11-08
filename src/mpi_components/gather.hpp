@@ -97,7 +97,7 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
 ==================================================================================================*/
 template <class Model, class T = double>
 std::unique_ptr<Proxy> gather(Model& m, void (Model::*f_master)(RegistrarBase<GatherMaster<T>>&),
-    void (Model::*f_slave)(RegistrarBase<GatherSlave<T>>&), std::set<std::string> filter = {}) {
+    void (Model::*f_slave)(RegistrarBase<GatherSlave<T>>&), std::set<std::string> filter = std::set<std::string>{}) {
     std::unique_ptr<Proxy> result{nullptr};
     if (!MPI::p->rank) {
         auto component = new GatherMaster<T>();
@@ -112,6 +112,6 @@ std::unique_ptr<Proxy> gather(Model& m, void (Model::*f_master)(RegistrarBase<Ga
 }
 
 template <class Model, class T = double>
-std::unique_ptr<Proxy> gather_model(Model& m, std::set<std::string> filter = {}) {
+std::unique_ptr<Proxy> gather_model(Model& m, std::set<std::string> filter = std::set<std::string>{}) {
     return gather(m, &Model::declare_model, &Model::declare_model, filter);
 }

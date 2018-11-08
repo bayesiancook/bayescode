@@ -54,11 +54,11 @@ class PolyData {
     //! a sparse data collection for the count (number of copies) of alleles,
     //! for each taxa (1st level), for each site of the alignment (2nd level),
     //! and for each state of the codons (3rd level).
-    std::map<int, std::map<int, std::map<int, unsigned>>> Data = {};
+    std::map<int, std::map<int, std::map<int, unsigned>>> Data;
 
     //! a sparse data collection for the total count of sampled allele,
     //! for each taxa (1st level), and for each site of the alignment (2nd level).
-    std::map<int, std::map<int, unsigned>> SiteSampleSize = {};
+    std::map<int, std::map<int, unsigned>> SiteSampleSize;
 
     //! a map for the total count of sampled allele for each taxa.
     std::vector<unsigned> SampleSize;

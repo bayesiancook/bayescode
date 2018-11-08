@@ -99,7 +99,7 @@ template <class Model, class T = double>
 std::unique_ptr<Proxy> broadcast(Model& m,
     void (Model::*f_master)(RegistrarBase<BroadcasterMaster<T>>&),
     void (Model::*f_slave)(RegistrarBase<BroadcasterSlave<T>>&),
-    std::set<std::string> filter = {}) {
+    std::set<std::string> filter = std::set<std::string>{}) {
     std::unique_ptr<Proxy> result{nullptr};
     if (!MPI::p->rank) {
         auto component = new BroadcasterMaster<T>();
@@ -114,6 +114,6 @@ std::unique_ptr<Proxy> broadcast(Model& m,
 }
 
 template <class Model, class T = double>
-std::unique_ptr<Proxy> broadcast_model(Model& m, std::set<std::string> filter = {}) {
+std::unique_ptr<Proxy> broadcast_model(Model& m, std::set<std::string> filter = std::set<std::string>{}) {
     return broadcast(m, &Model::declare_model, &Model::declare_model, filter);
 }
