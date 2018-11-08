@@ -22,7 +22,9 @@
 #include "MultiGeneMPIModule.hpp"
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
+#include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
+#include "mpi_components/partition.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -45,6 +47,8 @@ class MultiGeneSingleOmegaModelShared {
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
+          gene_set(parse_datafile(datafile)),
+          partition(gene_set, MPI::p->size - 1, 1),
           mpi(MPI::p->rank, MPI::p->size),
           blmode(blmode),
           nucmode(nucmode),
@@ -56,7 +60,9 @@ class MultiGeneSingleOmegaModelShared {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        mpi.AllocateAlignments(datafile);
+        mpi.AllocateAlignments(datafile);  // marked for deletion
+
+        // GeneLengths gene_lengths = parse_geneset_alignments(gene_set);
 
         refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
         taxonset = mpi.refdata->GetTaxonSet();
@@ -72,7 +78,7 @@ class MultiGeneSingleOmegaModelShared {
         } else {
             branchlength->SetAllBranches(1.0 / lambda);
             branchlengtharray = new GammaWhiteNoiseArray(
-                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+                partition.my_partition_size(), *tree, *branchlength, 1.0 / blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -92,16 +98,16 @@ class MultiGeneSingleOmegaModelShared {
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
             nucrelratearray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+                partition.my_partition_size(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+                partition.my_partition_size(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
         }
 
         // Omega
 
-        omegaarray =
-            new IIDGamma(mpi.GetLocalNgene(), omega_param.hypermean, omega_param.hyperinvshape);
+        omegaarray = new IIDGamma(
+            partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
     }
 
     int GetNtaxa() const { return mpi.refdata->GetNtaxa(); }
@@ -285,13 +291,13 @@ class MultiGeneSingleOmegaModelShared {
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
+            for (size_t g = 0; g < gene_set.size(); g++) {
                 double tmp = (*nucrelratearray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
+            mean /= gene_set.size();
+            var /= gene_set.size();
             var -= mean * mean;
             tot += var;
         }
@@ -309,13 +315,13 @@ class MultiGeneSingleOmegaModelShared {
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
+            for (size_t g = 0; g < gene_set.size(); g++) {
                 double tmp = (*nucstatarray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
+            mean /= gene_set.size();
+            var /= gene_set.size();
             var -= mean * mean;
             tot += var;
         }
@@ -380,6 +386,8 @@ class MultiGeneSingleOmegaModelShared {
 
   protected:
     std::string datafile, treefile;
+    GeneSet gene_set;
+    Partition partition;
     MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
     CodonSequenceAlignment *refcodondata;
@@ -467,7 +475,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void Update() {
         FastUpdate();
 
-        if (mpi.GetNprocs() > 1) {
+        if (MPI::p->size > 1) {
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
@@ -491,7 +499,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
     void PostPred(string name) {
         FastUpdate();
-        if (mpi.GetNprocs() > 1) {
+        if (MPI::p->size > 1) {
             SendBranchLengthsHyperParameters();
             SendNucRatesHyperParameters();
 
@@ -810,8 +818,8 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        geneprocess.assign(partition.my_partition_size(), (SingleOmegaModel *)0);
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene] =
                 new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
             geneprocess[gene]->Update();
@@ -845,7 +853,9 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     void GeneUpdate() {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+            geneprocess[gene]->Update();
+        }
     }
 
     void PostPred(string name) {
@@ -869,7 +879,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     void GenePostPred(string name) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->PostPred(name + mpi.GetLocalGeneName(gene));
         }
     }
@@ -920,13 +930,13 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     void GeneResampleSub(double frac) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->ResampleSub(frac);
         }
     }
 
     void MoveGeneParameters(int nrep) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->MoveParameters(nrep);
 
             (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
@@ -944,7 +954,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
     void ResampleGeneBranchLengths() {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->ResampleBranchLengths();
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
@@ -958,28 +968,28 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void ReceiveGlobalBranchLengths() {
         mpi.SlaveReceiveGlobal(*branchlength);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetBranchLengths(*branchlength);
         }
     }
 
     void ReceiveBranchLengthsHyperParameters() {
         mpi.SlaveReceiveGlobal(*branchlength, blhyperinvshape);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
         }
     }
 
     void ReceiveGeneBranchLengths() {
         mpi.SlaveReceiveGeneArray(*branchlengtharray);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
         }
     }
 
     void SendGeneBranchLengths() {
         // in principle, redundant..
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
         }
         mpi.SlaveSendGeneArray(*branchlengtharray);
@@ -987,7 +997,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void SendBranchLengthsSuffStat() {
         lengthpathsuffstatarray->Clear();
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->CollectLengthSuffStat();
             lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
         }
@@ -1005,7 +1015,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void ReceiveGlobalNucRates() {
         mpi.SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
 
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
         }
     }
@@ -1013,7 +1023,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void ReceiveGeneNucRates() {
         mpi.SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
 
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
         }
     }
@@ -1024,7 +1034,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         mpi.SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
         mpi.SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
 
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
                 nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
         }
@@ -1042,7 +1052,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void SendNucPathSuffStat() {
         nucpathsuffstat.Clear();
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->CollectNucPathSuffStat();
             nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
         }
@@ -1056,7 +1066,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void ReceiveOmega() {
         mpi.SlaveReceiveGeneArray(*omegaarray);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetOmega((*omegaarray)[gene]);
         }
     }
@@ -1065,7 +1075,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
     void ReceiveOmegaHyperParameters() {
         mpi.SlaveReceiveGlobal(omega_param.hypermean, omega_param.hyperinvshape);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetOmegaHyperParameters(
                 omega_param.hypermean, omega_param.hyperinvshape);
         }
@@ -1076,7 +1086,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void SendLogProbs() {
         GeneLogPrior = 0;
         lnL = 0;
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
         }

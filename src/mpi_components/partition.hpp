@@ -61,8 +61,9 @@ class Partition {
         if (partition.find(i) != partition.end()) {
             return partition.at(i).size();
         } else {
-            MPI::p->message("Error in partition_size: no subset for index %d", i);
-            exit(1);
+            return size_all();
+            // MPI::p->message("Error in partition_size: no subset for index %d", i);
+            // exit(1);
         }
     }
 
