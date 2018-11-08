@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 /*==================================================================================================
   Process
