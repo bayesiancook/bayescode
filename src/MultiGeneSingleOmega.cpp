@@ -65,12 +65,12 @@ struct AppData {
 };
 
 template <class D, class M>
-AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
+AppData<D, M> load_appdata(ChainCmdLine& cmd) {
     if (cmd.resume_from_checkpoint()) {
         AppData<D, M> d;
         std::ifstream is = cmd.checkpoint_file();
         d.chain_driver = unique_ptr<D>(new D(is));
-        d.model = model_from_stream<M>(is, myid, nprocs);
+        is >> d.model;
         return d;
     } else {
         AppData<D, M> d;
@@ -79,26 +79,18 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd, int myid, int nprocs) {
         cmd.parse();
         d.chain_driver =
             unique_ptr<D>(new D(cmd.chain_name(), app.every.getValue(), app.until.getValue()));
-        d.model = unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(), myid,
-            nprocs, args.blmode(), args.nucmode(), args.omega_param()));
+        d.model = unique_ptr<M>(new M(app.alignment.getValue(), app.treefile.getValue(),
+            args.blmode(), args.nucmode(), args.omega_param()));
         d.model->Update();
         return d;
     }
 }
 
-int main(int argc, char* argv[]) {
-    int myid = 0;
-    int nprocs = 0;
-
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-
+void compute(int argc, char** argv) {
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
-    if (!myid) {
-        auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd, myid, nprocs);
+    if (!MPI::p->rank) {
+        auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd);
         ConsoleLogger console_logger;
         ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *d.chain_driver, *d.model);
         StandardTracer trace(*d.model, cmd.chain_name());
@@ -108,9 +100,10 @@ int main(int argc, char* argv[]) {
         d.chain_driver->add(trace);
         d.chain_driver->go();
     } else {
-        auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd, myid, nprocs);
+        auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd);
         d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }
-    MPI_Finalize();
 }
+
+int main(int argc, char** argv) { mpi_run(argc, argv, compute); }
