@@ -1,5 +1,8 @@
 # BayesCode
 
+[![Build Status](https://travis-ci.org/bayesiancook/bayescode.svg?branch=dev)](https://travis-ci.org/bayesiancook/bayescode)
+[![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
+
 Requirements: Clang (or g++) and compatible MPI compiler
 ```bash
 sudo apt install g++-5 clang-3.6 libopenmpi-dev openmpi-bin
