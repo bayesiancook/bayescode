@@ -53,7 +53,7 @@ double PoissonRandomField::GetProb(int anc_state, int der_state, unsigned der_oc
         proba_obs = (*theta) * InterpolateProba(anc_state, der_state, der_occurence, sample_size,
                                    aafitnessarray, nucmatrix);
     }
-    assert(!isnan(proba_obs));
+    assert(!std::isnan(proba_obs));
     if (proba_obs >= 0.0 and proba_obs <= 1.0) {
         return proba_obs;
     } else {
