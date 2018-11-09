@@ -6,12 +6,12 @@ all: cmake
 	@cd _build ; make --no-print-directory -j8
 
 .PHONY: cmake
-cmake: _build/Makefile
+cmake: build_dir
+	@cd _build ; cmake ..
 
-_build/Makefile: CMakeLists.txt
+build_dir: CMakeLists.txt
 	@rm -rf _build
 	@mkdir _build
-	@cd _build ; cmake ..
 
 .PHONY: clean
 clean:
@@ -27,8 +27,8 @@ format:
 # ==============================================================================================================
 #  TESTING
 # ==============================================================================================================
-.PHONY: test
-test: cmake
+.PHONY: run-test
+run-test:
 	@cd _build ; make --no-print-directory -j8 tree_test mpi_seq_test mpi_par_test
 	@echo "\n\e[35m\e[1m== Tree test ==================================================================\e[0m"
 	_build/tree_test
@@ -37,8 +37,18 @@ test: cmake
 	@echo "\n\n\e[35m\e[1m== MPI par test ===============================================================\e[0m"
 	mpirun -np 3 _build/mpi_par_test
 
+.PHONY: test
+test: cmake
+	@make run-test
+
+.PHONY: coverage
+coverage: build_dir
+	@cd _build ; cmake -DCOVERAGE_MODE=ON ..
+	@make run-test
+
 .PHONY: aamutsel
-aamutsel: all
+aamutsel: cmake
+	@cd _build ; make --no-print-directory -j8 aamutsel
 	@rm -f gal4*.*
 	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 gal4
 	_build/aamutsel gal4

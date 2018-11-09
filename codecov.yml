@@ -1,0 +1,16 @@
+codecov:
+  branch: travis
+
+coverage:
+  range: 50..75
+  status:
+    patch: false
+    project:
+      default:
+        threshold: 5
+
+ignore:
+  - utils/Eigen/.*
+  - utils/Eigen/**/*
+  - utils/tclap/.*
+  - utils/.*

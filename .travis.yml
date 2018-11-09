@@ -1,0 +1,44 @@
+language: cpp
+
+dist: trusty
+sudo: false
+
+matrix:
+  include:
+  - addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-5
+        - libopenmpi-dev
+        - openmpi-bin
+    env:
+    - COMPILER=g++-5
+    - OMPI_CXX=$COMPILER
+    script:
+    - make && make clean
+    - make coverage
+    after_success:
+    - bash <(curl -s https://codecov.io/bash)
+
+  - addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-precise-3.6
+        packages:
+        - g++-5
+        - clang-3.6
+        - libopenmpi-dev
+        - openmpi-bin
+    env:
+    - COMPILER=clang++-3.6
+    - OMPI_CXX=$COMPILER
+    script:
+    - make && make test
+
+before_script:
+  - export CXX=$COMPILER
+  - $CXX -v
+  - mpic++ -v

@@ -6,21 +6,14 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
-set(CMAKE_CXX_FLAGS "-O3 --std=c++11 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
+option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
+if(COVERAGE_MODE)
+    set(CMAKE_CXX_FLAGS "-O0 --std=c++11 -fprofile-arcs -ftest-coverage") # coverage mode
+else()
+    set(CMAKE_CXX_FLAGS "-O3 --std=c++11 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
+endif(COVERAGE_MODE)
+unset(COVERAGE_MODE CACHE)
 
-# Sanitize: runtime checks for various forms of undefined or suspicious behavior (clang++).
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory -g")
-# For [-fsanitize] use one of the following:
-# -fsanitize=address: AddressSanitizer, a memory error detector.
-# -fsanitize=thread: ThreadSanitizer, a data race detector.
-# -fsanitize=memory: MemorySanitizer, a detector of uninitialized reads. Requires instrumentation of all program code.
-# -fsanitize=undefined: UndefinedBehaviorSanitizer, a fast and compatible undefined behavior checker.
-# -fsanitize=dataflow: DataFlowSanitizer, a general data flow analysis.
-# -fsanitize=cfi: control flow integrity checks. Requires -flto.
-# -fsanitize=safe-stack: safe stack protection against stack-based memory corruption errors.
-# Use [-g] to have file names and line numbers included in warning messages.
-
-# Read AAMutSel, but site profiles is not working yet
 include_directories("src")
 include_directories("src/lib")
 include_directories("utils")
