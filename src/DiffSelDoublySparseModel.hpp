@@ -47,6 +47,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/ChainComponent.hpp"
 #include "tree/implem.hpp"
 #include "Move.hpp"
+#include "components/Tracer.hpp"
 
 
 using namespace std;
@@ -99,6 +100,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // model selectors
     // -----
 
+  std::string datafile;
+  std::string treefile;
     int codonmodel;
 
     // 0: free wo shrinkage
@@ -114,6 +117,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     int maskepsilonmode;
 
     bool withtoggle;
+
 
     // -----
     // external parameters
@@ -212,6 +216,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     int gammanullcount;
 
   public:
+    friend std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel& m);
+
     //! \brief constructor
     //!
     //! parameters:
@@ -237,7 +243,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
         double inshiftprobmean, double inshiftprobinvconc, int fitnesscentermode = 3,
         bool withtoggle = true)
-        : fitnesscentermode(fitnesscentermode), withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
+        : datafile(datafile), treefile(treefile), fitnesscentermode(fitnesscentermode), withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
         pihypermean = inpihypermean;
         shiftprobmean = inshiftprobmean;
         shiftprobinvconc = inshiftprobinvconc;
@@ -1734,26 +1740,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! write complete current parameter configuration to stream
-    void ToStream(ostream &os) const {
-        if (blmode < 2) {
-            os << lambda << '\t';
-            os << *branchlength << '\t';
-        }
-        if (nucmode < 2) {
-            os << nucrelrate << '\t';
-            os << nucstat << '\t';
-        }
-        if (fitnessshapemode < 2) { os << fitnessshape << '\t'; }
-        if (fitnesscentermode < 2) { os << fitnesscenter << '\t'; }
-        os << *fitness << '\t';
-        if (maskmode < 2) { os << maskprob << '\t'; }
-        if (maskmode < 3) { os << *sitemaskarray << '\t'; }
-        if (maskepsilonmode < 2) { os << maskepsilon << '\t'; }
-        if (Ncond > 1) {
-            os << shiftprob << '\t';
-            os << *toggle << '\t';
-        }
-    }
+    void ToStream(ostream &os) { os << *this; }
 
   template <class C>
   void declare_model(C &t) {
@@ -1865,3 +1852,42 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
     }
 };
+
+std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseModel> &m) {
+    std::string model_name;
+    std::string datafile;
+    std::string treefile;
+    int  Ncond, Nlevel, codonmodel ;
+    double fitnessshapemode, fitnesscentermode, maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc ;
+
+    is >> model_name;
+    if (model_name != "DiffselDoublySparse") {
+        std::cerr << "Expected DiffselDoublySparse for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> Ncond >> Nlevel >> codonmodel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean >> shiftprobinvconc >> fitnesscentermode ;
+    m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel, maskepsilonmode, fitnessshapemode, pihypermean, shiftprobmean, shiftprobinvconc, fitnesscentermode ));
+    Tracer tracer{*m, &DiffSelDoublySparseModel::declare_model};
+    tracer.read_line(is);
+    return is;
+}
+
+std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel& m) {
+    Tracer tracer{m, &DiffSelDoublySparseModel::declare_model};
+    os << "DiffselDoublySparse" << '\t';
+    os << m.datafile << '\t';
+    os << m.treefile << '\t';
+    os << m.Ncond << '\t' ;
+    os << m.Nlevel << '\t' ;
+    os << m.codonmodel << '\t' ;
+    os << m.maskepsilonmode << '\t';
+    os << m.fitnessshapemode << '\t';
+    os << m.pihypermean << '\t';
+    os << m.shiftprobmean << '\t';
+    os << m.shiftprobinvconc << '\t';
+    os << m.fitnesscentermode << '\t';
+    tracer.write_line(os);
+    return os;
+}
