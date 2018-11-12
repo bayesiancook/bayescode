@@ -1,5 +1,5 @@
 codecov:
-  branch: travis
+  branch: dev
 
 coverage:
   range: 50..75
