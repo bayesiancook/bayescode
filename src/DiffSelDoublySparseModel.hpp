@@ -1641,23 +1641,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! return mean width of masks across sites
     double GetMeanWidth() const { return sitemaskarray->GetMeanWidth(); }
 
-    //! write header of trace file
-    void TraceHeader(std::ostream &os) const {
-        os << "#logprior\tlnL\tlength\t";
-        os << "pi\t";
-        os << "width\t";
-        os << "epsilon\t";
-        os << "shape\t";
-        os << "center\t";
-        for (int k = 1; k < Ncond; k++) {
-            os << "prob" << k << '\t';
-            os << "nshift" << k << '\t';
-        }
-        os << "statent\t";
-        os << "rrent\t";
-        os << "gammanulls\n";
-    }
-
     double GetPredictedDNDS(int cond) const {
         double mean = 0;
         for (int i = 0; i < Nsite; i++) {
@@ -1667,75 +1650,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return mean;
     }
 
-    //! write trace (one line summarizing current state) into trace file
-    void Trace(std::ostream &os) const {
-        os << GetLogPrior() << '\t';
-        os << GetLogLikelihood() << '\t';
-        os << 3 * branchlength->GetTotalLength() << '\t';
-        os << maskprob << '\t';
-        os << GetMeanWidth() << '\t';
-        os << maskepsilon << '\t';
-        os << fitnessshape << '\t';
-        os << Random::GetEntropy(fitnesscenter) << '\t';
-        for (int k = 1; k < Ncond; k++) {
-            os << shiftprob[k - 1] << '\t';
-            os << GetPropShift(k) << '\t';
-        }
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\t';
-        os << gammanullcount << '\n';
-    }
-
-    //! trace the current value of toggles, across all sites and all amino-acids,
-    //! under condition k (one single line in output stream)
-    void TraceToggle(int k, std::ostream &os) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            int m = 0;
-            for (int a = 0; a < Naa; a++) { m += sitemaskarray->GetVal(i)[a]; }
-            if (m > 1) {
-                for (int a = 0; a < Naa; a++) {
-                    os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a] << '\t';
-                }
-            } else {
-                for (int a = 0; a < Naa; a++) { os << 0 << '\t'; }
-            }
-        }
-        os << '\n';
-    }
-
-    //! trace the current value of fitness params, across all sites and all
-    //! amino-acids, under condition k (one single line in output stream)
-    void TraceFitness(int k, std::ostream &os) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) { os << fitness->GetVal(k, i)[a] << '\t'; }
-        }
-        os << '\n';
-    }
-
-    //! monitoring MCMC statistics
-    void Monitor(std::ostream &) const {}
-
-    //! get complete parameter configuration from stream
-    void FromStream(std::istream &is) {
-        if (blmode < 2) {
-            is >> lambda;
-            is >> *branchlength;
-        }
-        if (nucmode < 2) {
-            is >> nucrelrate;
-            is >> nucstat;
-        }
-        if (fitnessshapemode < 2) { is >> fitnessshape; }
-        if (fitnesscentermode < 2) { is >> fitnesscenter; }
-        is >> *fitness;
-        if (maskmode < 2) { is >> maskprob; }
-        if (maskmode < 3) { is >> *sitemaskarray; }
-        if (maskepsilonmode < 2) { is >> maskepsilon; }
-        if (Ncond > 1) {
-            is >> shiftprob;
-            is >> *toggle;
-        }
-    }
 
     //! write complete current parameter configuration to stream
     void ToStream(std::ostream &os) { os << *this; }
