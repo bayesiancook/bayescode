@@ -52,6 +52,10 @@ add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
 add_executable(globom "src/SingleOmega.cpp")
 target_link_libraries(globom bayescode_lib tree_lib)
 
+# Read single omega (readglobom)
+add_executable(readglobom "src/ReadSingleOmega.cpp")
+target_link_libraries(readglobom bayescode_lib tree_lib)
+
 # Codon M2a
 add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
 target_link_libraries(codonm2a bayescode_lib tree_lib)

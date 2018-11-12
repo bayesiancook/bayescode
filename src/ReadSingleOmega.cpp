@@ -36,9 +36,11 @@ int main(int argc, char *argv[]) {
     std::string chain_name = args.chain_name.getValue();
 
     std::ifstream is{chain_name + ".param"};
-    ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
-    SingleOmegaModel model{is};
-    ChainReader cr{model, chain_name + ".chain"};
+    ChainDriver *fake_read = nullptr;
+    unique_ptr<SingleOmegaModel> model = nullptr;
+    fake_read = new ChainDriver(is);
+    is >> model;
+    ChainReader cr(*model, chain_name + ".chain");
 
     cr.skip(burnin);
     if (ppred) {
@@ -46,7 +48,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < size; i++) {
             cerr << '.';
             cr.skip(every);
-            model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
+            model->PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
         }
         cerr << '\n';
     } else {
@@ -58,7 +60,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < size; i++) {
             cerr << '.';
             cr.skip(every);
-            double om = model.GetOmega();
+            double om = model->GetOmega();
             meanomega += om;
             varomega += om * om;
         }
