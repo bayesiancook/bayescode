@@ -16,22 +16,33 @@ class Tracer {
     }
 
     void write_header(std::ostream& os) const {
-        int n = header_to_stream.size();
+        size_t n = header_to_stream.size();
         if (n > 0) {
             header_to_stream.at(0)(os);
-            for (int i = 1; i < n; i++) {
+            for (size_t i = 1; i < n; i++) {
                 os << "\t";
                 header_to_stream.at(i)(os);
             }
         }
     }
 
+    unsigned nbr_header_fields() const { return static_cast<unsigned>(header_to_stream.size()); }
+
+    std::vector<double> line_values() const {
+        std::stringstream ss_line;
+        write_line(ss_line);
+        std::vector<double> values{};
+        std::string str_value;
+        while (getline(ss_line, str_value, '\t')) { values.push_back(stod(str_value)); }
+        return values;
+    }
+
     void write_line(std::ostream& os) const {
-        int n = data_to_stream.size();
+        size_t n = data_to_stream.size();
         if (n > 0) {
             os << "\n";
             data_to_stream.at(0)(os);
-            for (int i = 1; i < n; i++) {
+            for (size_t i = 1; i < n; i++) {
                 os << "\t";
                 data_to_stream.at(i)(os);
             }
@@ -47,34 +58,34 @@ class Tracer {
         for (auto& f : set_from_stream) f(is);
     }
 
-    void add(std::string name, double& d) {
-        header_to_stream.push_back([name](std::ostream& os) { os << name; });
-        data_to_stream.push_back([&d](std::ostream& os) { os << d; });
-        set_from_stream.push_back([&d](std::istream& is) { is >> d; });
+    void add(std::string const& name, double& d) {
+        header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
+        data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
+        set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
-    void add(std::string name, std::vector<double>& v) {
-        header_to_stream.push_back([&v, name](std::ostream& os) {
-            int n = v.size();
+    void add(std::string const& name, std::vector<double>& v) {
+        header_to_stream.emplace_back([&v, name](std::ostream& os) {
+            size_t n = v.size();
             if (n > 0) {
                 os << name << "[0]";
-                for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
+                for (size_t i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
             }
         });
-        data_to_stream.push_back([&v](std::ostream& os) {
-            int n = v.size();
+        data_to_stream.emplace_back([&v](std::ostream& os) {
+            size_t n = v.size();
             if (n > 0) {
                 os << v.at(0);
-                for (int i = 1; i < n; i++) os << "\t" << v.at(i);
+                for (size_t i = 1; i < n; i++) os << "\t" << v.at(i);
             }
         });
-        set_from_stream.push_back([&v](std::istream& is) {
+        set_from_stream.emplace_back([&v](std::istream& is) {
             for (auto& e : v) is >> e;
         });
     }
 
     template <class T>
-    void add(std::string name, SimpleArray<T>& v) {
+    void add(std::string const& name, SimpleArray<T>& v) {
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetSize();
             if (n > 0) {
@@ -87,7 +98,7 @@ class Tracer {
     }
 
 
-    void add(std::string name, StickBreakingProcess& sbp) {
+    void add(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
 
         auto& kappa = sbp.GetKappa();
@@ -98,7 +109,7 @@ class Tracer {
     }
 
     template <class T>
-    void add(std::string name, BranchArray<T>& v) {
+    void add(std::string const& name, BranchArray<T>& v) {
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetNbranch();
             if (n > 0) {
@@ -119,12 +130,12 @@ class Tracer {
     }
 
     template <class T>
-    void add(std::string name, Array<T>& v) {
+    void add(std::string const& name, Array<T>& v) {
         for (int i = 0; i < v.GetSize(); i++) { add(name + "[" + std::to_string(i) + "]", v[i]); }
     }
 
     template <class T>
-    void add(std::string name, T* o, double (T::*f)() const) {
+    void add(std::string const& name, T* o, double (T::*f)() const) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
         set_from_stream.push_back([](std::istream& is) {
@@ -133,10 +144,10 @@ class Tracer {
         });
     }
 
-    void add(std::string name, std::function<double()> f) {
-        header_to_stream.push_back([name](std::ostream& os) { os << name; });
-        data_to_stream.push_back([f](std::ostream& os) { os << f(); });
-        set_from_stream.push_back([](std::istream& is) {
+    void add(std::string const& name, std::function<double()> const& f) {
+        header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
+        data_to_stream.emplace_back([f](std::ostream& os) { os << f(); });
+        set_from_stream.emplace_back([](std::istream& is) {
             double d;
             is >> d;
         });

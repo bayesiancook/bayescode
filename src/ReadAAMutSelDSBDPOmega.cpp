@@ -3,6 +3,7 @@
 #include "AAMutSelDSBDPOmegaModel.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ChainReader.hpp"
+#include "components/stats_posterior.hpp"
 #include "tclap/CmdLine.h"
 
 using namespace std;
@@ -23,8 +24,6 @@ class ReadAAMutSelDSBDPOmegaArgParse {
         "For each point of the chain (after burn-in), produces a data replicate simulated "
         "from the posterior predictive distribution",
         cmd};
-    SwitchArg om{
-        "o", "om", "Computes the mean predicted omega under mutation-selection balance", cmd};
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
     UnlabeledValueArg<std::string> chain_name{
@@ -58,23 +57,6 @@ int main(int argc, char *argv[]) {
             model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
         }
         cerr << '\n';
-    } else if (read_args.om.getValue()) {
-        double meandnds = 0;
-        double vardnds = 0;
-
-        for (int step = 0; step < size; step++) {
-            cerr << '.';
-            cr.skip(every);
-            double om = model.GetPredictedDNDS();
-            meandnds += om;
-            vardnds += om * om;
-        }
-        cerr << '\n';
-        meandnds /= size;
-        vardnds /= size;
-        vardnds -= meandnds * meandnds;
-
-        cout << "posterior mean omega : " << meandnds << '\t' << sqrt(vardnds) << '\n';
     } else if (read_args.ss.getValue()) {
         std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
 
@@ -103,5 +85,7 @@ int main(int argc, char *argv[]) {
         }
         cerr << "mean site-specific profiles in " << chain_name << ".siteprofiles\n";
         cerr << '\n';
+    } else {
+        stats_posterior<AAMutSelDSBDPOmegaModel>(model, cr, every, size);
     }
 }

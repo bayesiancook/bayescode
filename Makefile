@@ -29,7 +29,7 @@ format:
 # ==============================================================================================================
 #  TESTING
 # ==============================================================================================================
-POINTS=5
+POINTS=20
 
 .PHONY: run-test
 run-test: all
@@ -59,7 +59,6 @@ run-test: all
 	_build/aamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read ==============================================================\e[0m"
 	_build/readaamutsel -b 0 -e 1 -u ${POINTS} _test/aamutsel_gal4
-	_build/readaamutsel --om -b 0 -e 1 -u ${POINTS} _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss -b 0 -e 1 -u ${POINTS} _test/aamutsel_gal4
 
@@ -74,14 +73,14 @@ coverage: build_dir
 
 .PHONY: aamutsel
 aamutsel: cmake
-	@cd _build ; make --no-print-directory -j8 aamutsel
+	@cd _build ; make --no-print-directory -j8 aamutsel readaamutsel
 	@rm -rf _aamutsel
 	@mkdir _aamutsel
 	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 _aamutsel/gal4
 	_build/aamutsel _aamutsel/gal4
-	_build/readaamutsel --om -b 0 -e 1 -u 10 _aamutsel/gal4
+	_build/readaamutsel -b 0 -e 1 -u 10 _aamutsel/gal4
 	_build/readaamutsel --ss -b 0 -e 1 -u 10 _aamutsel/gal4
 	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 -p _aamutsel/gal4_poly
 	_build/aamutsel _aamutsel/gal4_poly
-	_build/readaamutsel --om -b 0 -e 1 -u 10 _aamutsel/gal4_poly
+	_build/readaamutsel -b 0 -e 1 -u 10 _aamutsel/gal4_poly
 	_build/readaamutsel --ss -b 0 -e 1 -u 10 _aamutsel/gal4_poly

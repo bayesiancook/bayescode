@@ -3,6 +3,7 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ChainReader.hpp"
+#include "components/stats_posterior.hpp"
 #include "tclap/CmdLine.h"
 using namespace std;
 using namespace TCLAP;
@@ -52,23 +53,6 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
     } else {
-        cerr << size << " points to read\n";
-
-        double meanomega = 0;
-        double varomega = 0;
-
-        for (int i = 0; i < size; i++) {
-            cerr << '.';
-            cr.skip(every);
-            double om = model->GetOmega();
-            meanomega += om;
-            varomega += om * om;
-        }
-        cerr << '\n';
-        meanomega /= size;
-        varomega /= size;
-        varomega -= meanomega * meanomega;
-
-        cout << "posterior mean omega : " << meanomega << '\t' << sqrt(varomega) << '\n';
+        stats_posterior<SingleOmegaModel>(*model, cr, every, size);
     }
 }
