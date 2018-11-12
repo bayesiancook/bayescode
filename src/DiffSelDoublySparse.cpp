@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     ChainCmdLine cmd{argc, argv, message, ' ', "0.1"};
 
     ChainDriver *chain_driver = nullptr;
-    DiffSelDoublySparseModel *model = nullptr;
+    std::unique_ptr<DiffSelDoublySparseModel> model  = nullptr;
 
     // Default values, as in the original version:
     int codonmodel = 1;
@@ -91,11 +91,12 @@ int main(int argc, char *argv[]) {
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
-        model = new DiffSelDoublySparseModel(args.alignment.getValue(), args.treefile.getValue(),
+        model =   std::unique_ptr<DiffSelDoublySparseModel>  (
+          new DiffSelDoublySparseModel(args.alignment.getValue(), args.treefile.getValue(),
             ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel,
             ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
             ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
-            ddargs.shiftprobinvconc.getValue(), ddargs.fitnesscentermode.getValue(), true);
+            ddargs.shiftprobinvconc.getValue(), ddargs.fitnesscentermode.getValue(), true) );
         model->Update();
     }
 
@@ -109,7 +110,6 @@ int main(int argc, char *argv[]) {
     chain_driver->go();
 
     delete chain_driver;
-    delete model;
 }
 
 
