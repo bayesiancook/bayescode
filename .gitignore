@@ -7,3 +7,5 @@ tmp*
 *_bin
 *.json
 _build/
+_test/
+_aamutsel/
