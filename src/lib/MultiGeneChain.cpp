@@ -5,9 +5,6 @@
 #include "MultiGeneProbModel.hpp"
 using namespace std;
 
-// c++11
-#define nullptr 0
-
 MultiGeneChain::MultiGeneChain(int inmyid, int innprocs)
     : Chain(), myid(inmyid), nprocs(innprocs) {}
 

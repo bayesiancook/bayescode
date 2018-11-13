@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#define nullptr 0
 
 class Tree;
 
