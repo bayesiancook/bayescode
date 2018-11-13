@@ -91,6 +91,14 @@ of the CeCILL-C license and that you accept its terms.*/
  * that the corresponding toggle is equal to 1.
  */
 
+ // mode shared:      global
+ // mode shrunk:      gene specific, with hyperparameters estimated across genes
+ // mode independent: gene-specific, with fixed hyperparameters
+ enum param_mode_t { shared, shrunk, independent };
+
+ //! - mode == 2: global == "shared"
+//! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
+//! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
 
 class DiffSelDoublySparseModel : public ChainComponent {
     // -----
@@ -106,7 +114,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // 2: shared across genes
     // 3: fixed
 
-    int blmode;
+    param_mode_t blmode;
     int nucmode;
     int fitnessshapemode;
     int fitnesscentermode;
@@ -247,7 +255,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         codonmodel = incodonmodel;
 
-        blmode = 0;
+        blmode = independent;
         nucmode = 0;
 
         if (inshape > 0) {
@@ -403,13 +411,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
     }
 
-    //! \brief set estimation method for branch lengths
-    //!
-    //! Used in a multigene context.
-    //! - mode == 2: global
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetBLMode(int in) { blmode = in; }
 
     //! \brief set estimation method for nuc rates
     //!
@@ -562,7 +563,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetMaskEpsilon() const { return maskepsilon; }
 
     void Update() {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -570,7 +571,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     void PostPred(std::string name) {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -631,7 +632,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        if (blmode < 2) { total += BranchLengthsLogPrior(); }
+        if (blmode != shared) { total += BranchLengthsLogPrior(); }
         if (nucmode < 2) { total += NucRatesLogPrior(); }
         if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) { total += FitnessHyperLogPrior(); }
         // not updated at all times
@@ -653,7 +654,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) { ret += BranchLengthsHyperLogPrior(); }
+        if (blmode == independent) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
@@ -815,7 +816,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode < 2) { MoveBranchLengths(); }
+            if (blmode != shared) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             UpdateAll();
@@ -860,7 +861,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
+        if (blmode == independent) { MoveLambda(); }
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
@@ -1655,7 +1656,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
   template <class C>
   void declare_model(C &t) {
-    if (blmode < 2) {
+    if (blmode != shared) {
       t.add("lambda", lambda);
       t.add("branchlength", *branchlength);
     }
@@ -1698,7 +1699,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
-        if (blmode < 2) {
+        if (blmode != shared) {
             size++;
             size += branchlength->GetMPISize();
         }
@@ -1721,7 +1722,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! get complete parameter configuration from MPI buffer
     void MPIGet(const MPIBuffer &is) {
-        if (blmode < 2) {
+        if (blmode != shared) {
             is >> lambda;
             is >> *branchlength;
         }
@@ -1743,7 +1744,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! write complete current parameter configuration into MPI buffer
     void MPIPut(MPIBuffer &os) const {
-        if (blmode < 2) {
+        if (blmode != shared) {
             os << lambda;
             os << *branchlength;
         }
