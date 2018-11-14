@@ -10,14 +10,14 @@ _build: CMakeLists.txt
 	@mkdir _build
 	@cd _build ; cmake ..
 
-_build_coverage: CMakeLists.txt
-	@rm -rf _build_coverage
-	@mkdir _build_coverage
-	@cd _build_coverage ; cmake -DCOVERAGE_MODE=ON ..
-
 .PHONY: coverage
-coverage: _build_coverage
+coverage:
+	@rm -rf _build
+	@mkdir _build
+	@cd _build ; cmake -DCOVERAGE_MODE=ON ..
 	@make --no-print-directory test
+	# find _build_coverage -type f -name "*.gcno" -exec mv -t src/ {} +
+	# find _build_coverage -type f -name "*.gcda" -exec mv -t src/ {} +
 
 .PHONY: clean
 clean:
