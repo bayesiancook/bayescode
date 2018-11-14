@@ -3,38 +3,21 @@
 #include "SingleOmegaModel.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ChainReader.hpp"
+#include "components/ReadArgParse.hpp"
 #include "components/stats_posterior.hpp"
 #include "tclap/CmdLine.h"
+
 using namespace std;
 using namespace TCLAP;
 
-class ReadSingleOmegaArgParse {
-    CmdLine &cmd;
-
-  public:
-    ReadSingleOmegaArgParse(CmdLine &cmd) : cmd(cmd) {}
-    ValueArg<int> every{
-        "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
-    ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
-        false, -1, "int", cmd};
-    ValueArg<int> burnin{"b", "burnin", "Number of iterations for burnin", false, 0, "int", cmd};
-    SwitchArg ppred{"p", "ppred", "Perform simulations under posterior distribution", cmd};
-    UnlabeledValueArg<std::string> chain_name{
-        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
-};
-
-
 int main(int argc, char *argv[]) {
     CmdLine cmd{"ReadSingleOmega", ' ', "0.1"};
-    ReadSingleOmegaArgParse args(cmd);
+    ReadArgParse read_args(cmd);
     cmd.parse(argc, argv);
 
-    int burnin = args.burnin.getValue();
-    int every = args.every.getValue();
-    int until = args.until.getValue();
-    int ppred = args.ppred.getValue();
-    int size = (until - burnin) / every;
-    std::string chain_name = args.chain_name.getValue();
+    std::string chain_name = read_args.GetChainName();
+    int every = read_args.GetEvery();
+    int size = read_args.GetSize();
 
     std::ifstream is{chain_name + ".param"};
     ChainDriver *fake_read = nullptr;
@@ -43,8 +26,8 @@ int main(int argc, char *argv[]) {
     is >> model;
     ChainReader cr(*model, chain_name + ".chain");
 
-    cr.skip(burnin);
-    if (ppred) {
+    cr.skip(read_args.GetBurnIn());
+    if (read_args.GetPpred()) {
         cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';

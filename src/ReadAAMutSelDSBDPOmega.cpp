@@ -3,31 +3,19 @@
 #include "AAMutSelDSBDPOmegaModel.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ChainReader.hpp"
+#include "components/ReadArgParse.hpp"
 #include "components/stats_posterior.hpp"
 #include "tclap/CmdLine.h"
 
 using namespace std;
 using namespace TCLAP;
 
-class ReadAAMutSelDSBDPOmegaArgParse {
-    CmdLine &cmd;
-
+class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
-    ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : cmd(cmd) {}
+    explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
-    ValueArg<int> every{
-        "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
-    ValueArg<int> until{"u", "until", "Maximum number of (saved) iterations (-1 means unlimited)",
-        false, -1, "int", cmd};
-    ValueArg<int> burnin{"b", "burnin", "Number of iterations for burnin", false, 0, "int", cmd};
-    SwitchArg ppred{"p", "ppred",
-        "For each point of the chain (after burn-in), produces a data replicate simulated "
-        "from the posterior predictive distribution",
-        cmd};
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
-    UnlabeledValueArg<std::string> chain_name{
-        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -35,12 +23,10 @@ int main(int argc, char *argv[]) {
     ReadAAMutSelDSBDPOmegaArgParse read_args(cmd);
     cmd.parse(argc, argv);
 
-    int burnin = read_args.burnin.getValue();
-    int every = read_args.every.getValue();
-    int until = read_args.until.getValue();
-    // pveber until is set to -1, meaning to unlimited as described
-    int size = (until - burnin) / every;
-    std::string chain_name = read_args.chain_name.getValue();
+    std::string chain_name = read_args.GetChainName();
+    int burnin = read_args.GetBurnIn();
+    int every = read_args.GetEvery();
+    int size = read_args.GetSize();
 
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
@@ -50,7 +36,7 @@ int main(int argc, char *argv[]) {
     cr.skip(burnin);
     cerr << size << " points to read\n";
 
-    if (read_args.ppred.getValue()) {
+    if (read_args.GetPpred()) {
         for (int i = 0; i < size; i++) {
             cerr << '.';
             cr.skip(every);
