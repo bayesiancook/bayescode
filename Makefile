@@ -40,11 +40,11 @@ POINTS=5
 
 .PHONY: run-unit-tests
 run-unit-tests: all
-	@echo "\n\e[35m\e[1m== Tree test ================================================================\e[0m"
+	@echo "\n\e[35m\e[1m== Tree test ==================================================================\e[0m"
 	_build/tree_test
-	@echo "\n\e[35m\e[1m== MPI seq test =============================================================\e[0m"
-	_build/mpi_seq_test
-	@echo "\n\e[35m\e[1m== MPI par test =============================================================\e[0m"
+	@echo "\n\n\e[35m\e[1m== All sequential tests =======================================================\e[0m"
+	_build/all_tests
+	@echo "\n\n\e[35m\e[1m== MPI par test ===============================================================\e[0m"
 	mpirun -np 3 _build/mpi_par_test
 
 .PHONY: run-app-tests

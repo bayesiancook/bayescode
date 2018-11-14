@@ -1,12 +1,12 @@
 #include <cmath>
 #include <fstream>
-#include "InferenceAppArgParse.hpp"
 #include "MultiGeneChain.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
 #include "SlaveChainDriver.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
+#include "components/InferenceAppArgParse.hpp"
 #include "components/StandardTracer.hpp"
 
 using namespace std;

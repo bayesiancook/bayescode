@@ -85,9 +85,11 @@ add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
 target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES})
 
 # tests
+add_executable(all_tests "src/all_tests.cpp")
+target_link_libraries(all_tests ${MPI_LIBRARIES})
+
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)
-add_executable(mpi_seq_test "src/mpi_components/seq_test.cpp")
-target_link_libraries(mpi_seq_test ${MPI_LIBRARIES})
+
 add_executable(mpi_par_test "src/mpi_components/mpi_test.cpp")
 target_link_libraries(mpi_par_test ${MPI_LIBRARIES})

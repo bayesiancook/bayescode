@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include "tclap/CmdLine.h"
 
 using namespace TCLAP;

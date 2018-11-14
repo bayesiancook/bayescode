@@ -1,10 +1,10 @@
 #include <cmath>
 #include <fstream>
 #include "CodonM2aModel.hpp"
-#include "InferenceAppArgParse.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
+#include "components/InferenceAppArgParse.hpp"
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
 
