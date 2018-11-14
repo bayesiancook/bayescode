@@ -1,0 +1,23 @@
+##fileformat=VCFv4.0
+##source=SimuPoly 0.1
+##nodeName=SEQ13_
+##sequenceSize=192
+##ploidyLevel=diploid
+##numberIndividuals=20
+##numberGenotypes=40
+##reference=AATGAAGAATTTTTGATTTTTTTTATAGAAGTATATTGTAGATATAAAAAAATGGGGTGTTCTAAAAACTATCCCTTATGTACAAAGTGTTTTATATCAACCATAGTTTGTTTTTACTCTCCGTACGAACCAAGGAGTCCATTAACTAGAAATTACGTAACATATTGTGAGTTTAGAGTCGTAATTATTATG
+##FILTER=<ID=s50,Description="The alternative is the major allele">
+##FILTER=<ID=s100,Description="The reference has not been sampled">
+##INFO=<ID=REFCODON,Number=1,Type=String,Description="Codon of the reference">
+##INFO=<ID=ALTCODON,Number=1,Type=String,Description="Codon of the alternative">
+##INFO=<ID=REFAA,Number=1,Type=Character,Description="Amino-acid of the reference">
+##INFO=<ID=ALTAA,Number=1,Type=Character,Description="Amino-acid of the alternative">
+##INFO=<ID=POSITION,Number=1,Type=Integer,Description="Mutated codon position">
+##INFO=<ID=ALTCOUNT,Number=1,Type=Integer,Description="Number of alternative copy">
+##INFO=<ID=SYN,Number=1,Type=boolean,Description="Is a synonymous mutation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Id1	Id2	Id3	Id4	Id5	Id6	Id7	Id8	Id9	Id10	Id11	Id12	Id13	Id14	Id15	Id16	Id17	Id18	Id19	Id20
+.	76	.	T	C	100	PASS	REFCODON=TTA;ALTCODON=TCA;REFAA=L;ALTAA=S;POSITION=1;ALTCOUNT=5;SYN=FALSE	GT	T|T	T|T	T|T	T|T	T|C	T|T	T|T	T|T	C|T	T|T	T|T	T|T	C|T	T|T	T|T	T|C	T|T	T|T	C|T	T|T
+.	124	.	A	T	100	PASS	REFCODON=TAC;ALTCODON=TTC;REFAA=Y;ALTAA=F;POSITION=1;ALTCOUNT=1;SYN=FALSE	GT	T|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A
+.	130	.	C	A	100	PASS	REFCODON=CCA;ALTCODON=CAA;REFAA=P;ALTAA=Q;POSITION=1;ALTCOUNT=4;SYN=FALSE	GT	A|C	C|C	A|C	C|C	C|C	C|C	C|C	C|C	C|C	C|C	C|C	C|C	C|C	C|C	A|A	C|C	C|C	C|C	C|C	C|C
+.	177	.	G	A	100	PASS	REFCODON=GTC;ALTCODON=ATC;REFAA=V;ALTAA=I;POSITION=0;ALTCOUNT=4;SYN=FALSE	GT	G|G	G|G	G|G	A|G	G|G	G|G	G|G	G|G	G|G	G|A	G|G	G|G	A|G	G|G	G|G	G|G	G|G	G|G	G|G	G|A

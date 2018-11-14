@@ -1,7 +1,6 @@
 *.d
 .idea/
 cmake-build-debug/
-data/*
 *~
 tmp*
 *_bin

@@ -1,0 +1,25 @@
+##fileformat=VCFv4.0
+##source=SimuPoly 0.1
+##nodeName=SEQ11_
+##sequenceSize=192
+##ploidyLevel=diploid
+##numberIndividuals=20
+##numberGenotypes=40
+##reference=AATGAAGAATTTTTAATTTTTTTTATAGAAGTATTTTGTAGATATAAAAAGTTAGGTTGTTCTAAAAACAATCAAAATTGCATAAAATGTTATCAGTCTTCGTATGTATGTTTATACTCTCCATACGAACAGAGAAGTCCATTAACGAGAAATTACGTAACTTCTTGTGAAATACGTGTATTATTTATCATG
+##FILTER=<ID=s50,Description="The alternative is the major allele">
+##FILTER=<ID=s100,Description="The reference has not been sampled">
+##INFO=<ID=REFCODON,Number=1,Type=String,Description="Codon of the reference">
+##INFO=<ID=ALTCODON,Number=1,Type=String,Description="Codon of the alternative">
+##INFO=<ID=REFAA,Number=1,Type=Character,Description="Amino-acid of the reference">
+##INFO=<ID=ALTAA,Number=1,Type=Character,Description="Amino-acid of the alternative">
+##INFO=<ID=POSITION,Number=1,Type=Integer,Description="Mutated codon position">
+##INFO=<ID=ALTCOUNT,Number=1,Type=Integer,Description="Number of alternative copy">
+##INFO=<ID=SYN,Number=1,Type=boolean,Description="Is a synonymous mutation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Id1	Id2	Id3	Id4	Id5	Id6	Id7	Id8	Id9	Id10	Id11	Id12	Id13	Id14	Id15	Id16	Id17	Id18	Id19	Id20
+.	51	.	T	A	100	PASS	REFCODON=TTA;ALTCODON=ATA;REFAA=L;ALTAA=I;POSITION=0;ALTCOUNT=1;SYN=FALSE	GT	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|A	T|T	T|T	T|T
+.	107	.	A	T	100	PASS	REFCODON=GTA;ALTCODON=GTT;REFAA=V;ALTAA=V;POSITION=2;ALTCOUNT=1;SYN=TRUE	GT	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|A	A|T
+.	109	.	G	A	100	PASS	REFCODON=TGT;ALTCODON=TAT;REFAA=C;ALTAA=Y;POSITION=1;ALTCOUNT=3;SYN=FALSE	GT	G|G	G|G	G|G	G|G	G|G	G|A	G|G	G|G	G|G	G|G	G|G	G|G	G|A	G|G	G|G	A|G	G|G	G|G	G|G	G|G
+.	152	.	T	A	100	PASS	REFCODON=AAT;ALTCODON=AAA;REFAA=N;ALTAA=K;POSITION=2;ALTCOUNT=1;SYN=FALSE	GT	T|T	A|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T
+.	157	.	T	A	100	PASS	REFCODON=GTA;ALTCODON=GAA;REFAA=V;ALTAA=E;POSITION=1;ALTCOUNT=3;SYN=FALSE	GT	T|T	T|T	T|T	T|T	A|T	A|T	A|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T	T|T
+.	159	.	A	T	100	PASS	REFCODON=ACT;ALTCODON=TCT;REFAA=T;ALTAA=S;POSITION=0;ALTCOUNT=9;SYN=FALSE	GT	A|T	A|A	A|T	A|A	A|A	A|A	A|A	A|A	A|A	A|T	T|T	A|A	A|A	A|A	A|A	T|A	A|T	A|A	T|T	A|A

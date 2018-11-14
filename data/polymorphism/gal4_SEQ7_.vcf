@@ -1,0 +1,24 @@
+##fileformat=VCFv4.0
+##source=SimuPoly 0.1
+##nodeName=SEQ7_
+##sequenceSize=192
+##ploidyLevel=diploid
+##numberIndividuals=20
+##numberGenotypes=40
+##reference=AATGAAGAATTTTTGTTTTTTTTTATAGAAGTATTTTGTAGATATAAAAAAATGGGGTGTTCTAAAAATTTTCCCTTATGTACAAAGTGTTTTATATCAACCTTATTATGTTTATACTCTCCATACGAACAACGGAGTCCATTAACTAGAAATTACGTAACATATTGTGAGTTTAGAGCCGTAATTATTATG
+##FILTER=<ID=s50,Description="The alternative is the major allele">
+##FILTER=<ID=s100,Description="The reference has not been sampled">
+##INFO=<ID=REFCODON,Number=1,Type=String,Description="Codon of the reference">
+##INFO=<ID=ALTCODON,Number=1,Type=String,Description="Codon of the alternative">
+##INFO=<ID=REFAA,Number=1,Type=Character,Description="Amino-acid of the reference">
+##INFO=<ID=ALTAA,Number=1,Type=Character,Description="Amino-acid of the alternative">
+##INFO=<ID=POSITION,Number=1,Type=Integer,Description="Mutated codon position">
+##INFO=<ID=ALTCOUNT,Number=1,Type=Integer,Description="Number of alternative copy">
+##INFO=<ID=SYN,Number=1,Type=boolean,Description="Is a synonymous mutation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	Id1	Id2	Id3	Id4	Id5	Id6	Id7	Id8	Id9	Id10	Id11	Id12	Id13	Id14	Id15	Id16	Id17	Id18	Id19	Id20
+.	53	.	G	T	100	PASS	REFCODON=ATG;ALTCODON=ATT;REFAA=M;ALTAA=I;POSITION=2;ALTCOUNT=7;SYN=FALSE	GT	G|G	T|G	G|G	G|G	G|G	T|T	G|G	G|G	G|T	G|T	G|G	G|G	G|G	T|G	G|G	G|G	G|G	G|T	G|G	G|G
+.	75	.	T	A	100	PASS	REFCODON=TTA;ALTCODON=ATA;REFAA=L;ALTAA=I;POSITION=0;ALTCOUNT=12;SYN=FALSE	GT	T|T	A|T	T|A	A|T	T|T	T|T	A|T	A|T	T|A	A|T	A|T	A|T	T|A	T|T	T|A	T|A	T|T	T|T	T|T	T|T
+.	94	.	T	A	100	PASS	REFCODON=ATA;ALTCODON=AAA;REFAA=I;ALTAA=K;POSITION=1;ALTCOUNT=8;SYN=FALSE	GT	A|T	T|T	T|A	T|A	T|T	T|T	A|A	T|T	T|A	T|T	T|T	T|T	T|A	T|T	T|T	A|T	T|T	T|T	T|T	T|T
+.	143	.	A	T	100	PASS	REFCODON=TTA;ALTCODON=TTT;REFAA=L;ALTAA=F;POSITION=2;ALTCOUNT=8;SYN=FALSE	GT	A|A	A|T	A|A	A|T	A|A	A|A	T|A	A|A	A|A	A|A	A|A	A|A	T|A	A|A	A|A	A|T	A|A	A|A	T|A	T|T
+.	169	.	A	T	100	PASS	REFCODON=GAG;ALTCODON=GTG;REFAA=E;ALTAA=V;POSITION=1;ALTCOUNT=13;SYN=FALSE	GT	T|T	T|A	A|A	A|T	A|A	A|A	A|T	A|T	T|A	A|T	A|A	A|A	T|A	A|A	A|A	A|T	A|T	T|A	A|T	A|A
