@@ -61,7 +61,7 @@ class MultiGeneSingleOmegaModelShared {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        // mpi.AllocateAlignments(datafile);  // marked for deletion
+        mpi.AllocateAlignments(datafile);  // marked for deletion
 
         // GeneLengths gene_lengths = parse_geneset_alignments(gene_set);
 
