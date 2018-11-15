@@ -115,7 +115,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // 3: fixed
 
     param_mode_t blmode;
-    int nucmode;
+    //! - mode == 2: global =  shared across genes "shared"
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes "shrunk"
+    //! - mode == 0: gene-specific, with fixed hyperparameters "independent"
+
+    param_mode_t nucmode;
+
     int fitnessshapemode;
     int fitnesscentermode;
     int maskmode;
@@ -256,7 +261,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         codonmodel = incodonmodel;
 
         blmode = independent;
-        nucmode = 0;
+        nucmode = independent;
 
         if (inshape > 0) {
             fitnessshapemode = 3;
@@ -418,7 +423,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - mode == 2: global
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetNucMode(int in) { nucmode = in; }
+    void SetNucMode(param_mode_t in) { nucmode = in; }
 
     //! \brief set estimation method for fitness hyperparameter (center of
     //! multi-gamma distribution)
@@ -633,7 +638,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetLogPrior() const {
         double total = 0;
         if (blmode != shared) { total += BranchLengthsLogPrior(); }
-        if (nucmode < 2) { total += NucRatesLogPrior(); }
+        if (nucmode != shared) { total += NucRatesLogPrior(); }
         if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) { total += FitnessHyperLogPrior(); }
         // not updated at all times
         // total += FitnessLogPrior();
@@ -838,7 +843,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
             }
 
-            if (nucmode < 2) { MoveNucRates(weight); }
+            if (nucmode != shared) { MoveNucRates(weight); }
         }
 
         UpdateAll();
@@ -1660,7 +1665,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
       t.add("lambda", lambda);
       t.add("branchlength", *branchlength);
     }
-    if (nucmode < 2) {
+    if (nucmode != shared) {
       t.add("nucrelrate", nucrelrate);
       t.add("nucstat", nucstat);
     }
@@ -1703,7 +1708,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             size++;
             size += branchlength->GetMPISize();
         }
-        if (nucmode < 2) {
+        if (nucmode !=shared) {
             size += nucrelrate.size();
             size += nucstat.size();
         }
@@ -1726,7 +1731,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             is >> lambda;
             is >> *branchlength;
         }
-        if (nucmode < 2) {
+        if (nucmode != shared) {
             is >> nucrelrate;
             is >> nucstat;
         }
@@ -1748,7 +1753,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             os << lambda;
             os << *branchlength;
         }
-        if (nucmode < 2) {
+        if (nucmode != shared) {
             os << nucrelrate;
             os << nucstat;
         }
