@@ -10,24 +10,14 @@ using namespace std;
 PoissonRandomField::PoissonRandomField(
     set<unsigned> sample_size_set, CodonStateSpace *instatespace, unsigned precision)
     : statespace{instatespace}, precision{precision} {
-    unsigned grid_size = PowUnsigned(2, precision) + 1;
+    grid_s_step = 20.0 / (PowUnsigned(2, precision) + 1);
 
-    double max_sel_coef = 10;
-    double min_sel_coef = -max_sel_coef;
-    grid_s_step = (max_sel_coef - min_sel_coef) / grid_size;
-
-    cerr << "Pre-computing probabilities (for polymorphic data)" << endl;
     for (unsigned sample_size : sample_size_set) {
         ComputedProb[sample_size] = deque<pair<double, vector<double>>>();
         ComputedBinom[sample_size] = BinomialCoefficientArray(sample_size);
 
-        for (unsigned i{0}; i < grid_size; i++) {
-            double s = grid_s_step * i + min_sel_coef;
-            ComputedProb.at(sample_size)
-                .push_back(make_pair(s, ExpectedTimeObsVector(sample_size, s)));
-        }
+        ComputedProb.at(sample_size).push_back(make_pair(0, ExpectedTimeObsVector(sample_size, 0)));
     }
-    cerr << "Pre-computing terminated" << endl;
 }
 
 double PoissonRandomField::GetProb(int anc_state, int der_state, unsigned der_occurence,

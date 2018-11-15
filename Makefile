@@ -36,7 +36,7 @@ format:
 # ==============================================================================================================
 #  TESTING
 # ==============================================================================================================
-POINTS=5
+POINTS=2
 
 .PHONY: run-unit-tests
 run-unit-tests: all
@@ -65,6 +65,8 @@ run-app-tests: all
 	_build/readcodonm2a _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== MutSel run ===============================================================\e[0m"
 	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/aamutsel_gal4
+	@echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 	@echo "\n\e[35m\e[1m== MutSel restart ===========================================================\e[0m"
 	_build/aamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read ==============================================================\e[0m"
@@ -72,9 +74,9 @@ run-app-tests: all
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
-	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u 1 tmp
+	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 
-.PHONY: test
+.PHONY: testpr
 test:
 	@make --no-print-directory run-unit-tests
 	@make --no-print-directory run-app-tests
