@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
             ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel,
             ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
             ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
-            ddargs.shiftprobinvconc.getValue(), ddargs.fitnesscentermode.getValue(), true) );
+            ddargs.shiftprobinvconc.getValue(), param_mode_t(ddargs.fitnesscentermode.getValue() ), true) );
         model->Update();
     }
 

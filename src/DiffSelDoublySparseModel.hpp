@@ -91,43 +91,35 @@ of the CeCILL-C license and that you accept its terms.*/
  * that the corresponding toggle is equal to 1.
  */
 
- // mode shared:      global
- // mode shrunk:      gene specific, with hyperparameters estimated across genes
- // mode independent: gene-specific, with fixed hyperparameters
- enum param_mode_t { shared, shrunk, independent };
 
- //! - mode == 2: global == "shared"
+//! - mode == 3: global == "fixed"
+//! - mode == 2: global but estimated == "shared"
 //! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
 //! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
+enum param_mode_t { independent, shrunk, shared, fixed };
+
+bool resampled (param_mode_t p) {
+  return p == independent || p == shrunk ;
+}
+
 
 class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
 
-  std::string datafile;
-  std::string treefile;
+    std::string datafile;
+    std::string treefile;
     int codonmodel;
-
-    // 0: free wo shrinkage
-    // 1: free with shrinkage
-    // 2: shared across genes
-    // 3: fixed
-
     param_mode_t blmode;
-    //! - mode == 2: global =  shared across genes "shared"
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes "shrunk"
-    //! - mode == 0: gene-specific, with fixed hyperparameters "independent"
-
     param_mode_t nucmode;
+    param_mode_t fitnessshapemode;     //estimation method for fitness hyperparameter (shape of multi-gamma distribution)
+    param_mode_t fitnesscentermode; //estimation method for fitness hyperparameter (center of multi-gamma distribution)
 
-    int fitnessshapemode;
-    int fitnesscentermode;
     int maskmode;
     int maskepsilonmode;
 
     bool withtoggle;
-
 
     // -----
     // external parameters
@@ -251,7 +243,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc, int fitnesscentermode = 3,
+        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode = fixed,
         bool withtoggle = true)
         : datafile(datafile), treefile(treefile), fitnesscentermode(fitnesscentermode), withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
         pihypermean = inpihypermean;
@@ -264,10 +256,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
         nucmode = independent;
 
         if (inshape > 0) {
-            fitnessshapemode = 3;
+            fitnessshapemode = fixed;
             fitnessshape = inshape;
         } else {
-            fitnessshapemode = 0;
+            fitnessshapemode = independent;
             fitnessshape = 20.0;
         }
 
@@ -424,27 +416,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetNucMode(param_mode_t in) { nucmode = in; }
-
-    //! \brief set estimation method for fitness hyperparameter (center of
-    //! multi-gamma distribution)
-    //!
-    //! - mode == 3: fixed (uniform)
-    //! - mode == 2: shared across genes, estimated
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetFitnessCenterMode(int in) { fitnesscentermode = in; }
-
-    //! \brief set estimation method for fitness hyperparameter (shape of
-    //! multi-gamma distribution)
-    //!
-    //! - mode == 3: fixed
-    //! - mode == 2: shared across genes, estimated
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetFitnessShapeMode(int in, double inshape = 0) {
-        fitnessshapemode = in;
-        if (inshape > 0) { fitnessshape = inshape; }
-    }
 
     //! \brief set estimation method for site profile masks
     //!
@@ -639,7 +610,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         double total = 0;
         if (blmode != shared) { total += BranchLengthsLogPrior(); }
         if (nucmode != shared) { total += NucRatesLogPrior(); }
-        if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) { total += FitnessHyperLogPrior(); }
+        if (resampled(fitnessshapemode) || resampled(fitnesscentermode) ) { total += FitnessHyperLogPrior(); }
         // not updated at all times
         // total += FitnessLogPrior();
         if (maskmode < 2) {
@@ -676,8 +647,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
         double ret = 0;
-        if (fitnessshapemode < 2) { ret += FitnessShapeLogPrior(); }
-        if (fitnesscentermode < 2) { ret += FitnessCenterLogPrior(); }
+        if (resampled(fitnessshapemode ) ) { ret += FitnessShapeLogPrior(); }
+        if (resampled(fitnesscentermode ) ) { ret += FitnessCenterLogPrior(); }
         return ret;
     }
 
@@ -837,7 +808,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     MoveFitnessShifts(weight);
                     MoveShiftToggles(weight);
                 }
-                if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) {
+                if (resampled(fitnessshapemode) || resampled(fitnesscentermode)) {
                     MoveFitnessHyperParameters(10 * weight);
                 }
                 if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
@@ -1150,7 +1121,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness, *sitemaskarray, *toggle);
 
-        if (fitnessshapemode < 2) {
+        if (resampled(fitnessshapemode )) {
             Move::Scaling(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
             Move::Scaling(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
@@ -1160,7 +1131,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
         fitness->SetShape(fitnessshape);
 
-        if (fitnesscentermode < 2) {
+        if (resampled(fitnesscentermode )) {
             Move::Profile(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
             Move::Profile(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
@@ -1669,8 +1640,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
       t.add("nucrelrate", nucrelrate);
       t.add("nucstat", nucstat);
     }
-    if (fitnessshapemode < 2) { t.add("fitnessshape", fitnessshape); }
-    if (fitnesscentermode < 2) { t.add("fitnesscenter", fitnesscenter); }
+    if (resampled(fitnessshapemode ) ) { t.add("fitnessshape", fitnessshape); }
+    if (resampled(fitnesscentermode) ) { t.add("fitnesscenter", fitnesscenter); }
     t.add("fitness", *fitness);
     if (maskmode < 2) { t.add("maskprob", maskprob); }
     if (maskmode < 3) { t.add("sitemaskarray", *sitemaskarray); }
@@ -1712,8 +1683,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             size += nucrelrate.size();
             size += nucstat.size();
         }
-        if (fitnessshapemode < 2) { size++; }
-        if (fitnesscentermode < 2) { size += fitnesscenter.size(); }
+        if (resampled(fitnessshapemode ) ) { size++; }
+        if (resampled(fitnesscentermode ) ) { size += fitnesscenter.size(); }
         size += fitness->GetMPISize();
         if (maskmode < 2) { size++; }
         if (maskmode < 3) { size += sitemaskarray->GetMPISize(); }
@@ -1735,8 +1706,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (fitnessshapemode < 2) { is >> fitnessshape; }
-        if (fitnesscentermode < 2) { is >> fitnesscenter; }
+        if (resampled(fitnessshapemode ) ) { is >> fitnessshape; }
+        if (resampled(fitnesscentermode ) ) { is >> fitnesscenter; }
         is >> *fitness;
         if (maskmode < 2) { is >> maskprob; }
         if (maskmode < 3) { is >> *sitemaskarray; }
@@ -1757,8 +1728,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             os << nucrelrate;
             os << nucstat;
         }
-        if (fitnessshapemode < 2) { os << fitnessshape; }
-        if (fitnesscentermode < 2) { os << fitnesscenter; }
+        if (resampled(fitnessshapemode ) ) { os << fitnessshape; }
+        if (resampled(fitnesscentermode ) ) { os << fitnesscenter; }
         os << *fitness;
         if (maskmode < 2) { os << maskprob; }
         if (maskmode < 3) { os << *sitemaskarray; }
@@ -1775,7 +1746,8 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     std::string datafile;
     std::string treefile;
     int  Ncond, Nlevel, codonmodel ;
-    double fitnessshapemode, fitnesscentermode, maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc ;
+    int fitnessshapemode, fitnesscentermode ; //implicit cast of enum into int
+    double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc ;
 
     is >> model_name;
     if (model_name != "DiffselDoublySparse") {
@@ -1785,7 +1757,7 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     is >> datafile;
     is >> treefile;
     is >> Ncond >> Nlevel >> codonmodel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean >> shiftprobinvconc >> fitnesscentermode ;
-    m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel, maskepsilonmode, fitnessshapemode, pihypermean, shiftprobmean, shiftprobinvconc, fitnesscentermode ));
+    m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel, maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean, shiftprobinvconc, param_mode_t(fitnesscentermode) ));
     Tracer tracer{*m, &DiffSelDoublySparseModel::declare_model};
     tracer.read_line(is);
     return is;
