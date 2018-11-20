@@ -1,9 +1,9 @@
 #pragma once
 
-#include <set>
-#include <string>
 #include <fstream>
 #include <map>
+#include <set>
+#include <string>
 #include "SequenceAlignment.hpp"
 
 using GeneSet = std::set<std::string>;
@@ -14,7 +14,7 @@ GeneSet parse_datafile(std::string filename) {
     int nb_genes;
     is >> nb_genes;
     GeneSet result;
-    for (int i=0; i<nb_genes; i++) {
+    for (int i = 0; i < nb_genes; i++) {
         std::string name;
         is >> name;
         result.insert(name);
