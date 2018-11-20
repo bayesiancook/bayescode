@@ -103,6 +103,17 @@ bool resampled (param_mode_t p) {
   return p == independent || p == shrunk ;
 }
 
+//! Used in a multigene context.
+//! - mode == 3: no mask "no_mask"
+//! - mode == 2: parameter (maskprob) shared across genes "shared_mask"
+//! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
+//! across genes "gene_spec_mask_est_hyper"
+//! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters "gene_spec_mask_fixed_hyper"
+enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };
+
+bool gene_specific_mask_mode (mask_mode_t p) {
+  return p == gene_spec_mask_fixed_hyper || p == gene_spec_mask_est_hyper ;
+}
 
 class DiffSelDoublySparseModel : public ChainComponent {
     // -----
@@ -117,7 +128,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     param_mode_t fitnessshapemode;     //estimation method for fitness hyperparameter (shape of multi-gamma distribution)
     param_mode_t fitnesscentermode; //estimation method for fitness hyperparameter (center of multi-gamma distribution)
 
-    int maskmode;
+    mask_mode_t maskmode; //estimation method for site profile masks. Used in a multigene context.
     int maskepsilonmode;
 
     bool withtoggle;
@@ -266,15 +277,15 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         if (inepsilon == 1) {
             maskepsilon = 1;
-            maskmode = 3;
+            maskmode = no_mask;
             maskepsilonmode = 3;
         } else if (inepsilon >= 0) {
             maskepsilon = inepsilon;
             maskepsilonmode = 3;
-            maskmode = 0;
+            maskmode = gene_spec_mask_fixed_hyper;
         } else {
             maskepsilonmode = 0;
-            maskmode = 0;
+            maskmode = gene_spec_mask_fixed_hyper;
             maskepsilon = 0.01;
         }
 
@@ -417,16 +428,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
     void SetNucMode(param_mode_t in) { nucmode = in; }
-
-    //! \brief set estimation method for site profile masks
-    //!
-    //! Used in a multigene context.
-    //! - mode == 3: no mask
-    //! - mode == 2: parameter (maskprob) shared across genes
-    //! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
-    //! across genes
-    //! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
-    void SetMaskMode(int in) { maskmode = in; }
 
     //! \brief set estimation method for background fitness (maskepsilon)
     void SetMaskEpsilonMode(int in) { maskepsilonmode = in; }
@@ -614,7 +615,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (resampled(fitnessshapemode) || resampled(fitnesscentermode) ) { total += FitnessHyperLogPrior(); }
         // not updated at all times
         // total += FitnessLogPrior();
-        if (maskmode < 2) {
+        if (gene_specific_mask_mode(maskmode)) {
             total += MaskHyperLogPrior();
             total += MaskLogPrior();
         }
@@ -803,8 +804,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness(weight);
                 CompMoveFitness(weight);
-                if (maskmode < 3) { MoveMasks(weight); }
-                if (maskmode < 2) { MoveMaskHyperParameters(10 * weight); }
+                if (maskmode != no_mask) { MoveMasks(weight); }
+                if (gene_specific_mask_mode(maskmode)) { MoveMaskHyperParameters(10 * weight); } //FIXME: why move if fixed?
                 if (withtoggle) {
                     MoveFitnessShifts(weight);
                     MoveShiftToggles(weight);
@@ -959,7 +960,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     void MoveBaselineFitness(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset
         // of entries over the 20 amino-acids (2d parameter of call)
-        if (maskmode == 3) {
+        if (maskmode == no_mask) {
             MoveAllBaselineFitness(1.0, 3, nrep);
             MoveAllBaselineFitness(1.0, 10, nrep);
             MoveAllBaselineFitness(1.0, 20, nrep);
@@ -1644,8 +1645,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     if (resampled(fitnessshapemode ) ) { t.add("fitnessshape", fitnessshape); }
     if (resampled(fitnesscentermode) ) { t.add("fitnesscenter", fitnesscenter); }
     t.add("fitness", *fitness);
-    if (maskmode < 2) { t.add("maskprob", maskprob); }
-    if (maskmode < 3) { t.add("sitemaskarray", *sitemaskarray); }
+    if (gene_specific_mask_mode(maskmode)) { t.add("maskprob", maskprob); }
+    if (maskmode != no_mask) { t.add("sitemaskarray", *sitemaskarray); }
     if (maskepsilonmode < 2) { t.add("maskepsilon", maskepsilon); }
     if (Ncond > 1) {
       t.add("shiftprob", shiftprob);
@@ -1687,8 +1688,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (resampled(fitnessshapemode ) ) { size++; }
         if (resampled(fitnesscentermode ) ) { size += fitnesscenter.size(); }
         size += fitness->GetMPISize();
-        if (maskmode < 2) { size++; }
-        if (maskmode < 3) { size += sitemaskarray->GetMPISize(); }
+        if (gene_specific_mask_mode(maskmode)) { size++; }
+        if (maskmode !=no_mask) { size += sitemaskarray->GetMPISize(); }
         if (maskepsilonmode < 2) { size++; }
         if (Ncond > 1) {
             size += shiftprob.size();
@@ -1710,8 +1711,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (resampled(fitnessshapemode ) ) { is >> fitnessshape; }
         if (resampled(fitnesscentermode ) ) { is >> fitnesscenter; }
         is >> *fitness;
-        if (maskmode < 2) { is >> maskprob; }
-        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (gene_specific_mask_mode(maskmode)) { is >> maskprob; }
+        if (maskmode != no_mask) { is >> *sitemaskarray; }
         if (maskepsilonmode < 2) { is >> maskepsilon; }
         if (Ncond > 1) {
             is >> shiftprob;
@@ -1732,8 +1733,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (resampled(fitnessshapemode ) ) { os << fitnessshape; }
         if (resampled(fitnesscentermode ) ) { os << fitnesscenter; }
         os << *fitness;
-        if (maskmode < 2) { os << maskprob; }
-        if (maskmode < 3) { os << *sitemaskarray; }
+        if (gene_specific_mask_mode(maskmode)) { os << maskprob; }
+        if (maskmode!= no_mask) { os << *sitemaskarray; }
         if (maskepsilonmode < 2) { os << maskepsilon; }
         if (Ncond > 1) {
             os << shiftprob;
