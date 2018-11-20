@@ -54,30 +54,30 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
     int origin;
     MPI_Datatype datatype;
     std::vector<T> buf;
-    std::vector<std::function<buf_it(buf_it)>> readers;  // TODO work on buf_it&
+    std::vector<std::function<void(buf_it&)>> readers;
 
     friend RegistrarBase<BroadcasterSlave<T>>;
     using RegistrarBase<BroadcasterSlave<T>>::register_element;
 
     void register_element(std::string, T& target) {
-        readers.push_back([&target](buf_it it) {
+        readers.push_back([&target](buf_it& it) {
             target = *it;
-            return it + 1;
+            it++;
         });
         buf.push_back(-1);
     }
 
     void register_element(std::string, std::vector<T>& target) {
-        readers.push_back([&target](buf_it it) {
+        readers.push_back([&target](buf_it& it) {
             target = std::vector<T>(it, it + target.size());
-            return it + target.size();
+            it += target.size();
         });
-        for (size_t i = 0; i < target.size(); i++) { buf.push_back(-1); }
+        buf.insert(buf.end(), std::vector<T>(target.size(), -1));
     }
 
     void read_buffer() {
         buf_it it = buf.begin();
-        for (auto reader : readers) { it = reader(it); }
+        for (auto reader : readers) { reader(it); }
     }
 
   public:
@@ -114,6 +114,7 @@ std::unique_ptr<Proxy> broadcast(Model& m,
 }
 
 template <class Model, class T = double>
-std::unique_ptr<Proxy> broadcast_model(Model& m, std::set<std::string> filter = std::set<std::string>{}) {
+std::unique_ptr<Proxy> broadcast_model(
+    Model& m, std::set<std::string> filter = std::set<std::string>{}) {
     return broadcast(m, &Model::declare_model, &Model::declare_model, filter);
 }
