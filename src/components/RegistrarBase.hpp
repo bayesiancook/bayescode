@@ -46,8 +46,8 @@ class RegistrarBase {
     }
 
     template <class M>
-    void register_from_method(
-        M& ref, void (M::*f)(RegistrarBase<T>&), std::set<std::string> filter = std::set<std::string>{}) {
+    void register_from_method(M& ref, void (M::*f)(RegistrarBase<T>&),
+        std::set<std::string> filter = std::set<std::string>{}) {
         _filter = filter;
         (ref.*f)(*this);
         _filter.clear();

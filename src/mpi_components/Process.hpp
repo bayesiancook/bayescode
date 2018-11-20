@@ -1,9 +1,9 @@
 #pragma once
 
 #include <mpi.h>
+#include <iostream>
 #include <memory>
 #include <vector>
-#include <iostream>
 
 /*==================================================================================================
   Process
