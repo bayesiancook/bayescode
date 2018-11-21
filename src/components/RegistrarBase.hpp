@@ -1,14 +1,17 @@
 #pragma once
 
+#include <assert.h>
 #include <set>
 #include <string>
 
 class Partition;
 
+using filter_t = std::set<std::string>;
+
 // TODO move into a logger class somewhere
 #ifdef __GNUG__
 #include <cxxabi.h>
-static std::string demangle(const char* name) {
+static inline std::string demangle(const char* name) {
     int status{0};
     std::unique_ptr<char, void (*)(void*)> res{
         abi::__cxa_demangle(name, NULL, NULL, &status), std::free};
@@ -20,7 +23,7 @@ static std::string demangle(const char* name) { return name; }
 
 template <class T>
 class RegistrarBase {
-    mutable std::set<std::string> _filter;
+    mutable filter_t _filter;
 
   public:
     template <class... Args>
@@ -46,9 +49,11 @@ class RegistrarBase {
     }
 
     template <class M>
-    void register_from_method(M& ref, void (M::*f)(RegistrarBase<T>&),
-        std::set<std::string> filter = std::set<std::string>{}) {
-        _filter = filter;
+    void register_from_method(
+        M& ref, void (M::*f)(RegistrarBase<T>&), filter_t filter = filter_t{}) {
+        /* -- */
+        assert(filter.size() > 0);
+        _filter = filter;  // local copy
         (ref.*f)(*this);
         _filter.clear();
     }

@@ -53,6 +53,7 @@ class ReducerMaster : public Proxy, public RegistrarBase<ReducerMaster<T>> {
     ReducerMaster(Process& p = *MPI::p) : p(p), datatype(get_datatype<T>()) {}
 
     void acquire() final {
+        assert(buf.size() > 0);
         MPI_Reduce(
             zeroes.data(), buf.data(), buf.size(), datatype, MPI_SUM, p.rank, MPI_COMM_WORLD);
         read_buffer();
@@ -94,6 +95,7 @@ class ReducerSlave : public Proxy, public RegistrarBase<ReducerSlave<T>> {
 
     void release() final {
         write_buffer();
+        assert(buf.size() > 0);
         MPI_Reduce(buf.data(), NULL, buf.size(), datatype, MPI_SUM, origin, MPI_COMM_WORLD);
     }
 };

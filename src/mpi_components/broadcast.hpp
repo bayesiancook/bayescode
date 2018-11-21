@@ -39,6 +39,7 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster<T
 
     void release() final {
         write_buffer();
+        assert(buf.size() > 0);
         MPI_Bcast(buf.data(), buf.size(), datatype, p.rank, MPI_COMM_WORLD);
     }
 };
@@ -85,6 +86,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
         : p(p), origin(0), datatype(get_datatype<T>()) {}
 
     void acquire() final {
+        assert(buf.size() > 0);
         MPI_Bcast(buf.data(), buf.size(), datatype, origin, MPI_COMM_WORLD);
         read_buffer();
     }

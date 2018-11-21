@@ -3,9 +3,8 @@
 #include <assert.h>
 #include <mpi.h>
 #include <vector>
+#include "components/RegistrarBase.hpp"
 #include "interfaces.hpp"
-template <class T>
-class RegistrarBase;
 
 /*
 ====================================================================================================
@@ -19,8 +18,8 @@ class RegistrarBase;
 template <class T>
 struct GetMPIDatatype {
     MPI_Datatype operator()() {
-        fprintf(
-            stderr, "Error in get_datatype: template parameter T is not a supported datatype!\n");
+        fprintf(stderr, "Error in GetMPIDatatype: type %s is not a registered MPI datatype!\n",
+            demangle(typeid(T).name()).c_str());
         exit(1);
     }
 };
@@ -96,14 +95,11 @@ struct StructMetaData {
 template <class Model, class Class>
 using decl_pointer_t = void (Model::*)(RegistrarBase<Class>&);
 
-using filter_t = std::set<std::string>;
-
 template <class MasterClass, class SlaveClass, class Model>
 std::unique_ptr<Proxy> instantiate_and_declare(Model& m,
     decl_pointer_t<Model, MasterClass> f_master, decl_pointer_t<Model, SlaveClass> f_slave,
     filter_t filter) {
     /* -- */
-    assert(filter.size() != 0);
     std::unique_ptr<Proxy> result{nullptr};
     if (!MPI::p->rank) {
         auto component = new MasterClass();
