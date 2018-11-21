@@ -119,3 +119,29 @@ std::unique_ptr<Proxy> instantiate_and_declare_from_model(Model& m, filter_t fil
     return instantiate_and_declare<MasterClass, SlaveClass, Model>(
         m, &Model::declare_model, &Model::declare_model, filter);
 }
+
+/*
+====================================================================================================
+  Communication grouper class
+==================================================================================================*/
+
+class CommGroup : public Proxy {
+    std::vector<std::unique_ptr<Proxy>> operations;
+
+  public:
+    CommGroup() = default;
+
+    template <class... Operations>
+    CommGroup(std::unique_ptr<Proxy>&& operation, Operations&&... operations)
+        : CommGroup(std::forward<Operations>(operations)...) {
+        this->operations.emplace_back(std::move(operation));
+    }
+
+    void acquire() final {
+        for (auto&& operation : operations) { operation->acquire(); }
+    }
+
+    void release() final {
+        for (auto&& operation : operations) { operation->release(); }
+    }
+};
