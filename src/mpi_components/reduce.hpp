@@ -123,5 +123,5 @@ std::unique_ptr<Proxy> reduce(Model& m, void (Model::*f_master)(RegistrarBase<Re
 template <class Model, class T = double>
 std::unique_ptr<Proxy> reduce_model(
     Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return reduce(m, &Model::declare_model, &Model::declare_model, filter);
+    return reduce<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
 }

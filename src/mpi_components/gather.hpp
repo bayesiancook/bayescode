@@ -115,5 +115,5 @@ std::unique_ptr<Proxy> gather(Model& m, void (Model::*f_master)(RegistrarBase<Ga
 template <class Model, class T = double>
 std::unique_ptr<Proxy> gather_model(
     Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return gather(m, &Model::declare_model, &Model::declare_model, filter);
+    return gather<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
 }
