@@ -1,5 +1,7 @@
+#include <sstream>
 #include "doctest.h"
 #include "partition.hpp"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -80,4 +82,22 @@ TEST_CASE("Process::message") {
 
     CHECK(ss.str() ==
           "\e[0m\e[1m[\e[0m\e[32m1\e[0m\e[1m/\e[0m\e[32m2\e[0m\e[1m] \e[0mHello 3 - aa\n");
+}
+
+TEST_CASE("Struct decl macros") {
+    struct MyStruct {
+        double a;
+        int b;
+    };
+
+    StructMetaData expected;
+    expected.member_types = {MPI_UB, MPI_DOUBLE, MPI_INT};
+    expected.offsets = {sizeof(MyStruct), offsetof(MyStruct, a), offsetof(MyStruct, b)};
+
+    STRUCT_DECL(MyStruct)
+    ATTRIBUTE(a)
+    ATTRIBUTE(b)
+
+    CHECK(struct_decl_MyStruct.member_types == expected.member_types);
+    CHECK(struct_decl_MyStruct.offsets == expected.offsets);
 }
