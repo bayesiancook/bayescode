@@ -103,25 +103,7 @@ class ReducerSlave : public Proxy, public RegistrarBase<ReducerSlave<T>> {
   Functions that are meant to be called globally and that will create either a master or slave
   component depending on the process
 ==================================================================================================*/
-template <class Model, class T = double>
-std::unique_ptr<Proxy> reduce(Model& m, void (Model::*f_master)(RegistrarBase<ReducerMaster<T>>&),
-    void (Model::*f_slave)(RegistrarBase<ReducerSlave<T>>&),
-    std::set<std::string> filter = std::set<std::string>{}) {
-    std::unique_ptr<Proxy> result{nullptr};
-    if (!MPI::p->rank) {
-        auto component = new ReducerMaster<T>();
-        component->register_from_method(m, f_master, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    } else {
-        auto component = new ReducerSlave<T>();
-        component->register_from_method(m, f_slave, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    }
-    return result;
-}
-
-template <class Model, class T = double>
-std::unique_ptr<Proxy> reduce_model(
-    Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return reduce<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
+template <class T, class Model, class... Args>
+std::unique_ptr<Proxy> reduce_model(Model& m, filter_t filter) {
+    return instantiate_and_declare_from_model<ReducerMaster<T>, ReducerSlave<T>, Model>(m, filter);
 }

@@ -95,25 +95,7 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
   Functions that are meant to be called globally and that will create either a master or slave
   component depending on the process
 ==================================================================================================*/
-template <class Model, class T = double>
-std::unique_ptr<Proxy> gather(Model& m, void (Model::*f_master)(RegistrarBase<GatherMaster<T>>&),
-    void (Model::*f_slave)(RegistrarBase<GatherSlave<T>>&),
-    std::set<std::string> filter = std::set<std::string>{}) {
-    std::unique_ptr<Proxy> result{nullptr};
-    if (!MPI::p->rank) {
-        auto component = new GatherMaster<T>();
-        component->register_from_method(m, f_master, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    } else {
-        auto component = new GatherSlave<T>();
-        component->register_from_method(m, f_slave, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    }
-    return result;
-}
-
-template <class Model, class T = double>
-std::unique_ptr<Proxy> gather_model(
-    Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return gather<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
+template <class T, class Model, class... Args>
+std::unique_ptr<Proxy> gather_model(Model& m, filter_t filter) {
+    return instantiate_and_declare_from_model<GatherMaster<T>, GatherSlave<T>, Model>(m, filter);
 }
