@@ -61,15 +61,14 @@ void compute(int, char**) {
         m.h = p->rank - 0.4;
     }
 
-    auto reducer = reduce_model<double>(m, {"g", "h"});
-    auto gatherer = gather_model<double>(m, {"v"});
-    auto bcaster = broadcast_model<double>(m, {"a", "c"});
-    auto struct_bcaster = broadcast_model<MyStruct>(m, {"i", "j"});
+    CommGroup master_operations{
+        reduce_model<double>(m, {"g", "h"}), gather_model<double>(m, {"v"})};
 
-    p->rank ? bcaster->acquire() : bcaster->release();
-    p->rank ? struct_bcaster->acquire() : struct_bcaster->release();
-    p->rank ? gatherer->release() : gatherer->acquire();
-    p->rank ? reducer->release() : reducer->acquire();
+    CommGroup slave_operations{
+        broadcast_model<double>(m, {"a", "c"}), broadcast_model<MyStruct>(m, {"i", "j"})};
+
+    p->rank ? slave_operations.acquire() : slave_operations.release();
+    p->rank ? master_operations.release() : master_operations.acquire();
 
     m.print();
 }
