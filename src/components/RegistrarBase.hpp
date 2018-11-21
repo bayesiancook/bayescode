@@ -4,10 +4,10 @@
 #include <set>
 #include <string>
 
-class Partition;
-
-using filter_t = std::set<std::string>;
-
+/*
+====================================================================================================
+  Debug helpers
+==================================================================================================*/
 // TODO move into a logger class somewhere
 #ifdef __GNUG__
 #include <cxxabi.h>
@@ -20,6 +20,12 @@ static inline std::string demangle(const char* name) {
 #else
 static std::string demangle(const char* name) { return name; }
 #endif
+
+/*
+====================================================================================================
+  RegistrarBase class
+==================================================================================================*/
+using filter_t = std::set<std::string>;
 
 template <class T>
 class RegistrarBase {

@@ -6,4 +6,5 @@ class ChainComponent {
     virtual void move(int) {}
     virtual void savepoint(int) {}
     virtual void end() {}
+    virtual ~ChainComponent() = default;
 };
