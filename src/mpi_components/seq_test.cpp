@@ -91,13 +91,15 @@ TEST_CASE("Struct decl macros") {
     };
 
     StructMetaData expected;
-    expected.member_types = {MPI_UB, MPI_DOUBLE, MPI_INT};
+    expected.types = {MPI_UB, MPI_DOUBLE, MPI_INT};
     expected.offsets = {sizeof(MyStruct), offsetof(MyStruct, a), offsetof(MyStruct, b)};
+    expected.block_lengths = {0, 1, 1};
 
     STRUCT_DECL(MyStruct)
     ATTRIBUTE(a)
     ATTRIBUTE(b)
 
-    CHECK(struct_decl_MyStruct.member_types == expected.member_types);
+    CHECK(struct_decl_MyStruct.types == expected.types);
     CHECK(struct_decl_MyStruct.offsets == expected.offsets);
+    CHECK(struct_decl_MyStruct.block_lengths == expected.block_lengths);
 }
