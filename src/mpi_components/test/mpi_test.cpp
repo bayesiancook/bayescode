@@ -1,7 +1,7 @@
 #include <sstream>
-#include "broadcast.hpp"
-#include "gather.hpp"
-#include "reduce.hpp"
+#include "mpi_components/broadcast.hpp"
+#include "mpi_components/gather.hpp"
+#include "mpi_components/reduce.hpp"
 
 using MPI::p;
 using namespace std;

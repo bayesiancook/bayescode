@@ -2,4 +2,4 @@
 
 #include "components/test.cpp"
 
-#include "mpi_components/seq_test.cpp"
+#include "mpi_components/test/seq_test.cpp"

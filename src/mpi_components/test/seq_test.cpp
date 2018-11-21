@@ -1,7 +1,7 @@
 #include <sstream>
 #include "doctest.h"
-#include "partition.hpp"
-#include "utils.hpp"
+#include "mpi_components/partition.hpp"
+#include "mpi_components/utils.hpp"
 
 using namespace std;
 
@@ -94,6 +94,7 @@ TEST_CASE("Struct decl macros") {
     expected.types = {MPI_DOUBLE, MPI_INT};
     expected.offsets = {offsetof(MyStruct, a), offsetof(MyStruct, b)};
     expected.block_lengths = {1, 1};
+    expected.size = sizeof(MyStruct);
 
     STRUCT_DECL(MyStruct)
     ATTRIBUTE(a)
@@ -102,4 +103,5 @@ TEST_CASE("Struct decl macros") {
     CHECK(struct_decl_MyStruct.types == expected.types);
     CHECK(struct_decl_MyStruct.offsets == expected.offsets);
     CHECK(struct_decl_MyStruct.block_lengths == expected.block_lengths);
+    CHECK(struct_decl_MyStruct.size == expected.size);
 }
