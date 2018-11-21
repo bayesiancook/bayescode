@@ -52,9 +52,6 @@ struct StructMetaData {
 #define STRUCT_DECL(CLASS)                          \
     StructMetaData struct_decl_##CLASS;             \
     StructMetaData& struct__ = struct_decl_##CLASS; \
-    struct__.types.push_back(MPI_UB);               \
-    struct__.offsets.push_back(sizeof(CLASS));      \
-    struct__.block_lengths.push_back(0);            \
     CLASS x__;
 #define ATTRIBUTE(NAME)                                           \
     struct__.types.push_back(get_datatype<decltype(x__.NAME)>()); \

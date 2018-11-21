@@ -64,7 +64,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
             target = *it;
             it++;
         });
-        buf.push_back(-1);
+        buf.emplace_back();
     }
 
     void register_element(std::string, std::vector<T>& target) {
@@ -72,7 +72,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
             target = std::vector<T>(it, it + target.size());
             it += target.size();
         });
-        buf.insert(buf.end(), std::vector<T>(target.size(), -1));
+        buf.insert(buf.end(), std::vector<T>(target.size()));
     }
 
     void read_buffer() {
@@ -116,5 +116,5 @@ std::unique_ptr<Proxy> broadcast(Model& m,
 template <class Model, class T = double>
 std::unique_ptr<Proxy> broadcast_model(
     Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return broadcast(m, &Model::declare_model, &Model::declare_model, filter);
+    return broadcast<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
 }
