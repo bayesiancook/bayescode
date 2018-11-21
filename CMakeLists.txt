@@ -99,5 +99,5 @@ target_link_libraries(all_tests ${MPI_LIBRARIES})
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)
 
-add_executable(mpi_par_test "src/mpi_components/mpi_test.cpp")
+add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
 target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
