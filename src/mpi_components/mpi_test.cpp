@@ -9,20 +9,18 @@ using namespace std;
 struct MyStruct {
     int a;
     float b;
+    double c;  // unused
 };
 
-MPI_Datatype MPI_MYSTRUCT;
-template <>
-struct GetMPIDatatype<MyStruct> {
-    MPI_Datatype operator()() { return MPI_MYSTRUCT; }
-};
+STRUCT_GLOBAL_DECL(MyStruct, MPI_MYSTRUCT)
 
 struct DummyModel {
     double a{-1}, b{-1}, c{-1};
     vector<double> v;
     Partition partition{{"d", "e", "f"}, static_cast<size_t>(p->size) - 1, 1};
+    MyStruct j{-1, -1, -1};
     double g{-1}, h{-1};
-    MyStruct i{-1, -1};
+    MyStruct i{-1, -1, -1};
 
     template <class C>
     void declare_model(C& ref) {
@@ -33,13 +31,14 @@ struct DummyModel {
         ref.add("g", g);
         ref.add("h", h);
         ref.add("i", i);
+        ref.add("j", j);
     }
 
     void print() {
         stringstream ss;
         for (auto e : v) { ss << e << " "; }
-        p->message("Model state is %f, %f, %f, {%s}, %f, %f, (%d, %f)", a, b, c, ss.str().c_str(),
-            g, h, i.a, i.b);
+        p->message("Model state is %f, %f, %f, {%s}, %f, %f, (%d, %f), (%d, %f)", a, b, c,
+            ss.str().c_str(), g, h, i.a, i.b, j.a, j.b);
     }
 };
 
@@ -47,14 +46,15 @@ void compute(int, char**) {
     STRUCT_DECL(MyStruct)
     ATTRIBUTE(a)
     ATTRIBUTE(b)
-    STRUCT_DECL_COMMIT(MPI_MYSTRUCT)
+    STRUCT_COMMIT(MPI_MYSTRUCT)
 
     DummyModel m;
     if (!p->rank) {  // master
         m.a = 2.2;
         m.b = 3.3;
         m.c = 4.4;
-        m.i = {2, 3.2};
+        m.i = {2, 3.2, -1};
+        m.j = {7, 2.21, -1};
     } else {  // slave
         m.v = std::vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
         m.g = p->rank + 0.4;
@@ -64,7 +64,7 @@ void compute(int, char**) {
     auto reducer = reduce_model(m, {"g", "h"});
     auto gatherer = gather_model(m, {"v"});
     auto bcaster = broadcast_model(m, {"a", "c"});
-    auto struct_bcaster = broadcast_model<DummyModel, MyStruct>(m, {"i"});
+    auto struct_bcaster = broadcast_model<DummyModel, MyStruct>(m, {"i", "j"});
 
     p->rank ? bcaster->acquire() : bcaster->release();
     p->rank ? struct_bcaster->acquire() : struct_bcaster->release();
