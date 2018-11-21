@@ -61,10 +61,10 @@ void compute(int, char**) {
         m.h = p->rank - 0.4;
     }
 
-    auto reducer = reduce_model(m, {"g", "h"});
-    auto gatherer = gather_model(m, {"v"});
-    auto bcaster = broadcast_model(m, {"a", "c"});
-    auto struct_bcaster = broadcast_model<DummyModel, MyStruct>(m, {"i", "j"});
+    auto reducer = reduce_model<double>(m, {"g", "h"});
+    auto gatherer = gather_model<double>(m, {"v"});
+    auto bcaster = broadcast_model<double>(m, {"a", "c"});
+    auto struct_bcaster = broadcast_model<MyStruct>(m, {"i", "j"});
 
     p->rank ? bcaster->acquire() : bcaster->release();
     p->rank ? struct_bcaster->acquire() : struct_bcaster->release();

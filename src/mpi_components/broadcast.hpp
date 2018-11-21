@@ -3,7 +3,7 @@
 #include <functional>
 #include "Process.hpp"
 #include "components/RegistrarBase.hpp"
-#include "interfaces.hpp"
+#include "utils.hpp"
 
 /*==================================================================================================
   BroadcasterMaster
@@ -95,26 +95,8 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
   Functions that are meant to be called globally and that will create either a master or slave
   component depending on the process
 ==================================================================================================*/
-template <class Model, class T = double>
-std::unique_ptr<Proxy> broadcast(Model& m,
-    void (Model::*f_master)(RegistrarBase<BroadcasterMaster<T>>&),
-    void (Model::*f_slave)(RegistrarBase<BroadcasterSlave<T>>&),
-    std::set<std::string> filter = std::set<std::string>{}) {
-    std::unique_ptr<Proxy> result{nullptr};
-    if (!MPI::p->rank) {
-        auto component = new BroadcasterMaster<T>();
-        component->register_from_method(m, f_master, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    } else {
-        auto component = new BroadcasterSlave<T>();
-        component->register_from_method(m, f_slave, filter);
-        result.reset(dynamic_cast<Proxy*>(component));
-    }
-    return result;
-}
-
-template <class Model, class T = double>
-std::unique_ptr<Proxy> broadcast_model(
-    Model& m, std::set<std::string> filter = std::set<std::string>{}) {
-    return broadcast<Model, T>(m, &Model::declare_model, &Model::declare_model, filter);
+template <class T, class Model, class... Args>
+std::unique_ptr<Proxy> broadcast_model(Model& m, filter_t filter) {
+    return instantiate_and_declare_from_model<BroadcasterMaster<T>, BroadcasterSlave<T>, Model>(
+        m, filter);
 }
