@@ -50,6 +50,7 @@ class GatherMaster : public Proxy, public RegistrarBase<GatherMaster<T>> {
         : p(p), datatype(get_datatype<T>()), displs(p.size, 0), revcounts(p.size, 0) {}
 
     void acquire() final {
+        assert(buf.size() > 0);
         MPI_Gatherv(NULL, 0, datatype, buf.data(), revcounts.data(), displs.data(), datatype, 0,
             MPI_COMM_WORLD);
         read_buffer();
@@ -84,6 +85,7 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
 
     void release() final {
         write_buffer();
+        assert(buf.size() > 0);
         MPI_Gatherv(
             buf.data(), buf.size(), datatype, NULL, NULL, NULL, datatype, 0, MPI_COMM_WORLD);
     }

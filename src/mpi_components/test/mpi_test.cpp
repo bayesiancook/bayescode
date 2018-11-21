@@ -37,8 +37,8 @@ struct DummyModel {
     void print() {
         stringstream ss;
         for (auto e : v) { ss << e << " "; }
-        p->message("Model state is %f, %f, %f, {%s}, %f, %f, (%d, %f), (%d, %f)", a, b, c,
-            ss.str().c_str(), g, h, i.a, i.b, j.a, j.b);
+        p->message("Model state is %.2f, %.2f, %.2f, {%s}, %.2f, %.2f, (%d, %.2f), (%d, %.2f)", a,
+            b, c, ss.str().c_str(), g, h, i.a, i.b, j.a, j.b);
     }
 };
 
