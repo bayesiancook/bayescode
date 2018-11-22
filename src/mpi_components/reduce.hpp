@@ -106,6 +106,6 @@ class ReducerSlave : public Proxy, public RegistrarBase<ReducerSlave<T>> {
   component depending on the process
 ==================================================================================================*/
 template <class T, class Model, class... Args>
-std::unique_ptr<Proxy> reduce_model(Model& m, filter_t filter) {
+std::unique_ptr<Proxy> reduce(Model& m, filter_t filter) {
     return instantiate_and_declare_from_model<ReducerMaster<T>, ReducerSlave<T>, Model>(m, filter);
 }

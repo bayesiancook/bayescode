@@ -61,11 +61,10 @@ void compute(int, char**) {
         m.h = p->rank - 0.4;
     }
 
-    CommGroup master_operations{
-        reduce_model<double>(m, {"g", "h"}), gather_model<double>(m, {"v"})};
+    CommGroup master_operations{reduce<double>(m, {"g", "h"}), gather<double>(m, {"v"})};
 
     CommGroup slave_operations{
-        broadcast_model<double>(m, {"a", "c"}), broadcast_model<MyStruct>(m, {"i", "j"})};
+        broadcast<double>(m, {"a", "c"}), broadcast<MyStruct>(m, {"i", "j"})};
 
     p->rank ? slave_operations.acquire() : slave_operations.release();
     p->rank ? master_operations.release() : master_operations.acquire();
