@@ -353,7 +353,7 @@ class MultiGeneSingleOmegaModelShared {
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
-        t.add("omegaarray", dynamic_cast<SimpleArray<double> &>(*omegaarray), partition);
+        t.add("omegaarray", *omegaarray, partition);
     }
 
     template <class C>

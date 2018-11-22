@@ -86,18 +86,6 @@ class Tracer {
         set_from_stream.push_back([&v](std::istream& is) { is >> v; });
     }
 
-    template <class T>
-    void add(std::string name, SimpleArray<T>& v) {
-        for (int i = 0; i < v.GetSize(); i++) add(name + "[" + std::to_string(i) + "]", v[i]);
-    }
-
-    template <class T>
-    void add(std::string name, SimpleBidimArray<T>& mat) {
-        for (int i = 0; i < mat.GetNrow(); i++)
-            for (int j = 0; j < mat.GetNcol(); j++)
-                add(name + "[" + std::to_string(i) + "][" + std::to_string(j) + "]", mat(i, j));
-    }
-
     void add(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
 
