@@ -105,7 +105,7 @@ class DiffSelSparseFitnessArray : public SimpleBidimArray<std::vector<double>> {
  *
  * In words, and compared to DiffSelSparseFitnessArray, the baseline profiles
  * are first masked for some amino-acids (which are then considered as
- * low-fitness amino-acids across all conditions). Then, dor non-baseline
+ * low-fitness amino-acids across all conditions). Then, for non-baseline
  * conditions k=1..K, if d_kia == 0, the fitness of amino-acid a at site i under
  * condition k is just the (masked) baseline F_0ia; otherwise, it is a 'new'
  * fitness parameter, such as defined by G_kia.
