@@ -3,6 +3,7 @@
 #include "BranchArray.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "StickBreakingProcess.hpp"
+#include "mpi_components/partition.hpp"
 
 class Tracer {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
@@ -85,7 +86,7 @@ class Tracer {
     }
 
     template <class T>
-    void add(std::string const& name, SimpleArray<T>& v) {
+    void add(std::string const& name, SimpleArray<T>& v, Partition partition = Partition(IndexSet{},0)) {
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetSize();
             if (n > 0) {
