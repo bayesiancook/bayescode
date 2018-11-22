@@ -98,7 +98,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
   component depending on the process
 ==================================================================================================*/
 template <class T, class Model, class... Args>
-std::unique_ptr<Proxy> broadcast_model(Model& m, filter_t filter) {
+std::unique_ptr<Proxy> broadcast(Model& m, filter_t filter) {
     return instantiate_and_declare_from_model<BroadcasterMaster<T>, BroadcasterSlave<T>, Model>(
         m, filter);
 }

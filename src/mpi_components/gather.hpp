@@ -98,6 +98,6 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
   component depending on the process
 ==================================================================================================*/
 template <class T, class Model, class... Args>
-std::unique_ptr<Proxy> gather_model(Model& m, filter_t filter) {
+std::unique_ptr<Proxy> gather(Model& m, filter_t filter) {
     return instantiate_and_declare_from_model<GatherMaster<T>, GatherSlave<T>, Model>(m, filter);
 }
