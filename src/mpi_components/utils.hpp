@@ -146,8 +146,13 @@ class CommGroup : public Proxy {
     }
 };
 
+template <class... Args>
+std::unique_ptr<Proxy> make_comm_group(Args&&... args) {
+    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new CommGroup(std::forward<Args>(args)...)));
+}
 
-/*==================================================================================================
+/*
+====================================================================================================
   mpi_run
   Wrapper around a main-like function that initializes MPI and sets MPI::p to correspond to the
   local MPI process
