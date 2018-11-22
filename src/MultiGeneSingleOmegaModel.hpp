@@ -25,6 +25,9 @@
 #include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
 #include "mpi_components/partition.hpp"
+#include "mpi_components/broadcast.hpp"
+#include "mpi_components/reduce.hpp"
+#include "mpi_components/gather.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -106,6 +109,9 @@ class MultiGeneSingleOmegaModelShared {
 
         omegaarray = new IIDGamma(
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
+
+        CommGroup* omegacommgroup = new CommGroup(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}), gather<double>(*this,{"omegaarray"}));
+        mpiomega.reset(dynamic_cast<Proxy*>(omegacommgroup));
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
@@ -343,7 +349,7 @@ class MultiGeneSingleOmegaModelShared {
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
-        t.add("omegaarray", *omegaarray);
+        t.add("omegaarray", dynamic_cast<SimpleArray<double>&>(*omegaarray),partition);
     }
 
     template <class C>
@@ -433,6 +439,8 @@ class MultiGeneSingleOmegaModelShared {
     // total logprior for gene-specific variables (here, omega only)
     // summed over all genes
     double GeneLogPrior;
+
+    std::unique_ptr<Proxy> mpiomega,mpibl,mpinucrate,mpitrace;
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
@@ -570,42 +578,113 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
         for (int rep = 0; rep < nrep; rep++) {
             if (omega_param.variable) {
-                ReceiveOmega();
+                // ReceiveOmega();
+                mpiomega->acquire();
                 MoveOmegaHyperParameters();
-                SendOmegaHyperParameters();
+                // SendOmegaHyperParameters();
+                mpiomega->release();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == shared) {
                 ReceiveBranchLengthsSuffStat();
+                // reduce_blsuffstat.acquire();
                 ResampleBranchLengths();
                 MoveLambda();
                 SendGlobalBranchLengths();
+                // bcast_lambda.release();
+                // bcast_bl.release();
             } else if (blmode == shrunken) {
                 ReceiveBranchLengthsHyperSuffStat();
+                // reduce_blhypersuffstat.acquire();
                 MoveBranchLengthsHyperParameters();
                 SendBranchLengthsHyperParameters();
+                // bcast_blhyperparam.release();
             }
 
             // global nucrates, or gene nucrates hyperparameters
             if (nucmode == shared) {
                 ReceiveNucPathSuffStat();
+                // reduce_nucratesuffstat.acquire();
                 MoveNucRates();
                 SendGlobalNucRates();
+                // bcast_nucrate.release();
             } else if (nucmode == shrunken) {
                 ReceiveNucRatesHyperSuffStat();
+                // reduce_nucratehypersuffstat.acquire();
                 MoveNucRatesHyperParameters();
                 SendNucRatesHyperParameters();
+                // bcast_nucratehyperparam.release();
             }
         }
 
         // collect current state
+        // tracegroup
+
         if (blmode != shared) { ReceiveGeneBranchLengths(); }
         if (nucmode != shared) { ReceiveGeneNucRates(); }
         ReceiveOmega();
         ReceiveLogProbs();
         return 1;
     }
+
+    /*
+    double Move() {
+        int nrep = 30;
+
+        for (int rep = 0; rep < nrep; rep++) {
+
+            if (omega_param.variable) {
+                // ReceiveOmega();
+                mpiomega.acquire();
+                MoveOmegaHyperParameters();
+                // SendOmegaHyperParameters();
+                mpiomega.release();
+            }
+
+            // global branch lengths, or gene branch lengths hyperparameters
+            if (blmode == shared) {
+                // ReceiveBranchLengthsSuffStat();
+                reduce_blsuffstat.acquire();
+                ResampleBranchLengths();
+                MoveLambda();
+                // SendGlobalBranchLengths();
+                // bcast_lambda.release();
+                bcast_bl.release();
+            } else if (blmode == shrunken) {
+                // ReceiveBranchLengthsHyperSuffStat();
+                reduce_blhypersuffstat.acquire();
+                MoveBranchLengthsHyperParameters();
+                // SendBranchLengthsHyperParameters();
+                bcast_blhyperparam.release();
+            }
+
+            // global nucrates, or gene nucrates hyperparameters
+            if (nucmode == shared) {
+                // ReceiveNucPathSuffStat();
+                reduce_nucratesuffstat.acquire();
+                MoveNucRates();
+                // SendGlobalNucRates();
+                bcast_nucrate.release();
+            } else if (nucmode == shrunken) {
+                // ReceiveNucRatesHyperSuffStat();
+                reduce_nucratehypersuffstat.acquire();
+                MoveNucRatesHyperParameters();
+                // SendNucRatesHyperParameters();
+                bcast_nucratehyperparam.release();
+            }
+        }
+
+        // collect current state
+        // tracegroup
+
+        if (blmode != shared) { ReceiveGeneBranchLengths(); }
+        if (nucmode != shared) { ReceiveGeneNucRates(); }
+        ReceiveOmega();
+        ReceiveLogProbs();
+        return 1;
+    }
+    */
 
     // Branch lengths
 
@@ -889,8 +968,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             MoveGeneParameters(1.0);
 
             if (omega_param.variable) {
-                SendOmega();
-                ReceiveOmegaHyperParameters();
+                // SendOmega();
+                mpiomega->release();
+                // ReceiveOmegaHyperParameters();
+                mpiomega->acquire();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
