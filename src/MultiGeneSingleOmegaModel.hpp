@@ -24,10 +24,10 @@
 #include "components/ChainComponent.hpp"
 #include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
-#include "mpi_components/partition.hpp"
 #include "mpi_components/broadcast.hpp"
-#include "mpi_components/reduce.hpp"
 #include "mpi_components/gather.hpp"
+#include "mpi_components/partition.hpp"
+#include "mpi_components/reduce.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -110,8 +110,10 @@ class MultiGeneSingleOmegaModelShared {
         omegaarray = new IIDGamma(
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
-        CommGroup* omegacommgroup = new CommGroup(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}), gather<double>(*this,{"omegaarray"}));
-        mpiomega.reset(dynamic_cast<Proxy*>(omegacommgroup));
+        CommGroup *omegacommgroup =
+            new CommGroup(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}),
+                gather<double>(*this, {"omegaarray"}));
+        mpiomega.reset(dynamic_cast<Proxy *>(omegacommgroup));
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
@@ -349,7 +351,7 @@ class MultiGeneSingleOmegaModelShared {
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
-        t.add("omegaarray", dynamic_cast<SimpleArray<double>&>(*omegaarray),partition);
+        t.add("omegaarray", dynamic_cast<SimpleArray<double> &>(*omegaarray), partition);
     }
 
     template <class C>
@@ -440,7 +442,7 @@ class MultiGeneSingleOmegaModelShared {
     // summed over all genes
     double GeneLogPrior;
 
-    std::unique_ptr<Proxy> mpiomega,mpibl,mpinucrate,mpitrace;
+    std::unique_ptr<Proxy> mpiomega, mpibl, mpinucrate, mpitrace;
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,

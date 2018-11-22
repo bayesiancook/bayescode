@@ -2,8 +2,8 @@
 
 #include "components/RegistrarBase.hpp"
 #include "interfaces.hpp"
-#include "partition.hpp"
 #include "lib/Array.hpp"
+#include "partition.hpp"
 
 /*==================================================================================================
   GatherMaster
@@ -41,7 +41,7 @@ class GatherMaster : public Proxy, public RegistrarBase<GatherMaster<T>> {
     }
 
     void register_element(std::string s, SimpleArray<T>& target, const Partition& partition) {
-        register_element(s,target.GetArray(),partition);
+        register_element(s, target.GetArray(), partition);
     }
 
     void read_buffer() {
@@ -81,7 +81,7 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
     }
 
     void register_element(std::string s, SimpleArray<T>& target, Partition& partition) {
-        register_element(s,target.GetArray(),partition);
+        register_element(s, target.GetArray(), partition);
     }
 
     void write_buffer() {

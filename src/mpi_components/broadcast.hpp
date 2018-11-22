@@ -74,8 +74,8 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
             it += target.size();
         });
         // buf.insert(buf.end(), std::vector<T>(target.size()));
-        for (unsigned int e=0; e<target.size(); e++)    {
-        // for (auto e : target)   {
+        for (unsigned int e = 0; e < target.size(); e++) {
+            // for (auto e : target)   {
             buf.emplace_back();
         }
     }
