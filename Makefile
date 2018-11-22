@@ -73,6 +73,10 @@ run-app-tests: all
 	_build/readaamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss _test/aamutsel_gal4
+	@make --no-print-directory run-multigeneglobom-test
+
+.PHONY: run-multigeneglobom-test
+run-multigeneglobom-test: all
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
 	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 
