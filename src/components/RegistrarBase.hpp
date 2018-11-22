@@ -4,7 +4,14 @@
 #include <set>
 #include <string>
 #include "lib/Array.hpp"
+#include "lib/BranchArray.hpp"
 class IIDGamma;
+class BranchIIDGamma;
+class IIDDirichlet;
+class MultiDirichlet;
+class MultinomialAllocationVector;
+class GammaWhiteNoise;
+class GammaWhiteNoiseArray;
 
 /*
 ====================================================================================================
@@ -29,16 +36,37 @@ static std::string demangle(const char* name) { return name; }
 ==================================================================================================*/
 using filter_t = std::set<std::string>;
 
+#define CONVERT_REF_TO(FROM, TO)                                         \
+    template <class... Args>                                             \
+    void register_element(std::string s, FROM& target, Args&&... args) { \
+        convert_ref<TO>(s, target, std::forward<Args>(args)...);         \
+    }
+
 template <class T>
 class RegistrarBase {
     mutable filter_t _filter;
 
-  public:
-    template <class... Args>
-    void register_element(std::string s, IIDGamma& target, Args&&... args) {
-        auto& target_array_ref = dynamic_cast<SimpleArray<double>&>(target);
-        static_cast<T*>(this)->register_element(s, target_array_ref, std::forward<Args>(args)...);
+    template <class TargetType, class OriginalType, class... Args>
+    void convert_ref(std::string s, OriginalType& target, Args&&... args) {
+        try {
+            auto& converted_ref = dynamic_cast<TargetType&>(target);
+            static_cast<T*>(this)->register_element(s, converted_ref, std::forward<Args>(args)...);
+        } catch (const std::bad_cast& e) {
+            std::cerr << "\e[31mError\e[0m| Failed to convert from type \e[32m"
+                      << demangle(typeid(OriginalType).name()) << "\e[0m to type \e[32m"
+                      << demangle(typeid(TargetType).name()) << "\e[0m\n";
+            exit(1);
+        }
     }
+
+  public:
+    CONVERT_REF_TO(IIDGamma, SimpleArray<double>);
+    CONVERT_REF_TO(BranchIIDGamma, BranchArray<double>);
+    CONVERT_REF_TO(IIDDirichlet, SimpleArray<std::vector<double>>);
+    CONVERT_REF_TO(MultiDirichlet, SimpleArray<std::vector<double>>);
+    CONVERT_REF_TO(MultinomialAllocationVector, SimpleArray<int>);
+    CONVERT_REF_TO(GammaWhiteNoise, BranchArray<double>);
+    CONVERT_REF_TO(GammaWhiteNoiseArray, Array<GammaWhiteNoise>);
 
     template <class Target, class... Args>
     void register_element(std::string s, SimpleArray<Target>& target, Args&&... args) {

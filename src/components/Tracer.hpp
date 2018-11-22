@@ -4,12 +4,16 @@
 #include "BranchArray.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "StickBreakingProcess.hpp"
+#include "components/RegistrarBase.hpp"
 #include "mpi_components/partition.hpp"
 
-class Tracer {
+class Tracer : public RegistrarBase<Tracer> {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
     std::vector<std::function<void(std::ostream&)>> data_to_stream;
     std::vector<std::function<void(std::istream&)>> set_from_stream;
+
+    friend RegistrarBase<Tracer>;
+    using RegistrarBase<Tracer>::register_element;
 
   public:
     template <class T>
@@ -60,33 +64,36 @@ class Tracer {
         for (auto& f : set_from_stream) f(is);
     }
 
-    void add(std::string const& name, double& d) {
-        header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
-        data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
-        set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
-    }
-
-    void add(std::string const& name, int& d) {
+    void register_element(std::string const& name, double& d) {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
         set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
     template <class T>
-    void add(std::string const& name, SimpleArray<T>& v,
-        Partition partition = Partition(IndexSet{}, 0)) {
-        header_to_stream.push_back([&v, name](std::ostream& os) {
-            int n = v.GetSize();
+    void register_element(std::string const& name, std::vector<T>& v,
+        Partition partition = Partition(IndexSet(), 0)) {
+        /* -- */
+        header_to_stream.emplace_back([&v, name](std::ostream& os) {
+            size_t n = v.size();
             if (n > 0) {
                 os << name << "[0]";
-                for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
+                for (size_t i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
             }
         });
-        data_to_stream.push_back([&v](std::ostream& os) { os << v; });
-        set_from_stream.push_back([&v](std::istream& is) { is >> v; });
+        data_to_stream.emplace_back([&v](std::ostream& os) {
+            size_t n = v.size();
+            if (n > 0) {
+                os << v.at(0);
+                for (size_t i = 1; i < n; i++) os << "\t" << v.at(i);
+            }
+        });
+        set_from_stream.emplace_back([&v](std::istream& is) {
+            for (auto& e : v) is >> e;
+        });
     }
 
-    void add(std::string const& name, StickBreakingProcess& sbp) {
+    void register_element(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
 
         auto& kappa = sbp.GetKappa();
@@ -97,7 +104,7 @@ class Tracer {
     }
 
     template <class T>
-    void add(std::string const& name, BranchArray<T>& v) {
+    void register_element(std::string const& name, BranchArray<T>& v) {
         header_to_stream.push_back([&v, name](std::ostream& os) {
             int n = v.GetNbranch();
             if (n > 0) {
@@ -118,12 +125,12 @@ class Tracer {
     }
 
     template <class T>
-    void add(std::string const& name, Array<T>& v) {
+    void register_element(std::string const& name, Array<T>& v) {
         for (int i = 0; i < v.GetSize(); i++) { add(name + "[" + std::to_string(i) + "]", v[i]); }
     }
 
     template <class T>
-    void add(std::string const& name, T* o, double (T::*f)() const) {
+    void register_element(std::string const& name, T* o, double (T::*f)() const) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
         set_from_stream.push_back([](std::istream& is) {
@@ -132,7 +139,7 @@ class Tracer {
         });
     }
 
-    void add(std::string const& name, std::function<double()> const& f) {
+    void register_element(std::string const& name, std::function<double()> const& f) {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([f](std::ostream& os) { os << f(); });
         set_from_stream.emplace_back([](std::istream& is) {
