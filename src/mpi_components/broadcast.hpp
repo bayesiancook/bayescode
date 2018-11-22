@@ -73,7 +73,11 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave<T>>
             target = std::vector<T>(it, it + target.size());
             it += target.size();
         });
-        buf.insert(buf.end(), std::vector<T>(target.size()));
+        // buf.insert(buf.end(), std::vector<T>(target.size()));
+        for (unsigned int e=0; e<target.size(); e++)    {
+        // for (auto e : target)   {
+            buf.emplace_back();
+        }
     }
 
     void read_buffer() {
