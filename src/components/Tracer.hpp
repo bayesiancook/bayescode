@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include "BidimArray.hpp"
 #include "BranchArray.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "StickBreakingProcess.hpp"
@@ -64,39 +65,30 @@ class Tracer {
         set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
-    void add(std::string const& name, std::vector<double>& v) {
-        header_to_stream.emplace_back([&v, name](std::ostream& os) {
-            size_t n = v.size();
-            if (n > 0) {
-                os << name << "[0]";
-                for (size_t i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
-            }
-        });
-        data_to_stream.emplace_back([&v](std::ostream& os) {
-            size_t n = v.size();
-            if (n > 0) {
-                os << v.at(0);
-                for (size_t i = 1; i < n; i++) os << "\t" << v.at(i);
-            }
-        });
-        set_from_stream.emplace_back([&v](std::istream& is) {
-            for (auto& e : v) is >> e;
-        });
+    void add(std::string const& name, int& d) {
+        header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
+        data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
+        set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
     template <class T>
-    void add(std::string const& name, SimpleArray<T>& v) {
-        header_to_stream.push_back([&v, name](std::ostream& os) {
-            int n = v.GetSize();
-            if (n > 0) {
-                os << name << "[0]";
-                for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
-            }
-        });
-        data_to_stream.push_back([&v](std::ostream& os) { os << v; });
-        set_from_stream.push_back([&v](std::istream& is) { is >> v; });
+    void add(std::string name, std::vector<T>& v) {
+      for(size_t i = 0; i < v.size(); i++)
+        add(name + "[" + std::to_string(i) + "]", v[i]);
     }
 
+    template <class T>
+    void add(std::string name, SimpleArray<T>& v) {
+      for(int i = 0; i < v.GetSize(); i++)
+        add(name + "[" + std::to_string(i) + "]", v[i]);
+    }
+
+    template <class T>
+    void add(std::string name, SimpleBidimArray<T>& mat) {
+      for (int i = 0; i < mat.GetNrow(); i++)
+        for(int j = 0; j < mat.GetNcol(); j++)
+          add(name + "[" + std::to_string(i) + "][" + std::to_string(j) + "]", mat(i, j));
+    }
 
     void add(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));

@@ -28,6 +28,8 @@ conditions as regards security.
 The fact that you are presently reading this means that you have had knowledge
 of the CeCILL-C license and that you accept its terms.*/
 
+#pragma once
+
 #include "AADiffSelCodonMatrixBidimArray.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
@@ -40,11 +42,12 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "MultiGammaSuffStat.hpp"
 #include "PathSuffStat.hpp"
 #include "PhyloProcess.hpp"
-#include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
+#include "components/ChainComponent.hpp"
 #include "tree/implem.hpp"
+#include "Move.hpp"
+#include "components/Tracer.hpp"
 
-using namespace std;
 
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
@@ -88,32 +91,52 @@ using namespace std;
  * that the corresponding toggle is equal to 1.
  */
 
-class DiffSelDoublySparseModel : public ProbModel {
+
+//! - mode == 3: global == "fixed"
+//! - mode == 2: global but estimated == "shared"
+//! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
+//! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
+enum param_mode_t { independent, shrunk, shared, fixed };
+
+bool resampled (param_mode_t p) {
+  return p == independent || p == shrunk ;
+}
+
+//! Used in a multigene context.
+//! - mode == 3: no mask "no_mask"
+//! - mode == 2: parameter (maskprob) shared across genes "shared_mask"
+//! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
+//! across genes "gene_spec_mask_est_hyper"
+//! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters "gene_spec_mask_fixed_hyper"
+enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };
+
+bool gene_specific_mask_mode (mask_mode_t p) {
+  return p == gene_spec_mask_fixed_hyper || p == gene_spec_mask_est_hyper ;
+}
+
+class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
 
+    std::string datafile;
+    std::string treefile;
     int codonmodel;
+    param_mode_t blmode; // branch lengths fixed or sampled
+    param_mode_t nucmode; // mutation matrix parameters fixed or sampled
+    param_mode_t fitnessshapemode;     //estimation method for fitness hyperparameter (shape of multi-gamma distribution)
+    param_mode_t fitnesscentermode; //estimation method for fitness hyperparameter (center of multi-gamma distribution)
 
-    // 0: free wo shrinkage
-    // 1: free with shrinkage
-    // 2: shared across genes
-    // 3: fixed
-
-    int blmode;
-    int nucmode;
-    int fitnessshapemode;
-    int fitnesscentermode;
-    int maskmode;
+    mask_mode_t maskmode; //estimation method for site profile masks. Used in a multigene context.
     int maskepsilonmode;
 
-    int withtoggle;
+    bool withtoggle; // do we use site and amino-acid and condition specific toggles for differential effects?
 
     // -----
     // external parameters
     // -----
 
-    unique_ptr<const Tree> tree;
+    std::unique_ptr<const Tree> tree;
     FileSequenceAlignment *data;
     CodonSequenceAlignment *codondata;
 
@@ -149,9 +172,9 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     // nucleotide exchange rates and equilibrium frequencies (stationary
     // probabilities) hyperparameters
-    vector<double> nucrelratehypercenter;
+    std::vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
-    vector<double> nucstathypercenter;
+    std::vector<double> nucstathypercenter;
     double nucstathyperinvconc;
     // parameters
     std::vector<double> nucrelrate;
@@ -159,7 +182,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     GTRSubMatrix *nucmatrix;
 
     double fitnessshape;
-    vector<double> fitnesscenter;
+    std::vector<double> fitnesscenter;
     BidimIIDMultiGamma *fitness;
 
     double maskprob;
@@ -173,10 +196,10 @@ class DiffSelDoublySparseModel : public ProbModel {
     double pihypermean;
     double shiftprobmean;
     double shiftprobinvconc;
-    vector<double> pi;
-    vector<double> shiftprobhypermean;
-    vector<double> shiftprobhyperinvconc;
-    vector<double> shiftprob;
+    std::vector<double> pi;
+    std::vector<double> shiftprobhypermean;
+    std::vector<double> shiftprobhyperinvconc;
+    std::vector<double> shiftprob;
 
     BidimIIDMultiBernoulli *toggle;
 
@@ -206,6 +229,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     int gammanullcount;
 
   public:
+    friend std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel& m);
+
     //! \brief constructor
     //!
     //! parameters:
@@ -226,43 +251,40 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - inshape: shape parameter of the Gamma distribution of pre-fitness
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
+    //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc)
-        : hyperfitnesssuffstat(Naa) {
-        withtoggle = 0;
-        fitnesscentermode = 3;
-        fitnessshapemode = 3;
-        fitnessshape = 20.0;
-
+        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode = fixed,
+        bool withtoggle = true)
+        : datafile(datafile), treefile(treefile), fitnesscentermode(fitnesscentermode), withtoggle(withtoggle), hyperfitnesssuffstat(Naa) {
         pihypermean = inpihypermean;
         shiftprobmean = inshiftprobmean;
         shiftprobinvconc = inshiftprobinvconc;
 
         codonmodel = incodonmodel;
 
-        blmode = 0;
-        nucmode = 0;
+        blmode = independent;
+        nucmode = independent;
 
         if (inshape > 0) {
-            fitnessshapemode = 3;
+            fitnessshapemode = fixed;
             fitnessshape = inshape;
         } else {
-            fitnessshapemode = 0;
+            fitnessshapemode = independent;
             fitnessshape = 20.0;
         }
 
         if (inepsilon == 1) {
             maskepsilon = 1;
-            maskmode = 3;
+            maskmode = no_mask;
             maskepsilonmode = 3;
         } else if (inepsilon >= 0) {
             maskepsilon = inepsilon;
             maskepsilonmode = 3;
-            maskmode = 0;
+            maskmode = gene_spec_mask_fixed_hyper;
         } else {
             maskepsilonmode = 0;
-            maskmode = 0;
+            maskmode = gene_spec_mask_fixed_hyper;
             maskepsilon = 0.01;
         }
 
@@ -271,6 +293,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         if (Ncond <= 2) { Nlevel = 1; }
 
         ReadFiles(datafile, treefile);
+	Allocate();
     }
 
     DiffSelDoublySparseModel(const DiffSelDoublySparseModel &) = delete;
@@ -279,7 +302,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! read files (and read out the distribution of conditions across branches,
     //! based on the tree read from treefile)
-    void ReadFiles(string datafile, string treefile) {
+    void ReadFiles(std::string datafile, std::string treefile) {
         // nucleotide sequence alignment
         data = new FileSequenceAlignment(datafile);
 
@@ -298,7 +321,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         auto v = branch_container_from_parser<std::string>(
             parser, [](int i, const AnnotatedTree &t) { return t.tag(i, "Condition"); });
-        vector<int> iv(v.size(), 0);
+        std::vector<int> iv(v.size(), 0);
         for (size_t i = 0; i < v.size(); i++) {
             iv[i] = atoi(v[i].c_str());
             if (iv[i] >= Ncond) { iv[i] = Ncond - 1; }
@@ -330,9 +353,9 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         // nucleotide mutation matrix
         nucrelrate.assign(Nrr, 0);
-        Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
         nucstat.assign(Nnuc, 0);
-        Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
         nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
         // fitness parameters: IID Gamma, across all conditions, sites, and
@@ -396,16 +419,6 @@ class DiffSelDoublySparseModel : public ProbModel {
         suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
     }
 
-    //! \brief set toggle status: 0: toggles all fixed to 0, 1:random toggles,i
-    void SetWithToggles(int in) { withtoggle = in; }
-
-    //! \brief set estimation method for branch lengths
-    //!
-    //! Used in a multigene context.
-    //! - mode == 2: global
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetBLMode(int in) { blmode = in; }
 
     //! \brief set estimation method for nuc rates
     //!
@@ -413,38 +426,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! - mode == 2: global
     //! - mode == 1: gene specific, with hyperparameters estimated across genes
     //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetNucMode(int in) { nucmode = in; }
-
-    //! \brief set estimation method for fitness hyperparameter (center of
-    //! multi-gamma distribution)
-    //!
-    //! - mode == 3: fixed (uniform)
-    //! - mode == 2: shared across genes, estimated
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetFitnessCenterMode(int in) { fitnesscentermode = in; }
-
-    //! \brief set estimation method for fitness hyperparameter (shape of
-    //! multi-gamma distribution)
-    //!
-    //! - mode == 3: fixed
-    //! - mode == 2: shared across genes, estimated
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetFitnessShapeMode(int in, double inshape = 0) {
-        fitnessshapemode = in;
-        if (inshape > 0) { fitnessshape = inshape; }
-    }
-
-    //! \brief set estimation method for site profile masks
-    //!
-    //! Used in a multigene context.
-    //! - mode == 3: no mask
-    //! - mode == 2: parameter (maskprob) shared across genes
-    //! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
-    //! across genes
-    //! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
-    void SetMaskMode(int in) { maskmode = in; }
+    void SetNucMode(param_mode_t in) { nucmode = in; }
 
     //! \brief set estimation method for background fitness (maskepsilon)
     void SetMaskEpsilonMode(int in) { maskepsilonmode = in; }
@@ -506,15 +488,15 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc)
     //! to specified values (used in multi-gene context)
-    void SetShiftProbHyperParameters(const vector<double> &inpi,
-        const vector<double> &inshiftprobhypermean, const vector<double> &inshiftprobhyperinvconc) {
+    void SetShiftProbHyperParameters(const std::vector<double> &inpi,
+        const std::vector<double> &inshiftprobhypermean, const std::vector<double> &inshiftprobhyperinvconc) {
         pi = inpi;
         shiftprobhypermean = inshiftprobhypermean;
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
 
     //! const access to shift prob vector
-    const vector<double> &GetShiftProbVector() const { return shiftprob; }
+    const std::vector<double> &GetShiftProbVector() const { return shiftprob; }
 
     //! get a copy of fitness array (for all sites and amino-acids) for condition
     //! k
@@ -547,26 +529,26 @@ class DiffSelDoublySparseModel : public ProbModel {
     }
 
     //! const ref access to toggles for condition k=1..Ncond
-    const vector<vector<int>> &GetCondToggleArray(int k) const {
+    const std::vector<std::vector<int>> &GetCondToggleArray(int k) const {
         return toggle->GetSubArray(k - 1);
     }
 
     //! const ref access to masks across sites
-    const vector<vector<int>> &GetMaskArray() const { return sitemaskarray->GetArray(); }
+    const std::vector<std::vector<int>> &GetMaskArray() const { return sitemaskarray->GetArray(); }
 
     //! const access to low-fitness background value (mask epsilon)
     double GetMaskEpsilon() const { return maskepsilon; }
 
-    void Update() override {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+    void Update() {
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
         ResampleSub(1.0);
     }
 
-    void PostPred(string name) override {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
+    void PostPred(std::string name) {
+        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -578,7 +560,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! \brief dummy function that does not do anything.
     //!
-    //! Used for the templates of ScalingMove, SlidingMove and ProfileMove
+    //! Used for the templates of Move::Scaling, Move::Sliding and Move::Profile
     //! (defined in ProbModel), all of which require a void (*f)(void) function
     //! pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
@@ -627,12 +609,12 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        if (blmode < 2) { total += BranchLengthsLogPrior(); }
-        if (nucmode < 2) { total += NucRatesLogPrior(); }
-        if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) { total += FitnessHyperLogPrior(); }
+        if (blmode != shared) { total += BranchLengthsLogPrior(); }
+        if (nucmode != shared) { total += NucRatesLogPrior(); }
+        if (resampled(fitnessshapemode) || resampled(fitnesscentermode) ) { total += FitnessHyperLogPrior(); }
         // not updated at all times
         // total += FitnessLogPrior();
-        if (maskmode < 2) {
+        if (gene_specific_mask_mode(maskmode)) {
             total += MaskHyperLogPrior();
             total += MaskLogPrior();
         }
@@ -649,7 +631,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) { ret += BranchLengthsHyperLogPrior(); }
+        if (blmode == independent) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
@@ -666,8 +648,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
         double ret = 0;
-        if (fitnessshapemode < 2) { ret += FitnessShapeLogPrior(); }
-        if (fitnesscentermode < 2) { ret += FitnessCenterLogPrior(); }
+        if (resampled(fitnessshapemode ) ) { ret += FitnessShapeLogPrior(); }
+        if (resampled(fitnesscentermode ) ) { ret += FitnessCenterLogPrior(); }
         return ret;
     }
 
@@ -708,7 +690,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                     total += log(pi[k - 1]) + Random::logBetaDensity(shiftprob[k - 1], alpha, beta);
                 } else {
                     if (pi[k - 1] == 1.0) {
-                        cerr << "error in ToggleHyperLogPrior: inf\n";
+                        std::cerr << "error in ToggleHyperLogPrior: inf\n";
                         exit(1);
                     }
                     total += log(1 - pi[k - 1]);
@@ -725,7 +707,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
     // ---------------
     // collecting suff stats
@@ -802,17 +784,16 @@ class DiffSelDoublySparseModel : public ProbModel {
     // ---------------
 
     //! \brief complete MCMC move schedule
-    double Move() override {
+    void move(int) override {
         gammanullcount = 0;
         ResampleSub(1.0);
         MoveParameters(3, 20);
-        return 1.0;
     }
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode < 2) { MoveBranchLengths(); }
+            if (blmode != shared) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             UpdateAll();
@@ -822,19 +803,19 @@ class DiffSelDoublySparseModel : public ProbModel {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness(weight);
                 CompMoveFitness(weight);
-                if (maskmode < 3) { MoveMasks(weight); }
-                if (maskmode < 2) { MoveMaskHyperParameters(10 * weight); }
+                if (maskmode != no_mask) { MoveMasks(weight); }
+                if (gene_specific_mask_mode(maskmode)) { MoveMaskHyperParameters(10 * weight); } //FIXME: why move if fixed?
                 if (withtoggle) {
                     MoveFitnessShifts(weight);
                     MoveShiftToggles(weight);
                 }
-                if ((fitnessshapemode < 2) || (fitnesscentermode < 2)) {
+                if (resampled(fitnessshapemode) || resampled(fitnesscentermode)) {
                     MoveFitnessHyperParameters(10 * weight);
                 }
                 if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
             }
 
-            if (nucmode < 2) { MoveNucRates(weight); }
+            if (nucmode != shared) { MoveNucRates(weight); }
         }
 
         UpdateAll();
@@ -857,7 +838,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
+        if (blmode == independent) { MoveLambda(); }
     }
 
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
@@ -865,28 +846,28 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+        Move::Scaling(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
             &DiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+        Move::Scaling(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
             &DiffSelDoublySparseModel::NoUpdate, this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
-    //! ProfileMove)
+    //! Move::Profile)
     void MoveNucRates(int nrep) {
         CorruptMatrices();
 
-        ProfileMove(nucrelrate, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.03, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.03, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.01, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucrelrate, 0.01, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
 
-        ProfileMove(nucstat, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucstat, 0.01, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
+        Move::Profile(nucstat, 0.01, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
             &DiffSelDoublySparseModel::CorruptMatrices, this);
 
         CorruptMatrices();
@@ -906,7 +887,7 @@ class DiffSelDoublySparseModel : public ProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                const vector<int> &mask = (*sitemaskarray)[i];
+                const std::vector<int> &mask = (*sitemaskarray)[i];
 
                 double deltalogprob = 0;
 
@@ -978,7 +959,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveBaselineFitness(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset
         // of entries over the 20 amino-acids (2d parameter of call)
-        if (maskmode == 3) {
+        if (maskmode == no_mask) {
             MoveAllBaselineFitness(1.0, 3, nrep);
             MoveAllBaselineFitness(1.0, 10, nrep);
             MoveAllBaselineFitness(1.0, 20, nrep);
@@ -996,11 +977,11 @@ class DiffSelDoublySparseModel : public ProbModel {
     double MoveAllBaselineFitness(double tuning, int n, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa, 0);
+        std::vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                vector<double> &x = (*fitness)(0, i);
+                std::vector<double> &x = (*fitness)(0, i);
 
                 bk = x;
 
@@ -1030,12 +1011,12 @@ class DiffSelDoublySparseModel : public ProbModel {
     double MoveBaselineFitness(double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa, 0);
+        std::vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                vector<double> &fit = (*fitness)(0, i);
-                const vector<int> &mask = (*sitemaskarray)[i];
+                std::vector<double> &fit = (*fitness)(0, i);
+                const std::vector<int> &mask = (*sitemaskarray)[i];
 
                 bk = fit;
 
@@ -1075,19 +1056,19 @@ class DiffSelDoublySparseModel : public ProbModel {
     double MoveFitnessShifts(int k, double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        vector<double> bk(Naa, 0);
+        std::vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                vector<double> &x = (*fitness)(k, i);
-                const vector<int> &t = (*toggle)(k - 1, i);
-                const vector<int> &m = sitemaskarray->GetVal(i);
+                std::vector<double> &x = (*fitness)(k, i);
+                const std::vector<int> &t = (*toggle)(k - 1, i);
+                const std::vector<int> &m = sitemaskarray->GetVal(i);
 
                 // compute condition-specific mask, which is the conjunction of baseline
                 // mask and condition-specific vector of toggles: s = m*t this mask
                 // specifies which amino-acids are both active (across the tree) and
                 // undergoing a fitness shift in current condition
-                vector<int> s(Naa, 0);
+                std::vector<int> s(Naa, 0);
 
                 // nshift: number of amino-acids that are active in baseline and
                 // undergoing a fitness shift in current condition nmask : number of
@@ -1141,22 +1122,22 @@ class DiffSelDoublySparseModel : public ProbModel {
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness, *sitemaskarray, *toggle);
 
-        if (fitnessshapemode < 2) {
-            ScalingMove(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+        if (resampled(fitnessshapemode )) {
+            Move::Scaling(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Scaling(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Scaling(fitnessshape, 0.1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
         }
         fitness->SetShape(fitnessshape);
 
-        if (fitnesscentermode < 2) {
-            ProfileMove(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+        if (resampled(fitnesscentermode )) {
+            Move::Profile(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Profile(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
+            Move::Profile(fitnesscenter, 0.1, 3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
         }
     }
@@ -1164,7 +1145,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! Move schedule for Gibbs resampling of shifting probabilities
     void ResampleShiftProb() {
         if (!shiftprobinvconc) {
-            cerr << "error: in resample shift prob\n";
+            std::cerr << "error: in resample shift prob\n";
             exit(1);
         }
         for (int k = 1; k < Ncond; k++) { ResampleShiftProb(k); }
@@ -1183,8 +1164,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &t = (*toggle)(k - 1, i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1230,8 +1211,8 @@ class DiffSelDoublySparseModel : public ProbModel {
     double GetNShift(int k) const {
         int nshift = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &t = (*toggle)(k - 1, i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1250,7 +1231,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     double GetNTarget() const {
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int nm = 0;
             for (int a = 0; a < Naa; a++) { nm += m[a]; }
 
@@ -1270,8 +1251,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &t = (*toggle)(k - 1, i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1304,8 +1285,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &t = (*toggle)(k - 1, i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1339,21 +1320,21 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! MH move schedule on mask hyperparameter (maskprob)
     void MoveMaskHyperParameters(int nrep) {
-        SlidingMove(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
+        Move::Sliding(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
             &DiffSelDoublySparseModel::UpdateMask, this);
-        SlidingMove(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
+        Move::Sliding(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
             &DiffSelDoublySparseModel::UpdateMask, this);
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon(int nrep) {
-        SlidingMove(maskepsilon, 1.0, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Sliding(maskepsilon, 1.0, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        SlidingMove(maskepsilon, 0.1, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Sliding(maskepsilon, 0.1, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 1.0, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Scaling(maskepsilon, 1.0, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 0.1, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+        Move::Scaling(maskepsilon, 0.1, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
             &DiffSelDoublySparseModel::UpdateAll, this);
     }
 
@@ -1363,7 +1344,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         double ntot = 0;
 
         for (int i = 0; i < Nsite; i++) {
-            vector<int> &mask = (*sitemaskarray)[i];
+            std::vector<int> &mask = (*sitemaskarray)[i];
 
             // compute number of active entries
             int naa = 0;
@@ -1415,7 +1396,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                         int b = 0;
                         while ((b < Naa) && ((!mask[b]) || (b == a))) { b++; }
                         if (b == Naa) {
-                            cerr << "error in MoveMasks, when choosing other amino-acid\n";
+                            std::cerr << "error in MoveMasks, when choosing other amino-acid\n";
                             exit(1);
                         }
                         /*
@@ -1426,7 +1407,7 @@ class DiffSelDoublySparseModel : public ProbModel {
                             }
                         }
                         if (b == -1)    {
-                            cerr << "error in Move masks\n";
+                            std::cerr << "error in Move masks\n";
                             exit(1);
                         }
                         */
@@ -1513,8 +1494,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
+            const std::vector<int> &t = (*toggle)(k - 1, i);
+            const std::vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1534,8 +1515,8 @@ class DiffSelDoublySparseModel : public ProbModel {
         double nacc = 0;
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                const vector<int> &t = (*toggle)(k - 1, i);
-                const vector<int> &m = sitemaskarray->GetVal(i);
+                const std::vector<int> &t = (*toggle)(k - 1, i);
+                const std::vector<int> &m = sitemaskarray->GetVal(i);
 
                 // compute nshift and nmask for this site only
                 int ns = 0;
@@ -1555,12 +1536,12 @@ class DiffSelDoublySparseModel : public ProbModel {
                         if (b) { a++; }
                     }
                     if (a == Naa) {
-                        cerr << "error in move shift toggles: overflow when choosing "
+                        std::cerr << "error in move shift toggles: overflow when choosing "
                                 "target amino-acid\n";
                         exit(1);
                     }
                     if (!m[a]) {
-                        cerr << "error in move shift toggles: a is not within mask\n";
+                        std::cerr << "error in move shift toggles: a is not within mask\n";
                         exit(1);
                     }
 
@@ -1637,23 +1618,6 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! return mean width of masks across sites
     double GetMeanWidth() const { return sitemaskarray->GetMeanWidth(); }
 
-    //! write header of trace file
-    void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\tlength\t";
-        os << "pi\t";
-        os << "width\t";
-        os << "epsilon\t";
-        os << "shape\t";
-        os << "center\t";
-        for (int k = 1; k < Ncond; k++) {
-            os << "prob" << k << '\t';
-            os << "nshift" << k << '\t';
-        }
-        os << "statent\t";
-        os << "rrent\t";
-        os << "gammanulls\n";
-    }
-
     double GetPredictedDNDS(int cond) const {
         double mean = 0;
         for (int i = 0; i < Nsite; i++) {
@@ -1663,114 +1627,68 @@ class DiffSelDoublySparseModel : public ProbModel {
         return mean;
     }
 
-    //! write trace (one line summarizing current state) into trace file
-    void Trace(ostream &os) const override {
-        os << GetLogPrior() << '\t';
-        os << GetLogLikelihood() << '\t';
-        os << 3 * branchlength->GetTotalLength() << '\t';
-        os << maskprob << '\t';
-        os << GetMeanWidth() << '\t';
-        os << maskepsilon << '\t';
-        os << fitnessshape << '\t';
-        os << Random::GetEntropy(fitnesscenter) << '\t';
-        for (int k = 1; k < Ncond; k++) {
-            os << shiftprob[k - 1] << '\t';
-            os << GetPropShift(k) << '\t';
-        }
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\t';
-        os << gammanullcount << '\n';
-    }
-
-    //! trace the current value of toggles, across all sites and all amino-acids,
-    //! under condition k (one single line in output stream)
-    void TraceToggle(int k, ostream &os) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            int m = 0;
-            for (int a = 0; a < Naa; a++) { m += sitemaskarray->GetVal(i)[a]; }
-            if (m > 1) {
-                for (int a = 0; a < Naa; a++) {
-                    os << sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a] << '\t';
-                }
-            } else {
-                for (int a = 0; a < Naa; a++) { os << 0 << '\t'; }
-            }
-        }
-        os << '\n';
-    }
-
-    //! trace the current value of fitness params, across all sites and all
-    //! amino-acids, under condition k (one single line in output stream)
-    void TraceFitness(int k, ostream &os) const {
-        for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) { os << fitness->GetVal(k, i)[a] << '\t'; }
-        }
-        os << '\n';
-    }
-
-    //! monitoring MCMC statistics
-    void Monitor(ostream &) const override {}
-
-    //! get complete parameter configuration from stream
-    void FromStream(istream &is) override {
-        if (blmode < 2) {
-            is >> lambda;
-            is >> *branchlength;
-        }
-        if (nucmode < 2) {
-            is >> nucrelrate;
-            is >> nucstat;
-        }
-        if (fitnessshapemode < 2) { is >> fitnessshape; }
-        if (fitnesscentermode < 2) { is >> fitnesscenter; }
-        is >> *fitness;
-        if (maskmode < 2) { is >> maskprob; }
-        if (maskmode < 3) { is >> *sitemaskarray; }
-        if (maskepsilonmode < 2) { is >> maskepsilon; }
-        if (Ncond > 1) {
-            is >> shiftprob;
-            is >> *toggle;
-        }
-    }
 
     //! write complete current parameter configuration to stream
-    void ToStream(ostream &os) const override {
-        if (blmode < 2) {
-            os << lambda << '\t';
-            os << *branchlength << '\t';
-        }
-        if (nucmode < 2) {
-            os << nucrelrate << '\t';
-            os << nucstat << '\t';
-        }
-        if (fitnessshapemode < 2) { os << fitnessshape << '\t'; }
-        if (fitnesscentermode < 2) { os << fitnesscenter << '\t'; }
-        os << *fitness << '\t';
-        if (maskmode < 2) { os << maskprob << '\t'; }
-        if (maskmode < 3) { os << *sitemaskarray << '\t'; }
-        if (maskepsilonmode < 2) { os << maskepsilon << '\t'; }
-        if (Ncond > 1) {
-            os << shiftprob << '\t';
-            os << *toggle << '\t';
-        }
+    void ToStream(std::ostream &os) { os << *this; }
+
+  template <class C>
+  void declare_model(C &t) {
+    if (blmode != shared) {
+      t.add("lambda", lambda);
+      t.add("branchlength", *branchlength);
     }
+    if (nucmode != shared) {
+      t.add("nucrelrate", nucrelrate);
+      t.add("nucstat", nucstat);
+    }
+    if (resampled(fitnessshapemode ) ) { t.add("fitnessshape", fitnessshape); }
+    if (resampled(fitnesscentermode) ) { t.add("fitnesscenter", fitnesscenter); }
+    t.add("fitness", *fitness);
+    if (gene_specific_mask_mode(maskmode)) { t.add("maskprob", maskprob); }
+    if (maskmode != no_mask) { t.add("sitemaskarray", *sitemaskarray); }
+    if (maskepsilonmode < 2) { t.add("maskepsilon", maskepsilon); }
+    if (Ncond > 1) {
+      t.add("shiftprob", shiftprob);
+      t.add("toggle", *toggle);
+    }
+  }
+
+  template <class C>
+  void declare_stats(C &t) {
+    t.add("logprior", this, &DiffSelDoublySparseModel::GetLogPrior);
+    t.add("lnL", this, &DiffSelDoublySparseModel::GetLogLikelihood);
+    t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); }); // why 3 times?
+    t.add("maskprob", maskprob);
+    t.add("meanwidth", this, &DiffSelDoublySparseModel::GetMeanWidth);
+    t.add("maskepsilon", maskepsilon);
+    t.add("fitnessshape", fitnessshape);
+    t.add("fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
+    for (int k = 1; k < Ncond; k++) {
+      t.add("shiftprob_" + std::to_string(k), shiftprob[k - 1]);
+      t.add("propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
+    }
+    t.add("nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
+    t.add("nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
+    t.add("gammanullcount", gammanullcount );
+  }
+
 
     //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
-        if (blmode < 2) {
+        if (blmode != shared) {
             size++;
             size += branchlength->GetMPISize();
         }
-        if (nucmode < 2) {
+        if (nucmode !=shared) {
             size += nucrelrate.size();
             size += nucstat.size();
         }
-        if (fitnessshapemode < 2) { size++; }
-        if (fitnesscentermode < 2) { size += fitnesscenter.size(); }
+        if (resampled(fitnessshapemode ) ) { size++; }
+        if (resampled(fitnesscentermode ) ) { size += fitnesscenter.size(); }
         size += fitness->GetMPISize();
-        if (maskmode < 2) { size++; }
-        if (maskmode < 3) { size += sitemaskarray->GetMPISize(); }
+        if (gene_specific_mask_mode(maskmode)) { size++; }
+        if (maskmode !=no_mask) { size += sitemaskarray->GetMPISize(); }
         if (maskepsilonmode < 2) { size++; }
         if (Ncond > 1) {
             size += shiftprob.size();
@@ -1781,19 +1699,19 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! get complete parameter configuration from MPI buffer
     void MPIGet(const MPIBuffer &is) {
-        if (blmode < 2) {
+        if (blmode != shared) {
             is >> lambda;
             is >> *branchlength;
         }
-        if (nucmode < 2) {
+        if (nucmode != shared) {
             is >> nucrelrate;
             is >> nucstat;
         }
-        if (fitnessshapemode < 2) { is >> fitnessshape; }
-        if (fitnesscentermode < 2) { is >> fitnesscenter; }
+        if (resampled(fitnessshapemode ) ) { is >> fitnessshape; }
+        if (resampled(fitnesscentermode ) ) { is >> fitnesscenter; }
         is >> *fitness;
-        if (maskmode < 2) { is >> maskprob; }
-        if (maskmode < 3) { is >> *sitemaskarray; }
+        if (gene_specific_mask_mode(maskmode)) { is >> maskprob; }
+        if (maskmode != no_mask) { is >> *sitemaskarray; }
         if (maskepsilonmode < 2) { is >> maskepsilon; }
         if (Ncond > 1) {
             is >> shiftprob;
@@ -1803,19 +1721,19 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! write complete current parameter configuration into MPI buffer
     void MPIPut(MPIBuffer &os) const {
-        if (blmode < 2) {
+        if (blmode != shared) {
             os << lambda;
             os << *branchlength;
         }
-        if (nucmode < 2) {
+        if (nucmode != shared) {
             os << nucrelrate;
             os << nucstat;
         }
-        if (fitnessshapemode < 2) { os << fitnessshape; }
-        if (fitnesscentermode < 2) { os << fitnesscenter; }
+        if (resampled(fitnessshapemode ) ) { os << fitnessshape; }
+        if (resampled(fitnesscentermode ) ) { os << fitnesscenter; }
         os << *fitness;
-        if (maskmode < 2) { os << maskprob; }
-        if (maskmode < 3) { os << *sitemaskarray; }
+        if (gene_specific_mask_mode(maskmode)) { os << maskprob; }
+        if (maskmode!= no_mask) { os << *sitemaskarray; }
         if (maskepsilonmode < 2) { os << maskepsilon; }
         if (Ncond > 1) {
             os << shiftprob;
@@ -1823,3 +1741,43 @@ class DiffSelDoublySparseModel : public ProbModel {
         }
     }
 };
+
+std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseModel> &m) {
+    std::string model_name;
+    std::string datafile;
+    std::string treefile;
+    int  Ncond, Nlevel, codonmodel ;
+    int fitnessshapemode, fitnesscentermode ; //implicit cast of enum into int
+    double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc ;
+
+    is >> model_name;
+    if (model_name != "DiffselDoublySparse") {
+        std::cerr << "Expected DiffselDoublySparse for model name, got " << model_name << "\n";
+        exit(1);
+    }
+    is >> datafile;
+    is >> treefile;
+    is >> Ncond >> Nlevel >> codonmodel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean >> shiftprobinvconc >> fitnesscentermode ;
+    m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel, maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean, shiftprobinvconc, param_mode_t(fitnesscentermode) ));
+    Tracer tracer{*m, &DiffSelDoublySparseModel::declare_model};
+    tracer.read_line(is);
+    return is;
+}
+
+std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel& m) {
+    Tracer tracer{m, &DiffSelDoublySparseModel::declare_model};
+    os << "DiffselDoublySparse" << '\t';
+    os << m.datafile << '\t';
+    os << m.treefile << '\t';
+    os << m.Ncond << '\t' ;
+    os << m.Nlevel << '\t' ;
+    os << m.codonmodel << '\t' ;
+    os << m.maskepsilonmode << '\t';
+    os << m.fitnessshapemode << '\t';
+    os << m.pihypermean << '\t';
+    os << m.shiftprobmean << '\t';
+    os << m.shiftprobinvconc << '\t';
+    os << m.fitnesscentermode << '\t';
+    tracer.write_line(os);
+    return os;
+}
