@@ -106,14 +106,16 @@ class MultiGeneSingleOmegaModelShared {
         }
 
         // Omega
-
         omegaarray = new IIDGamma(
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
         // MPI communication groups
-        mpiomega =
-            make_comm_group(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}),
-                gather<double>(*this, {"omegaarray"}));
+        // clang-format off
+        mpiomega = make_comm_group(
+                broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}),
+                gather<double>(*this, {"omegaarray"})
+            );
+        // clang-format on
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
