@@ -40,10 +40,6 @@ class GatherMaster : public Proxy, public RegistrarBase<GatherMaster<T>> {
         });
     }
 
-    void register_element(std::string s, SimpleArray<T>& target, const Partition& partition) {
-        register_element(s, target.GetArray(), partition);
-    }
-
     void read_buffer() {
         std::vector<buf_it> its{buf.begin()};
         for (int i = 1; i < p.size; i++) { its.push_back(buf.begin() + displs.at(i)); }
@@ -78,10 +74,6 @@ class GatherSlave : public Proxy, public RegistrarBase<GatherSlave<T>> {
     void register_element(std::string, std::vector<T>& target, Partition&) {
         writers.push_back(
             [&target, this]() { buf.insert(buf.end(), target.begin(), target.end()); });
-    }
-
-    void register_element(std::string s, SimpleArray<T>& target, Partition& partition) {
-        register_element(s, target.GetArray(), partition);
     }
 
     void write_buffer() {

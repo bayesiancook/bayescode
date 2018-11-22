@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <set>
 #include <string>
+#include "lib/Array.hpp"
+class IIDGamma;
 
 /*
 ====================================================================================================
@@ -33,11 +35,23 @@ class RegistrarBase {
 
   public:
     template <class... Args>
-    void register_element(std::string s, Args... args) {
+    void register_element(std::string s, IIDGamma& target, Args&&... args) {
+        auto& target_array_ref = dynamic_cast<SimpleArray<double>&>(target);
+        static_cast<T*>(this)->register_element(s, target_array_ref, std::forward<Args>(args)...);
+    }
+
+    template <class Target, class... Args>
+    void register_element(std::string s, SimpleArray<Target>& target, Args&&... args) {
+        static_cast<T*>(this)->register_element(s, target.GetArray(), std::forward<Args>(args)...);
+    }
+
+    template <class Target, class... Args>
+    void register_element(std::string s, Target&, Args... args) {
         std::stringstream ss;
         ss << "\e[1m\e[31mError\e[0m| \e[33mregister_element\e[0m overload for element \e[32m" << s
            << "\e[0m not implemented for class \e[32m" << demangle(typeid(T).name())
-           << "\e[0m\n     \\ overload parameters are: \e[32m";
+           << "\e[0m\n     | reference type is \e[32m" << demangle(typeid(Target).name())
+           << "\e[0m\n     \\ other parameters are: \e[32m";
         std::vector<std::string> types{demangle(typeid(Args).name())...};
         for (auto t : types) { ss << t << " "; }
         ss << "\e[0m\n";

@@ -99,7 +99,6 @@ class Tracer {
         set_from_stream.push_back([&v](std::istream& is) { is >> v; });
     }
 
-
     void add(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
 
