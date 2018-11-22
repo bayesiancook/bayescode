@@ -199,6 +199,10 @@ class SimpleArray : public Array<T> {
     //! interface
     const std::vector<T> &GetArray() const { return array; }
 
+    //! return a ref to the std::vector<T> of which this class is the
+    //! interface
+    std::vector<T> &GetArray() { return array; }
+
     //! Apply a permutation over the arguments, such that entry indexed by i after
     //! the call is equal to entry formely indexed by permut[i]
     virtual void Permute(const Selector<int> &permut) {
