@@ -20,6 +20,7 @@ include_directories("utils")
 
 # Static libs
 add_library (tree_lib STATIC "src/tree/implem.cpp")
+add_library (mpicomponent_lib STATIC "src/mpi_components/Process.cpp")
 
 set(BAYESCODE_LIB
     src/lib/AAMutSelOmegaCodonSubMatrix.cpp
@@ -82,14 +83,14 @@ target_link_libraries(diffseldsparse bayescode_lib tree_lib)
 
 # Multi-gene single omega (multigeneglobom)
 add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
-target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES})
+target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")
-target_link_libraries(all_tests ${MPI_LIBRARIES})
+target_link_libraries(all_tests ${MPI_LIBRARIES} mpicomponent_lib)
 
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)
 
 add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
-target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
+target_link_libraries(mpi_par_test ${MPI_LIBRARIES} mpicomponent_lib)
