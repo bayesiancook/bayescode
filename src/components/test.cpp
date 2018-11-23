@@ -37,7 +37,16 @@ TEST_CASE("Tracer writing test") {
 
     t.write_header(ss);
     t.write_line(ss);
-    m = {1.11, 2.21, {3.31, 4.41, 5.51}};
+    auto old_v_addr = &(m.v[0]);
+    m.a = 1.11;
+    m.b = 2.21;
+    m.v[0] = 3.31;
+    m.v[1] = 4.41;
+    m.v[2] = 5.51;
+    CHECK(old_v_addr == &(m.v[0]));
+    CHECK(m.v[0] == 3.31);
+    CHECK(m.v[1] == 4.41);
+    CHECK(m.v[2] == 5.51);
     t.write_line(ss);
 
     CHECK(ss.str() ==
