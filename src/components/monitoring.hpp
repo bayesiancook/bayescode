@@ -20,7 +20,9 @@ class MonitorManager {
     void new_monitor(std::string name, Args&&... args) {
         static_assert(std::is_base_of<AbstractMonitor, T>::value,
             "Monitor does not inherit from AbstractMonitor");
-        monitors.emplace(name, dynamic_cast<AbstractMonitor*>(new T(std::forward<Args>(args)...)));
+        monitors.emplace(std::piecewise_construct, std::forward_as_tuple(name),
+            std::forward_as_tuple(
+                dynamic_cast<AbstractMonitor*>(new T(std::forward<Args>(args)...))));
     }
 
     void print(std::ostream& os) const {
