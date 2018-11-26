@@ -83,18 +83,18 @@ TEST_CASE("Arg parse test") {
     for (int i = 0; i < argc; i++) { free(argv[i]); }
 }
 
+class MyMonitor : public AbstractMonitor {
+    int count;
+
+  public:
+    MyMonitor(int count) : count(count) {}
+
+    void print(std::ostream& os) const final { os << "MyMonitor(" << count << ")"; }
+
+    void update(int n) { count += n; }
+};
+
 TEST_CASE("Monitoring base classes") {
-    class MyMonitor : public AbstractMonitor {
-        int count;
-
-      public:
-        MyMonitor(int count) : count(count) {}
-
-        void print(std::ostream& os) const final { os << "MyMonitor(" << count << ")"; }
-
-        void update(int n) { count += n; }
-    };
-
     auto f = [](int m) { return 3 * m; };
 
     MonitorManager m;
@@ -109,5 +109,21 @@ TEST_CASE("Monitoring base classes") {
     m.run_and_monitor<MyMonitor>(m1, f, 4);
     m.run_and_monitor<MyMonitor>(m2, f, 2);
     m.print(ss);
+    CHECK(ss.str() == "MyMonitor(15)\nMyMonitor(11)\n");
+}
+
+TEST_CASE("Global monitor") {
+    auto f = [](int m) { return 3 * m; };
+
+    {
+        auto m1 = gm->new_monitor<MyMonitor>(3);
+        auto m2 = gm->new_monitor<MyMonitor>(5);
+
+        gm->run_and_monitor<MyMonitor>(m1, f, 4);
+        gm->run_and_monitor<MyMonitor>(m2, f, 2);
+    }
+
+    std::stringstream ss;
+    gm->print(ss);
     CHECK(ss.str() == "MyMonitor(15)\nMyMonitor(11)\n");
 }

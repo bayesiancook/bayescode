@@ -41,3 +41,6 @@ class MonitorManager {
         monitor_ref.update(result);
     }
 };
+
+// global monitor
+extern std::unique_ptr<MonitorManager> gm;
