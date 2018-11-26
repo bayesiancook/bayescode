@@ -5,6 +5,7 @@
 #include <numeric>
 #include <set>
 #include <vector>
+#include "utils/date.h"
 
 class Token {
     std::function<std::string()> raw_string;
@@ -46,7 +47,12 @@ class Token {
     size_t size() const { return raw_string().size(); }
 };
 
-std::string timestamp() { return "13:12 22/11/1989"; }
+std::string timestamp_time() {
+    return date::format("%H:%M:%S",
+        std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()));
+}
+
+std::string timestamp_date() { return date::format("%Y %b %d", std::chrono::system_clock::now()); }
 
 // quick functions for specific token types
 template <class... Args>
