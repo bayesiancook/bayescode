@@ -10,7 +10,7 @@
 using generator_t = std::function<std::string()>;
 using decorator_t = std::function<std::string(std::string)>;
 
-decorator_t decorator(std::set<int> modifiers) {
+decorator_t make_decorator(std::set<int> modifiers) {
     std::string modif_prefix, modif_suffix;
     if (modifiers.size() > 0) {
         for (auto modifier : modifiers) { modif_prefix += "\e[" + std::to_string(modifier) + "m"; }
@@ -34,31 +34,31 @@ std::string format(const char* format, Args&&... args) {
 }
 
 class Token {
-    generator_t raw_string;
-    decorator_t modified_string{[](std::string s) { return s; }};
+    generator_t generator;
+    decorator_t decorator{[](std::string s) { return s; }};
 
   public:
     template <class... Args>
     Token(std::set<int> modifiers, const char* fmt, Args&&... args)
-        : modified_string(decorator(modifiers)) {
+        : decorator(make_decorator(modifiers)) {
         /* -- */
         auto formatted_string = format(fmt, std::forward<Args>(args)...);
-        raw_string = [formatted_string]() { return formatted_string; };
+        generator = [formatted_string]() { return formatted_string; };
     }
 
     template <class F>
-    Token(F f) : raw_string(f) {}
-    Token(std::string s) : raw_string([s]() { return s; }) {}
-    Token(const char* s) : raw_string([s]() { return std::string(s); }) {}
+    Token(F f) : generator(f) {}
+    Token(std::string s) : generator([s]() { return s; }) {}
+    Token(const char* s) : generator([s]() { return std::string(s); }) {}
 
     template <class Arg>
     Token(Arg&& arg, decorator_t d) : Token(arg) {
-        modified_string = d;
+        decorator = d;
     }
 
-    std::string str() const { return modified_string(raw_string()); }
+    std::string str() const { return decorator(generator()); }
 
-    size_t size() const { return raw_string().size(); }
+    size_t size() const { return generator().size(); }
 };
 
 std::string timestamp_time() {
@@ -73,9 +73,14 @@ std::string timestamp_full() {
 }
 
 // quick functions for specific token types
-Token bold_token(std::string s) { return Token(s, decorator({1})); }
-Token red_token(std::string s) { return Token(s, decorator({31})); }
-Token bold_red_token(std::string s) { return Token(s, decorator({1, 31})); }
+Token bold_token(std::string s) { return Token(s, make_decorator({1})); }
+Token red_token(std::string s) { return Token(s, make_decorator({31})); }
+Token bold_red_token(std::string s) { return Token(s, make_decorator({1, 31})); }
+Token bold_green_token(std::string s) { return Token(s, make_decorator({1, 32})); }
+Token bold_yellow_token(std::string s) { return Token(s, make_decorator({1, 33})); }
+Token bold_blue_token(std::string s) { return Token(s, make_decorator({1, 34})); }
+Token bold_magenta_token(std::string s) { return Token(s, make_decorator({1, 35})); }
+Token bold_cyan_token(std::string s) { return Token(s, make_decorator({1, 36})); }
 
 class MessageFormat {
     std::vector<Token> _prefix, _suffix, _line_prefix;
