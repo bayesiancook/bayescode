@@ -7,40 +7,54 @@
 #include <vector>
 #include "utils/date.h"
 
+using generator_t = std::function<std::string()>;
+using decorator_t = std::function<std::string(std::string)>;
+
+decorator_t decorator(std::set<int> modifiers) {
+    std::string modif_prefix, modif_suffix;
+    if (modifiers.size() > 0) {
+        for (auto modifier : modifiers) { modif_prefix += "\e[" + std::to_string(modifier) + "m"; }
+        modif_suffix += "\e[0m";
+    }
+    return [modif_prefix, modif_suffix](std::string s) { return modif_prefix + s + modif_suffix; };
+}
+
+template <class... Args>
+std::string format(const char* format, Args&&... args) {
+    char* buf = nullptr;
+    int res = asprintf(&buf, format, std::forward<Args>(args)...);
+    if (res == -1) {
+        fprintf(stderr, "Error in Logger::message: something went wrong in asprintf!\n");
+    }
+
+    // storing raw string in function
+    std::string buf_string(buf);
+    free(buf);
+    return buf_string;
+}
+
 class Token {
-    std::function<std::string()> raw_string;
-    std::function<std::string(std::string)> modified_string{[](std::string s) { return s; }};
+    generator_t raw_string;
+    decorator_t modified_string{[](std::string s) { return s; }};
 
   public:
     template <class... Args>
-    Token(std::set<int> modifiers, std::string format, Args&&... args) {
-        // formatting to intermediate string
-        char* buf = nullptr;
-        int res = asprintf(&buf, format.c_str(), std::forward<Args>(args)...);
-        if (res == -1) {
-            fprintf(stderr, "Error in Logger::message: something went wrong in asprintf!\n");
-        }
-
-        // storing raw string in function
-        std::string buf_string(buf);
-        free(buf);
-        raw_string = [buf_string]() { return buf_string; };
-
-        std::string modif_prefix, modif_suffix;
-        if (modifiers.size() > 0) {
-            for (auto modifier : modifiers) {
-                modif_prefix += "\e[" + std::to_string(modifier) + "m";
-            }
-            modif_suffix += "\e[0m";
-        }
-        modified_string = [modif_prefix, modif_suffix](
-            std::string s) { return modif_prefix + s + modif_suffix; };
+    Token(std::set<int> modifiers, const char* fmt, Args&&... args)
+        : modified_string(decorator(modifiers)) {
+        /* -- */
+        auto formatted_string = format(fmt, std::forward<Args>(args)...);
+        raw_string = [formatted_string]() { return formatted_string; };
     }
 
     template <class F>
     Token(F f) : raw_string(f) {}
     Token(std::string s) : raw_string([s]() { return s; }) {}
     Token(const char* s) : raw_string([s]() { return std::string(s); }) {}
+
+    template <class Arg>
+    Token(Arg&& arg, decorator_t d) : Token(arg) {
+        modified_string = d;
+    }
 
     std::string str() const { return modified_string(raw_string()); }
 
@@ -59,20 +73,9 @@ std::string timestamp_full() {
 }
 
 // quick functions for specific token types
-template <class... Args>
-Token bold(std::string format, Args&&... args) {
-    return Token({1}, format, std::forward<Args>(args)...);
-}
-
-template <class... Args>
-Token red(std::string format, Args&&... args) {
-    return Token({31}, format, std::forward<Args>(args)...);
-}
-
-template <class... Args>
-Token bold_red(std::string format, Args&&... args) {
-    return Token({1, 31}, format, std::forward<Args>(args)...);
-}
+Token bold_token(std::string s) { return Token(s, decorator({1})); }
+Token red_token(std::string s) { return Token(s, decorator({31})); }
+Token bold_red_token(std::string s) { return Token(s, decorator({1, 31})); }
 
 class MessageFormat {
     std::vector<Token> _prefix, _suffix, _line_prefix;
@@ -108,7 +111,7 @@ class Logger {
     }
 
     template <class... Args>
-    void message(MessageFormat& message_format, std::string format, Args&&... args) const {
+    void message(MessageFormat& message_format, const char* format, Args&&... args) const {
         // replace all \n with \n + line_prefix
         auto message = Token({}, format, std::forward<Args>(args)...).str();
         auto line_prefix = "\n" + message_format.line_prefix();

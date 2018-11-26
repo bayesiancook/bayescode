@@ -1,14 +1,16 @@
 #include "Logger.hpp"
 
 int main() {
-    MessageFormat error({bold(std::string(75, '=')), "\n", bold_red("ERROR"), bold(" | ")},
-        {"\n", bold(std::string(75, '=')), "\n"}, {bold("      | ")});
-    MessageFormat warning(
-        {Token({1, 32}, "WARNING"), bold(" ~ ")}, {bold(" ~\n")}, {bold("         ")});
-    MessageFormat info({Token({1, 36}, "INFO"), bold(" ("), Token(timestamp_date), bold(", "),
-                           Token(timestamp_time), bold(") ~ ")},
-        {bold(" ~\n")}, {Token(" ")});
-    MessageFormat debug({Token({1, 35}, "DEBUG"), bold(" ~ ")}, {bold(" ~\n")}, {bold("        ")});
+    MessageFormat error(
+        {bold_token(std::string(75, '=')), "\n", bold_red_token("ERROR"), bold_token(" | ")},
+        {"\n", bold_token(std::string(75, '=')), "\n"}, {bold_token("      | ")});
+    MessageFormat warning({Token({1, 32}, "WARNING"), bold_token(" ~ ")}, {bold_token(" ~\n")},
+        {bold_token("         ")});
+    MessageFormat info({Token({1, 36}, "INFO"), bold_token(" ("), Token(timestamp_date),
+                           bold_token(", "), Token(timestamp_time), bold_token(") ~ ")},
+        {bold_token(" ~\n")}, {Token(" ")});
+    MessageFormat debug({Token({1, 35}, "DEBUG"), bold_token(" ~ ")}, {bold_token(" ~\n")},
+        {bold_token("        ")});
 
     Logger l(std::cout);
     l.message(error, "Something failed!\nbadly!\nlike, very badly!");
