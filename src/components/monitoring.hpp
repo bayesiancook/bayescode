@@ -42,3 +42,17 @@ class MonitorManager {
 
 // global monitor
 extern std::unique_ptr<MonitorManager> gm;
+
+template <class T>
+class MeanMonitor : public AbstractMonitor {
+    T sum{0};
+    int count{0};
+
+  public:
+    void print(std::ostream& os) const final { os << sum / static_cast<double>(count); }
+
+    void update(T x) {
+        sum += x;
+        count++;
+    }
+};

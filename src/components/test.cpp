@@ -113,6 +113,7 @@ TEST_CASE("Monitoring base classes") {
 }
 
 TEST_CASE("Global monitor") {
+    gm.reset(new MonitorManager());
     auto f = [](int m) { return 3 * m; };
 
     {
@@ -127,4 +128,21 @@ TEST_CASE("Global monitor") {
     std::stringstream ss;
     gm->print(ss);
     CHECK(ss.str() == "m1: MyMonitor(15)\nm2: MyMonitor(11)\n");
+}
+
+TEST_CASE("MeanMonitor") {
+    gm.reset(new MonitorManager());
+    auto f = [](int n, int m) { return static_cast<double>(n) / static_cast<double>(m); };
+
+    { gm->new_monitor<MeanMonitor<double>>("m"); }
+    {
+        gm->run_and_monitor<MeanMonitor<double>>("m", f, 2, 3);
+        gm->run_and_monitor<MeanMonitor<double>>("m", f, 1, 3);
+        gm->run_and_monitor<MeanMonitor<double>>("m", f, 3, 4);
+        gm->run_and_monitor<MeanMonitor<double>>("m", f, 1, 4);
+    }
+
+    std::stringstream ss;
+    gm->print(ss);
+    CHECK(ss.str() == "m: 0.5\n");
 }
