@@ -14,5 +14,7 @@ int main() {
     l.message(error, "Something failed!\nbadly!\nlike, very badly!");
     l.message(warning, "This is baaaad!\n baaad!");
     l.message(info, "This is a message %d", 3);
+    std::cin.ignore();
+    l.message(info, "This is a message");
     l.message(debug, "This is a\ndebug message");
 }

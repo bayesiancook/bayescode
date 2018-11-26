@@ -54,6 +54,10 @@ std::string timestamp_time() {
 
 std::string timestamp_date() { return date::format("%Y %b %d", std::chrono::system_clock::now()); }
 
+std::string timestamp_full() {
+    return date::format("%Y-%m-%dT%T%z", std::chrono::system_clock::now());
+}
+
 // quick functions for specific token types
 template <class... Args>
 Token bold(std::string format, Args&&... args) {
