@@ -2,6 +2,7 @@
 
 #include "BaseArgParse.hpp"
 #include "Tracer.hpp"
+#include "monitoring.hpp"
 
 using namespace std;
 
@@ -80,4 +81,23 @@ TEST_CASE("Arg parse test") {
     // CHECK(cmd.checkpoint_file() == "tmp.param");
 
     for (int i = 0; i < argc; i++) { free(argv[i]); }
+}
+
+TEST_CASE("Monitoring base classes") {
+    class MyMonitor : public AbstractMonitor {
+        int count;
+
+      public:
+        MyMonitor(int count) : count(count) {}
+
+        void print(std::ostream& os) const final { os << "MyMonitor(" << count << ")"; }
+    };
+
+    MonitorManager m;
+    m.new_monitor<MyMonitor>(3);
+    m.new_monitor<MyMonitor>(5);
+
+    std::stringstream ss;
+    m.print(ss);
+    CHECK(ss.str() == "MyMonitor(3)\nMyMonitor(5)\n");
 }
