@@ -98,32 +98,33 @@ TEST_CASE("Monitoring base classes") {
     auto f = [](int m) { return 3 * m; };
 
     MonitorManager m;
-    auto m1 = m.new_monitor<MyMonitor>(3);
-    auto m2 = m.new_monitor<MyMonitor>(5);
+    m.new_monitor<MyMonitor>("m1", 3);
+    m.new_monitor<MyMonitor>("m2", 5);
 
     std::stringstream ss;
     m.print(ss);
-    CHECK(ss.str() == "MyMonitor(3)\nMyMonitor(5)\n");
+    CHECK(ss.str() == "m1: MyMonitor(3)\nm2: MyMonitor(5)\n");
     ss.str("");
 
-    m.run_and_monitor<MyMonitor>(m1, f, 4);
-    m.run_and_monitor<MyMonitor>(m2, f, 2);
+    m.run_and_monitor<MyMonitor>("m1", f, 4);
+    m.run_and_monitor<MyMonitor>("m2", f, 2);
     m.print(ss);
-    CHECK(ss.str() == "MyMonitor(15)\nMyMonitor(11)\n");
+    CHECK(ss.str() == "m1: MyMonitor(15)\nm2: MyMonitor(11)\n");
 }
 
 TEST_CASE("Global monitor") {
     auto f = [](int m) { return 3 * m; };
 
     {
-        auto m1 = gm->new_monitor<MyMonitor>(3);
-        auto m2 = gm->new_monitor<MyMonitor>(5);
-
-        gm->run_and_monitor<MyMonitor>(m1, f, 4);
-        gm->run_and_monitor<MyMonitor>(m2, f, 2);
+        gm->new_monitor<MyMonitor>("m1", 3);
+        gm->new_monitor<MyMonitor>("m2", 5);
+    }
+    {
+        gm->run_and_monitor<MyMonitor>("m1", f, 4);
+        gm->run_and_monitor<MyMonitor>("m2", f, 2);
     }
 
     std::stringstream ss;
     gm->print(ss);
-    CHECK(ss.str() == "MyMonitor(15)\nMyMonitor(11)\n");
+    CHECK(ss.str() == "m1: MyMonitor(15)\nm2: MyMonitor(11)\n");
 }

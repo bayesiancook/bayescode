@@ -1,8 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <memory>
-#include <vector>
 
 class AbstractMonitor {
   public:
@@ -11,33 +11,31 @@ class AbstractMonitor {
 };
 
 class MonitorManager {
-    std::vector<std::unique_ptr<AbstractMonitor>> monitors;
+    std::map<std::string, std::unique_ptr<AbstractMonitor>> monitors;
 
   public:
-    using monitor_index_t = size_t;
-
     MonitorManager() = default;
 
     template <class T, class... Args>
-    monitor_index_t new_monitor(Args&&... args) {
+    void new_monitor(std::string name, Args&&... args) {
         static_assert(std::is_base_of<AbstractMonitor, T>::value,
             "Monitor does not inherit from AbstractMonitor");
-        monitors.emplace_back(dynamic_cast<AbstractMonitor*>(new T(std::forward<Args>(args)...)));
-        return monitors.size() - 1;
+        monitors.emplace(name, dynamic_cast<AbstractMonitor*>(new T(std::forward<Args>(args)...)));
     }
 
     void print(std::ostream& os) const {
         for (auto& monitor : monitors) {
-            monitor->print(os);
+            os << monitor.first << ": ";
+            monitor.second->print(os);
             os << "\n";
         }
     }
 
     template <class M, class F, class... Args>
-    void run_and_monitor(monitor_index_t i, F f, Args&&... args) {
-        assert(dynamic_cast<M*>(monitors.at(i).get()) != nullptr);
+    void run_and_monitor(std::string name, F f, Args&&... args) {
+        assert(dynamic_cast<M*>(monitors.at(name).get()) != nullptr);
         auto result = f(std::forward<Args>(args)...);
-        auto& monitor_ref = dynamic_cast<M&>(*monitors.at(i));
+        auto& monitor_ref = dynamic_cast<M&>(*monitors.at(name));
         monitor_ref.update(result);
     }
 };
