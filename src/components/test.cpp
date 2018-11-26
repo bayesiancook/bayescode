@@ -91,13 +91,23 @@ TEST_CASE("Monitoring base classes") {
         MyMonitor(int count) : count(count) {}
 
         void print(std::ostream& os) const final { os << "MyMonitor(" << count << ")"; }
+
+        void update(int n) { count += n; }
     };
 
+    auto f = [](int m) { return 3 * m; };
+
     MonitorManager m;
-    m.new_monitor<MyMonitor>(3);
-    m.new_monitor<MyMonitor>(5);
+    auto m1 = m.new_monitor<MyMonitor>(3);
+    auto m2 = m.new_monitor<MyMonitor>(5);
 
     std::stringstream ss;
     m.print(ss);
     CHECK(ss.str() == "MyMonitor(3)\nMyMonitor(5)\n");
+    ss.str("");
+
+    m.run_and_monitor<MyMonitor>(m1, f, 4);
+    m.run_and_monitor<MyMonitor>(m2, f, 2);
+    m.print(ss);
+    CHECK(ss.str() == "MyMonitor(15)\nMyMonitor(11)\n");
 }
