@@ -94,7 +94,7 @@ class Logger {
         auto line_prefix = "\n" + message_format.line_prefix();
         size_t pos = 0;
         while (true) {
-            pos = message.find('\n', pos + 1);
+          pos = message.find('\n', pos + 1);
             if (pos == std::string::npos) { break; }
             message.replace(pos, 1, line_prefix);
         }
