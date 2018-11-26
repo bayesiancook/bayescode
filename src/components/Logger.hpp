@@ -1,13 +1,14 @@
 #pragma once
 
+#include <functional>
 #include <iostream>
 #include <numeric>
 #include <set>
 #include <vector>
 
 class Token {
-    std::string _value;
-    size_t _size;
+    std::function<std::string()> raw_string;
+    std::function<std::string(std::string)> modified_string{[](std::string s) { return s; }};
 
   public:
     template <class... Args>
@@ -18,25 +19,34 @@ class Token {
         if (res == -1) {
             fprintf(stderr, "Error in Logger::message: something went wrong in asprintf!\n");
         }
-        _value = buf;
-        free(buf);
-        _size = _value.size();  // size BEFORE modifiers (ie, in terms of displayed characters)
 
+        // storing raw string in function
+        std::string buf_string(buf);
+        free(buf);
+        raw_string = [buf_string]() { return buf_string; };
+
+        std::string modif_prefix, modif_suffix;
         if (modifiers.size() > 0) {
             for (auto modifier : modifiers) {
-                _value = "\e[" + std::to_string(modifier) + "m" + _value;
+                modif_prefix += "\e[" + std::to_string(modifier) + "m";
             }
-            _value += "\e[0m";
+            modif_suffix += "\e[0m";
         }
+        modified_string = [modif_prefix, modif_suffix](
+            std::string s) { return modif_prefix + s + modif_suffix; };
     }
 
-    Token(std::string s) : _value(s), _size(_value.size()) {}
-    Token(const char* s) : _value(s), _size(_value.size()) {}
+    template <class F>
+    Token(F f) : raw_string(f) {}
+    Token(std::string s) : raw_string([s]() { return s; }) {}
+    Token(const char* s) : raw_string([s]() { return std::string(s); }) {}
 
-    std::string str() const { return _value; }
+    std::string str() const { return modified_string(raw_string()); }
 
-    size_t size() const { return _size; }
+    size_t size() const { return raw_string().size(); }
 };
+
+std::string timestamp() { return "13:12 22/11/1989"; }
 
 // quick functions for specific token types
 template <class... Args>
@@ -94,7 +104,7 @@ class Logger {
         auto line_prefix = "\n" + message_format.line_prefix();
         size_t pos = 0;
         while (true) {
-          pos = message.find('\n', pos + 1);
+            pos = message.find('\n', pos + 1);
             if (pos == std::string::npos) { break; }
             message.replace(pos, 1, line_prefix);
         }
