@@ -119,3 +119,22 @@ TEST_CASE("Make operations") {
     bye->release();
     CHECK(ss.str() == "Hello! Hi! Goodbye! Bye! ");
 }
+
+TEST_CASE("ForInContainer test") {
+    std::stringstream ss;
+
+    struct MyStruct {
+        Operation op;
+        MyStruct(std::stringstream& ss, int i)
+            : op([&ss, i]() { ss << "+" << i; }, [&ss, i]() { ss << "-" << i; }) {}
+        double unused{0};
+    };
+
+    std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
+    ForInContainer<vector<MyStruct>, MyStruct> group(v, [](MyStruct& s) -> Proxy& { return s.op; });
+
+    group.acquire();
+    CHECK(ss.str() == "+1+2+3");
+    group.release();
+    CHECK(ss.str() == "+1+2+3-1-2-3");
+}
