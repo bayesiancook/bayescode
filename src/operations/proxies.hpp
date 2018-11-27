@@ -102,12 +102,11 @@ std::unique_ptr<Proxy> make_release_operation(Release f_release) {
 ====================================================================================================
   ForInContainer class
 ==================================================================================================*/
-template <class Container, class Element>
+template <class Container>
 class ForInContainer : public Proxy {
+    using Element = typename Container::value_type;
     Container& container;
     std::function<Proxy&(Element&)> get_proxy;
-    static_assert(std::is_same<typename Container::value_type, Element>::value,
-        "ForInContainer: template argument Container does not seem to have elemnt type Element");
 
   public:
     template <class GetProxy>
@@ -125,3 +124,14 @@ class ForInContainer : public Proxy {
         for (auto& element : container) { get_proxy(element).release(); }
     }
 };
+
+template <class Container, class GetProxy>
+std::unique_ptr<Proxy> make_for_in_container(Container& container, GetProxy get_proxy) {
+    return std::unique_ptr<Proxy>(
+        dynamic_cast<Proxy*>(new ForInContainer<Container>(container, get_proxy)));
+}
+
+template <class Container>
+std::unique_ptr<Proxy> make_for_in_container(Container& container) {
+    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new ForInContainer<Container>(container)));
+}

@@ -120,15 +120,15 @@ TEST_CASE("Make operations") {
     CHECK(ss.str() == "Hello! Hi! Goodbye! Bye! ");
 }
 
+struct MyStruct {
+    Operation op;
+    MyStruct(std::stringstream& ss, int i)
+        : op([&ss, i]() { ss << "+" << i; }, [&ss, i]() { ss << "-" << i; }) {}
+    double unused{0};
+};
+
 TEST_CASE("ForInContainer test") {
     std::stringstream ss;
-
-    struct MyStruct {
-        Operation op;
-        MyStruct(std::stringstream& ss, int i)
-            : op([&ss, i]() { ss << "+" << i; }, [&ss, i]() { ss << "-" << i; }) {}
-        double unused{0};
-    };
 
     // clang-format off
     std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
@@ -136,8 +136,8 @@ TEST_CASE("ForInContainer test") {
         {[&ss]() { ss << "*2"; }, [&ss]() { ss << "/2"; } },
         {[&ss]() { ss << "*3"; }, [&ss]() { ss << "/3"; } }
     };
-    ForInContainer<vector<MyStruct>, MyStruct> group(v, [](MyStruct& s) -> Proxy& { return s.op; });
-    ForInContainer<vector<Operation>, Operation> group2(v2);
+    ForInContainer<vector<MyStruct>> group(v, [](MyStruct& s) -> Proxy& { return s.op; });
+    ForInContainer<vector<Operation>> group2(v2);
     // clang-format on
 
     group.acquire();
@@ -145,5 +145,26 @@ TEST_CASE("ForInContainer test") {
     CHECK(ss.str() == "+1+2+3*2*3");
     group.release();
     group2.release();
+    CHECK(ss.str() == "+1+2+3*2*3-1-2-3/2/3");
+}
+
+TEST_CASE("make_for_in_container") {
+    std::stringstream ss;
+
+    // clang-format off
+    std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
+    std::vector<Operation> v2{
+        {[&ss]() { ss << "*2"; }, [&ss]() { ss << "/2"; }},
+        {[&ss]() { ss << "*3"; }, [&ss]() { ss << "/3"; }}
+    };
+    auto group = make_for_in_container(v, [](MyStruct& s) -> Proxy& { return s.op; });
+    auto group2 = make_for_in_container(v2);
+    // clang-format on
+
+    group->acquire();
+    group2->acquire();
+    CHECK(ss.str() == "+1+2+3*2*3");
+    group->release();
+    group2->release();
     CHECK(ss.str() == "+1+2+3*2*3-1-2-3/2/3");
 }
