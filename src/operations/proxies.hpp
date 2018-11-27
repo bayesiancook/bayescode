@@ -111,8 +111,11 @@ class ForInContainer : public Proxy {
 
   public:
     template <class GetProxy>
-    ForInContainer(Container& container, GetProxy get_proxy = [](Element& e) { return e; })
+    ForInContainer(Container& container, GetProxy get_proxy)
         : container(container), get_proxy(get_proxy) {}
+
+    ForInContainer(Container& container)
+        : container(container), get_proxy([](Element& e) -> Proxy& { return e; }) {}
 
     void acquire() final {
         for (auto& element : container) { get_proxy(element).acquire(); }
