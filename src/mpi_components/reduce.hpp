@@ -3,7 +3,7 @@
 #include <functional>
 #include "Process.hpp"
 #include "components/RegistrarBase.hpp"
-#include "interfaces.hpp"
+#include "utils.hpp"
 
 /*==================================================================================================
   ReducerMaster

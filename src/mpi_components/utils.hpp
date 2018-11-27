@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <vector>
 #include "components/RegistrarBase.hpp"
-#include "interfaces.hpp"
+#include "operations/interfaces.hpp"
 
 /*
 ====================================================================================================

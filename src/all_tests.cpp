@@ -2,4 +2,6 @@
 
 #include "components/test.cpp"
 
+#include "operations/test.cpp"
+
 #include "mpi_components/test/seq_test.cpp"
