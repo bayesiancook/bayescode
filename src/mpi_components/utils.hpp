@@ -122,37 +122,6 @@ std::unique_ptr<Proxy> instantiate_and_declare_from_model(Model& m, filter_t fil
 
 /*
 ====================================================================================================
-  Communication grouper class
-==================================================================================================*/
-
-class CommGroup : public Proxy {
-    std::vector<std::unique_ptr<Proxy>> operations;
-
-  public:
-    CommGroup() = default;
-
-    template <class... Operations>
-    CommGroup(std::unique_ptr<Proxy>&& operation, Operations&&... operations)
-        : CommGroup(std::forward<Operations>(operations)...) {
-        this->operations.emplace_back(std::move(operation));
-    }
-
-    void acquire() final {
-        for (auto&& operation : operations) { operation->acquire(); }
-    }
-
-    void release() final {
-        for (auto&& operation : operations) { operation->release(); }
-    }
-};
-
-template <class... Args>
-std::unique_ptr<Proxy> make_comm_group(Args&&... args) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new CommGroup(std::forward<Args>(args)...)));
-}
-
-/*
-====================================================================================================
   mpi_run
   Wrapper around a main-like function that initializes MPI and sets MPI::p to correspond to the
   local MPI process
