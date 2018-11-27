@@ -75,10 +75,25 @@ class Operation : public Proxy {
     std::function<void()> f_acquire{[]() {}};
     std::function<void()> f_release{[]() {}};
 
-public:
+  public:
     template <class Acquire, class Release>
     Operation(Acquire f_acquire, Release f_release) : f_acquire(f_acquire), f_release(f_release) {}
 
     void acquire() final { f_acquire(); }
     void release() final { f_release(); }
 };
+
+template <class Acquire, class Release>
+std::unique_ptr<Proxy> make_operation(Acquire f_acquire, Release f_release) {
+    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation(f_acquire, f_release)));
+}
+
+template <class Acquire>
+std::unique_ptr<Proxy> make_acquire_operation(Acquire f_acquire) {
+    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation(f_acquire, []() {})));
+}
+
+template <class Release>
+std::unique_ptr<Proxy> make_release_operation(Release f_release) {
+    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation([]() {}, f_release)));
+}

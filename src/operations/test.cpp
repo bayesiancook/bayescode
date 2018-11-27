@@ -102,3 +102,20 @@ TEST_CASE("Operation") {
     op.release();
     CHECK(ss.str() == "a = 2");
 }
+
+TEST_CASE("Make operations") {
+    std::stringstream ss;
+    auto greeter = make_operation([&ss]() { ss << "Hello! "; }, [&ss]() { ss << "Goodbye! "; });
+    auto hi = make_acquire_operation([&ss]() { ss << "Hi! "; });
+    auto bye = make_release_operation([&ss]() { ss << "Bye! "; });
+
+    greeter->acquire();
+    hi->acquire();
+    bye->acquire();
+    CHECK(ss.str() == "Hello! Hi! ");
+
+    greeter->release();
+    hi->release();
+    bye->release();
+    CHECK(ss.str() == "Hello! Hi! Goodbye! Bye! ");
+}
