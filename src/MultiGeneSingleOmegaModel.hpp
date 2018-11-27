@@ -45,6 +45,8 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
+STRUCT_GLOBAL_DECL(PoissonSuffStat,MPI_POISSONSUFFSTAT);
+
 class MultiGeneSingleOmegaModelShared {
   public:
     MultiGeneSingleOmegaModelShared(string datafile, string treefile, param_mode_t blmode,
@@ -112,10 +114,43 @@ class MultiGeneSingleOmegaModelShared {
 
         // MPI communication groups
         // clang-format off
+
+        if (blmode == shared)   {
+            mpibranchlengths = make_group(
+                    broadcast<double>(*this, {"branchlength"}),
+                    reduce<PoissonSuffStat>(*this, {"lengthpathsuffstatarray"})
+                );
+        }
+        else    {
+            mpibranchlengths = make_group(
+                    broadcast<double>(*this, {"branchlength", "blhyperinvshape"})
+                    // reduce<GammaSuffStat>(*this, {"lengthhypersuffstatarray"})
+                );
+        }
+
+        if (nucmode == shared)  {
+            mpinucrates = make_group(
+                    broadcast<double>(*this, {"nucrelratearray", "nucstatarray"}),
+                    reduce<int>(*this, {"nucpathsuffstat_rootcount", "nucpathsuffstat_paircount"}),
+                    reduce<double>(*this, {"nucpathsuffstat_pairbeta"})
+                );
+        }
+        else    {
+            mpinucrates = make_group(
+                    broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc", "nucstathypercenter", "nucstathyperinvconc"}),
+                    gather<double>(*this, {"nucrelratearray", "nucstatarray"})
+                );
+        }
+                    
         mpiomega = make_group(
                 broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}),
                 gather<double>(*this, {"omegaarray"})
             );
+
+        mpitrace = make_group(
+            );
+
+
         // clang-format on
     }
 
@@ -352,6 +387,10 @@ class MultiGeneSingleOmegaModelShared {
         t.add("nucrelratearray", *nucrelratearray);
         t.add("nucstatarray", *nucstatarray);
 
+        t.add("nucpathsuffstat_rootcount", nucpathsuffstat.rootcount);
+        t.add("nucpathsuffstat_paircount", nucpathsuffstat.paircount);
+        t.add("nucpathsuffstat_pairbeta", nucpathsuffstat.pairbeta);
+
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
         t.add("omegaarray", *omegaarray, partition);
@@ -445,7 +484,7 @@ class MultiGeneSingleOmegaModelShared {
     // summed over all genes
     double GeneLogPrior;
 
-    std::unique_ptr<Proxy> mpiomega, mpibl, mpinucrate, mpitrace;
+    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpitrace;
 };
 
 class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
@@ -583,113 +622,53 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
         for (int rep = 0; rep < nrep; rep++) {
             if (omega_param.variable) {
-                // ReceiveOmega();
                 mpiomega->acquire();
                 MoveOmegaHyperParameters();
-                // SendOmegaHyperParameters();
                 mpiomega->release();
             }
 
-            // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == shared) {
-                ReceiveBranchLengthsSuffStat();
-                // reduce_blsuffstat.acquire();
-                ResampleBranchLengths();
-                MoveLambda();
-                SendGlobalBranchLengths();
-                // bcast_lambda.release();
-                // bcast_bl.release();
-            } else if (blmode == shrunken) {
-                ReceiveBranchLengthsHyperSuffStat();
-                // reduce_blhypersuffstat.acquire();
-                MoveBranchLengthsHyperParameters();
-                SendBranchLengthsHyperParameters();
-                // bcast_blhyperparam.release();
-            }
-
-            // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == shared) {
-                ReceiveNucPathSuffStat();
-                // reduce_nucratesuffstat.acquire();
-                MoveNucRates();
-                SendGlobalNucRates();
-                // bcast_nucrate.release();
-            } else if (nucmode == shrunken) {
-                ReceiveNucRatesHyperSuffStat();
-                // reduce_nucratehypersuffstat.acquire();
-                MoveNucRatesHyperParameters();
-                SendNucRatesHyperParameters();
-                // bcast_nucratehyperparam.release();
-            }
-        }
-
-        // collect current state
-        // tracegroup
-
-        if (blmode != shared) { ReceiveGeneBranchLengths(); }
-        if (nucmode != shared) { ReceiveGeneNucRates(); }
-        ReceiveOmega();
-        ReceiveLogProbs();
-        return 1;
-    }
-
-    /*
-    double Move() {
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-
-            if (omega_param.variable) {
-                // ReceiveOmega();
-                mpiomega.acquire();
-                MoveOmegaHyperParameters();
-                // SendOmegaHyperParameters();
-                mpiomega.release();
-            }
-
+            mpibranchlengths->acquire();
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == shared) {
                 // ReceiveBranchLengthsSuffStat();
-                reduce_blsuffstat.acquire();
                 ResampleBranchLengths();
                 MoveLambda();
                 // SendGlobalBranchLengths();
-                // bcast_lambda.release();
-                bcast_bl.release();
             } else if (blmode == shrunken) {
                 // ReceiveBranchLengthsHyperSuffStat();
-                reduce_blhypersuffstat.acquire();
                 MoveBranchLengthsHyperParameters();
                 // SendBranchLengthsHyperParameters();
-                bcast_blhyperparam.release();
             }
+            mpibranchlengths->release();
 
             // global nucrates, or gene nucrates hyperparameters
+            mpinucrates->acquire();
             if (nucmode == shared) {
                 // ReceiveNucPathSuffStat();
-                reduce_nucratesuffstat.acquire();
                 MoveNucRates();
                 // SendGlobalNucRates();
-                bcast_nucrate.release();
             } else if (nucmode == shrunken) {
                 // ReceiveNucRatesHyperSuffStat();
-                reduce_nucratehypersuffstat.acquire();
                 MoveNucRatesHyperParameters();
                 // SendNucRatesHyperParameters();
-                bcast_nucratehyperparam.release();
             }
+            mpinucrates->release();
         }
 
         // collect current state
         // tracegroup
 
+        /*
+        mpitrace->acquire();
+        mpitrace->release();
+        */
+
         if (blmode != shared) { ReceiveGeneBranchLengths(); }
         if (nucmode != shared) { ReceiveGeneNucRates(); }
-        ReceiveOmega();
+        // ReceiveOmega();
         ReceiveLogProbs();
         return 1;
     }
-    */
 
     // Branch lengths
 
@@ -974,12 +953,18 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
 
             if (omega_param.variable) {
                 // SendOmega();
+                // geneomega->release();
                 mpiomega->release();
                 // ReceiveOmegaHyperParameters();
                 mpiomega->acquire();
+                // geneomega->acquire();
             }
 
             // global branch lengths, or gene branch lengths hyperparameters
+            // genebranchlengths->release();
+            mpibranchlengths->release();
+
+            /*
             if (blmode == shared) {
                 SendBranchLengthsSuffStat();
                 ReceiveGlobalBranchLengths();
@@ -987,8 +972,16 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                 SendBranchLengthsHyperSuffStat();
                 ReceiveBranchLengthsHyperParameters();
             }
+            */
+
+            mpibranchlengths->acquire();
+            // genebranchlengths->acquire();
 
             // global nucrates, or gene nucrates hyperparameters
+            // genenucrates->release();
+            mpinucrates->release();
+
+            /*
             if (nucmode == shared) {
                 SendNucPathSuffStat();
                 ReceiveGlobalNucRates();
@@ -996,6 +989,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                 SendNucRatesHyperSuffStat();
                 ReceiveNucRatesHyperParameters();
             }
+            */
+
+            mpinucrates->acquire();
+            // genenucrates->acquire();
         }
 
         // collect current state

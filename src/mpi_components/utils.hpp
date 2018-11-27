@@ -78,6 +78,10 @@ struct StructMetaData {
     struct__.types.push_back(get_datatype<decltype(x__.NAME)>()); \
     struct__.offsets.push_back(offsetof(decltype(x__), NAME));    \
     struct__.block_lengths.push_back(1);
+#define ATTRIBUTE_VECTOR(NAME,SIZE)                                           \
+    struct__.types.push_back(get_datatype<decltype(x__.NAME)>()); \
+    struct__.offsets.push_back(offsetof(decltype(x__), NAME));    \
+    struct__.block_lengths.push_back(SIZE);
 #define STRUCT_COMMIT(NAME) NAME = struct__.declare_and_commit();
 #define STRUCT_GLOBAL_DECL(CLASS, TYPENAME)            \
     MPI_Datatype TYPENAME;                             \
