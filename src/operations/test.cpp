@@ -93,3 +93,12 @@ TEST_CASE("make_* functions") {
     CHECK(a == 4);
     CHECK(b == 32);
 }
+
+TEST_CASE("Operation") {
+    std::stringstream ss;
+    Operation op([&ss]() { ss << "a = "; }, [&ss]() { ss << "2"; });
+    op.acquire();
+    CHECK(ss.str() == "a = ");
+    op.release();
+    CHECK(ss.str() == "a = 2");
+}
