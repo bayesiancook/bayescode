@@ -97,3 +97,28 @@ template <class Release>
 std::unique_ptr<Proxy> make_release_operation(Release f_release) {
     return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation([]() {}, f_release)));
 }
+
+/*
+====================================================================================================
+  ForInContainer class
+==================================================================================================*/
+template <class Container, class Element>
+class ForInContainer : public Proxy {
+    Container& container;
+    std::function<Proxy&(Element&)> get_proxy;
+    static_assert(std::is_same<typename Container::value_type, Element>::value,
+        "ForInContainer: template argument Container does not seem to have elemnt type Element");
+
+  public:
+    template <class GetProxy>
+    ForInContainer(Container& container, GetProxy get_proxy = [](Element& e) { return e; })
+        : container(container), get_proxy(get_proxy) {}
+
+    void acquire() final {
+        for (auto& element : container) { get_proxy(element).acquire(); }
+    }
+
+    void release() final {
+        for (auto& element : container) { get_proxy(element).release(); }
+    }
+};
