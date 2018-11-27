@@ -1,9 +1,9 @@
 #pragma once
 
 #include "components/RegistrarBase.hpp"
-#include "interfaces.hpp"
 #include "lib/Array.hpp"
 #include "partition.hpp"
+#include "utils.hpp"
 
 /*==================================================================================================
   GatherMaster
