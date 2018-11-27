@@ -2,6 +2,7 @@
 #include "mpi_components/broadcast.hpp"
 #include "mpi_components/gather.hpp"
 #include "mpi_components/reduce.hpp"
+#include "operations/proxies.hpp"
 
 using MPI::p;
 using namespace std;
@@ -61,10 +62,9 @@ void compute(int, char**) {
         m.h = p->rank - 0.4;
     }
 
-    CommGroup master_operations{reduce<double>(m, {"g", "h"}), gather<double>(m, {"v"})};
+    Group master_operations{reduce<double>(m, {"g", "h"}), gather<double>(m, {"v"})};
 
-    CommGroup slave_operations{
-        broadcast<double>(m, {"a", "c"}), broadcast<MyStruct>(m, {"i", "j"})};
+    Group slave_operations{broadcast<double>(m, {"a", "c"}), broadcast<MyStruct>(m, {"i", "j"})};
 
     p->rank ? slave_operations.acquire() : slave_operations.release();
     p->rank ? master_operations.release() : master_operations.acquire();

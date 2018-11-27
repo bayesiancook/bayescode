@@ -28,6 +28,7 @@
 #include "mpi_components/gather.hpp"
 #include "mpi_components/partition.hpp"
 #include "mpi_components/reduce.hpp"
+#include "operations/proxies.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -111,7 +112,7 @@ class MultiGeneSingleOmegaModelShared {
 
         // MPI communication groups
         // clang-format off
-        mpiomega = make_comm_group(
+        mpiomega = make_group(
                 broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}),
                 gather<double>(*this, {"omegaarray"})
             );
