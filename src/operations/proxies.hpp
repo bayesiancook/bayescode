@@ -66,3 +66,19 @@ template <class... Args>
 std::unique_ptr<Proxy> make_group(Args&&... args) {
     return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Group(std::forward<Args>(args)...)));
 }
+
+/*
+====================================================================================================
+  Operation class
+==================================================================================================*/
+class Operation : public Proxy {
+    std::function<void()> f_acquire{[]() {}};
+    std::function<void()> f_release{[]() {}};
+
+public:
+    template <class Acquire, class Release>
+    Operation(Acquire f_acquire, Release f_release) : f_acquire(f_acquire), f_release(f_release) {}
+
+    void acquire() final { f_acquire(); }
+    void release() final { f_release(); }
+};
