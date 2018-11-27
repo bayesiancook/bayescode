@@ -63,10 +63,33 @@ TEST_CASE("Group test") {
 
     p1.reset(dynamic_cast<Proxy*>(new MyProxy(a)));
     group.add(std::move(p1));
+    CHECK(p1.get() == nullptr);
     group.add(std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))));
 
     group.acquire();  // 3 b and 2 a
     group.release();
     CHECK(a == 24);
     CHECK(b == 120);
+}
+
+TEST_CASE("make_* functions") {
+    int a = 1;
+    int b = 1;
+    std::unique_ptr<Proxy> p1(dynamic_cast<Proxy*>(new MyProxy(b)));
+    MyProxy p3(a);
+    MyProxy p4(b);
+
+    // clang-format off
+    auto group = make_group(
+        std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))),
+        std::move(p1)
+    );
+    auto forall = make_forall(&p3, &p4, group.get());
+    // clang-format on
+    CHECK(p1.get() == nullptr);
+
+    forall->acquire();  // 3 b and 1 a
+    forall->release();
+    CHECK(a == 4);
+    CHECK(b == 32);
 }
