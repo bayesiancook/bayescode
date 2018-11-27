@@ -130,11 +130,20 @@ TEST_CASE("ForInContainer test") {
         double unused{0};
     };
 
+    // clang-format off
     std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
+    std::vector<Operation> v2{
+        {[&ss]() { ss << "*2"; }, [&ss]() { ss << "/2"; } },
+        {[&ss]() { ss << "*3"; }, [&ss]() { ss << "/3"; } }
+    };
     ForInContainer<vector<MyStruct>, MyStruct> group(v, [](MyStruct& s) -> Proxy& { return s.op; });
+    ForInContainer<vector<Operation>, Operation> group2(v2);
+    // clang-format on
 
     group.acquire();
-    CHECK(ss.str() == "+1+2+3");
+    group2.acquire();
+    CHECK(ss.str() == "+1+2+3*2*3");
     group.release();
-    CHECK(ss.str() == "+1+2+3-1-2-3");
+    group2.release();
+    CHECK(ss.str() == "+1+2+3*2*3-1-2-3/2/3");
 }
