@@ -47,12 +47,12 @@ TEST_CASE("ForAll test") {
 TEST_CASE("Group test") {
     int a = 1;
     int b = 1;
-    std::unique_ptr<Proxy> p1(dynamic_cast<Proxy*>(new MyProxy(b)));
+    unique_ptr<Proxy> p1(dynamic_cast<Proxy*>(new MyProxy(b)));
     // clang-format off
     Group group(
-        std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(a))),
-        std::move(p1),
-        std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b)))
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(a))),
+        move(p1),
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b)))
     );
     // clang-format on
     CHECK(p1.get() == nullptr);
@@ -63,9 +63,9 @@ TEST_CASE("Group test") {
     CHECK(b == 12);
 
     p1.reset(dynamic_cast<Proxy*>(new MyProxy(a)));
-    group.add(std::move(p1));
+    group.add(move(p1));
     CHECK(p1.get() == nullptr);
-    group.add(std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))));
+    group.add(unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))));
 
     group.acquire();  // 3 b and 2 a
     group.release();
@@ -73,17 +73,34 @@ TEST_CASE("Group test") {
     CHECK(b == 120);
 }
 
+TEST_CASE("Group order test") {
+    stringstream ss;
+    struct MyStreamProxy : public Proxy {
+        stringstream& ss;
+        int i;
+        MyStreamProxy(stringstream& ss, int i) : ss(ss), i(i) {}
+        void acquire() final { ss << "+" << i; }
+        void release() final { ss << "-" << i; }
+    };
+    Group group(unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 1})),
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 2})),
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 3})));
+
+    group.acquire();
+    CHECK(ss.str() == "+1+2+3");
+}
+
 TEST_CASE("make_* functions") {
     int a = 1;
     int b = 1;
-    std::unique_ptr<Proxy> p1(dynamic_cast<Proxy*>(new MyProxy(b)));
+    unique_ptr<Proxy> p1(dynamic_cast<Proxy*>(new MyProxy(b)));
     MyProxy p3(a);
     MyProxy p4(b);
 
     // clang-format off
     auto group = make_group(
-        std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))),
-        std::move(p1)
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyProxy(b))),
+        move(p1)
     );
     auto forall = make_forall(&p3, &p4, group.get());
     // clang-format on
@@ -96,7 +113,7 @@ TEST_CASE("make_* functions") {
 }
 
 TEST_CASE("Operation") {
-    std::stringstream ss;
+    stringstream ss;
     Operation op([&ss]() { ss << "a = "; }, [&ss]() { ss << "2"; });
     op.acquire();
     CHECK(ss.str() == "a = ");
@@ -105,7 +122,7 @@ TEST_CASE("Operation") {
 }
 
 TEST_CASE("Make operations") {
-    std::stringstream ss;
+    stringstream ss;
     auto greeter = make_operation([&ss]() { ss << "Hello! "; }, [&ss]() { ss << "Goodbye! "; });
     auto hi = make_acquire_operation([&ss]() { ss << "Hi! "; });
     auto bye = make_release_operation([&ss]() { ss << "Bye! "; });
@@ -123,17 +140,17 @@ TEST_CASE("Make operations") {
 
 struct MyStruct {
     Operation op;
-    MyStruct(std::stringstream& ss, int i)
+    MyStruct(stringstream& ss, int i)
         : op([&ss, i]() { ss << "+" << i; }, [&ss, i]() { ss << "-" << i; }) {}
     double unused{0};
 };
 
 TEST_CASE("ForInContainer test") {
-    std::stringstream ss;
+    stringstream ss;
 
     // clang-format off
-    std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
-    std::vector<Operation> v2{
+    vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
+    vector<Operation> v2{
         {[&ss]() { ss << "*2"; }, [&ss]() { ss << "/2"; } },
         {[&ss]() { ss << "*3"; }, [&ss]() { ss << "/3"; } }
     };
@@ -150,11 +167,11 @@ TEST_CASE("ForInContainer test") {
 }
 
 TEST_CASE("make_for_in_container") {
-    std::stringstream ss;
+    stringstream ss;
 
     // clang-format off
-    std::vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
-    std::vector<Operation> v2{
+    vector<MyStruct> v{{ss, 1}, {ss, 2}, {ss, 3}};
+    vector<Operation> v2{
         {[&ss]() { ss << "*2"; }, [&ss]() { ss << "/2"; }},
         {[&ss]() { ss << "*3"; }, [&ss]() { ss << "/3"; }}
     };

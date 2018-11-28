@@ -50,7 +50,7 @@ class Group : public Proxy {
     Group(std::unique_ptr<Proxy>&& operation, Operations&&... operations)
         : Group(std::forward<Operations>(operations)...) {
         /* -- */
-        this->operations.emplace_back(std::move(operation));
+        this->operations.insert(this->operations.begin(), std::move(operation));
     }
 
     void add(std::unique_ptr<Proxy> ptr) { operations.push_back(std::move(ptr)); }
