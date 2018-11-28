@@ -45,12 +45,10 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-STRUCT_GLOBAL_DECL(PoissonSuffStat,MPI_POISSONSUFFSTAT);
+STRUCT_GLOBAL_DECL(PoissonSuffStat, MPI_POISSONSUFFSTAT);
 
 class MultiGeneSingleOmegaModelShared {
-
   public:
-
     // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel *> geneprocess;
 
@@ -442,12 +440,11 @@ class MultiGeneSingleOmegaModelShared {
         t.add("nucrelratearray", *nucrelratearray);
         t.add("nucstatarray", *nucstatarray);
 
-        if (nucmode == shared)  {
+        if (nucmode == shared) {
             t.add("nucpathsuffstat_rootcount", nucpathsuffstat.rootcount);
             t.add("nucpathsuffstat_paircount", nucpathsuffstat.paircount);
             t.add("nucpathsuffstat_pairbeta", nucpathsuffstat.pairbeta);
-        }
-        else    {
+        } else {
             t.add("nucrelratesuffstat_sumlog", nucrelratesuffstat.sumlog);
             t.add("nucrelratesuffstat_n", nucrelratesuffstat.n);
             t.add("nucstatsuffstat_sumlog", nucstatsuffstat.sumlog);
@@ -923,7 +920,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
 class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                                        public MultiGeneSingleOmegaModelShared {
-
   public:
     //-------------------
     // Construction and allocation

@@ -113,7 +113,7 @@ class DirichletSuffStat : public SuffStat {
         n += temp;
     }
 
-  // private:
+    // private:
     std::vector<double> sumlog;
     int n;
 };

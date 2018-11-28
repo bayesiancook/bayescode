@@ -104,7 +104,7 @@ class PoissonSuffStat : public SuffStat {
                Random::logGamma(shape + count);
     }
 
-  // protected:
+    // protected:
     int count;
     double beta;
 };
