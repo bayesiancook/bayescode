@@ -725,7 +725,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
         if (blmode != shared) { ReceiveGeneBranchLengths(); }
         if (nucmode != shared) { ReceiveGeneNucRates(); }
-        // ReceiveOmega();
+        ReceiveOmega();
         ReceiveLogProbs();
         return 1;
     }
@@ -1016,27 +1016,19 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                 // geneomega->acquire();
             }
 
-            // global branch lengths, or gene branch lengths hyperparameters
-            // genebranchlengths->release();
             mpibranchlengths->release();
-
             /*
             if (blmode == shared) {
-                SendBranchLengthsSuffStat();
-                ReceiveGlobalBranchLengths();
+                CollectBranchLengthsSuffStat();
+                SyncGlobalBranchLengths();
             } else if (blmode == shrunken) {
-                SendBranchLengthsHyperSuffStat();
-                ReceiveBranchLengthsHyperParameters();
+                CollectBranchLengthsHyperSuffStat();
+                SyncBranchLengthsHyperParameters();
             }
             */
-
             mpibranchlengths->acquire();
-            // genebranchlengths->acquire();
 
-            // global nucrates, or gene nucrates hyperparameters
-            // genenucrates->release();
             mpinucrates->release();
-
             /*
             if (nucmode == shared) {
                 SendNucPathSuffStat();
@@ -1046,9 +1038,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                 ReceiveNucRatesHyperParameters();
             }
             */
-
             mpinucrates->acquire();
-            // genenucrates->acquire();
         }
 
         // collect current state
