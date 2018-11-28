@@ -228,7 +228,7 @@ class NucPathSuffStat : public SuffStat {
         }
     }
 
-  // private:
+    // private:
     std::vector<int> rootcount;
     std::vector<std::vector<int>> paircount;
     std::vector<std::vector<double>> pairbeta;

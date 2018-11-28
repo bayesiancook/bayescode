@@ -87,7 +87,6 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd) {
 }
 
 void compute(int argc, char** argv) {
-
     STRUCT_DECL(PoissonSuffStat);
     ATTRIBUTE(count);
     ATTRIBUTE(beta);
@@ -112,7 +111,4 @@ void compute(int argc, char** argv) {
     }
 }
 
-int main(int argc, char** argv) { 
-    
-    mpi_run(argc, argv, compute); 
-}
+int main(int argc, char** argv) { mpi_run(argc, argv, compute); }

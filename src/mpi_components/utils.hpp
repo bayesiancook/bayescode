@@ -78,7 +78,7 @@ struct StructMetaData {
     struct__.types.push_back(get_datatype<decltype(x__.NAME)>()); \
     struct__.offsets.push_back(offsetof(decltype(x__), NAME));    \
     struct__.block_lengths.push_back(1);
-#define ATTRIBUTE_VECTOR(NAME,SIZE)                                           \
+#define ATTRIBUTE_VECTOR(NAME, SIZE)                              \
     struct__.types.push_back(get_datatype<decltype(x__.NAME)>()); \
     struct__.offsets.push_back(offsetof(decltype(x__), NAME));    \
     struct__.block_lengths.push_back(SIZE);
