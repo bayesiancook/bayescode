@@ -161,6 +161,14 @@ class SimpleBranchArray : public BranchArray<T> {
     T &operator[](int index) /*override*/ { return array[index]; }
     const T &GetVal(int index) const /*override*/ { return array[index]; }
 
+    //! return a const ref to the std::vector<T> of which this class is the
+    //! interface
+    const std::vector<T> &GetArray() const { return array; }
+
+    //! return a ref to the std::vector<T> of which this class is the
+    //! interface
+    std::vector<T> &GetArray() { return array; }
+
   protected:
     const Tree &tree;
     std::vector<T> array;

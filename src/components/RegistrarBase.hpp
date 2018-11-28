@@ -61,12 +61,17 @@ class RegistrarBase {
 
   public:
     CONVERT_REF_TO(IIDGamma, SimpleArray<double>);
-    CONVERT_REF_TO(BranchIIDGamma, BranchArray<double>);
+    CONVERT_REF_TO(BranchIIDGamma, SimpleBranchArray<double>);
     CONVERT_REF_TO(IIDDirichlet, SimpleArray<std::vector<double>>);
     CONVERT_REF_TO(MultiDirichlet, SimpleArray<std::vector<double>>);
     CONVERT_REF_TO(MultinomialAllocationVector, SimpleArray<int>);
-    CONVERT_REF_TO(GammaWhiteNoise, BranchArray<double>);
+    CONVERT_REF_TO(GammaWhiteNoise, SimpleBranchArray<double>);
     CONVERT_REF_TO(GammaWhiteNoiseArray, Array<GammaWhiteNoise>);
+
+    template <class Target, class... Args>
+    void register_element(std::string s, SimpleBranchArray<Target>& target, Args&&... args) {
+        static_cast<T*>(this)->register_element(s, target.GetArray(), std::forward<Args>(args)...);
+    }
 
     template <class Target, class... Args>
     void register_element(std::string s, SimpleArray<Target>& target, Args&&... args) {
