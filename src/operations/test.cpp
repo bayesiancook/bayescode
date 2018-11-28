@@ -1,5 +1,6 @@
 #include "doctest.h"
 
+#include <sstream>
 #include "proxies.hpp"
 
 using namespace std;
