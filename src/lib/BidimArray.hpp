@@ -164,4 +164,38 @@ class SimpleBidimArray : public BidimArray<T> {
     std::vector<std::vector<T>> array;
 };
 
+/**
+ * \brief A Selector that distributes the components of a double mixture (double allocation vectors)
+ * over an array of items, through 2 vectors of allocations.
+ *
+ * This Selector<T> maintains a pointer over a Bidimarray of (say K * L) components and
+ * 2 arrays of (say N) integer allocation variables. Then, for any index i,
+ * GetVal(i) returns a reference to the component to which item i is allocated (using the double
+ * allocation) (i.e. components[alloc_row[i], alloc_col[i]])
+ */
+
+template <class T>
+class DoubleMixtureSelector : public Selector<T> {
+  public:
+    //! Constructor takes the array of components and the allocation vector
+    DoubleMixtureSelector(const BidimSelector<T> *incomponents, const Selector<int> *inalloc_row,
+        const Selector<int> *inalloc_col)
+        : components(incomponents), alloc_row(inalloc_row), alloc_col(inalloc_col) {
+        assert(alloc_col->GetSize() == alloc_row->GetSize());
+    }
+    ~DoubleMixtureSelector() {}
+
+    //! return size of array of components
+    int GetSize() const override { return alloc_col->GetSize(); }
+
+    //! GetVal(i) (for i in 0..alloc->GetSize()-1) returns a reference to the
+    //! component to which item i is allocated (i.e. components[alloc_row[i], alloc_col[i]])
+    const T &GetVal(int i) const override { return components->GetVal(alloc_row->GetVal(i), alloc_col->GetVal(i)); }
+
+  private:
+    const BidimSelector<T> *components;
+    const Selector<int> *alloc_row;
+    const Selector<int> *alloc_col;
+};
+
 #endif

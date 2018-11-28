@@ -72,6 +72,14 @@ target_link_libraries(aamutsel bayescode_lib tree_lib)
 add_executable(readaamutsel "src/ReadAAMutSelDSBDPOmega.cpp")
 target_link_libraries(readaamutsel bayescode_lib tree_lib)
 
+# Mutation-Selection (mutselomega)
+add_executable(mutselomega "src/AAMutSelMultipleOmega.cpp")
+target_link_libraries(mutselomega bayescode_lib tree_lib)
+
+# Read Mutation-Selection (mutselomega)
+add_executable(readmutselomega "src/ReadAAMutSelMultipleOmega.cpp")
+target_link_libraries(readmutselomega bayescode_lib tree_lib)
+
 # Diffsel double sparse (diffseldsparse)
 add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
 target_link_libraries(diffseldsparse bayescode_lib tree_lib)
