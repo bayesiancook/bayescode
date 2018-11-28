@@ -40,9 +40,9 @@ class ReducerMaster : public Proxy, public RegistrarBase<ReducerMaster<T>> {
             target = std::vector<T>(it, it + target.size());
             it += target.size();
         });
-        std::vector<T> tmp(target.size(), -1);
+        std::vector<T> tmp(target.size());
         buf.insert(buf.end(), tmp.begin(), tmp.end());  // so buf has the right size
-        std::vector<T> tmp0(target.size(), 0);
+        std::vector<T> tmp0(target.size());
         zeroes.insert(zeroes.end(), tmp0.begin(), tmp0.end());
     }
 

@@ -5,6 +5,8 @@
 #include <string>
 #include "lib/Array.hpp"
 #include "lib/BranchArray.hpp"
+class PoissonSuffStat;
+class PoissonSuffStatBranchArray;
 class IIDGamma;
 class BranchIIDGamma;
 class IIDDirichlet;
@@ -67,6 +69,14 @@ class RegistrarBase {
     CONVERT_REF_TO(MultinomialAllocationVector, SimpleArray<int>);
     CONVERT_REF_TO(GammaWhiteNoise, SimpleBranchArray<double>);
     CONVERT_REF_TO(GammaWhiteNoiseArray, Array<GammaWhiteNoise>);
+    CONVERT_REF_TO(PoissonSuffStatBranchArray, SimpleBranchArray<PoissonSuffStat>);
+
+    template <class Elem, class... Args>
+    void register_element(std::string s, std::vector<std::vector<Elem>>& vv, Args&&... args) {
+        for (size_t i=0; i<vv.size(); i++)  {
+            static_cast<T*>(this)->register_element(s + "_" + std::to_string(i), vv.at(i), std::forward<Args>(args)...);
+        }
+    }
 
     template <class Target, class... Args>
     void register_element(std::string s, SimpleBranchArray<Target>& target, Args&&... args) {
