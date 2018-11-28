@@ -87,6 +87,12 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd) {
 }
 
 void compute(int argc, char** argv) {
+
+    STRUCT_DECL(PoissonSuffStat);
+    ATTRIBUTE(count);
+    ATTRIBUTE(beta);
+    STRUCT_COMMIT(MPI_POISSONSUFFSTAT);
+
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
     if (!MPI::p->rank) {
@@ -108,10 +114,5 @@ void compute(int argc, char** argv) {
 
 int main(int argc, char** argv) { 
     
-    STRUCT_DECL(PoissonSuffStat);
-    ATTRIBUTE(count);
-    ATTRIBUTE(beta);
-    STRUCT_COMMIT(MPI_POISSONSUFFSTAT);
-
     mpi_run(argc, argv, compute); 
 }

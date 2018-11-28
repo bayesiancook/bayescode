@@ -48,7 +48,12 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
 STRUCT_GLOBAL_DECL(PoissonSuffStat,MPI_POISSONSUFFSTAT);
 
 class MultiGeneSingleOmegaModelShared {
+
   public:
+
+    // each gene defines its own SingleOmegaModel
+    std::vector<SingleOmegaModel *> geneprocess;
+
     MultiGeneSingleOmegaModelShared(string datafile, string treefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
@@ -128,18 +133,68 @@ class MultiGeneSingleOmegaModelShared {
                 );
         }
 
+
+        mpinucrates = make_group();
+        auto& mpinucratesref = dynamic_cast<Group&>(*mpinucrates);
+
         if (nucmode == shared)  {
-            mpinucrates = make_group(
-                    broadcast<double>(*this, {"nucrelratearray", "nucstatarray"}),
-                    reduce<int>(*this, {"nucpathsuffstat_rootcount", "nucpathsuffstat_paircount"}),
-                    reduce<double>(*this, {"nucpathsuffstat_pairbeta"})
-                );
+
+            // first broadcast
+            mpinucratesref.add(broadcast<double>(*this, {"nucrelratearray", "nucstatarray"}));
+            // second (only slave) should sync gene processes
+
+            // slave should collect suff stat before releasing nucrates resources
+            if (MPI::p->rank)   {
+                auto nuccollectsuffstat = [this](){ 
+                    nucpathsuffstat.Clear();
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->CollectNucPathSuffStat();
+                        nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
+                    }
+                }; 
+                mpinucratesref.add(make_release_operation(nuccollectsuffstat));
+            }
+
+            mpinucratesref.add(reduce<int>(*this, {"nucpathsuffstat_rootcount", "nucpathsuffstat_paircount"}));
+            mpinucratesref.add(reduce<double>(*this, {"nucpathsuffstat_pairbeta"}));
         }
         else    {
-            mpinucrates = make_group(
-                    broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc", "nucstathypercenter", "nucstathyperinvconc"}),
-                    gather<double>(*this, {"nucrelratearray", "nucstatarray"})
-                );
+
+            // broadcasting hyperparameters
+            // first, master and slave, when doing a release and acquire, resp., should broadcast
+            mpinucratesref.add(broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc", "nucstathypercenter", "nucstathyperinvconc"}));
+
+            // second, only slave should then synchronize gene processes with new value just acquired
+            if (MPI::p->rank)   {
+
+                auto nuchypersync = [this](){
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
+                            nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
+                    }
+                };
+                mpinucratesref.add(make_acquire_operation(nuchypersync));
+            }
+
+            // two-step reduction of suffstats
+            // suffstats
+            // first, only slave, when doing a relase, should collect suff stats across genes
+            if (MPI::p->rank)   {
+                auto nuccollecthypersuffstat = [this](){
+                    nucrelratesuffstat.Clear();
+                    nucrelratearray->AddSuffStat(nucrelratesuffstat);
+                    nucstatsuffstat.Clear();
+                    nucstatarray->AddSuffStat(nucstatsuffstat);
+                };
+                mpinucratesref.add(make_release_operation(nuccollecthypersuffstat));
+            }
+            // second, master and slave, when doing an acquire and a release, resp, should reduce the suff stats
+            mpinucratesref.add(reduce<double>(*this, {"nucrelratesuffstat_sumlog", "nucstatsuffstat_sumlog"}));
+            mpinucratesref.add(reduce<int>(*this, {"nucrelratesuffstat_n", "nucstatsuffstat_n"}));
+
+            // alternatively one-step reduction of suffstats
+            // mpinucratesref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
+            // and then the master should reduce the suffstats across the whole array
         }
                     
         mpiomega = make_group(
@@ -387,9 +442,17 @@ class MultiGeneSingleOmegaModelShared {
         t.add("nucrelratearray", *nucrelratearray);
         t.add("nucstatarray", *nucstatarray);
 
-        t.add("nucpathsuffstat_rootcount", nucpathsuffstat.rootcount);
-        t.add("nucpathsuffstat_paircount", nucpathsuffstat.paircount);
-        t.add("nucpathsuffstat_pairbeta", nucpathsuffstat.pairbeta);
+        if (nucmode == shared)  {
+            t.add("nucpathsuffstat_rootcount", nucpathsuffstat.rootcount);
+            t.add("nucpathsuffstat_paircount", nucpathsuffstat.paircount);
+            t.add("nucpathsuffstat_pairbeta", nucpathsuffstat.pairbeta);
+        }
+        else    {
+            t.add("nucrelratesuffstat_sumlog", nucrelratesuffstat.sumlog);
+            t.add("nucrelratesuffstat_n", nucrelratesuffstat.n);
+            t.add("nucstatsuffstat_sumlog", nucstatsuffstat.sumlog);
+            t.add("nucstatsuffstat_n", nucstatsuffstat.n);
+        }
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
@@ -860,9 +923,6 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
 
 class MultiGeneSingleOmegaModelSlave : public ChainComponent,
                                        public MultiGeneSingleOmegaModelShared {
-  private:
-    // each gene defines its own SingleOmegaModel
-    std::vector<SingleOmegaModel *> geneprocess;
 
   public:
     //-------------------
@@ -1114,24 +1174,19 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         }
     }
 
-    void SendNucRatesHyperSuffStat() {
+    void CollectNucRatesHyperSuffStat() {
         nucrelratesuffstat.Clear();
         nucrelratearray->AddSuffStat(nucrelratesuffstat);
-        mpi.SlaveSendAdditive(nucrelratesuffstat);
-
         nucstatsuffstat.Clear();
         nucstatarray->AddSuffStat(nucstatsuffstat);
-        mpi.SlaveSendAdditive(nucstatsuffstat);
     }
 
-    void SendNucPathSuffStat() {
+    void CollectNucPathSuffStat() {
         nucpathsuffstat.Clear();
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->CollectNucPathSuffStat();
             nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
         }
-
-        mpi.SlaveSendAdditive(nucpathsuffstat);
     }
 
     // omega (and hyperparameters)
