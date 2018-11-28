@@ -75,6 +75,7 @@ TEST_CASE("Group test") {
 
 TEST_CASE("Group order test") {
     stringstream ss;
+
     struct MyStreamProxy : public Proxy {
         stringstream& ss;
         int i;
@@ -82,12 +83,18 @@ TEST_CASE("Group order test") {
         void acquire() final { ss << "+" << i; }
         void release() final { ss << "-" << i; }
     };
-    Group group(unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 1})),
+    // clang-format off
+    Group group(
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 1})),
         unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 2})),
-        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 3})));
+        unique_ptr<Proxy>(dynamic_cast<Proxy*>(new MyStreamProxy{ss, 3}))
+    );
+    // clang-format on
 
     group.acquire();
     CHECK(ss.str() == "+1+2+3");
+    group.release();
+    CHECK(ss.str() == "+1+2+3-1-2-3");
 }
 
 TEST_CASE("make_* functions") {
