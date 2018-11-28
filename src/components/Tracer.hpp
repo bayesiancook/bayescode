@@ -69,6 +69,12 @@ class Tracer : public RegistrarBase<Tracer> {
         set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
+    void register_element(std::string const& name, int& d) {
+        header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
+        data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
+        set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
+    }
+
     template <class T>
     void register_element(std::string const& name, std::vector<T>& v,
         Partition partition = Partition(IndexSet(), 0)) {
