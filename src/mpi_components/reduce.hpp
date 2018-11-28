@@ -40,8 +40,10 @@ class ReducerMaster : public Proxy, public RegistrarBase<ReducerMaster<T>> {
             target = std::vector<T>(it, it + target.size());
             it += target.size();
         });
-        buf.insert(buf.end(), std::vector<T>(target.size(), -1));  // so buf has the right size
-        zeroes.insert(buf.end(), std::vector<T>(target.size(), 0));
+        std::vector<T> tmp(target.size(), -1);
+        buf.insert(buf.end(), tmp.begin(), tmp.end()); // so buf has the right size
+        std::vector<T> tmp0(target.size(), 0);
+        zeroes.insert(buf.end(), tmp0.begin(), tmp0.end());
     }
 
     void read_buffer() {
@@ -81,7 +83,7 @@ class ReducerSlave : public Proxy, public RegistrarBase<ReducerSlave<T>> {
     }
 
     void register_element(std::string, std::vector<T>& target) {
-        writers.push_back([&target, this]() { buf.insert(buf.end(), target); });
+        writers.push_back([&target, this]() { buf.insert(buf.end(), target.begin(), target.end()); });
     }
 
     void write_buffer() {
