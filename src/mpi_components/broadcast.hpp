@@ -12,25 +12,22 @@
   is meant to communicate with one BroadcasterSlave per other process
 ==================================================================================================*/
 class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster> {
-    Process& p;
-
-    friend RegistrarBase<BroadcasterMaster>;
-    using RegistrarBase<BroadcasterMaster>::register_element;
-
     BufferManager buf;
+
+  public:
+    BroadcasterMaster() { assert(MPI::p->rank == 0); }
+
+    using RegistrarBase<BroadcasterMaster>::register_element;
 
     template <class T>
     void register_element(std::string, T& target) {
         buf.add(target);
     }
 
-  public:
-    BroadcasterMaster(Process& p = *MPI::p) : p(p) {}
-
     void release() final {
         assert(buf.buffer_size() > 0);
         auto ready_buf = buf.send_buffer();
-        MPI_Bcast(ready_buf, buf.buffer_size(), MPI_PACKED, p.rank, MPI_COMM_WORLD);
+        MPI_Bcast(ready_buf, buf.buffer_size(), MPI_PACKED, 0, MPI_COMM_WORLD);
     }
 };
 
@@ -38,20 +35,17 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster> 
   BroadcasterSlave
 ==================================================================================================*/
 class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave> {
-    Process& p;
-
-    friend RegistrarBase<BroadcasterSlave>;
-    using RegistrarBase<BroadcasterSlave>::register_element;
-
     BufferManager buf;
+
+  public:
+    BroadcasterSlave() {}
+
+    using RegistrarBase<BroadcasterSlave>::register_element;
 
     template <class T>
     void register_element(std::string, T& target) {
         buf.add(target);
     }
-
-  public:
-    BroadcasterSlave(Process& p = *MPI::p) : p(p) {}
 
     void acquire() final {
         assert(buf.buffer_size() > 0);

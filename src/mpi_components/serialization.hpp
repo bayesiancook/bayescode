@@ -195,7 +195,6 @@ class BufferManager {
         return _send_buffer->data();
     }
 
-    // second param is optional but can be used to ensure size is correct
     void receive() {
         assert(_receive_buffer.get() != nullptr);
         assert(_receive_buffer->size() == buffer_size());
