@@ -10,8 +10,6 @@
 #include "MultinomialAllocationVector.hpp"
 #include "Permutation.hpp"
 #include "PhyloProcess.hpp"
-#include "PolyProcess.hpp"
-#include "PolySuffStat.hpp"
 #include "StickBreakingProcess.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
@@ -71,15 +69,12 @@
 class AAMutSelMultipleOmegaModel : public ChainComponent {
     std::string datafile, treefile;
 
-    bool polymorphism_aware;
-
     std::unique_ptr<Tracer> tracer;
     std::unique_ptr<const Tree> tree;
 
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
     CodonSequenceAlignment *codondata;
-    PolyData *polydata{nullptr};
 
     int Nsite;
     int Ntaxa;
@@ -110,14 +105,14 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     double delta_omegahyperinvshape;
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet
 
-    MultinomialAllocationVector *omegaalloc;
+    MultinomialAllocationVector *omega_alloc;
     double omega_mixture_concentration;
 
     Dirichlet *omega_weight;
-    OccupancySuffStat *omega_occupancy;
     IIDGamma *delta_omega_array;
 
-    OmegaPathSuffStatArray *omegapathsuffstat;
+    OmegaPathSuffStatArray *siteomegapathsuffstatarray;
+    OmegaPathSuffStatArray *componentomegapathsuffstatarray;
 
     // distributions
     int baseNcat;
@@ -125,7 +120,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     double basekappa;
     StickBreakingProcess *baseweight;
 
-    OccupancySuffStat *baseoccupancy;
+    OccupancySuffStat *baseprofile_occupancy;
     std::vector<double> basecenterhypercenter;
     double basecenterhyperinvconc;
 
@@ -142,36 +137,28 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     int Ncat;
     double kappa;
     StickBreakingProcess *weight;
-    OccupancySuffStat *occupancy;
+
+    OccupancySuffStat *profile_occupancy;
+    OccupancySuffStat *omega_occupancy;
 
     MultiDirichlet *componentaafitnessarray;
     DirichletSuffStatArray *basesuffstatarray;
 
-    MultinomialAllocationVector *sitealloc;
+    MultinomialAllocationVector *profile_alloc;
 
     // an array of codon matrices (one for each distinct aa fitness profile)
     AAMutSelCodonMatrixBidimArray *componentcodonmatrixbidimarray;
 
     // this one is used by PhyloProcess: has to be a Selector<SubMatrix>
     DoubleMixtureSelector<SubMatrix> *sitesubmatrixarray;
+    DoubleMixtureSelector<AAMutSelOmegaCodonSubMatrix> *sitecodonsubmatrixarray;
 
-    // this one is used by PolyProcess: has to be a Selector<vector<double>>
     MixtureSelector<std::vector<double>> *siteaafitnessarray;
 
     PhyloProcess *phyloprocess;
 
-    // global theta (4*Ne*u) used for polymorphism
-    double theta;
-    double thetamax;
-
-    PolyProcess *polyprocess{nullptr};
-    PoissonRandomField *poissonrandomfield{nullptr};
-
     PathSuffStatArray *sitepathsuffstatarray;
     PathSuffStatArray *componentpathsuffstatarray;
-
-    PolySuffStatArray *sitepolysuffstatarray{nullptr};
-    PolySuffStatArray *componentpolysuffstatarray{nullptr};
 
     // 0: free wo shrinkage
     // 1: free with shrinkage
@@ -218,12 +205,10 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
-    //! - polymorphism_aware: boolean to force using polymorphism data
     AAMutSelMultipleOmegaModel(std::string indatafile, std::string intreefile, int inomegamode,
-        int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift, bool polymorphism_aware)
+        int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift)
         : datafile(indatafile),
           treefile(intreefile),
-          polymorphism_aware(polymorphism_aware),
           omegaNcat(inomegaNcat),
           omega_shift(inomegashift),
           baseNcat(inbaseNcat),
@@ -243,8 +228,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
 
-        if (polymorphism_aware) { polydata = new PolyData(codondata, datafile); }
-
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
 
@@ -263,8 +246,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         }
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
-        std::cerr << "ncat : " << Ncat << '\n';
-        std::cerr << "basencat : " << baseNcat << '\n';
+        std::cerr << "Ncat : " << Ncat << '\n';
+        std::cerr << "baseNcat : " << baseNcat << '\n';
+        std::cerr << "omegaNcat : " << omegaNcat << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -310,11 +294,10 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         t.add("kappa", kappa);
         t.add("weight", *weight);
         t.add("componentaafitnessarray", *componentaafitnessarray);
-        t.add("sitealloc", *sitealloc);
+        t.add("profile_alloc", *profile_alloc);
         t.add("delta_omega_array", *delta_omega_array);
-        t.add("omegaalloc", *omegaalloc);
+        t.add("omega_alloc", *omega_alloc);
         t.add("omega_weight", *omega_weight);
-        if (polyprocess != nullptr) { t.add("theta; ", theta); }
     }
 
     template <class C>
@@ -323,9 +306,10 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         t.add("lnL", [this]() { return GetLogLikelihood(); });
         // 3x: per coding site (and not per nucleotide site)
         t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); });
+        t.add("dnds", [this]() { return GetPredictedEffectivedNdS(); });
+        t.add("omega0", [this]() { return GetPredictedOmegaKnot(); });
         t.add("omega", [this]() { return GetMeanOmega(); });
         t.add("omegaent", [this]() { return Random::GetEntropy(omega_weight->GetArray()); });
-        t.add("theta", theta);
         t.add("ncluster", [this]() { return GetNcluster(); });
         t.add("kappa", kappa);
         if (baseNcat > 1) {
@@ -416,7 +400,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         // base distribution (can be skipped)
         basekappa = 1.0;
         baseweight = new StickBreakingProcess(baseNcat, basekappa);
-        baseoccupancy = new OccupancySuffStat(baseNcat);
+        baseprofile_occupancy = new OccupancySuffStat(baseNcat);
 
         basecenterhypercenter.assign(Naa, 1.0 / Naa);
         basecenterhyperinvconc = 1.0 / Naa;
@@ -454,10 +438,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         weight = new StickBreakingProcess(Ncat, kappa);
 
         // site allocations to the mixture (multinomial allocation)
-        sitealloc = new MultinomialAllocationVector(Nsite, weight->GetArray());
+        profile_alloc = new MultinomialAllocationVector(Nsite, weight->GetArray());
 
-        // occupancy suff stats of site allocations (for resampling weights)
-        occupancy = new OccupancySuffStat(Ncat);
+        // occupancy suff stats of site allocations for resampling weights (for both profile and
+        // omega)
+        profile_occupancy = new OccupancySuffStat(Ncat);
+        omega_occupancy = new OccupancySuffStat(omegaNcat);
 
         // global omega (fixed to 1 by default)
         delta_omegahypermean = 1.0;
@@ -468,7 +454,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
         omega_mixture_concentration = 1.0;
         omega_weight = new Dirichlet(omegaNcat, omega_mixture_concentration);
-        omegaalloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
+        omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
 
         // Ncat*omegaNcat mut sel codon matrices (based on the Ncat fitness profiles of the mixture,
         // and the omegaNcat finite mixture for omega)
@@ -477,30 +463,26 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
         // Bidimselector, specifying which codon matrix should be used for each site
         sitesubmatrixarray = new DoubleMixtureSelector<SubMatrix>(
-            componentcodonmatrixbidimarray, sitealloc, omegaalloc);
+            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
+
+        // Bidimselector, specifying which codon matrix should be used for each site (needed to
+        // collect omegapathsuffstatarray)
+        sitecodonsubmatrixarray = new DoubleMixtureSelector<AAMutSelOmegaCodonSubMatrix>(
+            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
 
         // selector, specifying which aa fitness array should be used for each site
         siteaafitnessarray =
-            new MixtureSelector<std::vector<double>>(componentaafitnessarray, sitealloc);
+            new MixtureSelector<std::vector<double>>(componentaafitnessarray, profile_alloc);
 
-        // global theta (4*Ne*u = 1e-5 by default, and maximum value 0.1)
-        theta = 1e-5;
-        thetamax = 0.1;
-        if (polydata != nullptr) {
-            poissonrandomfield =
-                new PoissonRandomField(polydata->GetSampleSizeSet(), GetCodonStateSpace());
-            polyprocess = new PolyProcess(GetCodonStateSpace(), polydata, poissonrandomfield,
-                siteaafitnessarray, nucmatrix, &theta);
-            sitepolysuffstatarray = new PolySuffStatArray(Nsite);
-            componentpolysuffstatarray = new PolySuffStatArray(Ncat);
-        }
-
-        phyloprocess = new PhyloProcess(
-            tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray, polyprocess);
+        phyloprocess =
+            new PhyloProcess(tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray);
         phyloprocess->Unfold();
 
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
         componentpathsuffstatarray = new PathSuffStatArray(Ncat);
+
+        siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
+        componentomegapathsuffstatarray = new OmegaPathSuffStatArray(omegaNcat);
     }
 
     //-------------------
@@ -518,9 +500,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return current omega value for omega mixture of component i
     double GetOmega(int i) const { return omega_shift + delta_omega_array->GetVal(i); }
 
-    //! return current theta value
-    double GetTheta() const { return theta; }
-
     //! \brief const access to array of length-pathsuffstats across branches
     const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
         return lengthpathsuffstatarray;
@@ -529,8 +508,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! \brief const access to array of suff stats for base mixture
     const DirichletSuffStatArray *GetBaseSuffStatArray() const { return basesuffstatarray; }
 
-    //! \brief const access to array of occupancy suff stats for base mixture
-    const OccupancySuffStat *GetBaseOccupancies() const { return baseoccupancy; }
+    //! \brief const access to array of base occupancy suff stats for base mixture
+    const OccupancySuffStat *GetBaseOccupancies() const { return baseprofile_occupancy; }
 
     //-------------------
     // Setting and updating
@@ -630,7 +609,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
-        UpdateOccupancies();
+        UpdateProfileOccupancies();
         UpdateMatrices();
         ResampleSub(1.0);
     }
@@ -640,7 +619,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
-        UpdateOccupancies();
+        UpdateProfileOccupancies();
         UpdateMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -664,8 +643,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
         total += AALogPrior();
-        if (omegamode < 2) { total += OmegaLogPrior(); }
-        if (polyprocess != nullptr) { total += ThetaLogPrior(); }
+        if (omegamode < 2) { total += TotalDeltaOmegaLogPrior(); }
         return total;
     }
 
@@ -686,25 +664,20 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         return ret;
     }
 
-    //! log prior over omega
+    //! \brief log prior over delta_omega (for all components) + HyperLogPrior
+    double TotalDeltaOmegaLogPrior() const { return DeltaOmegaLogPrior() + DeltaOmegaHyperLogPrior(); }
 
-    double OmegaLogPrior() const { return DeltaOmegaLogPrior() + DeltaOmegaHyperLogPrior(); }
+    //! \brief log prior over delta_omega (for all components)
+    double DeltaOmegaLogPrior() const { return delta_omega_array->GetLogProb(); }
 
-    double DeltaOmegaLogPrior() const {
-        return  delta_omega_array->GetLogProb();
-    }
+    //! \brief log prior over delta_omega (for component i)
+    double DeltaOmegaLogPrior(int i) const { return delta_omega_array->GetLogProb(i); }
 
+    //! \brief log prior over hyperparameter of prior over omega (here,
+    //! delta_omegahyperinvshape ~ exponential of rate 10)
+    //! delta_omegahypermean ~ exponential of rate 10)
     double DeltaOmegaHyperLogPrior() const {
         return -(delta_omegahyperinvshape + delta_omegahypermean) / 10;
-    }
-
-    //! log prior over theta
-    double ThetaLogPrior() const {
-        if (theta > thetamax) {
-            return -std::numeric_limits<double>::infinity();
-        } else {
-            return -log(theta);
-        }
     }
 
     //! log prior over nuc rates rho and pi (uniform)
@@ -762,30 +735,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // Suff Stat and suffstatlogprobs
     //-------------------
 
-    //! return log prob only at the tips due to polymorphism of the substitution mapping,
-    //! as a function of the current codon substitution process
-    double PolySuffStatLogProb() const {
-        //! sum over all components to get log prob
-        if (polyprocess != nullptr) {
-            return componentpolysuffstatarray->GetLogProb(
-                *poissonrandomfield, *componentaafitnessarray, *nucmatrix, theta);
-        } else {
-            return 0;
-        }
-    }
-
-    //! return log prob only at the tips due to polymorphism of the substitution
-    //! mapping, over sites allocated to component k of the mixture
-    double ComponentPolySuffStatLogProb(int k) const {
-        // sum over all sites allocated to component k
-        if (polyprocess != nullptr) {
-            return componentpolysuffstatarray->GetVal(k).GetLogProb(
-                *poissonrandomfield, componentaafitnessarray->GetVal(k), *nucmatrix, theta);
-        } else {
-            return 0.0;
-        }
-    }
-
     //! return log prob of the current substitution mapping, as a function of the
     //! current codon substitution process
     double PathSuffStatLogProb() const {
@@ -794,7 +743,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         for (int site{0}; site < GetNsite(); site++) {
             tot += sitepathsuffstatarray->GetVal(site).GetLogProb(sitesubmatrixarray->GetVal(site));
         }
-        tot += PolySuffStatLogProb();
         return tot;
     }
 
@@ -804,26 +752,19 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double tot{0};
         // To do: Fix and refactor
         for (int site{0}; site < GetNsite(); site++) {
-            if (sitealloc->GetVal(site) == k) {
-                tot += sitepathsuffstatarray->GetVal(site).GetLogProb(sitesubmatrixarray->GetVal(site));
+            if (profile_alloc->GetVal(site) == k) {
+                tot += sitepathsuffstatarray->GetVal(site).GetLogProb(
+                    sitesubmatrixarray->GetVal(site));
             }
         }
-        tot += ComponentPolySuffStatLogProb(k);
         return tot;
     }
 
     //! return log prob of the substitution mappings over sites allocated to omega
     //! component k of the omega mixture
     double PathSuffStatOmegaLogProb(int k) const {
-        double tot{0};
-        // To do: Fix and refactor
-        for (int site{0}; site < GetNsite(); site++) {
-            if (omegaalloc->GetVal(site) == k) {
-                tot += sitepathsuffstatarray->GetVal(site).GetLogProb(sitesubmatrixarray->GetVal(site));
-            }
-        }
-        tot += ComponentPolySuffStatLogProb(k);
-        return tot;
+        return componentomegapathsuffstatarray->GetVal(k).GetLogProb(
+            omega_shift + delta_omega_array->GetVal(k));
     }
 
     //! return log prob of current branch lengths, as a function of branch lengths
@@ -837,9 +778,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! of the center and concentration parameters of this component
     double BaseSuffStatLogProb(int k) const {
         return basesuffstatarray->GetVal(k).GetLogProb(
-                   basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k)) +
-               ComponentPolySuffStatLogProb(k);
-        ;
+            basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k));
     }
 
     //-------------------
@@ -851,9 +790,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     double LambdaHyperLogProb() const {
         return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
     }
-
-    //! log prob factor to be recomputed when Theta=4*Ne*u
-    double ThetaLogProb() const { return ThetaLogPrior() + PolySuffStatLogProb(); }
 
     //! log prob factor to be recomputed when moving nucleotide mutation rate
     //! parameters (nucrelrate and nucstat)
@@ -879,24 +815,28 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //  Collecting Suff Stats
     //-------------------
 
-    //! collect sufficient statistics if substitution mappings across sites
+    //! collect sufficient statistics of substitution mappings across sites
     void CollectSitePathSuffStat() {
         sitepathsuffstatarray->Clear();
         sitepathsuffstatarray->AddSuffStat(*phyloprocess);
-        if (polyprocess != nullptr) {
-            sitepolysuffstatarray->Clear();
-            sitepolysuffstatarray->AddSuffStat(*phyloprocess);
-        }
     }
 
-    //! gather site-specific sufficient statistics component-wise
+    //! gather site-specific sufficient statistics component-wise (per profile component)
     void CollectComponentPathSuffStat() {
         componentpathsuffstatarray->Clear();
-        componentpathsuffstatarray->Add(*sitepathsuffstatarray, *sitealloc);
-        if (polyprocess != nullptr) {
-            componentpolysuffstatarray->Clear();
-            componentpolysuffstatarray->Add(*sitepolysuffstatarray, *sitealloc);
-        }
+        componentpathsuffstatarray->Add(*sitepathsuffstatarray, *profile_alloc);
+    }
+
+    //! collect omega sufficient statistics of substitution mappings across sites
+    void CollectSiteOmegaPathSuffStat() {
+        siteomegapathsuffstatarray->Clear();
+        siteomegapathsuffstatarray->AddSuffStat(*sitecodonsubmatrixarray, *sitepathsuffstatarray);
+    }
+
+    //! gather site-specific omega sufficient statistics component-wise (per omega component)
+    void CollectComponentOmegaPathSuffStat() {
+        componentomegapathsuffstatarray->Clear();
+        componentomegapathsuffstatarray->Add(*siteomegapathsuffstatarray, *omega_alloc);
     }
 
     //! collect sufficient statistics for moving branch lengths (directly from the
@@ -956,9 +896,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
             if (nucmode < 2) { MoveNucRates(); }
 
-            if (omegamode < 2) { MoveOmega(); }
-
-            if (polyprocess != nullptr) { MoveTheta(); }
+            if (omegamode < 2) { MoveOmegaMixture(1); }
 
             aachrono.Start();
             MoveAAMixture(3);
@@ -1003,136 +941,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
-    //! MH move on theta
-    void MoveTheta() {
-        Move::Scaling(theta, 1.0, 10, &AAMutSelMultipleOmegaModel::ThetaLogProb,
-            &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        Move::Scaling(theta, 0.3, 10, &AAMutSelMultipleOmegaModel::ThetaLogProb,
-            &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        assert(theta <= thetamax);
-    }
-
-    //! MH move on omega
-    void MoveOmega() {
-        omegapathsuffstat.Clear();
-        omegapathsuffstat.AddSuffStat(*componentcodonmatrixbidimarray, *componentpathsuffstatarray);
-        if (omegaprior == 0) {
-            GibbsResampleOmega();
-        } else {
-            MultipleTryMoveOmega(100);
-        }
-        UpdateCodonMatrices();
-    }
-
-    void GibbsResampleOmega() {
-        double alpha = 1.0 / delta_omegahyperinvshape;
-        double beta = alpha / delta_omegahypermean;
-        omega = Random::GammaSample(
-            alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
-    }
-
-    int MultipleTryMoveOmega(int ntry) {
-        /*
-        if (omega == 1.0)   {
-
-            // initial prob: (1-pi)*p(D | omega == 1.0)
-            // ntry values of dposom
-            // final prob: pi* < p(D | omega == 1.0 + dposom) >
-        }
-
-        else    {
-
-            // ntry values of dposom, with first value being equal to current omega
-        - 1.0
-            // initial prob: pi* < p(D | omega == 1.0 + dposom) >
-            // final prob: (1-pi)*p(D | omega == 1.0)
-        }
-        // MH decision rule between omega == 1.0 or omega > 1.0
-        // if decision -> omega > 1.0, then randomly sample dposom among ntry values
-        and set omega = 1.0 + dposom
-        */
-
-        double logp0 = omegapathsuffstat.GetLogProb(1.0);
-
-        double alpha = 1.0 / dposomhyperinvshape;
-        double beta = alpha / dposomhypermean;
-
-        std::vector<double> logparray(ntry, 0);
-        std::vector<double> dposomarray(ntry, 0);
-        double max = 0;
-        for (int i = 0; i < ntry; i++) {
-            if ((!i) && (omega > 1.0)) {
-                dposomarray[i] = omega - 1.0;
-            } else {
-                dposomarray[i] = Random::Gamma(alpha, beta);
-                if (!dposomarray[i]) { dposomarray[i] = 1e-5; }
-            }
-            logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
-            if ((!i) || (max < logparray[i])) { max = logparray[i]; }
-        }
-
-        double tot = 0;
-        std::vector<double> cumulprob(ntry, 0);
-        for (int i = 0; i < ntry; i++) {
-            tot += exp(logparray[i] - max);
-            cumulprob[i] = tot;
-        }
-        double logp1 = log(tot / ntry) + max;
-
-        // Multiple-Try Gibbs version
-        /*
-        double m = (logp0>logp1) ? logp0 : logp1;
-        double q0 = (1-dposompi) * exp(logp0-m);
-        double q1 = dposompi * exp(logp1-m);
-        double p0 = q0 / (q0+q1);
-
-        if (Random::Uniform() < p0) {
-            omega = 1.0;
-        }
-        else    {
-            // randomly choose dposom among the ntry values in array
-        }
-        */
-
-        // Multiple-Try MH version
-        int accept = 0;
-        int choice = 0;
-
-        if (omega == 1.0) {
-            double logratio = log(dposompi) + logp1 - log(1.0 - dposompi) - logp0;
-            if (log(Random::Uniform()) < logratio) {
-                choice = 1;
-                accept = 1;
-            } else {
-                choice = 0;
-            }
-        } else {
-            double logratio = log(1.0 - dposompi) + logp0 - log(dposompi) - logp1;
-            if (log(Random::Uniform()) < logratio) {
-                choice = 0;
-                accept = 1;
-            } else {
-                choice = 1;
-            }
-        }
-
-        if (choice == 1) {
-            // randomly choose dposom among the ntry values in array
-            double u = tot * Random::Uniform();
-            int i = 0;
-            while ((i < ntry) && (u > cumulprob[i])) { i++; }
-            if (i == ntry) {
-                std::cerr << "error in MultipleTryMoveOmega: overflow\n";
-                exit(1);
-            }
-            omega = 1.0 + dposomarray[i];
-        } else {
-            omega = 1.0;
-        }
-
-        return accept;
-    }
-
     //! MH move on nucleotide rate parameters
     void MoveNucRates() {
         Move::Profile(nucrelrate, 0.1, 1, 3, &AAMutSelMultipleOmegaModel::NucRatesLogProb,
@@ -1152,10 +960,10 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     void MoveAAMixture(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
             MoveAAProfiles();
-            ResampleEmptyComponents();
-            ResampleAlloc();
-            LabelSwitchingMove();
-            ResampleWeights();
+            ResampleEmptyProfileComponents();
+            ResampleProfileAlloc();
+            ProfileLabelSwitchingMove();
+            ResampleProfileWeights();
             MoveKappa();
             CollectComponentPathSuffStat();
             UpdateCodonMatrices();
@@ -1163,9 +971,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     //! resample empty components of the mixture from prior
-    void ResampleEmptyComponents() {
-        componentaafitnessarray->PriorResample(*occupancy);
-        componentcodonmatrixbidimarray->UpdateCodonMatrices(*occupancy);
+    void ResampleEmptyProfileComponents() {
+        componentaafitnessarray->PriorResample(*profile_occupancy);
+        componentcodonmatrixbidimarray->UpdateCodonMatrices(*profile_occupancy);
     }
 
     //! MH move on amino-acid fitness profiles (occupied components only)
@@ -1209,7 +1017,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double ntot = 0;
         double bk[Naa];
         for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) {
+            if (profile_occupancy->GetVal(i)) {
                 std::vector<double> &aa = (*componentaafitnessarray)[i];
                 for (int rep = 0; rep < nrep; rep++) {
                     for (int l = 0; l < Naa; l++) { bk[l] = aa[l]; }
@@ -1249,7 +1057,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double nacc = 0;
         double ntot = 0;
         for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) {
+            if (profile_occupancy->GetVal(i)) {
                 double aaconc = componentconcentrationarray->GetVal(i);
                 const std::vector<double> &aacenter = componentcenterarray->GetVal(i);
 
@@ -1306,28 +1114,30 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     //! Gibbs resample mixture allocations
-    void ResampleAlloc() {
+    void ResampleProfileAlloc() {
         std::vector<double> postprob(Ncat, 0);
         for (int i = 0; i < Nsite; i++) {
-            GetAllocPostProb(i, postprob);
-            sitealloc->GibbsResample(i, postprob);
+            GetProfileAllocPostProb(i, postprob);
+            profile_alloc->GibbsResample(i, postprob);
         }
-        UpdateOccupancies();
+        UpdateProfileOccupancies();
     }
 
-    //! update mixture occupancy suff stats (for resampling mixture weights)
-    void UpdateOccupancies() {
-        occupancy->Clear();
-        occupancy->AddSuffStat(*sitealloc);
+    //! update mixture profile occupancy suff stats (for resampling mixture weights)
+    void UpdateProfileOccupancies() {
+        profile_occupancy->Clear();
+        profile_occupancy->AddSuffStat(*profile_alloc);
     }
 
     //! get allocation posterior probabilities for a given site
-    void GetAllocPostProb(int site, std::vector<double> &postprob) {
+    void GetProfileAllocPostProb(int site, std::vector<double> &postprob) {
         double max = 0;
         const std::vector<double> &w = weight->GetArray();
         const PathSuffStat &suffstat = sitepathsuffstatarray->GetVal(site);
         for (int i = 0; i < Ncat; i++) {
-            double tmp = suffstat.GetLogProb(componentcodonmatrixbidimarray->GetVal(i));
+            // TO DO: Need help from Nicolas L.
+            double tmp = suffstat.GetLogProb(
+                componentcodonmatrixbidimarray->GetVal(i, omega_alloc->GetVal(site)));
             postprob[i] = tmp;
             if ((!i) || (max < tmp)) { max = tmp; }
         }
@@ -1342,15 +1152,15 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     //! MCMC sequence for label switching moves
-    void LabelSwitchingMove() {
+    void ProfileLabelSwitchingMove() {
         Permutation permut(Ncat);
-        weight->LabelSwitchingMove(5, *occupancy, permut);
-        sitealloc->Permute(permut);
+        weight->LabelSwitchingMove(5, *profile_occupancy, permut);
+        profile_alloc->Permute(permut);
         componentaafitnessarray->Permute(permut);
     }
 
-    //! Gibbs resample mixture weights (based on occupancy suff stats)
-    void ResampleWeights() { weight->GibbsResample(*occupancy); }
+    //! Gibbs resample mixture weights (based on profile_occupancy suff stats)
+    void ResampleProfileWeights() { weight->GibbsResample(*profile_occupancy); }
 
     //! MH move on kappa, concentration parameter of the mixture
     void MoveKappa() {
@@ -1401,7 +1211,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double ntot = 0;
         std::vector<double> bk(Naa, 0);
         for (int k = 0; k < baseNcat; k++) {
-            if (baseoccupancy->GetVal(k)) {
+            if (baseprofile_occupancy->GetVal(k)) {
                 std::vector<double> &aa = (*basecenterarray)[k];
                 bk = aa;
                 double deltalogprob = -BaseLogProb(k);
@@ -1426,7 +1236,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double nacc = 0;
         double ntot = 0;
         for (int k = basemin; k < baseNcat; k++) {
-            if (baseoccupancy->GetVal(k)) {
+            if (baseprofile_occupancy->GetVal(k)) {
                 double &c = (*baseconcentrationarray)[k];
                 double bk = c;
                 double deltalogprob = -BaseLogProb(k);
@@ -1449,8 +1259,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     //! resample empty components of the base mixture from the prior
     void ResampleBaseEmptyComponents() {
-        basecenterarray->PriorResample(*baseoccupancy);
-        baseconcentrationarray->PriorResample(*baseoccupancy);
+        basecenterarray->PriorResample(*baseprofile_occupancy);
+        baseconcentrationarray->PriorResample(*baseprofile_occupancy);
         if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
     }
 
@@ -1468,10 +1278,10 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         UpdateBaseOccupancies();
     }
 
-    //! update base occupancy suff stats (for moving base weights)
+    //! update base profile_occupancy suff stats (for moving base weights)
     void UpdateBaseOccupancies() {
-        baseoccupancy->Clear();
-        baseoccupancy->AddSuffStat(*componentalloc);
+        baseprofile_occupancy->Clear();
+        baseprofile_occupancy->AddSuffStat(*componentalloc);
     }
 
     //! get allocation posterior probability of a component of the first-level
@@ -1498,23 +1308,126 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! MCMC sequence for label switching moves of the base mixture
     void BaseLabelSwitchingMove() {
         Permutation permut(baseNcat);
-        baseweight->LabelSwitchingMove(5, *baseoccupancy, permut);
+        baseweight->LabelSwitchingMove(5, *baseprofile_occupancy, permut);
         componentalloc->Permute(permut);
         basecenterarray->Permute(permut);
         baseconcentrationarray->Permute(permut);
         basesuffstatarray->Permute(permut);
     }
 
-    //! Gibbs resample base mixture weights (based on occupancy suff stats)
-    void ResampleBaseWeights() { baseweight->GibbsResample(*baseoccupancy); }
+    //! Gibbs resample base mixture weights (based on profile_occupancy suff stats)
+    void ResampleBaseWeights() { baseweight->GibbsResample(*baseprofile_occupancy); }
 
     //! MH move on basekappa, concentration parameter of the base mixture
     void MoveBaseKappa() {
-        Move::Scaling(basekappa, 1.0, 10, &AAMutSelMultipleOmegaModel::BaseStickBreakingHyperLogProb,
+        Move::Scaling(basekappa, 1.0, 10,
+            &AAMutSelMultipleOmegaModel::BaseStickBreakingHyperLogProb,
             &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        Move::Scaling(basekappa, 0.3, 10, &AAMutSelMultipleOmegaModel::BaseStickBreakingHyperLogProb,
+        Move::Scaling(basekappa, 0.3, 10,
+            &AAMutSelMultipleOmegaModel::BaseStickBreakingHyperLogProb,
             &AAMutSelMultipleOmegaModel::NoUpdate, this);
         baseweight->SetKappa(basekappa);
+    }
+
+    //! MCMC module for the mixture of omega
+    void MoveOmegaMixture(int nrep) {
+        for (int rep = 0; rep < nrep; rep++) {
+            CollectComponentOmegaPathSuffStat();
+            MoveOmegaValues(0.1, 3);
+            MoveOmegaValues(1.0, 3);
+            ResampleEmptyOmegaComponents();
+            CollectSiteOmegaPathSuffStat();
+            ResampleOmegaAlloc();
+            ResampleOmegaWeights();
+            MoveOmegaHyper();
+        }
+        UpdateCodonMatrices();
+    }
+
+    //! MH move on omega (per component): scaling move
+    double MoveOmegaValues(double tuning, int nrep) {
+        double nacc = 0;
+        double ntot = 0;
+        double bk;
+        for (int i = 0; i < omegaNcat; i++) {
+            if (omega_occupancy->GetVal(i)) {
+                for (int rep = 0; rep < nrep; rep++) {
+                    bk = delta_omega_array->GetVal(i);
+                    double deltalogprob = -DeltaOmegaLogPrior(i) - PathSuffStatOmegaLogProb(i);
+                    double loghastings = tuning * (Random::Uniform() - 0.5);
+                    double hastings = exp(loghastings);
+                    (*delta_omega_array)[i] *= hastings;
+                    deltalogprob +=
+                        loghastings + DeltaOmegaLogPrior(i) + PathSuffStatOmegaLogProb(i);
+                    int accepted = (log(Random::Uniform()) < deltalogprob);
+                    if (accepted) {
+                        nacc++;
+                    } else {
+                        (*delta_omega_array)[i] = bk;
+                    }
+                    ntot++;
+                }
+            }
+        }
+        return nacc / ntot;
+    }
+
+    void ResampleEmptyOmegaComponents() { delta_omega_array->PriorResample(*omega_occupancy); };
+
+    //! update mixture omega occupancy suff stats (for resampling mixture weights)
+    void UpdateOmegaOccupancies() {
+        omega_occupancy->Clear();
+        omega_occupancy->AddSuffStat(*omega_alloc);
+    }
+
+    //! Gibbs resample omega mixture allocations
+    void ResampleOmegaAlloc() {
+        std::vector<double> postprob(omegaNcat, 0);
+        for (int i = 0; i < Nsite; i++) {
+            GetOmegaAllocPostProb(i, postprob);
+            omega_alloc->GibbsResample(i, postprob);
+        }
+        UpdateOmegaOccupancies();
+    }
+
+    //! get omega allocation posterior probabilities for a given site
+    double GetOmegaAllocPostProb(int site, std::vector<double> &postprob) {
+        double max = 0;
+
+        const std::vector<double> &w = omega_weight->GetArray();
+        const OmegaPathSuffStat &suffstat = siteomegapathsuffstatarray->GetVal(site);
+
+        for (int i = 0; i < omegaNcat; i++) {
+            double tmp = suffstat.GetLogProb(omega_shift + delta_omega_array->GetVal(i));
+            postprob[i] = tmp;
+            if ((!i) || (max < tmp)) { max = tmp; }
+        }
+
+        double total = 0;
+        for (int i = 0; i < omegaNcat; i++) {
+            postprob[i] = w[i] * exp(postprob[i] - max);
+            total += postprob[i];
+        }
+
+        for (int i = 0; i < omegaNcat; i++) { postprob[i] /= total; }
+
+        return log(total) + max;
+    }
+
+    //! Gibbs resample omega mixture weights (based on omega occupancy suff stats)
+    void ResampleOmegaWeights() { omega_weight->GibbsResample(*omega_occupancy); }
+
+
+    //! Scaling moves on omega hyperparameters
+    void MoveOmegaHyper() {
+        Move::Scaling(delta_omegahypermean, 1.0, 10, &AAMutSelMultipleOmegaModel::TotalDeltaOmegaLogPrior,
+            &AAMutSelMultipleOmegaModel::NoUpdate, this);
+        Move::Scaling(delta_omegahypermean, 0.3, 10, &AAMutSelMultipleOmegaModel::TotalDeltaOmegaLogPrior,
+            &AAMutSelMultipleOmegaModel::NoUpdate, this);
+        Move::Scaling(delta_omegahyperinvshape, 1.0, 10, &AAMutSelMultipleOmegaModel::TotalDeltaOmegaLogPrior,
+            &AAMutSelMultipleOmegaModel::NoUpdate, this);
+        Move::Scaling(delta_omegahyperinvshape, 0.3, 10, &AAMutSelMultipleOmegaModel::TotalDeltaOmegaLogPrior,
+            &AAMutSelMultipleOmegaModel::NoUpdate, this);
     }
 
     //-------------------
@@ -1526,7 +1439,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     int GetNcluster() const {
         int n = 0;
         for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) { n++; }
+            if (profile_occupancy->GetVal(i)) { n++; }
         }
         return n;
     }
@@ -1535,7 +1448,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     int GetBaseNcluster() const {
         int n = 0;
         for (int i = 0; i < baseNcat; i++) {
-            if (baseoccupancy->GetVal(i)) { n++; }
+            if (baseprofile_occupancy->GetVal(i)) { n++; }
         }
         return n;
     }
@@ -1556,8 +1469,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double tot = 0;
         double totw = 0;
         for (int i = basemin; i < baseNcat; i++) {
-            tot += baseoccupancy->GetVal(i) * baseconcentrationarray->GetVal(i);
-            totw += baseoccupancy->GetVal(i);
+            tot += baseprofile_occupancy->GetVal(i) * baseconcentrationarray->GetVal(i);
+            totw += baseprofile_occupancy->GetVal(i);
         }
         return tot / totw;
     }
@@ -1566,7 +1479,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     double GetMeanComponentAAEntropy() const {
         double tot = 0;
         for (int i = 0; i < baseNcat; i++) {
-            tot += baseoccupancy->GetVal(i) * Random::GetEntropy(basecenterarray->GetVal(i));
+            tot +=
+                baseprofile_occupancy->GetVal(i) * Random::GetEntropy(basecenterarray->GetVal(i));
         }
         return tot / Ncat;
     }
@@ -1577,48 +1491,49 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return entropy of vector of equilibrium nucleotide composition
     double GetNucStatEntropy() const { return Random::GetEntropy(nucrelrate); }
 
-    double GetPredictedDNDS() const {
+    //! return predicted omega induced by the mutation-selection balance
+    double GetPredictedOmegaKnot() const {
         double mean = 0;
-        for (int i = 0; i < Ncat; i++) {
-            if (occupancy->GetVal(i)) {
-                mean +=
-                    occupancy->GetVal(i) * (*componentcodonmatrixbidimarray)[i].GetPredictedDNDS();
-            }
+        for (int i = 0; i < GetNsite(); i++) {
+            mean += sitecodonsubmatrixarray->GetVal(i).GetPredictedDNDS();
         }
-        mean /= Nsite;
+        mean /= GetNsite();
+        return mean;
+    }
+
+    //! return effective dnds taking into the mutation-selection balance and omega
+    double GetPredictedEffectivedNdS() const {
+        double mean = 0;
+        for (int i = 0; i < GetNsite(); i++) {
+            mean += (omega_shift + delta_omega_array->GetVal(omega_alloc->GetVal(i))) *
+                    sitecodonsubmatrixarray->GetVal(i).GetPredictedDNDS();
+        }
+        mean /= GetNsite();
         return mean;
     }
 
     const std::vector<double> &GetProfile(int i) const { return siteaafitnessarray->GetVal(i); }
 
-    void Monitor(std::ostream &os) const {
-        os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\t' << basechrono.GetTime()
-           << '\n';
-        os << "prop time in aa moves  : " << aachrono.GetTime() / totchrono.GetTime() << '\n';
-        os << "prop time in base moves: " << basechrono.GetTime() / totchrono.GetTime() << '\n';
-    }
-
     void ToStream(std::ostream &os) const {
-        os << "AAMutSelDSBDPOmega" << '\t';
+        os << "AAMutSelMultipleOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
         os << omegamode << '\t';
         os << Ncat << '\t' << baseNcat << '\t';
         os << omegaNcat << '\t' << omega_shift << '\t';
-        os << polymorphism_aware << '\t';
         tracer->write_line(os);
     }
 
     AAMutSelMultipleOmegaModel(std::istream &is) {
         std::string model_name;
         is >> model_name;
-        if (model_name != "AAMutSelDSBDPOmega") {
-            std::cerr << "Expected AAMutSelDSBDPOmega for model name, got " << model_name << "\n";
+        if (model_name != "AAMutSelMultipleOmega") {
+            std::cerr << "Expected AAMutSelMultipleOmega for model name, got " << model_name
+                      << "\n";
             exit(1);
         }
         is >> datafile >> treefile;
         is >> omegamode;
         is >> Ncat >> baseNcat >> omegaNcat >> omega_shift;
-        is >> polymorphism_aware;
 
         init();
         tracer->read_line(is);

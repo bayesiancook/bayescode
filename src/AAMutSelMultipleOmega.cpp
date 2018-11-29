@@ -25,7 +25,6 @@ class AAMutselArgParse : public BaseArgParse {
         "", "omegancat", "number of components of omega finite mixture", false, 1, "int", cmd};
     SwitchArg freeomega{"", "freeomega",
         "omega is allowed to vary with shrinkage (otherwise set to 1)", cmd, false};
-    SwitchArg polymorphism_aware{"p", "polymorphism_aware", "Use polymorphic data", cmd, false};
 
     //! - omegamode: omega fixed (3), shared across genes (2) or estimated with
     //! shrinkage across genes (1) or without shrinkage (0)
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
         model = new AAMutSelMultipleOmegaModel(args.alignment.getValue(), args.treefile.getValue(),
             aamutsel_args.omegamode(), aamutsel_args.ncat.getValue(),
             aamutsel_args.basencat.getValue(), aamutsel_args.omegancat.getValue(),
-            aamutsel_args.omega_shift.getValue(), aamutsel_args.polymorphism_aware.getValue());
+            aamutsel_args.omega_shift.getValue());
     }
 
     ConsoleLogger console_logger;

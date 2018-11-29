@@ -95,6 +95,16 @@ aamutsel: _build
 	_build/readaamutsel _aamutsel/gal4_poly
 	_build/readaamutsel --ss _aamutsel/gal4_poly
 
+.PHONY: mutselomega
+mutselomega: _build
+	@cd _build ; make --no-print-directory -j8 mutselomega readmutselomega
+	@rm -rf _mutselomega
+	@mkdir _mutselomega
+	_build/mutselomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --freeomega --omegancat 3 -u 10 _mutselomega/gal4
+	_build/mutselomega _mutselomega/gal4
+	_build/readmutselomega _mutselomega/gal4
+	_build/readmutselomega --ss _mutselomega/gal4
+
 .PHONY: diffseldsparse
 diffseldsparse: all
 		@rm -f delme*.*

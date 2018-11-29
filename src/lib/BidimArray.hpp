@@ -1,9 +1,8 @@
-
-#ifndef BIDIMARRAY_H
-#define BIDIMARRAY_H
+#pragma once
 
 #include "Array.hpp"
 #include "MPIBuffer.hpp"
+#include <cassert>
 
 /**
  * \brief An interface for an abstract indexed bidim-array of constant
@@ -197,5 +196,3 @@ class DoubleMixtureSelector : public Selector<T> {
     const Selector<int> *alloc_row;
     const Selector<int> *alloc_col;
 };
-
-#endif

@@ -69,7 +69,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
 }
 
 double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
-    // UpdateMatrix();
+    UpdateMatrix();
     double totom = 0;
     double totweight = 0;
     for (int i = 0; i < Nstate; i++) {
