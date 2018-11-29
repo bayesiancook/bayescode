@@ -4,6 +4,10 @@
 #include <cstdio>
 #include "utils.hpp"
 
+/*
+====================================================================================================
+  Some helpers to get the size of MPI types
+==================================================================================================*/
 namespace MPI {
     size_t int_size() {
         int result;
@@ -24,6 +28,11 @@ namespace MPI {
     }
 };  // namespace MPI
 
+/*
+====================================================================================================
+  SendBuffer
+  A buffer which can pack ints and doubles for sending over MPI
+==================================================================================================*/
 class SendBuffer {
     size_t allocated_buffer_size{0};
     void* buffer{nullptr};
@@ -76,6 +85,12 @@ class SendBuffer {
     void* data() const { return buffer; }
 };
 
+
+/*
+====================================================================================================
+  ReceiveBuffer
+  A class to unpack ints and doubles from a MPI buffer
+==================================================================================================*/
 class ReceiveBuffer {
     void* buffer{nullptr};
     int buffer_position{0};
@@ -104,6 +119,12 @@ class ReceiveBuffer {
     }
 };
 
+/*
+====================================================================================================
+  BufferManager
+  A class to which ints and doubles (and vectors of ints and doubles) can be registered.
+  Registered objects can then be packed in bulk into a buffer or read in bulk from a buffer.
+==================================================================================================*/
 class BufferManager {
     std::vector<int*> ints;
     std::vector<double*> doubles;
@@ -151,7 +172,9 @@ class BufferManager {
         return _send_buffer.data();
     }
 
-    void receive(void* buffer) const {
+    // second param is optional but can be used to ensure size is correct
+    void receive(void* buffer, size_t expected_size = 0) const {
+        assert(expected_size == 0 or expected_size == buffer_size());
         ReceiveBuffer rcv_buffer(buffer, buffer_size());
         for (auto x : ints) { *x = rcv_buffer.unpack<int>(); }
         for (auto x : doubles) { *x = rcv_buffer.unpack<double>(); }
