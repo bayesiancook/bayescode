@@ -70,6 +70,37 @@ void compute(int, char**) {
         p->message(
             "Unpacked doubles: %.2f, %.2f, %.2f, %.2f", v2.at(0), v2.at(1), v2.at(2), v2.at(3));
     }
+    if (!p->rank) {
+        int i{1}, j{2}, k{3};
+        double l{2.1}, m{3.2}, n{5.6};
+        vector<int> v{5, 8, 9};
+        vector<double> v2{2.35, 5.68};
+        BufferManager b;
+        b.add(i);
+        b.add(j);
+        b.add(k);
+        b.add(l);
+        b.add(m);
+        b.add(n);
+        b.add(v);
+        b.add(v2);
+
+        void* buf = b.send_buffer();
+        size_t buf_size = b.buffer_size();
+        p->message("Size of buffer is %d", buf_size);
+
+        i = 0;
+        j = 0;
+        k = 0;
+        l = 0;
+        m = 0;
+        n = 0;
+        v = {0, 0, 0};
+        v2 = {0, 0, 0};
+
+        b.receive(buf);
+        p->message("%d, %d, %d, %.2f, %.2f, %.2f", i, j, k, l, m, n);
+    }
 
     DummyModel m;
     if (!p->rank) {  // master
