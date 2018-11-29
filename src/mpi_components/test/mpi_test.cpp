@@ -10,8 +10,13 @@ using namespace std;
 
 struct MyStruct {
     int a;
-    float b;
+    double b;
     double c;  // unused
+
+    template <class T>
+    void serialization_interface(T& x) {
+        x.add(a, b);
+    }
 };
 
 STRUCT_GLOBAL_DECL(MyStruct, MPI_MYSTRUCT)

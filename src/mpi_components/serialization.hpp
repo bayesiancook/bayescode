@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <numeric>
 #include "utils.hpp"
 
 /*
