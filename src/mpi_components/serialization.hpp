@@ -157,6 +157,12 @@ class BufferManager {
         x.template serialization_interface<BufferManager>(*this);
     }
 
+    template <class Arg, class... Args>
+    void add(Arg& arg, Args&&... args) {
+        add(arg);
+        add(std::forward<Args>(args)...);
+    }
+
     size_t nb_ints() const {
         auto sum_size = [](int acc, std::vector<int>* v) { return acc + v->size(); };
         int vec_size = std::accumulate(int_vectors.begin(), int_vectors.end(), 0, sum_size);

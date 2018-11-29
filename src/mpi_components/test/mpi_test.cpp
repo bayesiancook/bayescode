@@ -78,14 +78,7 @@ void compute(int, char**) {
         vector<int> v{5, 8, 9};
         vector<double> v2{2.35, 5.68};
         BufferManager b;
-        b.add(i);
-        b.add(j);
-        b.add(k);
-        b.add(l);
-        b.add(m);
-        b.add(n);
-        b.add(v);
-        b.add(v2);
+        b.add(i, j, k, l, m, n, v, v2);
 
         void* buf = b.send_buffer();
         size_t buf_size = b.buffer_size();
