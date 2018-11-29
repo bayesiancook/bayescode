@@ -2,6 +2,7 @@
 #include "mpi_components/broadcast.hpp"
 #include "mpi_components/gather.hpp"
 #include "mpi_components/reduce.hpp"
+#include "mpi_components/serialization.hpp"
 #include "operations/proxies.hpp"
 
 using MPI::p;
@@ -48,6 +49,12 @@ void compute(int, char**) {
     ATTRIBUTE(a)
     ATTRIBUTE(b)
     STRUCT_COMMIT(MPI_MYSTRUCT)
+
+    SendBuffer buf;
+    int i[4] = {2, 3, 4, 5};
+    double j[4] = {2, 3, 4, 5.2};
+    buf.pack(i, 4);
+    buf.pack(j, 4);
 
     DummyModel m;
     if (!p->rank) {  // master
