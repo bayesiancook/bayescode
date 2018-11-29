@@ -50,11 +50,19 @@ void compute(int, char**) {
     ATTRIBUTE(b)
     STRUCT_COMMIT(MPI_MYSTRUCT)
 
-    SendBuffer buf;
-    int i[4] = {2, 3, 4, 5};
-    double j[4] = {2, 3, 4, 5.2};
-    buf.pack(i, 4);
-    buf.pack(j, 4);
+    if (!p->rank) {
+        SendBuffer buf;
+        int i[4] = {2, 3, 4, 5};
+        double j[4] = {2, 3, 4, 5.2};
+        buf.pack(i, 4);
+        buf.pack(j, 4);
+
+        ReceiveBuffer rcvbuf(buf.data(), buf.size());
+        p->message("Unpacked ints: %d, %d, %d, %d", rcvbuf.unpack<int>(), rcvbuf.unpack<int>(),
+            rcvbuf.unpack<int>(), rcvbuf.unpack<int>());
+        p->message("Unpacked doubles: %.2f, %.2f, %.2f, %.2f", rcvbuf.unpack<double>(),
+            rcvbuf.unpack<double>(), rcvbuf.unpack<double>(), rcvbuf.unpack<double>());
+    }
 
     DummyModel m;
     if (!p->rank) {  // master

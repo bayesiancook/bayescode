@@ -1,26 +1,35 @@
 #pragma once
 
-#include <mpi.h>
 #include <cstdio>
+#include "utils.hpp"
 
-class SendBuffer {
-    size_t allocated_buffer_size{16};
-    void* buffer{malloc(16)};
-
-    size_t buffer_size{0}; // should be identical
-    int buffer_position{0};
-
-    size_t int_size() const {
+namespace MPI {
+    size_t int_size() {
         int result;
         MPI_Type_size(MPI_INT, &result);
         return static_cast<size_t>(result);
     }
 
-    size_t double_size() const {
+    size_t double_size() {
         int result;
         MPI_Type_size(MPI_DOUBLE, &result);
         return static_cast<size_t>(result);
     }
+
+    size_t packed_size() {
+        int result;
+        MPI_Type_size(MPI_PACKED, &result);
+        return static_cast<size_t>(result);
+    }
+};  // namespace MPI
+
+class SendBuffer {
+    size_t allocated_buffer_size{16};
+    void* buffer{malloc(16)};
+
+    size_t buffer_size{0};  // should be identical to position
+    int buffer_position{0};
+
 
     void double_buffer_size() {
         void* new_buffer = malloc(allocated_buffer_size * 2);
@@ -31,43 +40,56 @@ class SendBuffer {
     }
 
   public:
-    SendBuffer() {
-        int packed_size;
-        MPI_Type_size(MPI_PACKED, &packed_size);
-        assert(packed_size == 1);
-    }
+    SendBuffer() { assert(MPI::packed_size() == 1); }
 
     ~SendBuffer() { free(buffer); }
 
     void pack(int* data, size_t count = 1) {
-        size_t add_size = int_size() * count;
+        size_t add_size = MPI::int_size() * count;
         if (buffer_size + add_size > allocated_buffer_size) {
             double_buffer_size();
             pack(data, count);
         } else {
             assert(buffer_position == static_cast<int>(buffer_size));
             buffer_size += add_size;
-            MPI_Pack(data, count, MPI_INT, buffer, allocated_buffer_size, &buffer_position, MPI_COMM_WORLD);
+            MPI_Pack(data, count, MPI_INT, buffer, allocated_buffer_size, &buffer_position,
+                MPI_COMM_WORLD);
             assert(buffer_position == static_cast<int>(buffer_size));
         }
     }
 
     void pack(double* data, size_t count = 1) {
-        size_t add_size = double_size() * count;
+        size_t add_size = MPI::double_size() * count;
         if (buffer_size + add_size > allocated_buffer_size) {
             double_buffer_size();
             pack(data, count);
         } else {
             assert(buffer_position == static_cast<int>(buffer_size));
             buffer_size += add_size;
-            MPI_Pack(data, count, MPI_DOUBLE, buffer, allocated_buffer_size, &buffer_position, MPI_COMM_WORLD);
+            MPI_Pack(data, count, MPI_DOUBLE, buffer, allocated_buffer_size, &buffer_position,
+                MPI_COMM_WORLD);
             assert(buffer_position == static_cast<int>(buffer_size));
         }
     }
+
+    size_t size() const { return buffer_size; }
+
+    void* data() const { return buffer; }
 };
 
-class Serializable {
+class ReceiveBuffer {
+    void* buffer{nullptr};
+    int buffer_position{0};
+    size_t buffer_size{0};
+
   public:
-    virtual size_t buffer_size() = 0;
-    virtual void serialize(SendBuffer&) = 0;
+    ReceiveBuffer(void* buffer, size_t buffer_size) : buffer(buffer), buffer_size(buffer_size) {}
+
+    template <typename T>
+    T unpack() {
+        T result;
+        MPI_Datatype mpi_type = GetMPIDatatype<T>()();
+        MPI_Unpack(buffer, buffer_size, &buffer_position, &result, 1, mpi_type, MPI_COMM_WORLD);
+        return result;
+    }
 };
