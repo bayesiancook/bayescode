@@ -57,13 +57,15 @@ void compute(int, char**) {
         buf.pack(i, 4);
         buf.pack(j, 4);
 
-        ReceiveBuffer rcvbuf(buf.data(), buf.size());
+        ReceiveBuffer rcvbuf(buf.size());
+        memcpy(rcvbuf.data(), buf.data(), buf.size());
         p->message("Unpacked ints: %d, %d, %d, %d", rcvbuf.unpack<int>(), rcvbuf.unpack<int>(),
             rcvbuf.unpack<int>(), rcvbuf.unpack<int>());
         p->message("Unpacked doubles: %.2f, %.2f, %.2f, %.2f", rcvbuf.unpack<double>(),
             rcvbuf.unpack<double>(), rcvbuf.unpack<double>(), rcvbuf.unpack<double>());
 
-        ReceiveBuffer rcvbuf2(buf.data(), buf.size());
+        ReceiveBuffer rcvbuf2(buf.size());
+        memcpy(rcvbuf2.data(), buf.data(), buf.size());
         auto v1 = rcvbuf2.unpack_vector<int>(4);
         p->message("Unpacked ints: %d, %d, %d, %d", v1.at(0), v1.at(1), v1.at(2), v1.at(3));
         auto v2 = rcvbuf2.unpack_vector<double>(4);
@@ -89,18 +91,10 @@ void compute(int, char**) {
         size_t buf_size = b.buffer_size();
         p->message("Size of buffer is %d", buf_size);
 
-        i = 0;
-        j = 0;
-        k = 0;
-        l = 0;
-        m = 0;
-        n = 0;
-        v = {0, 0, 0};
-        v2 = {0, 0};
+        void* rcvbuf = b.receive_buffer();
+        memcpy(rcvbuf, buf, buf_size);
 
-        p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
-            v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
-        b.receive(buf);
+        b.receive();
         p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
             v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
     }

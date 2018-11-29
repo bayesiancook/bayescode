@@ -49,7 +49,8 @@ class SendBuffer {
 
   public:
     SendBuffer() { assert(MPI::packed_size() == 1); }
-
+    SendBuffer(SendBuffer const&) = delete;
+    SendBuffer& operator=(SendBuffer const&) = delete;
     ~SendBuffer() { free(buffer); }
 
     void pack(int* data, size_t count = 1) {
@@ -97,7 +98,16 @@ class ReceiveBuffer {
     size_t buffer_size{0};
 
   public:
-    ReceiveBuffer(void* buffer, size_t buffer_size) : buffer(buffer), buffer_size(buffer_size) {}
+    ReceiveBuffer(size_t buffer_size = 0) : buffer_size(buffer_size) {
+        buffer = malloc(buffer_size);
+    }
+    ReceiveBuffer(ReceiveBuffer const&) = delete;
+    ReceiveBuffer& operator=(ReceiveBuffer const&) = delete;
+    ~ReceiveBuffer() { free(buffer); }
+
+    void* data() const { return buffer; }
+
+    size_t size() const { return buffer_size; }
 
     template <typename T>
     T unpack() {
@@ -131,7 +141,8 @@ class BufferManager {
     std::vector<std::vector<int>*> int_vectors;
     std::vector<std::vector<double>*> double_vectors;
 
-    SendBuffer _send_buffer;
+    std::unique_ptr<SendBuffer> _send_buffer;
+    std::unique_ptr<ReceiveBuffer> _receive_buffer;
 
   public:
     BufferManager() = default;
@@ -162,23 +173,28 @@ class BufferManager {
         return nb_ints() * MPI::int_size() + nb_doubles() * MPI::double_size();
     }
 
+    void* receive_buffer() {
+        _receive_buffer.reset(new ReceiveBuffer(buffer_size()));
+        return _receive_buffer->data();
+    }
+
     void* send_buffer() {
-        _send_buffer = SendBuffer();
-        for (auto x : ints) { _send_buffer.pack(x); }
-        for (auto x : doubles) { _send_buffer.pack(x); }
-        for (auto x : int_vectors) { _send_buffer.pack(x->data(), x->size()); }
-        for (auto x : double_vectors) { _send_buffer.pack(x->data(), x->size()); }
-        assert(buffer_size() == _send_buffer.size());
-        return _send_buffer.data();
+        _send_buffer.reset(new SendBuffer());
+        for (auto x : ints) { _send_buffer->pack(x); }
+        for (auto x : doubles) { _send_buffer->pack(x); }
+        for (auto x : int_vectors) { _send_buffer->pack(x->data(), x->size()); }
+        for (auto x : double_vectors) { _send_buffer->pack(x->data(), x->size()); }
+        assert(buffer_size() == _send_buffer->size());
+        return _send_buffer->data();
     }
 
     // second param is optional but can be used to ensure size is correct
-    void receive(void* buffer, size_t expected_size = 0) const {
-        assert(expected_size == 0 or expected_size == buffer_size());
-        ReceiveBuffer rcv_buffer(buffer, buffer_size());
-        for (auto x : ints) { *x = rcv_buffer.unpack<int>(); }
-        for (auto x : doubles) { *x = rcv_buffer.unpack<double>(); }
-        for (auto x : int_vectors) { *x = rcv_buffer.unpack_vector<int>(x->size()); }
-        for (auto x : double_vectors) { *x = rcv_buffer.unpack_vector<double>(x->size()); }
+    void receive() {
+        assert(_receive_buffer.get() != nullptr);
+        assert(_receive_buffer->size() == buffer_size());
+        for (auto x : ints) { *x = _receive_buffer->unpack<int>(); }
+        for (auto x : doubles) { *x = _receive_buffer->unpack<double>(); }
+        for (auto x : int_vectors) { *x = _receive_buffer->unpack_vector<int>(x->size()); }
+        for (auto x : double_vectors) { *x = _receive_buffer->unpack_vector<double>(x->size()); }
     }
 };
