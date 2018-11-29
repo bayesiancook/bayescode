@@ -88,8 +88,19 @@ class ReceiveBuffer {
     template <typename T>
     T unpack() {
         T result;
-        MPI_Datatype mpi_type = GetMPIDatatype<T>()();
+        MPI_Datatype mpi_type = get_datatype<T>();
         MPI_Unpack(buffer, buffer_size, &buffer_position, &result, 1, mpi_type, MPI_COMM_WORLD);
+        assert(buffer_position <= static_cast<int>(buffer_size));
+        return result;
+    }
+
+    template <typename T>
+    std::vector<T> unpack_vector(int count) {
+        std::vector<T> result(count);
+        MPI_Datatype mpi_type = get_datatype<T>();
+        MPI_Unpack(
+            buffer, buffer_size, &buffer_position, result.data(), count, mpi_type, MPI_COMM_WORLD);
+        assert(buffer_position <= static_cast<int>(buffer_size));
         return result;
     }
 };

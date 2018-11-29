@@ -62,6 +62,13 @@ void compute(int, char**) {
             rcvbuf.unpack<int>(), rcvbuf.unpack<int>());
         p->message("Unpacked doubles: %.2f, %.2f, %.2f, %.2f", rcvbuf.unpack<double>(),
             rcvbuf.unpack<double>(), rcvbuf.unpack<double>(), rcvbuf.unpack<double>());
+
+        ReceiveBuffer rcvbuf2(buf.data(), buf.size());
+        auto v1 = rcvbuf2.unpack_vector<int>(4);
+        p->message("Unpacked ints: %d, %d, %d, %d", v1.at(0), v1.at(1), v1.at(2), v1.at(3));
+        auto v2 = rcvbuf2.unpack_vector<double>(4);
+        p->message(
+            "Unpacked doubles: %.2f, %.2f, %.2f, %.2f", v2.at(0), v2.at(1), v2.at(2), v2.at(3));
     }
 
     DummyModel m;
