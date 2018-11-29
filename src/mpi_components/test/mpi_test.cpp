@@ -96,10 +96,13 @@ void compute(int, char**) {
         m = 0;
         n = 0;
         v = {0, 0, 0};
-        v2 = {0, 0, 0};
+        v2 = {0, 0};
 
+        p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
+            v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
         b.receive(buf);
-        p->message("%d, %d, %d, %.2f, %.2f, %.2f", i, j, k, l, m, n);
+        p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
+            v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
     }
 
     DummyModel m;
