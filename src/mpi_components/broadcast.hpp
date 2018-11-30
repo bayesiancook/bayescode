@@ -3,25 +3,21 @@
 #include <functional>
 #include "BufferManager.hpp"
 #include "Process.hpp"
-#include "components/RegistrarBase.hpp"
-#include "utils.hpp"
 
 /*==================================================================================================
   BroadcasterMaster
   An object responsible for broadcasting the values of specified fields to other processes
   is meant to communicate with one BroadcasterSlave per other process
 ==================================================================================================*/
-class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster> {
+class BroadcasterMaster : public Proxy {
     BufferManager buf;
 
   public:
     BroadcasterMaster() { assert(MPI::p->rank == 0); }
 
-    using RegistrarBase<BroadcasterMaster>::register_element;
-
-    template <class T>
-    void register_element(std::string, T& target) {
-        buf.add(target);
+    template <class... Variables>
+    void add(Variables&&... vars) {
+        buf.add(std::forward<Variables>(vars)...);
     }
 
     void release() final {
@@ -34,17 +30,15 @@ class BroadcasterMaster : public Proxy, public RegistrarBase<BroadcasterMaster> 
 /*==================================================================================================
   BroadcasterSlave
 ==================================================================================================*/
-class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave> {
+class BroadcasterSlave : public Proxy {
     BufferManager buf;
 
   public:
     BroadcasterSlave() {}
 
-    using RegistrarBase<BroadcasterSlave>::register_element;
-
-    template <class T>
-    void register_element(std::string, T& target) {
-        buf.add(target);
+    template <class... Variables>
+    void add(Variables&&... vars) {
+        buf.add(std::forward<Variables>(vars)...);
     }
 
     void acquire() final {
@@ -60,8 +54,15 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave> {
   Functions that are meant to be called globally and that will create either a master or slave
   component depending on the process
 ==================================================================================================*/
-template <class Model, class... Args>
-std::unique_ptr<Proxy> broadcast(Model& m, filter_t filter) {
-    return instantiate_and_declare_from_model<BroadcasterMaster, BroadcasterSlave, Model>(
-        m, filter);
+template <class... Variables>
+std::unique_ptr<Proxy> broadcast(Variables&&... vars) {
+    if (!MPI::p->rank) {  // master
+        auto broadcaster = new BroadcasterMaster();
+        broadcaster->add(std::forward<Variables>(vars)...);
+        return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(broadcaster));
+    } else {  // slave
+        auto broadcaster = new BroadcasterSlave();
+        broadcaster->add(std::forward<Variables>(vars)...);
+        return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(broadcaster));
+    }
 }

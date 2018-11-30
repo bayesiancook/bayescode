@@ -13,11 +13,9 @@ class GatherMaster : public Proxy {
   public:
     GatherMaster(Partition partition) : partition(partition), manager(partition) {}
 
-    template <class T>
-    void add(T& target) {
-        static_assert(is_partitionable<T>::value, "GatherMaster: target is not partitionable!");
-        assert(target.size() % partition.size_all() == 0);
-        manager.add(target);
+    template <class... Variables>
+    void add(Variables&&... vars) {
+        manager.add(std::forward<Variables>(vars)...);
     }
 
     void acquire() final {
@@ -39,11 +37,9 @@ class GatherSlave : public Proxy {
   public:
     GatherSlave(Partition partition) : partition(partition) {}
 
-    template <class T>
-    void add(T& target) {
-        static_assert(is_partitionable<T>::value, "GatherSlave: target is not partitionable!");
-        assert(target.size() % partition.my_partition_size() == 0);
-        manager.add(target);
+    template <class... Variables>
+    void add(Variables&&... vars) {
+        manager.add(std::forward<Variables>(vars)...);
     }
 
     void release() final {

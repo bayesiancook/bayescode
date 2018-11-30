@@ -132,7 +132,7 @@ void compute(int, char**) {
 
     Group master_operations{reduce<double>(m, {"g", "h"}), gather(m.partition, m.v)};
 
-    Group slave_operations{broadcast(m, {"a", "c"}), broadcast(m, {"i", "j"})};
+    Group slave_operations{broadcast(m.a, m.c), broadcast(m.i, m.j)};
 
     p->rank ? slave_operations.acquire() : slave_operations.release();
     p->rank ? master_operations.release() : master_operations.acquire();
