@@ -22,7 +22,7 @@ class PartitionedBufferManager {
         for (size_t subset = 0; subset < partition.size(); subset++) {
             size_t subset_size = partition.partition_size(subset);
             size_t nb_elements = subset_size * multiplicity;
-            managers.at(subset).add(x[i], nb_elements);
+            managers.at(subset).add_subset(x, i, nb_elements);
         }
     }
 };

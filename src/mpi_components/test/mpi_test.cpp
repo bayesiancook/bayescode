@@ -99,15 +99,15 @@ void compute(int, char**) {
             v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
     }
     if (!p->rank) {
-        // IndexSet is{"a", "b", "c", "d", "e"};
-        // Partition part(is, 3);
-        // PartitionedBufferManager bm(part);
+        IndexSet is{"a", "b", "c", "d", "e"};
+        Partition part(is, 3);
+        PartitionedBufferManager bm(part);
 
-        // std::vector<double> v = {1.1, 2.2, 3.3, 4.4, 5.5};
-        // bm.add(v);
+        std::vector<double> v = {1.1, 2.2, 3.3, 4.4, 5.5};
+        bm.add(v);
 
-        // std::vector<StructTheGreat> v2 = {{1, 0.1}, {2, 0.2}, {3, 0.3}, {4, 0.4}, {5, 0.5}};
-        // bm.add(v2);
+        std::vector<StructTheGreat> v2 = {{1, 0.1}, {2, 0.2}, {3, 0.3}, {4, 0.4}, {5, 0.5}};
+        bm.add(v2);
     }
 
     DummyModel m;

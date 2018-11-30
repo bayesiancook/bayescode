@@ -12,6 +12,9 @@
   Registered objects can then be packed in bulk into a buffer or read in bulk from a buffer.
 ==================================================================================================*/
 class BufferManager {
+    /*----------------------------------------------------------------------------------------------
+      Manager state */
+
     // clang-format off
     struct double_array_t { double* data; size_t size; };
     struct int_array_t    { int*    data; size_t size; };
@@ -23,37 +26,47 @@ class BufferManager {
     std::unique_ptr<SendBuffer> _send_buffer;
     std::unique_ptr<ReceiveBuffer> _receive_buffer;
 
+    /*----------------------------------------------------------------------------------------------
+      Dispatchers */
+
     template <class T>
-    void array_dispatch(T& x, std::true_type /* is_partitionable */) {
-        contig_dispatch(x, is_contiguously_serializable<T>());
+    void array_add_dispatch(T& x, std::true_type /* is_partitionable */) {
+        contig_add_subset_dispatch(x, 0, x.size(), is_contiguously_serializable<T>());
     }
 
     template <class T>
-    void contig_dispatch(T& x, std::true_type /* is_contiguously_serializable */) {
-        add(x[0], x.size());
-    }
-
-    template <class T>
-    void contig_dispatch(T& x, std::false_type /* is_contiguously_serializable */) {
-        for (size_t i = 0; i < x.size(); i++) { add(x[0]); }
-    }
-
-    template <class T>
-    void array_dispatch(T& x, std::false_type /* is_partitionable */) {
+    void array_add_dispatch(T& x, std::false_type /* is_partitionable */) {
         static_assert(
-            has_custom_serialization<T>(), "BufferManager type T lacks custom serialization");
+            has_custom_serialization<T>::value, "BufferManager: type T lacks custom serialization");
         x.template serialization_interface<BufferManager>(*this);
+    }
+
+    template <class T>
+    void contig_add_subset_dispatch(
+        T& x, size_t start, size_t size, std::true_type /* is_contiguously_serializable */) {
+        /* -- */
+        add(x[start], size);
+    }
+
+    template <class T>
+    void contig_add_subset_dispatch(
+        T& x, size_t start, size_t size, std::false_type /* is_contiguously_serializable */) {
+        /* -- */
+        for (size_t i = start; i < start + size; i++) { add(x[i]); }
     }
 
   public:
     BufferManager() = default;
+
+    /*----------------------------------------------------------------------------------------------
+      Declaration functions */
 
     void add(int& data, size_t size = 1) { int_arrays.push_back({&data, size}); }
     void add(double& data, size_t size = 1) { double_arrays.push_back({&data, size}); }
 
     template <class T>
     void add(T& x) {
-        array_dispatch(x, is_partitionable<T>());
+        array_add_dispatch(x, is_partitionable<T>());
     }
 
     template <class Arg, class... Args>
@@ -61,6 +74,16 @@ class BufferManager {
         add(arg);
         add(std::forward<Args>(args)...);
     }
+
+    template <class T>
+    void add_subset(T& x, size_t start, size_t size) {
+        static_assert(is_partitionable<T>::value,
+            "BufferManager: cannot add subset of non-partitionable object");
+        contig_add_subset_dispatch(x, start, size, is_contiguously_serializable<T>());
+    }
+
+    /*----------------------------------------------------------------------------------------------
+      Size-related functions */
 
     size_t nb_ints() const {
         auto sum_size = [](int acc, int_array_t v) { return acc + v.size; };
@@ -75,6 +98,9 @@ class BufferManager {
     size_t buffer_size() const {
         return nb_ints() * MPI::int_size() + nb_doubles() * MPI::double_size();
     }
+
+    /*----------------------------------------------------------------------------------------------
+      Send-receive interfaces */
 
     void* receive_buffer() {
         _receive_buffer.reset(new ReceiveBuffer(buffer_size()));
