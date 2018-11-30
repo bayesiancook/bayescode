@@ -17,13 +17,11 @@ template <class T> struct has_custom_serialization     { static bool const value
 
 // can be serialized by contiguous chunks (eg, vector<double>)
 template <class T> struct is_contiguously_serializable { static bool const value = false; };
-// clang-format on
 
 /*
 ====================================================================================================
   Array stuff
 ==================================================================================================*/
-// clang-format off
 
 // implements size_t size() or T& operator[]()
 template <class T> struct has_size            { static bool const value = false; };
@@ -32,13 +30,11 @@ template <class T> struct has_access_operator { static bool const value = false;
 // can be partitioned by buffer manager
 template <class T> struct is_partitionable 
     { static bool const value = has_size<T>::value and has_access_operator<T>::value; };
-// clang-format on
 
 /*
 ====================================================================================================
   Vector traits
 ==================================================================================================*/
-// clang-format off
 template <class T> struct is_contiguously_serializable<std::vector<T>>
     { static bool const value = is_default_serializable<T>::value; };
 
