@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <mpi.h>
 #include <vector>
+#include "Process.hpp"
 #include "components/RegistrarBase.hpp"
 #include "operations/interfaces.hpp"
 

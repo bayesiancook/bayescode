@@ -44,4 +44,12 @@ class ReceiveBuffer {
         assert(buffer_position <= static_cast<int>(buffer_size));
         return result;
     }
+
+    template <typename T>
+    void unpack_array(T* data, size_t size) {
+        MPI_Datatype mpi_type = get_datatype<T>();
+        MPI_Unpack(
+            buffer, buffer_size, &buffer_position, data, size, mpi_type, MPI_COMM_WORLD);
+        assert(buffer_position <= static_cast<int>(buffer_size));
+    }
 };
