@@ -15,7 +15,7 @@ struct MyStruct {
     double c;  // unused
     template <class T> void serialization_interface(T& x) { x.add(a, b); }
 };
-template<> struct has_custom_serialization<MyStruct> { static const bool value = true; };
+template<> struct has_custom_serialization<MyStruct> : public true_type {};
 // clang-format on
 
 struct DummyModel {
@@ -52,7 +52,7 @@ struct StructTheGreat {
     double b;
     template <class T> void serialization_interface(T& x) { x.add(a, b); }
 };
-template<> struct has_custom_serialization<StructTheGreat> { static const bool value = true; };
+template<> struct has_custom_serialization<StructTheGreat> : public true_type {};
 // clang-format on
 
 void compute(int, char**) {
