@@ -129,7 +129,7 @@ void compute(int, char**) {
         m.h = p->rank - 0.4;
     }
 
-    Group master_operations{reduce<double>(m, {"g", "h"}), gather<double>(m, {"v"})};
+    Group master_operations{reduce<double>(m, {"g", "h"}), gather(m.partition, m.v)};
 
     Group slave_operations{broadcast(m, {"a", "c"}), broadcast(m, {"i", "j"})};
 
