@@ -1063,7 +1063,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-
             MoveGeneParameters(1.0);
 
             if (omega_param.variable) {

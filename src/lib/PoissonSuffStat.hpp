@@ -42,7 +42,7 @@
 
 class PoissonSuffStat : public SuffStat {
   public:
-    PoissonSuffStat() {Clear();}
+    PoissonSuffStat() { Clear(); }
     ~PoissonSuffStat() {}
 
     //! set count and beta to 0
@@ -70,14 +70,10 @@ class PoissonSuffStat : public SuffStat {
     }
 
     //! write structure into generic output stream
-    void ToStream(std::ostream &os) const {
-        os << count << '\t' << beta << '\n';
-    }
+    void ToStream(std::ostream &os) const { os << count << '\t' << beta << '\n'; }
 
     //! read structure from generic input stream
-    void FromStream(std::istream &is) {
-        is >> count >> beta;
-    }
+    void FromStream(std::istream &is) { is >> count >> beta; }
 
     //! return size when put into an MPI buffer
     unsigned int GetMPISize() const { return 2; }
@@ -119,12 +115,12 @@ class PoissonSuffStat : public SuffStat {
     double beta;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const PoissonSuffStat& suffstat)   {
+inline std::ostream &operator<<(std::ostream &os, const PoissonSuffStat &suffstat) {
     suffstat.ToStream(os);
     return os;
 }
 
-inline std::istream& operator>>(std::istream& is, PoissonSuffStat& suffstat)   {
+inline std::istream &operator>>(std::istream &is, PoissonSuffStat &suffstat) {
     suffstat.FromStream(is);
     return is;
 }
