@@ -13,33 +13,35 @@ class PartitionedBufferManager {
 
     void check_manager() {
         if (!manager_ready) {
-            for (size_t subset = 0; subset < partition.size(); subset++) {
+            for (size_t subset = partition.first(); subset < partition.max_index(); subset++) {
                 manager.merge(temp_managers.at(subset));
-                _revcounts.at(subset) = partition.partition_size(subset);
-                for (size_t i = subset + 1; i < partition.size(); i++) {
-                    _displs.at(i) += partition.partition_size(subset);
+                _revcounts.at(subset) = temp_managers.at(subset).buffer_size();
+                for (size_t i = subset + 1; i < partition.max_index(); i++) {
+                    _displs.at(i) += temp_managers.at(subset).buffer_size();
                 }
             }
+            manager_ready = true;
         }
     }
 
   public:
     PartitionedBufferManager(Partition partition)
         : partition(partition),
-          temp_managers(partition.size()),
-          _revcounts(partition.size()),
-          _displs(partition.size()) {}
+          temp_managers(partition.max_index()),
+          _revcounts(partition.max_index()),
+          _displs(partition.max_index(), 0) {}
 
     template <class T>
     void add(T& x) {
         static_assert(is_partitionable<T>::value,
             "PartitionedBufferManager::add: type T is not partitionable");
         assert(x.size() % partition.size_all() == 0);
+        assert(x.size() != 0);
         assert(!manager_ready);
 
         size_t multiplicity = x.size() / partition.size_all();
         int i = 0;
-        for (size_t subset = 0; subset < partition.size(); subset++) {
+        for (size_t subset = partition.first(); subset < partition.max_index(); subset++) {
             size_t subset_size = partition.partition_size(subset);
             size_t nb_elements = subset_size * multiplicity;
             temp_managers.at(subset).add_subset(x, i, nb_elements);

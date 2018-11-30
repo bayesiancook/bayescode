@@ -20,10 +20,11 @@ using IndexMapping = std::map<Index, Index>;
 class Partition {
     std::map<int, IndexSet> partition;
     const Process& process;  // local process (used in my* member functions)
+    size_t _first;
 
   public:
     Partition(IndexSet indexes, size_t size, size_t first = 0, const Process& process = *MPI::p)
-        : process(process) {
+        : process(process), _first(first) {
         size_t nb_indexes = indexes.size();
         for (size_t i = 0; i < size; i++) {
             auto begin = indexes.begin();
@@ -61,7 +62,7 @@ class Partition {
         if (partition.find(i) != partition.end()) {
             return partition.at(i).size();
         } else {
-            return size_all();
+            return 0;
             // MPI::p->message("Error in partition_size: no subset for index %d", i);
             // exit(1);
         }
@@ -76,6 +77,10 @@ class Partition {
     }
 
     size_t size() const { return partition.size(); }
+
+    size_t first() const { return _first; }
+
+    size_t max_index() const { return size() + first(); }
 
     size_t max_partition_size() const {
         size_t result = 0;

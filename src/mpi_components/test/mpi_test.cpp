@@ -123,6 +123,7 @@ void compute(int, char**) {
         m.c = 4.4;
         m.i = {2, 3.2, -1};
         m.j = {7, 2.21, -1};
+        m.v = {-1, -1, -1};
     } else {  // slave
         m.v = vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
         m.g = p->rank + 0.4;
