@@ -30,12 +30,12 @@ class BufferManager {
       Dispatchers */
 
     template <class T>
-    void array_add_dispatch(T& x, std::true_type /* is_partitionable */) {
+    void array_add_dispatch(T& x, std::true_type /* is partitionable */) {
         contig_add_subset_dispatch(x, 0, x.size(), is_contiguously_serializable<T>());
     }
 
     template <class T>
-    void array_add_dispatch(T& x, std::false_type /* is_partitionable */) {
+    void array_add_dispatch(T& x, std::false_type /* is not partitionable */) {
         static_assert(
             has_custom_serialization<T>::value, "BufferManager: type T lacks custom serialization");
         x.template serialization_interface<BufferManager>(*this);
@@ -43,14 +43,14 @@ class BufferManager {
 
     template <class T>
     void contig_add_subset_dispatch(
-        T& x, size_t start, size_t size, std::true_type /* is_contiguously_serializable */) {
+        T& x, size_t start, size_t size, std::true_type /* is contiguously serializable */) {
         /* -- */
         add(x[start], size);
     }
 
     template <class T>
     void contig_add_subset_dispatch(
-        T& x, size_t start, size_t size, std::false_type /* is_contiguously_serializable */) {
+        T& x, size_t start, size_t size, std::false_type /* is not contiguously serializable */) {
         /* -- */
         for (size_t i = start; i < start + size; i++) { add(x[i]); }
     }
@@ -120,5 +120,15 @@ class BufferManager {
         assert(_receive_buffer->size() == buffer_size());
         for (auto x : int_arrays) { _receive_buffer->unpack_array<int>(x.data, x.size); }
         for (auto x : double_arrays) { _receive_buffer->unpack_array<double>(x.data, x.size); }
+    }
+
+    /*----------------------------------------------------------------------------------------------
+      Merging */
+    void merge(const BufferManager& other) {
+        _send_buffer.reset(nullptr);
+        _receive_buffer.reset(nullptr);
+        int_arrays.insert(int_arrays.end(), other.int_arrays.begin(), other.int_arrays.end());
+        double_arrays.insert(
+            double_arrays.end(), other.double_arrays.begin(), other.double_arrays.end());
     }
 };

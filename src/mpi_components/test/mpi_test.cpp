@@ -48,7 +48,7 @@ struct DummyModel {
 
 // clang-format off
 struct StructTheGreat {
-    int a;
+    double a;
     double b;
     template <class T> void serialization_interface(T& x) { x.add(a, b); }
 };
@@ -99,15 +99,21 @@ void compute(int, char**) {
             v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
     }
     if (!p->rank) {
-        IndexSet is{"a", "b", "c", "d", "e"};
-        Partition part(is, 3);
+        IndexSet is{"a", "b", "c"};
+        Partition part(is, 2);
         PartitionedBufferManager bm(part);
 
-        std::vector<double> v = {1.1, 2.2, 3.3, 4.4, 5.5};
+        vector<vector<double>> v = {{1.1, 1.11}, {2.2, 2.22}, {3.3, 3.33}};
         bm.add(v);
 
-        std::vector<StructTheGreat> v2 = {{1, 0.1}, {2, 0.2}, {3, 0.3}, {4, 0.4}, {5, 0.5}};
+        vector<StructTheGreat> v2 = {{0.01, 0.1}, {0.02, 0.2}, {0.03, 0.3}};
         bm.add(v2);
+
+        auto void_buf = bm.send_buffer();
+        auto buf = static_cast<double*>(void_buf);
+        p->message("Buf = %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
+            buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10],
+            buf[11]);
     }
 
     DummyModel m;
@@ -118,7 +124,7 @@ void compute(int, char**) {
         m.i = {2, 3.2, -1};
         m.j = {7, 2.21, -1};
     } else {  // slave
-        m.v = std::vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
+        m.v = vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
         m.g = p->rank + 0.4;
         m.h = p->rank - 0.4;
     }
