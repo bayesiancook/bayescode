@@ -69,12 +69,12 @@ class PartitionedBufferManager {
         return manager.buffer_size();
     }
 
-    const int* revcounts() {
+    int* revcounts() {
         check_manager();
         return _revcounts.data();
     }
 
-    const int* displs() {
+    int* displs() {
         check_manager();
         return _displs.data();
     }
