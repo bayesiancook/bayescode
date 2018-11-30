@@ -34,6 +34,9 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     //! return the number of columns (number of omega Ncat)
     virtual int GetNcol() const override { return delta_omega_array->GetSize(); }
 
+    //! return current omega value for omega mixture of component i
+    double GetOmega(int i) const { return omega_shift + delta_omega_array->GetVal(i); }
+
     //! const access to the matrix for row (fitness cat) i and column (omega cat) j
     virtual const AAMutSelOmegaCodonSubMatrix &GetVal(int i, int j) const override {
         return *matrixarray[i][j];
@@ -48,7 +51,7 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
                 matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(codonstatespace, nucmatrix,
-                    fitnessarray->GetVal(i), omega_shift + delta_omega_array->GetVal(j), 1.0);
+                    fitnessarray->GetVal(i), GetOmega(j), 1.0);
             }
         }
     }
@@ -61,25 +64,33 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     }
 
     //! update all matrices
-    void UpdateCodonMatrices() {
+    void CorruptCodonMatrices() {
         for (int i = 0; i < GetNrow(); i++) {
-            UpdateCodonMatrices(i);
+            CorruptRowCodonMatrices(i);
         }
     }
 
-    //! update all matrices for component i of the fitness mixture
-    void UpdateCodonMatrices(int i) {
+    //! update all matrices for row i
+    void CorruptRowCodonMatrices(int i) {
         for (int j = 0; j < GetNcol(); j++) {
-            matrixarray[i][j]->SetOmega(omega_shift + delta_omega_array->GetVal(j));
+            matrixarray[i][j]->SetOmega(GetOmega(j));
+            matrixarray[i][j]->CorruptMatrix();
+        }
+    }
+
+    //! update all matrices for col j
+    void CorruptColCodonMatrices(int j) {
+        for (int i = 0; i < GetNrow(); i++) {
+            matrixarray[i][j]->SetOmega(GetOmega(j));
             matrixarray[i][j]->CorruptMatrix();
         }
     }
 
     //! update only those matrices for which occupancy[i] != 0
-    void UpdateCodonMatrices(const Selector<int> &occupancy) {
+    void CorruptCodonMatricesRowOccupancy(const Selector<int> &row_occupancy) {
         for (int i = 0; i < GetNrow(); i++) {
-            if (!occupancy.GetVal(i)) {
-                UpdateCodonMatrices(i);
+            if (!row_occupancy.GetVal(i)) {
+                CorruptRowCodonMatrices(i);
             }
         }
     }

@@ -18,7 +18,7 @@ class AAMutselArgParse : public BaseArgParse {
         "", "ncat", "truncation of the first-level stick-breaking process", false, 100, "int", cmd};
     ValueArg<int> basencat{"", "basencat", "truncation of the second-level stick-breaking process",
         false, 1, "int", cmd};
-    ValueArg<double> omega_shift{"", "omega_shift",
+    ValueArg<double> omegashift{"", "omegashift",
         "the shift applied to omega (typically 1 for detecting adaptation, 0 for general case)", false,
         1.0, "double", cmd};
     ValueArg<int> omegancat{
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
         model = new AAMutSelMultipleOmegaModel(args.alignment.getValue(), args.treefile.getValue(),
             aamutsel_args.omegamode(), aamutsel_args.ncat.getValue(),
             aamutsel_args.basencat.getValue(), aamutsel_args.omegancat.getValue(),
-            aamutsel_args.omega_shift.getValue());
+            aamutsel_args.omegashift.getValue());
     }
 
     ConsoleLogger console_logger;

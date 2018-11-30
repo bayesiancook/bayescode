@@ -100,10 +100,10 @@ mutselomega: _build
 	@cd _build ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
-	_build/mutselomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --freeomega --omegancat 3 -u 10 _mutselomega/gal4
-	_build/mutselomega _mutselomega/gal4
-	_build/readmutselomega _mutselomega/gal4
-	_build/readmutselomega --ss _mutselomega/gal4
+	_build/mutselomega -a data/samhd1/samhd1.ali -t data/samhd1/samhd1.tree --freeomega --omegancat 1 -u 20 _mutselomega/samhd1
+	_build/mutselomega _mutselomega/samhd1
+	_build/readmutselomega _mutselomega/samhd1
+	_build/readmutselomega --ss _mutselomega/samhd1
 
 .PHONY: diffseldsparse
 diffseldsparse: all
