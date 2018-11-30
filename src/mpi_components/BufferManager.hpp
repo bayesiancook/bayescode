@@ -23,19 +23,37 @@ class BufferManager {
     std::unique_ptr<SendBuffer> _send_buffer;
     std::unique_ptr<ReceiveBuffer> _receive_buffer;
 
+    template <class T>
+    void array_dispatch(T& x, std::true_type /* is_partitionable */) {
+        contig_dispatch(x, is_contiguously_serializable<T>());
+    }
+
+    template <class T>
+    void contig_dispatch(T& x, std::true_type /* is_contiguously_serializable */) {
+        add(x[0], x.size());
+    }
+
+    template <class T>
+    void contig_dispatch(T& x, std::false_type /* is_contiguously_serializable */) {
+        for (size_t i = 0; i < x.size(); i++) { add(x[0]); }
+    }
+
+    template <class T>
+    void array_dispatch(T& x, std::false_type /* is_partitionable */) {
+        static_assert(
+            has_custom_serialization<T>(), "BufferManager type T lacks custom serialization");
+        x.template serialization_interface<BufferManager>(*this);
+    }
+
   public:
     BufferManager() = default;
 
     void add(int& data, size_t size = 1) { int_arrays.push_back({&data, size}); }
     void add(double& data, size_t size = 1) { double_arrays.push_back({&data, size}); }
-    void add(std::vector<int>& x) { int_arrays.push_back({x.data(), x.size()}); }
-    void add(std::vector<double>& x) { double_arrays.push_back({x.data(), x.size()}); }
 
     template <class T>
-    void add(T& x, size_t count = 1) {
-        static_assert(
-            has_custom_serialization<T>::value, "BufferManager::add: class T is not serializable");
-        x.template serialization_interface<BufferManager>(*this);
+    void add(T& x) {
+        array_dispatch(x, is_partitionable<T>());
     }
 
     template <class Arg, class... Args>
