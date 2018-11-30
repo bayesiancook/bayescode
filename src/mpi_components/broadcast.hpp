@@ -60,7 +60,7 @@ class BroadcasterSlave : public Proxy, public RegistrarBase<BroadcasterSlave> {
   Functions that are meant to be called globally and that will create either a master or slave
   component depending on the process
 ==================================================================================================*/
-template <class T, class Model, class... Args>
+template <class Model, class... Args>
 std::unique_ptr<Proxy> broadcast(Model& m, filter_t filter) {
     return instantiate_and_declare_from_model<BroadcasterMaster, BroadcasterSlave, Model>(
         m, filter);

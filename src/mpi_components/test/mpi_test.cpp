@@ -1,5 +1,5 @@
 #include <sstream>
-#include "mpi_components/BufferManager.hpp"
+#include "mpi_components/PartitionedBufferManager.hpp"
 #include "mpi_components/broadcast.hpp"
 #include "mpi_components/gather.hpp"
 #include "mpi_components/reduce.hpp"
@@ -8,18 +8,15 @@
 using MPI::p;
 using namespace std;
 
+// clang-format off
 struct MyStruct {
     int a;
     double b;
     double c;  // unused
-
-    template <class T>
-    void serialization_interface(T& x) {
-        x.add(a, b);
-    }
+    template <class T> void serialization_interface(T& x) { x.add(a, b); }
 };
-
-STRUCT_GLOBAL_DECL(MyStruct, MPI_MYSTRUCT)
+template<> struct has_custom_serialization<MyStruct> { static const bool value = true; };
+// clang-format on
 
 struct DummyModel {
     double a{-1}, b{-1}, c{-1};
@@ -49,12 +46,16 @@ struct DummyModel {
     }
 };
 
-void compute(int, char**) {
-    STRUCT_DECL(MyStruct)
-    ATTRIBUTE(a)
-    ATTRIBUTE(b)
-    STRUCT_COMMIT(MPI_MYSTRUCT)
+// clang-format off
+struct StructTheGreat {
+    int a;
+    double b;
+    template <class T> void serialization_interface(T& x) { x.add(a, b); }
+};
+template<> struct has_custom_serialization<StructTheGreat> { static const bool value = true; };
+// clang-format on
 
+void compute(int, char**) {
     if (!p->rank) {
         SendBuffer buf;
         int i[4] = {2, 3, 4, 5};
@@ -82,6 +83,7 @@ void compute(int, char**) {
         double l{2.1}, m{3.2}, n{5.6};
         vector<int> v{5, 8, 9};
         vector<double> v2{2.35, 5.68};
+
         BufferManager b;
         b.add(i, j, k, l, m, n, v, v2);
 
@@ -95,6 +97,17 @@ void compute(int, char**) {
         b.receive();
         p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
             v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
+    }
+    if (!p->rank) {
+        IndexSet is{"a", "b", "c", "d", "e"};
+        Partition part(is, 3);
+        PartitionedBufferManager bm(part);
+
+        std::vector<double> v = {1.1, 2.2, 3.3, 4.4, 5.5};
+        bm.add(v);
+
+        std::vector<StructTheGreat> v2 = {{1, 0.1}, {2, 0.2}, {3, 0.3}, {4, 0.4}, {5, 0.5}};
+        bm.add(v2);
     }
 
     DummyModel m;
@@ -112,7 +125,7 @@ void compute(int, char**) {
 
     Group master_operations{reduce<double>(m, {"g", "h"}), gather<double>(m, {"v"})};
 
-    Group slave_operations{broadcast<double>(m, {"a", "c"}), broadcast<MyStruct>(m, {"i", "j"})};
+    Group slave_operations{broadcast(m, {"a", "c"}), broadcast(m, {"i", "j"})};
 
     p->rank ? slave_operations.acquire() : slave_operations.release();
     p->rank ? master_operations.release() : master_operations.acquire();
