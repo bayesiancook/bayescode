@@ -1,8 +1,8 @@
 #include <sstream>
+#include "mpi_components/BufferManager.hpp"
 #include "mpi_components/broadcast.hpp"
 #include "mpi_components/gather.hpp"
 #include "mpi_components/reduce.hpp"
-#include "mpi_components/serialization.hpp"
 #include "operations/proxies.hpp"
 
 using MPI::p;

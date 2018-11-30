@@ -1,9 +1,9 @@
 #pragma once
 
 #include <functional>
+#include "BufferManager.hpp"
 #include "Process.hpp"
 #include "components/RegistrarBase.hpp"
-#include "serialization.hpp"
 #include "utils.hpp"
 
 /*==================================================================================================

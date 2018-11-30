@@ -40,6 +40,29 @@ struct GetMPIDatatype<int> {
 };
 
 /*--------------------------------------------------------------------------------------------------
+  Some helpers to get the size of MPI types */
+
+namespace MPI {
+    size_t int_size() {
+        int result;
+        MPI_Type_size(MPI_INT, &result);
+        return static_cast<size_t>(result);
+    }
+
+    size_t double_size() {
+        int result;
+        MPI_Type_size(MPI_DOUBLE, &result);
+        return static_cast<size_t>(result);
+    }
+
+    size_t packed_size() {
+        int result;
+        MPI_Type_size(MPI_PACKED, &result);
+        return static_cast<size_t>(result);
+    }
+};  // namespace MPI
+
+/*--------------------------------------------------------------------------------------------------
   Function to get type with better syntax */
 
 template <typename T>
