@@ -269,22 +269,22 @@ class MultiGeneSingleOmegaModelShared {
         // note: instead, one could have collected omega suffstats for each slave, then reduced, as
         // for nucrates and bl
         // mpiomegaref.add(gather<double>(*this, {"omegaarray"}));
-        mpiomegaref.add(gather(partition, *omegaarray));
+        // mpiomegaref.add(gather(partition, *omegaarray));
 
         mpitrace = make_group();
         auto &mpitraceref = dynamic_cast<Group &>(*mpiomega);
         // gather omegas
         // mpitraceref.add(gather<double>(*this, {"omegaarray"}));
-        mpitraceref.add(gather(partition, *omegaarray));
+        // mpitraceref.add(gather(partition, *omegaarray));
         if (blmode != shared) {
             // gather branch lengths across genes
             // mpitraceref.add(gather<double>(*this, {"branchlengtharray"}));
-            mpitraceref.add(gather(partition, *branchlengtharray));
+            // mpitraceref.add(gather(partition, *branchlengtharray));
         }
         if (nucmode != shared) {
             // gather nucrates across genes
             // mpitraceref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
-            mpitraceref.add(gather(partition, *nucrelratearray, *nucstatarray));
+            // mpitraceref.add(gather(partition, *nucrelratearray, *nucstatarray));
         }
         // reduce log prior and log likelihoods across genes
         // mpitraceref.add(reduce<double>(*this, {"genelogprior", "geneloglikelihood"}));
@@ -670,24 +670,24 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         FastUpdate();
 
         if (MPI::p->size > 1) {
-            SendBranchLengthsHyperParameters();
-            SendNucRatesHyperParameters();
+            // SendBranchLengthsHyperParameters();
+            // SendNucRatesHyperParameters();
 
-            if (blmode == shared) {
-                SendGlobalBranchLengths();
-            } else {
-                SendGeneBranchLengths();
-            }
+            // if (blmode == shared) {
+            //     SendGlobalBranchLengths();
+            // } else {
+            //     SendGeneBranchLengths();
+            // }
 
-            if (nucmode == shared) {
-                SendGlobalNucRates();
-            } else {
-                SendGeneNucRates();
-            }
+            // if (nucmode == shared) {
+            //     SendGlobalNucRates();
+            // } else {
+            //     SendGeneNucRates();
+            // }
 
-            SendOmegaHyperParameters();
-            SendOmega();
-            ReceiveLogProbs();
+            // SendOmegaHyperParameters();
+            // SendOmega();
+            // ReceiveLogProbs();
         }
     }
 
@@ -1015,24 +1015,24 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void end() override {}
 
     void Update() {
-        ReceiveBranchLengthsHyperParameters();
-        ReceiveNucRatesHyperParameters();
+        // ReceiveBranchLengthsHyperParameters();
+        // ReceiveNucRatesHyperParameters();
 
-        if (blmode == shared) {
-            ReceiveGlobalBranchLengths();
-        } else {
-            ReceiveGeneBranchLengths();
-        }
-        if (nucmode == shared) {
-            ReceiveGlobalNucRates();
-        } else {
-            ReceiveGeneNucRates();
-        }
+        // if (blmode == shared) {
+        //     ReceiveGlobalBranchLengths();
+        // } else {
+        //     ReceiveGeneBranchLengths();
+        // }
+        // if (nucmode == shared) {
+        //     ReceiveGlobalNucRates();
+        // } else {
+        //     ReceiveGeneNucRates();
+        // }
 
-        ReceiveOmegaHyperParameters();
-        ReceiveOmega();
-        GeneUpdate();
-        SendLogProbs();
+        // ReceiveOmegaHyperParameters();
+        // ReceiveOmega();
+        // GeneUpdate();
+        // SendLogProbs();
     }
 
     void GeneUpdate() {
