@@ -84,7 +84,7 @@ run-app-tests: all
 .PHONY: run-multigeneglobom-test
 run-multigeneglobom-test: all
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
-	# cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
+	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 
 .PHONY: testpr
 test:

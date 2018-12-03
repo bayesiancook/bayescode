@@ -90,8 +90,8 @@ target_link_libraries(diffseldsparse bayescode_lib tree_lib)
 # target_link_libraries(readdiffseldsparse bayescode_lib tree_lib)
 
 # Multi-gene single omega (multigeneglobom)
-# add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
-# target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
+add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
+target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")
