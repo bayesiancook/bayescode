@@ -32,7 +32,7 @@ class ReducerMaster : public Proxy {
             BufferManager tmp_manager = manager.int_manager();
             auto buf = tmp_manager.receive_buffer();
             auto nb_elems = tmp_manager.nb_ints();
-            MPI_Reduce(buf, zeroes_int.data(), nb_elems, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(zeroes_int.data(), buf, nb_elems, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
             tmp_manager.receive();
         }
     }
@@ -51,6 +51,8 @@ class ReducerMaster : public Proxy {
     }
 
     void acquire() final {
+        MPI::p->message(
+            "Reducing %zu ints and %zu doubles", manager.nb_ints(), manager.nb_doubles());
         assert(manager.buffer_size() > 0);
         reduce_ints();
         reduce_doubles();
@@ -90,6 +92,8 @@ class ReducerSlave : public Proxy {
     }
 
     void release() final {
+        MPI::p->message(
+            "Reducing %zu ints and %zu doubles", manager.nb_ints(), manager.nb_doubles());
         assert(manager.buffer_size() > 0);
         reduce_ints();
         reduce_doubles();

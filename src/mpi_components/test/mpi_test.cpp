@@ -23,15 +23,16 @@ struct DummyModel {
     vector<double> v;
     Partition partition{{"d", "e", "f"}, static_cast<size_t>(p->size) - 1, 1};
     MyStruct j{-1, -1, -1};
-    double g{-1};
+    MyStruct g{-1, -1, -1};
     double h{-1};
     MyStruct i{-1, -1, -1};
 
     void print() {
         stringstream ss;
         for (auto e : v) { ss << e << " "; }
-        p->message("Model state is %.2f, %.2f, %.2f, {%s}, %.2f, %.2f, (%d, %.2f), (%d, %.2f)", a,
-            b, c, ss.str().c_str(), g, h, i.a, i.b, j.a, j.b);
+        p->message(
+            "Model state is %.2f, %.2f, %.2f, {%s}, (%d, %.2f, %.2f), %.2f, (%d, %.2f), (%d, %.2f)",
+            a, b, c, ss.str().c_str(), g.a, g.b, g.c, h, i.a, i.b, j.a, j.b);
     }
 };
 
@@ -115,7 +116,7 @@ void compute(int, char**) {
         m.v = {-1, -1, -1};
     } else {  // slave
         m.v = vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
-        m.g = p->rank + 0.4;
+        m.g = {p->rank + 1, p->rank - 0.72, p->rank + 0.4};
         m.h = p->rank + 2.3;
     }
 
