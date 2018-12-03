@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "MPIBuffer.hpp"
+#include "mpi_components/traits.hpp"
 #include "tree/implem.hpp"
 
 /**
@@ -161,6 +162,8 @@ class SimpleBranchArray : public BranchArray<T> {
     T &operator[](int index) /*override*/ { return array[index]; }
     const T &GetVal(int index) const /*override*/ { return array[index]; }
 
+    size_t size() const { return array.size(); }
+
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
     const std::vector<T> &GetArray() const { return array; }
@@ -169,7 +172,21 @@ class SimpleBranchArray : public BranchArray<T> {
     //! interface
     std::vector<T> &GetArray() { return array; }
 
+    template <class Registrar>
+    void serialization_interface(Registrar &x) {
+        x.add(array);
+    }
+
   protected:
     const Tree &tree;
     std::vector<T> array;
 };
+
+template <class T>
+struct has_custom_serialization<SimpleBranchArray<T>> : std::true_type {};
+
+template <class T>
+struct has_size<SimpleBranchArray<T>> : std::true_type {};
+
+template <class T>
+struct has_access_operator<SimpleBranchArray<T>> : std::true_type {};

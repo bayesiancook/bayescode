@@ -229,11 +229,19 @@ class NucPathSuffStat : public SuffStat {
         }
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(rootcount, paircount, pairbeta);
+    }
+
     // private:
     std::vector<int> rootcount;
     std::vector<std::vector<int>> paircount;
     std::vector<std::vector<double>> pairbeta;
 };
+
+template <>
+struct has_custom_serialization<NucPathSuffStat> : std::true_type {};
 
 /**
  * \brief A sufficient statistic for substitution histories, as a function of

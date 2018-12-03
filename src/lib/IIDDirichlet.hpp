@@ -113,10 +113,18 @@ class DirichletSuffStat : public SuffStat {
         n += temp;
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(sumlog, n);
+    }
+
     // private:
     std::vector<double> sumlog;
     int n;
 };
+
+template <>
+struct has_custom_serialization<DirichletSuffStat> : std::true_type {};
 
 /**
  * \brief A SimpleArray of DirichletSuffStat
@@ -278,10 +286,24 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
         return m2;
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(array, center, concentration);
+    }
+
   protected:
     std::vector<double> center;
     double concentration;
 };
+
+template <>
+struct has_custom_serialization<IIDDirichlet> : std::true_type {};
+
+template <>
+struct has_size<IIDDirichlet> : std::true_type {};
+
+template <>
+struct has_access_operator<IIDDirichlet> : std::true_type {};
 
 /**
  * \brief An array of Dirichlet random variables, each with its own center and

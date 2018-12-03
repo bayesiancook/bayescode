@@ -1,6 +1,4 @@
-
-#ifndef GAMMASUFFSTAT_H
-#define GAMMASUFFSTAT_H
+#pragma once
 
 #include "IIDGamma.hpp"
 #include "PoissonSuffStat.hpp"
@@ -122,11 +120,19 @@ class GammaSuffStat : public SuffStat {
     //! return N, total number of gamma variates contributing to the suff stat
     int GetN() const { return n; }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(sum, sumlog, n);
+    }
+
   private:
     double sum;
     double sumlog;
     int n;
 };
+
+template <>
+struct has_custom_serialization<GammaSuffStat> : std::true_type {};
 
 /**
  * \brief A tree-structured branch-wise array of gamma sufficient statistics
@@ -222,4 +228,5 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
     }
 };
 
-#endif
+template <>
+struct has_custom_serialization<GammaSuffStatBranchArray> : std::true_type {};

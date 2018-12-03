@@ -4,6 +4,7 @@
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
 #include "Random.hpp"
+#include "mpi_components/traits.hpp"
 
 /**
  * \brief An array of IID gamma random variables
@@ -129,7 +130,15 @@ class IIDGamma : public SimpleArray<double> {
   protected:
     double shape;
     double scale;
+
+    // VL : what should gather(IIDGamma) do?
 };
+
+template <>
+struct has_size<IIDGamma> : std::true_type {};
+
+template <>
+struct has_access_operator<IIDGamma> : std::true_type {};
 
 /**
  * \brief A tree-structured branch-wise array of iid Gamma variables
@@ -218,7 +227,15 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
         return m2;
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(array, shape, scale);
+    }
+
   protected:
     double shape;
     double scale;
 };
+
+template <>
+struct has_custom_serialization<BranchIIDGamma> : std::true_type {};

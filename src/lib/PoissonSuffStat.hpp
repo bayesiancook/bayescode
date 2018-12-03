@@ -110,10 +110,18 @@ class PoissonSuffStat : public SuffStat {
                Random::logGamma(shape + count);
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(count, beta);
+    }
+
     // protected:
     int count;
     double beta;
 };
+
+template <>
+struct has_custom_serialization<PoissonSuffStat> : std::true_type {};
 
 inline std::ostream &operator<<(std::ostream &os, const PoissonSuffStat &suffstat) {
     suffstat.ToStream(os);
@@ -305,6 +313,9 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
         }
     }
 };
+
+template <>
+struct has_custom_serialization<PoissonSuffStatBranchArray> : std::true_type {};
 
 class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
   public:

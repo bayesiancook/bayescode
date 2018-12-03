@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "MPIBuffer.hpp"
+#include "mpi_components/traits.hpp"
 
 /**
  * \brief An interface for an abstract indexed array of constant references over
@@ -195,6 +196,8 @@ class SimpleArray : public Array<T> {
     T &operator[](int index) override { return array[index]; }
     const T &GetVal(int index) const override { return array[index]; }
 
+    size_t size() const { return array.size(); }
+
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
     const std::vector<T> &GetArray() const { return array; }
@@ -223,9 +226,23 @@ class SimpleArray : public Array<T> {
         (*this)[cat2] = tmp;
     }
 
+    template <class Registrar>
+    void serialization_interface(Registrar &x) {
+        x.add(array);
+    }
+
   protected:
     std::vector<T> array;
 };
+
+template <class T>
+struct has_custom_serialization<SimpleArray<T>> : std::true_type {};
+
+template <class T>
+struct has_size<SimpleArray<T>> : std::true_type {};
+
+template <class T>
+struct has_access_operator<SimpleArray<T>> : std::true_type {};
 
 /**
  * \brief A Selector that distributes the components of a mixture over an array
