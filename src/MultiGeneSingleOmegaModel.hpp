@@ -45,8 +45,6 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-STRUCT_GLOBAL_DECL(PoissonSuffStat, MPI_POISSONSUFFSTAT);
-
 class MultiGeneSingleOmegaModelShared {
   public:
     // each gene defines its own SingleOmegaModel
@@ -116,18 +114,17 @@ class MultiGeneSingleOmegaModelShared {
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
         // MPI communication groups
-        // clang-format off
-
         mpibranchlengths = make_group();
-        auto& mpibranchlengthsref = dynamic_cast<Group&>(*mpibranchlengths);
+        auto &mpibranchlengthsref = dynamic_cast<Group &>(*mpibranchlengths);
 
-        if (blmode == shared)   {
-
+        if (blmode == shared) {
             // broadcast branch lengths
-            mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength"}));
+            // mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength"}));
+            mpibranchlengthsref.add(broadcast(*branchlength));
+
             // slaves sync gene processes
-            if (MPI::p->rank)   {
-                auto blsync = [this](){
+            if (MPI::p->rank) {
+                auto blsync = [this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetBranchLengths(*branchlength);
                     }
@@ -137,27 +134,30 @@ class MultiGeneSingleOmegaModelShared {
 
             // suffstats
             // slaves collect suff stat across genes
-            if (MPI::p->rank)   {
-                auto blcollectsuffstat = [this](){ 
+            if (MPI::p->rank) {
+                auto blcollectsuffstat = [this]() {
                     lengthpathsuffstatarray->Clear();
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->CollectLengthSuffStat();
-                        lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
+                        lengthpathsuffstatarray->Add(
+                            *geneprocess[gene]->GetLengthPathSuffStatArray());
                     }
-                }; 
+                };
                 mpibranchlengthsref.add(make_release_operation(blcollectsuffstat));
             }
             // suffstats are reduced
-            mpibranchlengthsref.add(reduce<PoissonSuffStat>(*this, {"lengthpathsuffstatarray"}));
-        }
-        else    {
-
+            // mpibranchlengthsref.add(reduce<PoissonSuffStat>(*this, {"lengthpathsuffstatarray"}));
+            mpibranchlengthsref.add(reduce(*lengthpathsuffstatarray));
+        } else {
             // broadcast branchlengths hyperparameters
-            mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength", "blhyperinvshape"}));
-            if (MPI::p->rank)   {
-                auto blsync = [this](){
+            // mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength",
+            // "blhyperinvshape"}));
+            mpibranchlengthsref.add(broadcast(*branchlength, blhyperinvshape));
+            if (MPI::p->rank) {
+                auto blsync = [this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
+                        geneprocess[gene]->SetBranchLengthsHyperParameters(
+                            *branchlength, blhyperinvshape);
                     }
                 };
                 mpibranchlengthsref.add(make_acquire_operation(blsync));
@@ -165,27 +165,27 @@ class MultiGeneSingleOmegaModelShared {
 
             // suff stats
             // slaves collect suff stat across genes
-            if (MPI::p->rank)   {
-                auto blcollecthypersuffstat = [this](){ 
+            if (MPI::p->rank) {
+                auto blcollecthypersuffstat = [this]() {
                     lengthhypersuffstatarray->Clear();
                     lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-                }; 
+                };
                 mpibranchlengthsref.add(make_release_operation(blcollecthypersuffstat));
             }
             // reduce suff stats
-            mpibranchlengthsref.add(reduce<GammaSuffStat>(*this, {"lengthhypersuffstatarray"}));
+            // mpibranchlengthsref.add(reduce<GammaSuffStat>(*this, {"lengthhypersuffstatarray"}));
+            mpibranchlengthsref.add(reduce(*lengthhypersuffstatarray));
         }
 
         mpinucrates = make_group();
-        auto& mpinucratesref = dynamic_cast<Group&>(*mpinucrates);
+        auto &mpinucratesref = dynamic_cast<Group &>(*mpinucrates);
 
-        if (nucmode == shared)  {
-
+        if (nucmode == shared) {
             // broadcasting nuc rates
-            mpinucratesref.add(broadcast<double>(*this, {"nucrelratearray", "nucstatarray"}));
+            mpinucratesref.add(broadcast(*nucrelratearray, *nucstatarray));
             // slaves sync gene processes
-            if (MPI::p->rank)   {
-                auto nucsync = [this](){
+            if (MPI::p->rank) {
+                auto nucsync = [this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
                     }
@@ -195,27 +195,34 @@ class MultiGeneSingleOmegaModelShared {
 
             // suffstats
             // slaves collect suff stat across genes
-            if (MPI::p->rank)   {
-                auto nuccollectsuffstat = [this](){ 
+            if (MPI::p->rank) {
+                auto nuccollectsuffstat = [this]() {
                     nucpathsuffstat.Clear();
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->CollectNucPathSuffStat();
                         nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
                     }
-                }; 
+                };
                 mpinucratesref.add(make_release_operation(nuccollectsuffstat));
             }
             // suffstats are reduced and received by the master
-            mpinucratesref.add(reduce<int>(*this, {"nucpathsuffstat_rootcount", "nucpathsuffstat_paircount"}));
-            mpinucratesref.add(reduce<double>(*this, {"nucpathsuffstat_pairbeta"}));
-        }
-        else    {
-
+            // mpinucratesref.add(reduce<int>(*this, {"nucpathsuffstat_rootcount",
+            // "nucpathsuffstat_paircount"})); mpinucratesref.add(reduce<double>(*this,
+            // {"nucpathsuffstat_pairbeta"}));
+            mpinucratesref.add(reduce(nucpathsuffstat));
+        } else {
             // broadcasting hyperparameters
-            mpinucratesref.add(broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc", "nucstathypercenter", "nucstathyperinvconc"}));
+            // mpinucratesref.add(
+            //     broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc",
+            //                                  "nucstathypercenter", "nucstathyperinvconc"}));
+            // mpinucratesref.add(
+            //     broadcast<double>(*this, {"nucrelratehypercenter", "nucrelratehyperinvconc",
+            //                                  "nucstathypercenter", "nucstathyperinvconc"}));
+            mpinucratesref.add(broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
+                nucstathypercenter, nucstathyperinvconc));
             // slaves sync gene processes
-            if (MPI::p->rank)   {
-                auto nuchypersync = [this](){
+            if (MPI::p->rank) {
+                auto nuchypersync = [this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
                             nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
@@ -226,8 +233,8 @@ class MultiGeneSingleOmegaModelShared {
 
             // suffstats
             // slaves collect suff stats across genes
-            if (MPI::p->rank)   {
-                auto nuccollecthypersuffstat = [this](){
+            if (MPI::p->rank) {
+                auto nuccollecthypersuffstat = [this]() {
                     nucrelratesuffstat.Clear();
                     nucrelratearray->AddSuffStat(nucrelratesuffstat);
                     nucstatsuffstat.Clear();
@@ -236,17 +243,21 @@ class MultiGeneSingleOmegaModelShared {
                 mpinucratesref.add(make_release_operation(nuccollecthypersuffstat));
             }
             // suff stats are reduced and received by the master
-            mpinucratesref.add(reduce<double>(*this, {"nucrelratesuffstat_sumlog", "nucstatsuffstat_sumlog"}));
-            mpinucratesref.add(reduce<int>(*this, {"nucrelratesuffstat_n", "nucstatsuffstat_n"}));
+            // mpinucratesref.add(
+            //     reduce<double>(*this, {"nucrelratesuffstat_sumlog", "nucstatsuffstat_sumlog"}));
+            // mpinucratesref.add(reduce<int>(*this, {"nucrelratesuffstat_n",
+            // "nucstatsuffstat_n"}));
+            mpinucratesref.add(reduce(nucrelratesuffstat, nucstatsuffstat));
         }
-                    
+
         mpiomega = make_group();
-        auto& mpiomegaref = dynamic_cast<Group&>(*mpiomega);
+        auto &mpiomegaref = dynamic_cast<Group &>(*mpiomega);
 
         // broadcast omega hyperparams
-        mpiomegaref.add(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}));
-        if (MPI::p->rank)   {
-            auto omegasync = [this,omega_param](){
+        // mpiomegaref.add(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}));
+        mpiomegaref.add(broadcast(omega_param.hypermean, omega_param.hyperinvshape));
+        if (MPI::p->rank) {
+            auto omegasync = [this, omega_param]() {
                 for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                     geneprocess[gene]->SetOmegaHyperParameters(
                         omega_param.hypermean, omega_param.hyperinvshape);
@@ -255,25 +266,29 @@ class MultiGeneSingleOmegaModelShared {
             mpiomegaref.add(make_acquire_operation(omegasync));
         }
         // gather omegas
-        // note: instead, one could have collected omega suffstats for each slave, then reduced, as for nucrates and bl
-        mpiomegaref.add(gather<double>(*this, {"omegaarray"}));
+        // note: instead, one could have collected omega suffstats for each slave, then reduced, as
+        // for nucrates and bl
+        // mpiomegaref.add(gather<double>(*this, {"omegaarray"}));
+        mpiomegaref.add(gather(partition, *omegaarray));
 
         mpitrace = make_group();
-        auto& mpitraceref = dynamic_cast<Group&>(*mpiomega);
+        auto &mpitraceref = dynamic_cast<Group &>(*mpiomega);
         // gather omegas
-        mpitraceref.add(gather<double>(*this, {"omegaarray"}));
+        // mpitraceref.add(gather<double>(*this, {"omegaarray"}));
+        mpitraceref.add(gather(partition, *omegaarray));
         if (blmode != shared) {
             // gather branch lengths across genes
-            mpitraceref.add(gather<double>(*this, {"branchlengtharray"}));
+            // mpitraceref.add(gather<double>(*this, {"branchlengtharray"}));
+            mpitraceref.add(gather(partition, *branchlengtharray));
         }
         if (nucmode != shared) {
             // gather nucrates across genes
-            mpitraceref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
+            // mpitraceref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
+            mpitraceref.add(gather(partition, *nucrelratearray, *nucstatarray));
         }
         // reduce log prior and log likelihoods across genes
-        mpitraceref.add(reduce<double>(*this, {"genelogprior", "geneloglikelihood"}));
-
-        // clang-format on
+        // mpitraceref.add(reduce<double>(*this, {"genelogprior", "geneloglikelihood"}));
+        mpitraceref.add(reduce(GeneLogPrior, GeneLogLikelihood));
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
