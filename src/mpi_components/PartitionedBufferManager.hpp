@@ -49,6 +49,12 @@ class PartitionedBufferManager {
         }
     }
 
+    template <class Var, class... Vars>
+    void add(Var& var, Vars&&... vars) {
+        add(var);
+        add(std::forward<Vars>(vars)...);
+    }
+
     void* send_buffer() {
         check_manager();
         return manager.send_buffer();
