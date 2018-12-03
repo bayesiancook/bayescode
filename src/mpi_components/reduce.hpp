@@ -24,29 +24,36 @@ class ReducerMaster : public Proxy {
         manager.add(std::forward<Variables>(vars)...);
     }
 
+    void reduce_ints() {
+        if (manager.nb_ints() > 0) {
+            if (zeroes_int.size() != manager.nb_ints()) {
+                zeroes_int = std::vector<int>(manager.nb_ints(), 0);
+            }
+            BufferManager tmp_manager = manager.int_manager();
+            auto buf = tmp_manager.receive_buffer();
+            auto nb_elems = tmp_manager.nb_ints();
+            MPI_Reduce(buf, zeroes_int.data(), nb_elems, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+            tmp_manager.receive();
+        }
+    }
+
+    void reduce_doubles() {
+        if (manager.nb_doubles() > 0) {
+            if (zeroes_double.size() != manager.nb_doubles()) {
+                zeroes_double = std::vector<double>(manager.nb_doubles(), 0);
+            }
+            BufferManager tmp_manager = manager.double_manager();
+            auto buf = tmp_manager.receive_buffer();
+            auto nb_elems = tmp_manager.nb_doubles();
+            MPI_Reduce(zeroes_double.data(), buf, nb_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            tmp_manager.receive();
+        }
+    }
+
     void acquire() final {
-        MPI_Request request_int;
-        MPI_Request request_double;
-        manager.receive_buffer();  // so the buffer is ready
-        if (manager.buffer_int_size() > 0) {
-            if (zeroes_int.size() != manager.buffer_int_size()) {
-                zeroes_int = std::vector<int>(manager.buffer_int_size(), 0);
-            }
-            auto buf_int = manager.receive_int_buffer();
-            MPI_Ireduce(zeroes_int.data(), buf_int, manager.buffer_int_size(), MPI_INT, MPI_SUM,
-                MPI::p->rank, MPI_COMM_WORLD, &request_int);
-        }
-        if (manager.buffer_double_size() > 0) {
-            if (zeroes_double.size() != manager.buffer_double_size()) {
-                zeroes_double = std::vector<double>(manager.buffer_double_size(), 0);
-            }
-            auto buf_double = manager.receive_double_buffer();
-            MPI_Ireduce(zeroes_double.data(), buf_double, manager.buffer_double_size(), MPI_DOUBLE,
-                MPI_SUM, MPI::p->rank, MPI_COMM_WORLD, &request_double);
-        }
-        if (manager.buffer_int_size() > 0) { MPI_Wait(&request_int, MPI_STATUS_IGNORE); }
-        if (manager.buffer_double_size() > 0) { MPI_Wait(&request_double, MPI_STATUS_IGNORE); }
-        manager.receive();
+        assert(manager.buffer_size() > 0);
+        reduce_ints();
+        reduce_doubles();
     }
 };
 
@@ -64,22 +71,28 @@ class ReducerSlave : public Proxy {
         manager.add(std::forward<Variables>(vars)...);
     }
 
+    void reduce_ints() {
+        if (manager.nb_ints() > 0) {
+            BufferManager tmp_manager = manager.int_manager();
+            auto buf = tmp_manager.send_buffer();
+            auto nb_elems = tmp_manager.nb_ints();
+            MPI_Reduce(buf, nullptr, nb_elems, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        }
+    }
+
+    void reduce_doubles() {
+        if (manager.nb_doubles() > 0) {
+            BufferManager tmp_manager = manager.double_manager();
+            auto buf = tmp_manager.send_buffer();
+            auto nb_elems = tmp_manager.nb_doubles();
+            MPI_Reduce(buf, nullptr, nb_elems, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        }
+    }
+
     void release() final {
-        MPI_Request request_int;
-        MPI_Request request_double;
-        manager.send_buffer();  // so the buffer is ready
-        if (manager.buffer_int_size() > 0) {
-            auto buf_int = manager.send_int_buffer();
-            MPI_Ireduce(buf_int, NULL, manager.buffer_int_size(), MPI_INT, MPI_SUM, 0,
-                MPI_COMM_WORLD, &request_int);
-        }
-        if (manager.buffer_double_size() > 0) {
-            auto buf_double = manager.send_double_buffer();
-            MPI_Ireduce(buf_double, NULL, manager.buffer_double_size(), MPI_DOUBLE, MPI_SUM, 0,
-                MPI_COMM_WORLD, &request_double);
-        }
-        if (manager.buffer_int_size() > 0) { MPI_Wait(&request_int, MPI_STATUS_IGNORE); }
-        if (manager.buffer_double_size() > 0) { MPI_Wait(&request_double, MPI_STATUS_IGNORE); }
+        assert(manager.buffer_size() > 0);
+        reduce_ints();
+        reduce_doubles();
     }
 };
 

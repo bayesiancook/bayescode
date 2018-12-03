@@ -95,9 +95,9 @@ class BufferManager {
         return std::accumulate(double_arrays.begin(), double_arrays.end(), 0, sum_size);
     }
 
-    size_t buffer_size() const { return buffer_int_size() + buffer_double_size(); }
-    size_t buffer_int_size() const { return nb_ints() * MPI::int_size(); }
-    size_t buffer_double_size() const { return nb_doubles() * MPI::double_size(); }
+    size_t buffer_size() const {
+        return nb_ints() * MPI::int_size() + nb_doubles() * MPI::double_size();
+    }
 
     /*----------------------------------------------------------------------------------------------
       Send-receive interfaces */
@@ -105,11 +105,6 @@ class BufferManager {
     void* receive_buffer() {
         _receive_buffer.reset(new ReceiveBuffer(buffer_size()));
         return _receive_buffer->data();
-    }
-    void* receive_int_buffer() { return _receive_buffer->data(); }
-
-    void* receive_double_buffer() {
-        return static_cast<char*>(_receive_buffer->data()) + buffer_int_size();
     }
 
     void* send_buffer() {
@@ -120,12 +115,6 @@ class BufferManager {
         return _send_buffer->data();
     }
 
-    void* send_int_buffer() { return _send_buffer->data(); }
-
-    void* send_double_buffer() {
-        return static_cast<char*>(_send_buffer->data()) + buffer_int_size();
-    }
-
     void receive() {
         assert(_receive_buffer.get() != nullptr);
         assert(_receive_buffer->size() == buffer_size());
@@ -134,12 +123,25 @@ class BufferManager {
     }
 
     /*----------------------------------------------------------------------------------------------
-      Merging */
+      Manager state transfer */
+
     void merge(const BufferManager& other) {
         _send_buffer.reset(nullptr);
         _receive_buffer.reset(nullptr);
         int_arrays.insert(int_arrays.end(), other.int_arrays.begin(), other.int_arrays.end());
         double_arrays.insert(
             double_arrays.end(), other.double_arrays.begin(), other.double_arrays.end());
+    }
+
+    BufferManager int_manager() {
+        BufferManager result;
+        result.int_arrays = int_arrays;
+        return result;
+    }
+
+    BufferManager double_manager() {
+        BufferManager result;
+        result.double_arrays = double_arrays;
+        return result;
     }
 };

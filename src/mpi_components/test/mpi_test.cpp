@@ -23,20 +23,9 @@ struct DummyModel {
     vector<double> v;
     Partition partition{{"d", "e", "f"}, static_cast<size_t>(p->size) - 1, 1};
     MyStruct j{-1, -1, -1};
-    double g{-1}, h{-1};
+    double g{-1};
+    double h{-1};
     MyStruct i{-1, -1, -1};
-
-    template <class C>
-    void declare_model(C& ref) {
-        ref.add("a", a);
-        ref.add("b", b);
-        ref.add("c", c);
-        ref.add("v", v, partition);
-        ref.add("g", g);
-        ref.add("h", h);
-        ref.add("i", i);
-        ref.add("j", j);
-    }
 
     void print() {
         stringstream ss;
@@ -127,7 +116,7 @@ void compute(int, char**) {
     } else {  // slave
         m.v = vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
         m.g = p->rank + 0.4;
-        m.h = p->rank - 0.4;
+        m.h = p->rank + 2.3;
     }
 
     Group master_operations{reduce(m.g, m.h), gather(m.partition, m.v)};
