@@ -1,6 +1,7 @@
 #pragma once
 
 #include <typeinfo>
+#include <cassert>
 #include "CodonSubMatrixArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
@@ -380,13 +381,15 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
     //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] +=
     //! suffstatarray[i]
     void Add(const Selector<OmegaPathSuffStat> &suffstatarray, const Selector<int> &alloc) {
-        for (int i = 0; i < GetSize(); i++) {
+        assert(suffstatarray.GetSize() == alloc.GetSize());
+        for (int i = 0; i < suffstatarray.GetSize(); i++) {
             (*this)[alloc.GetVal(i)].Add(suffstatarray.GetVal(i));
         }
     }
 
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const Array<double> *omegaarray) const {
+        assert(omegaarray->GetSize() == GetSize());
         double total = 0;
         for (int i = 0; i < GetSize(); i++) {
             total += GetVal(i).GetLogProb(omegaarray->GetVal(i));
