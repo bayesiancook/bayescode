@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cassert>
 #include "Array.hpp"
 #include "MPIBuffer.hpp"
-#include <cassert>
 
 /**
  * \brief An interface for an abstract indexed bidim-array of constant
@@ -189,7 +189,9 @@ class DoubleMixtureSelector : public Selector<T> {
 
     //! GetVal(i) (for i in 0..alloc->GetSize()-1) returns a reference to the
     //! component to which item i is allocated (i.e. components[alloc_row[i], alloc_col[i]])
-    const T &GetVal(int i) const override { return components->GetVal(alloc_row->GetVal(i), alloc_col->GetVal(i)); }
+    const T &GetVal(int i) const override {
+        return components->GetVal(alloc_row->GetVal(i), alloc_col->GetVal(i));
+    }
 
   private:
     const BidimSelector<T> *components;

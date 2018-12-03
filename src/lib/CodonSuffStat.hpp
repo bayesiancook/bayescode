@@ -1,7 +1,7 @@
 #pragma once
 
-#include <typeinfo>
 #include <cassert>
+#include <typeinfo>
 #include "CodonSubMatrixArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"

@@ -50,8 +50,8 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     void Create() {
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
-                matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(codonstatespace, nucmatrix,
-                    fitnessarray->GetVal(i), GetOmega(j), 1.0);
+                matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(
+                    codonstatespace, nucmatrix, fitnessarray->GetVal(i), GetOmega(j), 1.0);
             }
         }
     }
@@ -65,9 +65,7 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
 
     //! update all matrices
     void CorruptCodonMatrices() {
-        for (int i = 0; i < GetNrow(); i++) {
-            CorruptRowCodonMatrices(i);
-        }
+        for (int i = 0; i < GetNrow(); i++) { CorruptRowCodonMatrices(i); }
     }
 
     //! update all matrices for row i
@@ -89,9 +87,7 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     //! update only those matrices for which occupancy[i] != 0
     void CorruptCodonMatricesRowOccupancy(const Selector<int> &row_occupancy) {
         for (int i = 0; i < GetNrow(); i++) {
-            if (!row_occupancy.GetVal(i)) {
-                CorruptRowCodonMatrices(i);
-            }
+            if (!row_occupancy.GetVal(i)) { CorruptRowCodonMatrices(i); }
         }
     }
 
