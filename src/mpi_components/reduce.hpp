@@ -51,8 +51,6 @@ class ReducerMaster : public Proxy {
     }
 
     void acquire() final {
-        MPI::p->message(
-            "Reducing %zu ints and %zu doubles", manager.nb_ints(), manager.nb_doubles());
         assert(manager.buffer_size() > 0);
         reduce_ints();
         reduce_doubles();
@@ -92,8 +90,6 @@ class ReducerSlave : public Proxy {
     }
 
     void release() final {
-        MPI::p->message(
-            "Reducing %zu ints and %zu doubles", manager.nb_ints(), manager.nb_doubles());
         assert(manager.buffer_size() > 0);
         reduce_ints();
         reduce_doubles();
