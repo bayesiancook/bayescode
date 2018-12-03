@@ -97,22 +97,21 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     std::vector<double> nucrelrate;
     GTRSubMatrix *nucmatrix;
 
-    // of mean delta_omegahypermean and inverse shape parameter delta_omegahyperinvshape
     int omegaNcat;
+    MultinomialAllocationVector *omega_alloc;
+    Dirichlet *omega_weight;
 
     double omega_shift;
     double delta_omegahypermean;
     double delta_omegahyperinvshape;
-    // base distribution G0 is itself a stick-breaking mixture of Dirichlet
-
-    MultinomialAllocationVector *omega_alloc;
-
-    Dirichlet *omega_weight;
+    // delta_omega_array of mean delta_omegahypermean and inverse shape parameter
+    // delta_omegahyperinvshape
     IIDGamma *delta_omega_array;
 
     OmegaPathSuffStatArray *siteomegapathsuffstatarray;
     OmegaPathSuffStatArray *componentomegapathsuffstatarray;
 
+    // base distribution G0 is itself a stick-breaking mixture of Dirichlet
     // distributions
     int baseNcat;
     int basemin;
@@ -177,14 +176,11 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // 2: mix of 2 (modal) gamma distributions: one at 1 and another one with mean > 1
     int omegamode;
 
+    bool flatfitness;
+
     Chrono aachrono;
     Chrono basechrono;
     Chrono totchrono;
-
-    double acca1, acca2, acca3, acca4;
-    double tota1, tota2, tota3, tota4;
-    double accb1, accb2, accb3, accb4;
-    double totb1, totb2, totb3, totb4;
 
   public:
     //-------------------
@@ -204,14 +200,15 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
     AAMutSelMultipleOmegaModel(std::string indatafile, std::string intreefile, int inomegamode,
-        int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift)
+        int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift, bool inflatfitness)
         : datafile(indatafile),
           treefile(intreefile),
           omegaNcat(inomegaNcat),
           omega_shift(inomegashift),
           baseNcat(inbaseNcat),
           Ncat(inNcat),
-          omegamode(inomegamode) {
+          omegamode(inomegamode),
+          flatfitness(inflatfitness) {
         init();
         Update();
     }
@@ -243,10 +240,16 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             }
         }
 
+        if (flatfitness) {
+            baseNcat = 1;
+            Ncat = 1;
+        }
+
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
         std::cerr << "Ncat : " << Ncat << '\n';
         std::cerr << "baseNcat : " << baseNcat << '\n';
         std::cerr << "omegaNcat : " << omegaNcat << '\n';
+        std::cerr << "OmegaShift : " << omega_shift << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -256,14 +259,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         tree = make_from_parser(parser);
 
         Nbranch = tree->nb_nodes() - 1;
-
-        // not sure this was not needed
-        // tree->SetIndices();
-
-        acca1 = acca2 = acca3 = acca4 = 0;
-        tota1 = tota2 = tota3 = tota4 = 0;
-        accb1 = accb2 = accb3 = accb4 = 0;
-        totb1 = totb2 = totb3 = totb4 = 0;
 
         Allocate();
         tracer =
@@ -296,6 +291,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         t.add("delta_omega_array", *delta_omega_array);
         t.add("omega_alloc", *omega_alloc);
         t.add("omega_weight", *omega_weight);
+        t.add("delta_omegahyperinvshape", delta_omegahyperinvshape);
+        t.add("delta_omegahypermean", delta_omegahypermean);
     }
 
     template <class C>
@@ -322,55 +319,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         t.add("aaent", [this]() { return GetMeanAAEntropy(); });
         t.add("meanaaconc", [this]() { return GetMeanComponentAAConcentration(); });
         t.add("aacenterent", [this]() { return GetMeanComponentAAEntropy(); });
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+        t.add("statent", [this]() { return GetNucRREntropy(); });
+        t.add("rrent", [this]() { return GetNucStatEntropy(); });
     }
-
-    //! \brief set estimation method for branch lengths
-    //!
-    //! - mode == 2: shared and estimated across genes
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! (with shrinkage)
-    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
-    //!
-    //! for single-gene analyses, only mode 0 can be used.
-    void SetBLMode(int mode) { blmode = mode; }
-
-    //! \brief set estimation method for nuc rates
-    //!
-    //! - mode == 2: shared and estimated across genes
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! (with shrinkage)
-    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
-    //!
-    //! for single-gene analyses, only mode 0 can be used.
-    void SetNucMode(int mode) { nucmode = mode; }
-
-    //! \brief set estimation method for nuc rates
-    //!
-    //! - mode == 3: fixed to 1
-    //! - mode == 2: shared and estimated across genes: currently not implemented
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! (with shrinkage)
-    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
-    //!
-    //! for single-gene analyses, either mode 3 and mode 0 can be used -- default
-    //! mode is 3.
-    void SetOmegaMode(int mode) { omegamode = mode; }
-
-    //! \brief set estimation method for center and concentration parameters of
-    //! base distribution
-    //!
-    //! - mode == 3: shared across genes and fixed to externally given empirical
-    //! values: currently not implemented
-    //! - mode == 2: shared and estimated across genes
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! (with shrinkage): currently not implemented
-    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
-    //!
-    //! for single-gene analyses, either mode 3 and mode 0 can be used -- default
-    //! mode is 3.
-    void SetBaseMode(int mode) { basemode = mode; }
 
     //! allocate the model (data structures)
     void Allocate() {
@@ -430,6 +381,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         // Ncat fitness profiles iid from the base distribution
         componentaafitnessarray =
             new MultiDirichlet(componentcenterarray, componentconcentrationarray);
+        if (flatfitness) { componentaafitnessarray->Flatten(); }
 
         // mixture weights (truncated stick breaking process)
         kappa = 1.0;
@@ -443,7 +395,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         profile_occupancy = new OccupancySuffStat(Ncat);
         omega_occupancy = new OccupancySuffStat(omegaNcat);
 
-        // global omega (fixed to 1 by default)
+        // omega (fixed to 1 by default)
         delta_omegahypermean = 1.0;
         delta_omegahyperinvshape = 1.0;
         double delta_omegahypershape = 1.0 / delta_omegahyperinvshape;
@@ -493,83 +445,11 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return number of aligned sites
     int GetNsite() const { return Nsite; }
 
-    //! return current omega value for omega mixture of component i
-    double GetOmega(int i) const { return omega_shift + delta_omega_array->GetVal(i); }
+    //! return current omega value for omega mixture of component k
+    double GetComponentOmega(int k) const { return omega_shift + delta_omega_array->GetVal(k); }
 
-    //! \brief const access to array of length-pathsuffstats across branches
-    const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
-        return lengthpathsuffstatarray;
-    }
-
-    //! \brief const access to array of suff stats for base mixture
-    const DirichletSuffStatArray *GetBaseSuffStatArray() const { return basesuffstatarray; }
-
-    //! \brief const access to array of base occupancy suff stats for base mixture
-    const OccupancySuffStat *GetBaseOccupancies() const { return baseprofile_occupancy; }
-
-    //-------------------
-    // Setting and updating
-    // ------------------
-
-    //! set branch lengths to a new value (multi-gene analyses)
-    void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
-        branchlength->Copy(inbranchlength);
-    }
-
-    //! get a copy of branch lengths into array given as argument
-    void GetBranchLengths(BranchArray<double> &inbranchlength) const {
-        inbranchlength.Copy(*branchlength);
-    }
-
-    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(
-        const BranchSelector<double> &inblmean, double inblinvshape) {
-        blhypermean->Copy(inblmean);
-        blhyperinvshape = inblinvshape;
-        branchlength->SetShape(1.0 / blhyperinvshape);
-    }
-
-    //! set omega hyperparams to new value (multi-gene analyses)
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
-        delta_omegahypermean = inomegahypermean;
-        delta_omegahyperinvshape = inomegahyperinvshape;
-    }
-
-    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
-    void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
-        double innucstathyperinvconc) {
-        nucrelratehypercenter = innucrelratehypercenter;
-        nucrelratehyperinvconc = innucrelratehyperinvconc;
-        nucstathypercenter = innucstathypercenter;
-        nucstathyperinvconc = innucstathyperinvconc;
-    }
-
-    //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(
-        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
-        UpdateMatrices();
-    }
-
-    //! copy nucleotide rates into vectors given as arguments (multi-gene
-    //! analyses)
-    void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
-        innucrelrate = nucrelrate;
-        innucstat = nucstat;
-    }
-
-    //! set base mixture concentration and center parameters to new value
-    //! (multi-gene analyses)
-    void SetBaseMixture(const Selector<std::vector<double>> &inbasecenterarray,
-        const Selector<double> &inbaseconcentrationarray, const Selector<double> &inbaseweight,
-        const Selector<int> &inpermut) {
-        basecenterarray->Copy(inbasecenterarray);
-        baseconcentrationarray->Copy(inbaseconcentrationarray);
-        baseweight->Copy(inbaseweight);
-        componentalloc->Permute(inpermut);
-    }
+    //! return current omega value for omega mixture of site
+    double GetSiteOmega(int site) const { return GetComponentOmega(omega_alloc->GetVal(site)); }
 
     //! \brief tell the nucleotide matrix that its parameters have changed and
     //! that it should be updated
@@ -776,7 +656,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return log prob of the substitution mappings over sites allocated to omega
     //! component k of the omega mixture
     double PathSuffStatOmegaLogProb(int k) const {
-        return componentomegapathsuffstatarray->GetVal(k).GetLogProb(GetOmega(k));
+        return componentomegapathsuffstatarray->GetVal(k).GetLogProb(GetComponentOmega(k));
     }
 
     //! return log prob of current branch lengths, as a function of branch lengths
@@ -880,15 +760,17 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
             if (nucmode < 2) { MoveNucRates(); }
 
-            if (omegamode < 2) { MoveOmegaMixture(1); }
+            if (omegamode < 2) { MoveOmegaMixture(3); }
 
-            aachrono.Start();
-            MoveAAMixture(3);
-            aachrono.Stop();
+            if (!flatfitness) {
+                aachrono.Start();
+                MoveAAMixture(3);
+                aachrono.Stop();
 
-            basechrono.Start();
-            if (basemode < 2) { MoveBase(3); }
-            basechrono.Stop();
+                basechrono.Start();
+                if (basemode < 2) { MoveBase(3); }
+                basechrono.Stop();
+            }
 
             totchrono.Stop();
         }
@@ -968,28 +850,16 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! MH move on amino-acid fitness profiles: additive compensated move on pairs
     //! of entries of the vector
     double CompMoveAAProfiles(int nrep) {
-        accb1 += MoveAA(1.0, 1, nrep);
-        // accb2 += MoveAA(1.0,3,nrep);
-        // accb3 += MoveAA(0.3,3,nrep);
-        accb4 += MoveAA(0.1, 3, nrep);
-        totb1++;
-        totb2++;
-        totb3++;
-        totb4++;
+        MoveAA(1.0, 1, nrep);
+        MoveAA(0.1, 3, nrep);
         return 1.0;
     }
 
     //! MH move on amino-acid fitness profiles: multiplicative move (using the
     //! Gamma representation of the Dirichlet)
     double MulMoveAAProfiles(int nrep) {
-        acca1 += MoveAAGamma(3.0, nrep);
-        acca2 += MoveAAGamma(1.0, nrep);
-        // acca3 += MoveAAGamma(0.3,nrep);
-        // acca4 += MoveAAGamma(0.1,nrep);
-        tota1++;
-        tota2++;
-        tota3++;
-        tota4++;
+        MoveAAGamma(3.0, nrep);
+        MoveAAGamma(1.0, nrep);
         return 1.0;
     }
 
@@ -1329,19 +1199,20 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     //! MH move on omega (per component): scaling move
     double MoveOmegaValues(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        double bk;
+        double bk{0}, nacc{0}, ntot{0};
         for (int i = 0; i < omegaNcat; i++) {
             if (omega_occupancy->GetVal(i)) {
                 for (int rep = 0; rep < nrep; rep++) {
                     bk = delta_omega_array->GetVal(i);
-                    double deltalogprob = -DeltaOmegaLogPrior(i) - PathSuffStatOmegaLogProb(i);
+
+                    double deltalogprob = -(PathSuffStatOmegaLogProb(i) + DeltaOmegaLogPrior(i));
                     double loghastings = tuning * (Random::Uniform() - 0.5);
                     double hastings = exp(loghastings);
+
                     (*delta_omega_array)[i] *= hastings;
-                    deltalogprob +=
-                        loghastings + DeltaOmegaLogPrior(i) + PathSuffStatOmegaLogProb(i);
+
+                    deltalogprob += loghastings;
+                    deltalogprob += PathSuffStatOmegaLogProb(i) + DeltaOmegaLogPrior(i);
                     int accepted = (log(Random::Uniform()) < deltalogprob);
                     if (accepted) {
                         nacc++;
@@ -1380,7 +1251,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         const OmegaPathSuffStat &suffstat = siteomegapathsuffstatarray->GetVal(site);
 
         for (int i = 0; i < omegaNcat; i++) {
-            double tmp = suffstat.GetLogProb(GetOmega(i));
+            double tmp = suffstat.GetLogProb(GetComponentOmega(i));
             postprob[i] = tmp;
             if ((!i) || (max < tmp)) { max = tmp; }
         }
@@ -1445,7 +1316,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return mean omega
     double GetMeanOmega() const {
         double tot = 0;
-        for (int i{0}; i < omegaNcat; i++) { tot += GetOmega(i); }
+        for (int i{0}; i < omegaNcat; i++) { tot += GetComponentOmega(i); }
         return tot / omegaNcat;
     }
 
@@ -1493,8 +1364,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     double GetPredictedEffectivedNdS() const {
         double mean = 0;
         for (int i = 0; i < GetNsite(); i++) {
-            mean += GetOmega(omega_alloc->GetVal(i)) *
-                    sitecodonsubmatrixarray->GetVal(i).GetPredictedDNDS();
+            mean += GetSiteOmega(i) * sitecodonsubmatrixarray->GetVal(i).GetPredictedDNDS();
         }
         mean /= GetNsite();
         return mean;

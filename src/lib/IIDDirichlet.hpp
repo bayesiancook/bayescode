@@ -411,6 +411,12 @@ class MultiDirichlet : public SimpleArray<std::vector<double>> {
         return m2;
     }
 
+    void Flatten(){
+        for (int cat = 0; cat < GetSize(); cat++) {
+            std::fill((*this)[cat].begin(), (*this)[cat].end(), 1.0 / (*this)[cat].size());
+        }
+    }
+
   protected:
     int dim;
     const Selector<std::vector<double>> *centerarray;

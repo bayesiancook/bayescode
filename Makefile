@@ -36,7 +36,7 @@ format:
 # ==============================================================================================================
 #  TESTING
 # ==============================================================================================================
-POINTS=2
+POINTS=1
 
 .PHONY: run-unit-tests
 run-unit-tests: all
@@ -73,6 +73,12 @@ run-app-tests: all
 	_build/readaamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss _test/aamutsel_gal4
+	@echo "\n\e[35m\e[1m== MutSel Multiple omega run ================================================\e[0m"
+	_build/mutselomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --freeomega --omegancat 3 -u ${POINTS} _test/mutselomega_gal4
+	@echo "\n\e[35m\e[1m== MutSel Multiple omega restart ============================================\e[0m"
+	_build/mutselomega _test/mutselomega_gal4
+	@echo "\n\e[35m\e[1m== MutSel Multiple omega read ===============================================\e[0m"
+	_build/readmutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
 	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 
@@ -100,7 +106,7 @@ mutselomega: _build
 	@cd _build ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
-	_build/mutselomega -a data/samhd1/samhd1.ali -t data/samhd1/samhd1.tree --freeomega --omegancat 1 -u 20 _mutselomega/samhd1
+	_build/mutselomega -a data/samhd1/samhd1.ali -t data/samhd1/samhd1.tree --omegashift 0.0 --freeomega --omegancat 1 -u 20 _mutselomega/samhd1
 	_build/mutselomega _mutselomega/samhd1
 	_build/readmutselomega _mutselomega/samhd1
 	_build/readmutselomega --ss _mutselomega/samhd1

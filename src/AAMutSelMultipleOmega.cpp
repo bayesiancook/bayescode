@@ -19,12 +19,13 @@ class AAMutselArgParse : public BaseArgParse {
     ValueArg<int> basencat{"", "basencat", "truncation of the second-level stick-breaking process",
         false, 1, "int", cmd};
     ValueArg<double> omegashift{"", "omegashift",
-        "the shift applied to omega (typically 1 for detecting adaptation, 0 for general case)", false,
-        1.0, "double", cmd};
+        "the shift applied to omega (typically 1 for detecting adaptation, 0 for general case)",
+        false, 1.0, "double", cmd};
     ValueArg<int> omegancat{
         "", "omegancat", "number of components of omega finite mixture", false, 1, "int", cmd};
     SwitchArg freeomega{"", "freeomega",
         "omega is allowed to vary with shrinkage (otherwise set to 1)", cmd, false};
+    SwitchArg flatfitness{"", "flatfitness", "Fitness landscape are flattened", cmd, false};
 
     //! - omegamode: omega fixed (3), shared across genes (2) or estimated with
     //! shrinkage across genes (1) or without shrinkage (0)
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]) {
         model = new AAMutSelMultipleOmegaModel(args.alignment.getValue(), args.treefile.getValue(),
             aamutsel_args.omegamode(), aamutsel_args.ncat.getValue(),
             aamutsel_args.basencat.getValue(), aamutsel_args.omegancat.getValue(),
-            aamutsel_args.omegashift.getValue());
+            aamutsel_args.omegashift.getValue(), aamutsel_args.flatfitness.getValue());
     }
 
     ConsoleLogger console_logger;
