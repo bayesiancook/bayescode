@@ -95,9 +95,9 @@ class BufferManager {
         return std::accumulate(double_arrays.begin(), double_arrays.end(), 0, sum_size);
     }
 
-    size_t buffer_size() const {
-        return nb_ints() * MPI::int_size() + nb_doubles() * MPI::double_size();
-    }
+    size_t buffer_size() const { return buffer_int_size() + buffer_double_size(); }
+    size_t buffer_int_size() const { return nb_ints() * MPI::int_size(); }
+    size_t buffer_double_size() const { return nb_doubles() * MPI::double_size(); }
 
     /*----------------------------------------------------------------------------------------------
       Send-receive interfaces */
@@ -106,6 +106,11 @@ class BufferManager {
         _receive_buffer.reset(new ReceiveBuffer(buffer_size()));
         return _receive_buffer->data();
     }
+    void* receive_int_buffer() { return _receive_buffer->data(); }
+
+    void* receive_double_buffer() {
+        return static_cast<char*>(_receive_buffer->data()) + buffer_int_size();
+    }
 
     void* send_buffer() {
         _send_buffer.reset(new SendBuffer());
@@ -113,6 +118,12 @@ class BufferManager {
         for (auto x : double_arrays) { _send_buffer->pack(x.data, x.size); }
         assert(buffer_size() == _send_buffer->size());
         return _send_buffer->data();
+    }
+
+    void* send_int_buffer() { return _send_buffer->data(); }
+
+    void* send_double_buffer() {
+        return static_cast<char*>(_send_buffer->data()) + buffer_int_size();
     }
 
     void receive() {
