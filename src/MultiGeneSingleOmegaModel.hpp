@@ -45,7 +45,7 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-class MultiGeneSingleOmegaModelShared {
+class MultiGeneSingleOmegaModelShared : public ChainComponent {
   public:
     // each gene defines its own SingleOmegaModel
     std::vector<SingleOmegaModel *> geneprocess;
@@ -112,6 +112,15 @@ class MultiGeneSingleOmegaModelShared {
         // Omega
         omegaarray = new IIDGamma(
             partition.my_allocation_size(), omega_param.hypermean, omega_param.hyperinvshape);
+
+        if (MPI::p->rank > 0) {
+            geneprocess.assign(partition.my_partition_size(), (SingleOmegaModel *)0);
+            for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                geneprocess[gene] =
+                    new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
+                geneprocess[gene]->Update();
+            }
+        }
 
         declare_groups();
     }
@@ -184,7 +193,6 @@ class MultiGeneSingleOmegaModelShared {
             //clang-format on
         }
         else    {
-
             // clang-format off
             mpinucrates = make_group(
                 broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
@@ -527,95 +535,69 @@ class MultiGeneSingleOmegaModelShared {
         }
     }
 
-  protected:
-    std::string datafile, treefile;
-    CodonStateSpace codonstatespace;
-    GeneSet gene_set;
-    Partition partition;
-    MultiGeneMPIModule mpi;
-    std::unique_ptr<const Tree> tree;
+    // ============================================================================================
+    // ============================================================================================
+    //   MASTER THINGS
+    // ============================================================================================
+    // ============================================================================================
 
-    param_mode_t blmode;
-    param_mode_t nucmode;
-    omega_param_t omega_param;
+    using M = MultiGeneSingleOmegaModelShared;
 
-    // Branch lengths
-
-    double lambda;
-    BranchIIDGamma *branchlength;
-    GammaSuffStat hyperlengthsuffstat;
-
-    double blhyperinvshape;
-    GammaWhiteNoiseArray *branchlengtharray;
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStatBranchArray *lengthhypersuffstatarray;
-
-    // Nucleotide rates
-
-    // shared nuc rates
-    GTRSubMatrix *nucmatrix;
-    NucPathSuffStat nucpathsuffstat;
-
-    // gene-specific nuc rates
-    vector<double> nucrelratehypercenter;
-    double nucrelratehyperinvconc;
-    IIDDirichlet *nucrelratearray;
-    DirichletSuffStat nucrelratesuffstat;
-
-    vector<double> nucstathypercenter;
-    double nucstathyperinvconc;
-    IIDDirichlet *nucstatarray;
-    DirichletSuffStat nucstatsuffstat;
-
-    // Omega
-
-    // each gene has its own omega
-    // omegaarray[gene], for gene=1..Ngene
-    // iid gamma, with hyperparameters omegahypermean and hyperinvshape
-    IIDGamma *omegaarray;
-
-    // suffstat for gene-specific omega's
-    // as a function of omegahypermean and omegahyperinvshape
-    GammaSuffStat omegahypersuffstat;
-
-    // total log likelihood (summed across all genes)
-    double GeneLogLikelihood;
-    // total logprior for gene-specific variables (here, omega only)
-    // summed over all genes
-    double GeneLogPrior;
-
-    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpitrace;
-};
-
-class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
-                                        public ChainComponent {
-    using M = MultiGeneSingleOmegaModelMaster;
-
-  public:
-    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelMaster &m);
+    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m);
 
     //-------------------
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, param_mode_t blmode,
-        param_mode_t nucmode, omega_param_t omega_param)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        cerr << "number of branches : " << GetNbranch() << '\n';
-        cerr << "tree and data fit together\n";
+    void start() override {}
+
+    void move(int) override {
+        MPI::p->message("Moving!");
+        if (!MPI::p->rank){
+            SendRunningStatus(1);
+            MoveMaster();
+        } else {
+            MoveSlave();
+        }
     }
 
-    void start() override {}
-    void move(int) override {
-        SendRunningStatus(1);
-        Move();
-    }
     void savepoint(int) override {}
-    void end() override { SendRunningStatus(0); }
+
+    void end() override {
+        if (!MPI::p->rank) {
+            SendRunningStatus(0);
+        }
+    }
 
     void SendRunningStatus(int status) { MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD); }
 
-    void Update() {
+    void Update() { // TEMPORARY
+        if (!MPI::p->rank) {
+            UpdateMaster();
+        } else {
+            UpdateSlave();
+        }
+    }
+
+    void UpdateSlave() {
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
+
+        if (blmode != shared)   {
+            ReceiveGeneBranchLengths();
+        }
+        if (nucmode != shared)  {
+            ReceiveGeneNucRates();
+        }
+        ReceiveOmega();
+
+        GeneUpdate();
+
+        mpitrace->release();
+    }
+
+    void UpdateMaster() {
         FastUpdate();
 
         mpibranchlengths->release();
@@ -632,7 +614,22 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         mpitrace->acquire();
     }
 
-    void PostPred(string name) {
+    void PostPredSlave(string name) {
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
+
+        if (blmode != shared)   {
+            ReceiveGeneBranchLengths();
+        }
+        if (nucmode != shared)  {
+            ReceiveGeneNucRates();
+        }
+        ReceiveOmega();
+        GenePostPred(name);
+    }
+
+    void PostPredMaster(string name) {
         FastUpdate();
 
         mpibranchlengths->release();
@@ -646,6 +643,72 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
             SendGeneNucRates();
         }
         SendOmega();
+    }
+
+    //-------------------
+    // Moves
+    //-------------------
+
+    // slave move
+    double MoveSlave() {
+        GeneResampleSub(1.0);
+
+        int nrep = 30;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            MoveGeneParameters(1.0);
+
+            if (omega_param.variable) {
+                mpiomega->release();
+                mpiomega->acquire();
+            }
+
+            mpibranchlengths->release();
+            mpibranchlengths->acquire();
+
+            mpinucrates->release();
+            mpinucrates->acquire();
+        }
+
+        mpitrace->release();
+        // mpitrace->acquire();
+
+        return 1;
+    }
+
+    double MoveMaster() {
+        int nrep = 30;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            if (omega_param.variable) {
+                mpiomega->acquire();
+                MoveOmegaHyperParameters();
+                mpiomega->release();
+            }
+
+            mpibranchlengths->acquire();
+            if (blmode == shared) {
+                ResampleBranchLengths();
+                MoveLambda();
+            } else if (blmode == shrunken) {
+                MoveBranchLengthsHyperParameters();
+            }
+            mpibranchlengths->release();
+
+            // global nucrates, or gene nucrates hyperparameters
+            mpinucrates->acquire();
+            if (nucmode == shared) {
+                MoveNucRates();
+            } else if (nucmode == shrunken) {
+                MoveNucRatesHyperParameters();
+            }
+            mpinucrates->release();
+        }
+
+        mpitrace->acquire();
+        // mpitrace->release();
+
+        return 1;
     }
 
     //-------------------
@@ -690,57 +753,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
-
-    //-------------------
-    // Moves
-    //-------------------
-
-    // all methods starting with Master are called only by master
-    // for each such method, there is a corresponding method called by slave, and
-    // starting with Slave
-    //
-    // all methods starting with Gene are called only be slaves, and do some work
-    // across all genes allocated to that slave
-
-    double Move() {
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            if (omega_param.variable) {
-                mpiomega->acquire();
-                MoveOmegaHyperParameters();
-                mpiomega->release();
-            }
-
-            mpibranchlengths->acquire();
-            if (blmode == shared) {
-                ResampleBranchLengths();
-                MoveLambda();
-            } else if (blmode == shrunken) {
-                MoveBranchLengthsHyperParameters();
-            }
-            mpibranchlengths->release();
-
-            // global nucrates, or gene nucrates hyperparameters
-            mpinucrates->acquire();
-            if (nucmode == shared) {
-                MoveNucRates();
-            } else if (nucmode == shrunken) {
-                MoveNucRatesHyperParameters();
-            }
-            mpinucrates->release();
-        }
-
-        mpitrace->acquire();
-        // mpitrace->release();
-
-        return 1;
-    }
-
     // Branch lengths
-
-    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
-
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -855,70 +868,16 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void SendOmega() { mpi.MasterSendGeneArray(*omegaarray); }
 
     void ToStream(ostream &os) { os << *this; }
-};
 
-
-class MultiGeneSingleOmegaModelSlave : public ChainComponent,
-                                       public MultiGeneSingleOmegaModelShared {
-  public:
-    //-------------------
-    // Construction and allocation
-    //-------------------
-
-    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, param_mode_t blmode,
-        param_mode_t nucmode, omega_param_t omega_param)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        geneprocess.assign(partition.my_partition_size(), (SingleOmegaModel *)0);
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene] =
-                new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
-            geneprocess[gene]->Update();
-        }
-    }
-
-    void start() override {}
-    void move(int) override { Move(); }
-    void savepoint(int) override {}
-    void end() override {}
-
-    void Update() {
-
-        mpibranchlengths->acquire();
-        mpinucrates->acquire();
-        mpiomega->acquire();
-
-        if (blmode != shared)   {
-            ReceiveGeneBranchLengths();
-        }
-        if (nucmode != shared)  {
-            ReceiveGeneNucRates();
-        }
-        ReceiveOmega();
-
-        GeneUpdate();
-
-        mpitrace->release();
-    }
-
+    // ============================================================================================
+    // ============================================================================================
+    //   SLAVE THINGS
+    // ============================================================================================
+    // ============================================================================================
     void GeneUpdate() {
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->Update();
         }
-    }
-
-    void PostPred(string name) {
-        mpibranchlengths->acquire();
-        mpinucrates->acquire();
-        mpiomega->acquire();
-
-        if (blmode != shared)   {
-            ReceiveGeneBranchLengths();
-        }
-        if (nucmode != shared)  {
-            ReceiveGeneNucRates();
-        }
-        ReceiveOmega();
-        GenePostPred(name);
     }
 
     void GenePostPred(string name) {
@@ -930,34 +889,6 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     //-------------------
     // Moves
     //-------------------
-
-    // slave move
-    double Move() {
-        GeneResampleSub(1.0);
-
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            MoveGeneParameters(1.0);
-
-            if (omega_param.variable) {
-                mpiomega->release();
-                mpiomega->acquire();
-            }
-
-            mpibranchlengths->release();
-            mpibranchlengths->acquire();
-
-            mpinucrates->release();
-            mpinucrates->acquire();
-        }
-
-        mpitrace->release();
-        // mpitrace->acquire();
-
-        return 1;
-    }
-
     void GeneResampleSub(double frac) {
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->ResampleSub(frac);
@@ -1014,6 +945,71 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
             geneprocess[gene]->SetOmega((*omegaarray)[gene]);
         }
     }
+
+    // ============================================================================================
+    // ============================================================================================
+    //   END OF THINGS
+    // ============================================================================================
+    // ============================================================================================
+
+  protected:
+    std::string datafile, treefile;
+    CodonStateSpace codonstatespace;
+    GeneSet gene_set;
+    Partition partition;
+    MultiGeneMPIModule mpi;
+    std::unique_ptr<const Tree> tree;
+
+    param_mode_t blmode;
+    param_mode_t nucmode;
+    omega_param_t omega_param;
+
+    // Branch lengths
+
+    double lambda;
+    BranchIIDGamma *branchlength;
+    GammaSuffStat hyperlengthsuffstat;
+
+    double blhyperinvshape;
+    GammaWhiteNoiseArray *branchlengtharray;
+    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    GammaSuffStatBranchArray *lengthhypersuffstatarray;
+
+    // Nucleotide rates
+
+    // shared nuc rates
+    GTRSubMatrix *nucmatrix;
+    NucPathSuffStat nucpathsuffstat;
+
+    // gene-specific nuc rates
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    IIDDirichlet *nucrelratearray;
+    DirichletSuffStat nucrelratesuffstat;
+
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    IIDDirichlet *nucstatarray;
+    DirichletSuffStat nucstatsuffstat;
+
+    // Omega
+
+    // each gene has its own omega
+    // omegaarray[gene], for gene=1..Ngene
+    // iid gamma, with hyperparameters omegahypermean and hyperinvshape
+    IIDGamma *omegaarray;
+
+    // suffstat for gene-specific omega's
+    // as a function of omegahypermean and omegahyperinvshape
+    GammaSuffStat omegahypersuffstat;
+
+    // total log likelihood (summed across all genes)
+    double GeneLogLikelihood;
+    // total logprior for gene-specific variables (here, omega only)
+    // summed over all genes
+    double GeneLogPrior;
+
+    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpitrace;
 };
 
 template <class M>
@@ -1037,7 +1033,7 @@ std::istream &operator>>(istream &is, unique_ptr<M> &m) {
     return is;
 }
 
-std::ostream &operator<<(ostream &os, MultiGeneSingleOmegaModelMaster &m) {
+std::ostream &operator<<(ostream &os, MultiGeneSingleOmegaModelShared &m) {
     Tracer tracer{m, &MultiGeneSingleOmegaModelShared::declare_model};
     os << "MultiGeneSingleOmega"
        << "\t";
