@@ -113,68 +113,109 @@ class MultiGeneSingleOmegaModelShared {
         omegaarray = new IIDGamma(
             partition.my_partition_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
-        // MPI communication groups
-        mpibranchlengths = make_group();
-        auto &mpibranchlengthsref = dynamic_cast<Group &>(*mpibranchlengths);
+        declare_groups();
+    }
+
+    // MPI communication groups
+    void declare_groups() {
+        // mpibranchlengths = make_group();
+        // auto &mpibranchlengthsref = dynamic_cast<Group &>(*mpibranchlengths);
 
         if (blmode == shared) {
-            // broadcast branch lengths
-            // mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength"}));
-            mpibranchlengthsref.add(broadcast(*branchlength));
+            // clang-format off
+            mpibranchlengths = make_group(
+                broadcast(*branchlength),
 
-            // slaves sync gene processes
-            if (MPI::p->rank) {
-                auto blsync = [this]() {
+                slave_acquire([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetBranchLengths(*branchlength);
-                    }
-                };
-                mpibranchlengthsref.add(make_acquire_operation(blsync));
-            }
+                    }}),
 
-            // suffstats
-            // slaves collect suff stat across genes
-            if (MPI::p->rank) {
-                auto blcollectsuffstat = [this]() {
+                slave_release([this]() {
                     lengthpathsuffstatarray->Clear();
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->CollectLengthSuffStat();
                         lengthpathsuffstatarray->Add(
                             *geneprocess[gene]->GetLengthPathSuffStatArray());
-                    }
-                };
-                mpibranchlengthsref.add(make_release_operation(blcollectsuffstat));
-            }
+                    }}),
+
+                reduce(*lengthpathsuffstatarray)
+            );
+            // clang-format on
+
+            // broadcast branch lengths
+            // mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength"}));
+
+            // slaves sync gene processes
+            // if (MPI::p->rank) {
+            //     auto blsync = [this]() {
+            //         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+            //             geneprocess[gene]->SetBranchLengths(*branchlength);
+            //         }
+            //     };
+            //     mpibranchlengthsref.add(make_acquire_operation(blsync));
+            // }
+
+            // suffstats
+            // slaves collect suff stat across genes
+            // if (MPI::p->rank) {
+            //     auto blcollectsuffstat = [this]() {
+            //         lengthpathsuffstatarray->Clear();
+            //         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+            //             geneprocess[gene]->CollectLengthSuffStat();
+            //             lengthpathsuffstatarray->Add(
+            //                 *geneprocess[gene]->GetLengthPathSuffStatArray());
+            //         }
+            //     };
+            //     mpibranchlengthsref.add(make_release_operation(blcollectsuffstat));
+            // }
             // suffstats are reduced
             // mpibranchlengthsref.add(reduce<PoissonSuffStat>(*this, {"lengthpathsuffstatarray"}));
-            mpibranchlengthsref.add(reduce(*lengthpathsuffstatarray));
         } else {
             // broadcast branchlengths hyperparameters
             // mpibranchlengthsref.add(broadcast<double>(*this, {"branchlength",
             // "blhyperinvshape"}));
-            mpibranchlengthsref.add(broadcast(*branchlength, blhyperinvshape));
-            if (MPI::p->rank) {
-                auto blsync = [this]() {
+
+            // clang-format off
+            mpibranchlengths = make_group(
+                slave_acquire([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetBranchLengthsHyperParameters(
                             *branchlength, blhyperinvshape);
-                    }
-                };
-                mpibranchlengthsref.add(make_acquire_operation(blsync));
-            }
+                    }}),
 
-            // suff stats
-            // slaves collect suff stat across genes
-            if (MPI::p->rank) {
-                auto blcollecthypersuffstat = [this]() {
+                slave_release([this]() {
                     lengthhypersuffstatarray->Clear();
                     lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-                };
-                mpibranchlengthsref.add(make_release_operation(blcollecthypersuffstat));
-            }
-            // reduce suff stats
-            // mpibranchlengthsref.add(reduce<GammaSuffStat>(*this, {"lengthhypersuffstatarray"}));
-            mpibranchlengthsref.add(reduce(*lengthhypersuffstatarray));
+                }),
+
+                reduce(*lengthhypersuffstatarray)
+            );
+            // clang-format on
+
+            // mpibranchlengthsref.add(broadcast(*branchlength, blhyperinvshape));
+            // if (MPI::p->rank) {
+            //     auto blsync = [this]() {
+            //         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+            //             geneprocess[gene]->SetBranchLengthsHyperParameters(
+            //                 *branchlength, blhyperinvshape);
+            //         }
+            //     };
+            //     mpibranchlengthsref.add(make_acquire_operation(blsync));
+            // }
+
+            // // suff stats
+            // // slaves collect suff stat across genes
+            // if (MPI::p->rank) {
+            //     auto blcollecthypersuffstat = [this]() {
+            //         lengthhypersuffstatarray->Clear();
+            //         lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
+            //     };
+            //     mpibranchlengthsref.add(make_release_operation(blcollecthypersuffstat));
+            // }
+            // // reduce suff stats
+            // // mpibranchlengthsref.add(reduce<GammaSuffStat>(*this,
+            // {"lengthhypersuffstatarray"}));
         }
 
         mpinucrates = make_group();
@@ -257,7 +298,7 @@ class MultiGeneSingleOmegaModelShared {
         // mpiomegaref.add(broadcast<double>(*this, {"omegahypermean", "omegahyperinvshape"}));
         mpiomegaref.add(broadcast(omega_param.hypermean, omega_param.hyperinvshape));
         if (MPI::p->rank) {
-            auto omegasync = [this, omega_param]() {
+            auto omegasync = [this]() {
                 for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                     geneprocess[gene]->SetOmegaHyperParameters(
                         omega_param.hypermean, omega_param.hyperinvshape);

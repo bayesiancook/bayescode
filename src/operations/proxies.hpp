@@ -6,6 +6,8 @@
 #include "interfaces.hpp"
 #include "mpi_components/Process.hpp"
 
+using ProxyPtr = std::unique_ptr<Proxy>;
+
 /*
 ====================================================================================================
   ForAll class
@@ -32,8 +34,8 @@ class ForAll : public Proxy {
 };
 
 template <class... Args>
-std::unique_ptr<Proxy> make_forall(Args&&... args) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new ForAll(std::forward<Args>(args)...)));
+ProxyPtr make_forall(Args&&... args) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new ForAll(std::forward<Args>(args)...)));
 }
 
 /*
@@ -42,13 +44,13 @@ std::unique_ptr<Proxy> make_forall(Args&&... args) {
   Same as forall but owns its contents in the form of unique pointers
 ==================================================================================================*/
 class Group : public Proxy {
-    std::vector<std::unique_ptr<Proxy>> operations;
+    std::vector<ProxyPtr> operations;
 
   public:
     Group() = default;
 
     template <class... Operations>
-    Group(std::unique_ptr<Proxy>&& operation, Operations&&... operations)
+    Group(ProxyPtr&& operation, Operations&&... operations)
         : Group(std::forward<Operations>(operations)...) {
         /* -- */
         if (operation.get() != nullptr) {
@@ -56,7 +58,7 @@ class Group : public Proxy {
         }
     }
 
-    void add(std::unique_ptr<Proxy> ptr) {
+    void add(ProxyPtr ptr) {
         if (ptr.get() != nullptr) { operations.push_back(std::move(ptr)); }
     }
 
@@ -70,8 +72,8 @@ class Group : public Proxy {
 };
 
 template <class... Args>
-std::unique_ptr<Proxy> make_group(Args&&... args) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Group(std::forward<Args>(args)...)));
+ProxyPtr make_group(Args&&... args) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new Group(std::forward<Args>(args)...)));
 }
 
 /*
@@ -91,18 +93,18 @@ class Operation : public Proxy {
 };
 
 template <class Acquire, class Release>
-std::unique_ptr<Proxy> make_operation(Acquire f_acquire, Release f_release) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation(f_acquire, f_release)));
+ProxyPtr make_operation(Acquire f_acquire, Release f_release) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new Operation(f_acquire, f_release)));
 }
 
 template <class Acquire>
-std::unique_ptr<Proxy> make_acquire_operation(Acquire f_acquire) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation(f_acquire, []() {})));
+ProxyPtr make_acquire_operation(Acquire f_acquire) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new Operation(f_acquire, []() {})));
 }
 
 template <class Release>
-std::unique_ptr<Proxy> make_release_operation(Release f_release) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new Operation([]() {}, f_release)));
+ProxyPtr make_release_operation(Release f_release) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new Operation([]() {}, f_release)));
 }
 
 /*
@@ -133,20 +135,40 @@ class ForInContainer : public Proxy {
 };
 
 template <class Container, class GetProxy>
-std::unique_ptr<Proxy> make_for_in_container(Container& container, GetProxy get_proxy) {
-    return std::unique_ptr<Proxy>(
-        dynamic_cast<Proxy*>(new ForInContainer<Container>(container, get_proxy)));
+ProxyPtr make_for_in_container(Container& container, GetProxy get_proxy) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new ForInContainer<Container>(container, get_proxy)));
 }
 
 template <class Container>
-std::unique_ptr<Proxy> make_for_in_container(Container& container) {
-    return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new ForInContainer<Container>(container)));
+ProxyPtr make_for_in_container(Container& container) {
+    return ProxyPtr(dynamic_cast<Proxy*>(new ForInContainer<Container>(container)));
 }
 
-std::unique_ptr<Proxy> slave_only(std::unique_ptr<Proxy>&& ptr) {
-    return MPI::p->rank ? std::move(ptr) : nullptr;
+/*
+====================================================================================================
+  Conditional creation functions
+==================================================================================================*/
+
+ProxyPtr slave_only(ProxyPtr&& ptr) { return MPI::p->rank ? std::move(ptr) : nullptr; }
+
+ProxyPtr master_only(ProxyPtr&& ptr) { return (!MPI::p->rank) ? std::move(ptr) : nullptr; }
+
+template <class F>
+ProxyPtr slave_acquire(F f) {
+    return slave_only(make_acquire_operation(f));
 }
 
-std::unique_ptr<Proxy> master_only(std::unique_ptr<Proxy>&& ptr) {
-    return (!MPI::p->rank) ? std::move(ptr) : nullptr;
+template <class F>
+ProxyPtr slave_release(F f) {
+    return slave_only(make_release_operation(f));
+}
+
+template <class F>
+ProxyPtr master_acquire(F f) {
+    return master_only(make_acquire_operation(f));
+}
+
+template <class F>
+ProxyPtr master_release(F f) {
+    return master_only(make_release_operation(f));
 }
