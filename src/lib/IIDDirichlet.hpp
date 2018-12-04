@@ -284,7 +284,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     }
 
   protected:
-    const std::vector<double>& center;
+    const std::vector<double> &center;
     double concentration;
 };
 

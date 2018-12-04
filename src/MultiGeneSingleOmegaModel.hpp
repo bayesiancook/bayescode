@@ -102,8 +102,8 @@ class MultiGeneSingleOmegaModelShared {
             nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
-            nucrelratearray = new IIDDirichlet(
-                partition.my_allocation_size(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucrelratearray = new IIDDirichlet(partition.my_allocation_size(),
+                nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(
                 partition.my_allocation_size(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
@@ -118,8 +118,8 @@ class MultiGeneSingleOmegaModelShared {
 
     // MPI communication groups
     void declare_groups() {
-
         if (blmode == shared) {
+            // clang-format off
             mpibranchlengths = make_group(
                 broadcast(*branchlength),
 
@@ -139,7 +139,9 @@ class MultiGeneSingleOmegaModelShared {
 
                 reduce(*lengthpathsuffstatarray)
             );
+            //clang-format on
         } else {
+            // clang-format off
             mpibranchlengths = make_group(
                 broadcast(*branchlength, blhyperinvshape),
 
@@ -156,9 +158,10 @@ class MultiGeneSingleOmegaModelShared {
 
                 reduce(*lengthhypersuffstatarray)
             );
+            //clang-format on
         }
-
         if (nucmode == shared)  {
+            // clang-format off
             mpinucrates = make_group(
                 broadcast(*nucrelratearray,*nucstatarray),
 
@@ -178,15 +181,19 @@ class MultiGeneSingleOmegaModelShared {
 
                 reduce(nucpathsuffstat)
             );
+            //clang-format on
         }
         else    {
 
+            // clang-format off
             mpinucrates = make_group(
-                broadcast(nucrelratehypercenter, nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc),
+                broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
+                          nucstathypercenter, nucstathyperinvconc),
 
                 slave_acquire([this]()  {
                     for (auto gene : geneprocess)   {
-                        gene->SetNucRatesHyperParameters(nucrelratehypercenter, nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
+                        gene->SetNucRatesHyperParameters(nucrelratehypercenter,
+                            nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
                     }
                 }),
 
@@ -199,14 +206,17 @@ class MultiGeneSingleOmegaModelShared {
 
                 reduce(nucrelratesuffstat,nucstatsuffstat)
             );
+            //clang-format on
         }
 
+        // clang-format off
         mpiomega = make_group(
                 broadcast(omega_param.hypermean, omega_param.hyperinvshape),
 
                 slave_acquire([this]()  {
                     for (auto gene : geneprocess)   {
-                        gene->SetOmegaHyperParameters(omega_param.hypermean, omega_param.hyperinvshape);
+                        gene->SetOmegaHyperParameters(
+                            omega_param.hypermean, omega_param.hyperinvshape);
                     }
                 }),
 
@@ -217,9 +227,10 @@ class MultiGeneSingleOmegaModelShared {
 
                 reduce(omegahypersuffstat)
             );
+            //clang-format on
 
+        // clang-format off
         mpitrace = make_group(
-
             gather(partition, *omegaarray),
 
             (blmode != shared) ?
@@ -241,6 +252,7 @@ class MultiGeneSingleOmegaModelShared {
 
             reduce(GeneLogPrior, GeneLogLikelihood)
         );
+        //clang-format on
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
