@@ -226,17 +226,9 @@ class SimpleArray : public Array<T> {
         (*this)[cat2] = tmp;
     }
 
-    template <class Registrar>
-    void serialization_interface(Registrar &x) {
-        x.add(array);
-    }
-
   protected:
     std::vector<T> array;
 };
-
-template <class T>
-struct has_custom_serialization<SimpleArray<T>> : std::true_type {};
 
 template <class T>
 struct has_size<SimpleArray<T>> : std::true_type {};
