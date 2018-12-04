@@ -3,6 +3,7 @@
 #include "mpi_components/broadcast.hpp"
 #include "mpi_components/gather.hpp"
 #include "mpi_components/reduce.hpp"
+#include "mpi_components/scatter.hpp"
 #include "operations/proxies.hpp"
 
 using MPI::p;
@@ -20,7 +21,7 @@ template<> struct has_custom_serialization<MyStruct> : public true_type {};
 
 struct DummyModel {
     double a{-1}, b{-1}, c{-1};
-    vector<double> v;
+    vector<double> v, v2;
     Partition partition{{"d", "e", "f"}, static_cast<size_t>(p->size) - 1, 1};
     MyStruct j{-1, -1, -1};
     MyStruct g{-1, -1, -1};
@@ -30,9 +31,12 @@ struct DummyModel {
     void print() {
         stringstream ss;
         for (auto e : v) { ss << e << " "; }
+        stringstream ss2;
+        for (auto e : v2) { ss2 << e << " "; }
         p->message(
-            "Model state is %.2f, %.2f, %.2f, {%s}, (%d, %.2f, %.2f), %.2f, (%d, %.2f), (%d, %.2f)",
-            a, b, c, ss.str().c_str(), g.a, g.b, g.c, h, i.a, i.b, j.a, j.b);
+            "Model state is:\n\ta  =  %.2f\n\tb  =  %.2f\n\tc  =  %.2f\n\tv  = {%s}\n\tv2 = "
+            "{%s}\n\tg  = (%d, %.2f, %.2f)\n\th  =  %.2f\n\ti  = (%d, %.2f)\n\tj  = (%d, %.2f)",
+            a, b, c, ss.str().c_str(), ss2.str().c_str(), g.a, g.b, g.c, h, i.a, i.b, j.a, j.b);
     }
 };
 
@@ -114,15 +118,17 @@ void compute(int, char**) {
         m.i = {2, 3.2, -1};
         m.j = {7, 2.21, -1};
         m.v = {-1, -1, -1};
+        m.v2 = {13, 14, 15};
     } else {  // slave
         m.v = vector<double>(m.partition.my_partition_size(), p->rank + 1.1);
         m.g = {p->rank + 1, p->rank - 0.72, p->rank + 0.4};
         m.h = p->rank + 2.3;
+        m.v2 = vector<double>(m.partition.my_partition_size(), -1);
     }
 
     Group master_operations{reduce(m.g, m.h), gather(m.partition, m.v)};
 
-    Group slave_operations{broadcast(m.a, m.c), broadcast(m.i, m.j)};
+    Group slave_operations{broadcast(m.a, m.c), broadcast(m.i, m.j), scatter(m.partition, m.v2)};
 
     p->rank ? slave_operations.acquire() : slave_operations.release();
     p->rank ? master_operations.release() : master_operations.acquire();
