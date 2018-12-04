@@ -231,6 +231,8 @@ class MultiGeneSingleOmegaModelShared {
                 nullptr,
 
             slave_release([this]()  {
+                GeneLogPrior = 0;
+                GeneLogLikelihood = 0;
                 for (auto gene : geneprocess)   {
                     GeneLogPrior += gene->GetLogPrior();
                     GeneLogLikelihood += gene->GetLogLikelihood();
