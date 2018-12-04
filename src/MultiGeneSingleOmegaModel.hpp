@@ -606,49 +606,34 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     void Update() {
         FastUpdate();
 
-        if (MPI::p->size > 1) {
-            // SendBranchLengthsHyperParameters();
-            // SendNucRatesHyperParameters();
+        mpibranchlengths->release();
+        mpinucrates->release();
+        mpiomega->release();
 
-            // if (blmode == shared) {
-            //     SendGlobalBranchLengths();
-            // } else {
-            //     SendGeneBranchLengths();
-            // }
-
-            // if (nucmode == shared) {
-            //     SendGlobalNucRates();
-            // } else {
-            //     SendGeneNucRates();
-            // }
-
-            // SendOmegaHyperParameters();
-            // SendOmega();
-            // ReceiveLogProbs();
+        if (blmode != shared)   {
+            SendGeneBranchLengths();
         }
+        if (nucmode != shared)  {
+            SendGeneNucRates();
+        }
+        SendOmega();
+        mpitrace->acquire();
     }
 
     void PostPred(string name) {
         FastUpdate();
-        if (MPI::p->size > 1) {
-            SendBranchLengthsHyperParameters();
-            SendNucRatesHyperParameters();
 
-            if (blmode == shared) {
-                SendGlobalBranchLengths();
-            } else {
-                SendGeneBranchLengths();
-            }
+        mpibranchlengths->release();
+        mpinucrates->release();
+        mpiomega->release();
 
-            if (nucmode == shared) {
-                SendGlobalNucRates();
-            } else {
-                SendGeneNucRates();
-            }
-
-            SendOmegaHyperParameters();
-            SendOmega();
+        if (blmode != shared)   {
+            SendGeneBranchLengths();
         }
+        if (nucmode != shared)  {
+            SendGeneNucRates();
+        }
+        SendOmega();
     }
 
     //-------------------
@@ -735,7 +720,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         }
 
         mpitrace->acquire();
-        mpitrace->release();
+        // mpitrace->release();
 
         return 1;
     }
@@ -853,76 +838,9 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // MPI send / receive
     //-------------------
 
-    // Branch lengths
-
-    void SendGlobalBranchLengths() { mpi.MasterSendGlobal(*branchlength); }
-
-    void SendBranchLengthsHyperParameters() {
-        mpi.MasterSendGlobal(*branchlength, blhyperinvshape);
-    }
-
     void SendGeneBranchLengths() { mpi.MasterSendGeneArray(*branchlengtharray); }
-
-    void ReceiveGeneBranchLengths() { mpi.MasterReceiveGeneArray(*branchlengtharray); }
-
-    void ReceiveBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        mpi.MasterReceiveAdditive(*lengthpathsuffstatarray);
-    }
-
-    void ReceiveBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        mpi.MasterReceiveAdditive(*lengthhypersuffstatarray);
-    }
-
-    // Nucleotide Rates
-
-    void SendGlobalNucRates() {
-        mpi.MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
-    }
-
     void SendGeneNucRates() { mpi.MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void ReceiveGeneNucRates() { mpi.MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void SendNucRatesHyperParameters() {
-        mpi.MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        mpi.MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
-    }
-
-    void ReceiveNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucrelratesuffstat);
-
-        nucstatsuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucstatsuffstat);
-    }
-
-    void ReceiveNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucpathsuffstat);
-    }
-
-    // omega (and hyperparameters)
-
-    void ReceiveOmega() { mpi.MasterReceiveGeneArray(*omegaarray); }
-
     void SendOmega() { mpi.MasterSendGeneArray(*omegaarray); }
-
-    // omega hyperparameters
-
-    void SendOmegaHyperParameters() {
-        mpi.MasterSendGlobal(omega_param.hypermean, omega_param.hyperinvshape);
-    }
-
-    // log probs
-
-    void ReceiveLogProbs() {
-        GeneLogPrior = 0;
-        mpi.MasterReceiveAdditive(GeneLogPrior);
-        GeneLogLikelihood = 0;
-        mpi.MasterReceiveAdditive(GeneLogLikelihood);
-    }
 
     void ToStream(ostream &os) { os << *this; }
 };
@@ -952,24 +870,22 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     void end() override {}
 
     void Update() {
-        // ReceiveBranchLengthsHyperParameters();
-        // ReceiveNucRatesHyperParameters();
 
-        // if (blmode == shared) {
-        //     ReceiveGlobalBranchLengths();
-        // } else {
-        //     ReceiveGeneBranchLengths();
-        // }
-        // if (nucmode == shared) {
-        //     ReceiveGlobalNucRates();
-        // } else {
-        //     ReceiveGeneNucRates();
-        // }
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
 
-        // ReceiveOmegaHyperParameters();
-        // ReceiveOmega();
-        // GeneUpdate();
-        // SendLogProbs();
+        if (blmode != shared)   {
+            ReceiveGeneBranchLengths();
+        }
+        if (nucmode != shared)  {
+            ReceiveGeneNucRates();
+        }
+        ReceiveOmega();
+
+        GeneUpdate();
+
+        mpitrace->release();
     }
 
     void GeneUpdate() {
@@ -979,21 +895,16 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     }
 
     void PostPred(string name) {
-        ReceiveBranchLengthsHyperParameters();
-        ReceiveNucRatesHyperParameters();
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
 
-        if (blmode == shared) {
-            ReceiveGlobalBranchLengths();
-        } else {
+        if (blmode != shared)   {
             ReceiveGeneBranchLengths();
         }
-        if (nucmode == shared) {
-            ReceiveGlobalNucRates();
-        } else {
+        if (nucmode != shared)  {
             ReceiveGeneNucRates();
         }
-
-        ReceiveOmegaHyperParameters();
         ReceiveOmega();
         GenePostPred(name);
     }
@@ -1030,7 +941,7 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         }
 
         mpitrace->release();
-        mpitrace->acquire();
+        // mpitrace->acquire();
 
         return 1;
     }
@@ -1070,59 +981,10 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
     // MPI send / receive
     //-------------------
 
-    // Branch lengths
-
-    void ReceiveGlobalBranchLengths() {
-        mpi.SlaveReceiveGlobal(*branchlength);
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->SetBranchLengths(*branchlength);
-        }
-    }
-
-    void ReceiveBranchLengthsHyperParameters() {
-        mpi.SlaveReceiveGlobal(*branchlength, blhyperinvshape);
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
-        }
-    }
-
     void ReceiveGeneBranchLengths() {
         mpi.SlaveReceiveGeneArray(*branchlengtharray);
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
-        }
-    }
-
-    void SendGeneBranchLengths() {
-        // in principle, redundant..
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-        mpi.SlaveSendGeneArray(*branchlengtharray);
-    }
-
-    void SendBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->CollectLengthSuffStat();
-            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
-        }
-        mpi.SlaveSendAdditive(*lengthpathsuffstatarray);
-    }
-
-    void SendBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-        mpi.SlaveSendAdditive(*lengthhypersuffstatarray);
-    }
-
-    // Nucleotide Rates
-
-    void ReceiveGlobalNucRates() {
-        mpi.SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
-
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
         }
     }
 
@@ -1134,65 +996,11 @@ class MultiGeneSingleOmegaModelSlave : public ChainComponent,
         }
     }
 
-    void SendGeneNucRates() { mpi.SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void ReceiveNucRatesHyperParameters() {
-        mpi.SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        mpi.SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
-
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
-                nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
-        }
-    }
-
-    void CollectNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        nucrelratearray->AddSuffStat(nucrelratesuffstat);
-        nucstatsuffstat.Clear();
-        nucstatarray->AddSuffStat(nucstatsuffstat);
-    }
-
-    void CollectNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->CollectNucPathSuffStat();
-            nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
-        }
-    }
-
-    // omega (and hyperparameters)
-
-    void SendOmega() { mpi.SlaveSendGeneArray(*omegaarray); }
-
     void ReceiveOmega() {
         mpi.SlaveReceiveGeneArray(*omegaarray);
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->SetOmega((*omegaarray)[gene]);
         }
-    }
-
-    // omega hyperparameters
-
-    void ReceiveOmegaHyperParameters() {
-        mpi.SlaveReceiveGlobal(omega_param.hypermean, omega_param.hyperinvshape);
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->SetOmegaHyperParameters(
-                omega_param.hypermean, omega_param.hyperinvshape);
-        }
-    }
-
-    // log probs
-
-    void SendLogProbs() {
-        GeneLogPrior = 0;
-        GeneLogLikelihood = 0;
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            GeneLogPrior += geneprocess[gene]->GetLogPrior();
-            GeneLogLikelihood += geneprocess[gene]->GetLogLikelihood();
-        }
-        mpi.SlaveSendAdditive(GeneLogPrior);
-        mpi.SlaveSendAdditive(GeneLogLikelihood);
     }
 };
 
