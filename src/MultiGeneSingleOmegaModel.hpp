@@ -47,9 +47,6 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
 
 class MultiGeneSingleOmegaModelShared : public ChainComponent {
   public:
-    // each gene defines its own SingleOmegaModel
-    std::vector<SingleOmegaModel *> geneprocess;
-
     MultiGeneSingleOmegaModelShared(string datafile, string treefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
@@ -953,6 +950,9 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     // ============================================================================================
 
   protected:
+    // each gene defines its own SingleOmegaModel
+    std::vector<SingleOmegaModel *> geneprocess;
+
     std::string datafile, treefile;
     CodonStateSpace codonstatespace;
     GeneSet gene_set;
