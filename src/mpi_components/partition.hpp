@@ -70,6 +70,8 @@ class Partition {
 
     size_t my_partition_size() const { return partition_size(process.rank); }
 
+    size_t my_allocation_size() const { return process.rank ? partition_size(process.rank) : size_all(); }
+
     size_t size_all() const {
         size_t result = 0;
         for (auto subset : partition) { result += subset.second.size(); }
