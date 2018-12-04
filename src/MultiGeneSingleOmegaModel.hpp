@@ -127,17 +127,18 @@ class MultiGeneSingleOmegaModelShared {
                 broadcast(*branchlength),
 
                 slave_acquire([this]() {
-                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->SetBranchLengths(*branchlength);
-                    }}),
+                    for (auto gene : geneprocess) {
+                        gene->SetBranchLengths(*branchlength);
+                    }
+                }),
 
                 slave_release([this]() {
                     lengthpathsuffstatarray->Clear();
-                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->CollectLengthSuffStat();
-                        lengthpathsuffstatarray->Add(
-                            *geneprocess[gene]->GetLengthPathSuffStatArray());
-                    }}),
+                    for (auto gene : geneprocess) {
+                        gene->CollectLengthSuffStat();
+                        lengthpathsuffstatarray->Add(*gene->GetLengthPathSuffStatArray());
+                    }
+                }),
 
                 reduce(*lengthpathsuffstatarray)
             );
@@ -179,10 +180,10 @@ class MultiGeneSingleOmegaModelShared {
             // clang-format off
             mpibranchlengths = make_group(
                 slave_acquire([this]() {
-                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->SetBranchLengthsHyperParameters(
-                            *branchlength, blhyperinvshape);
-                    }}),
+                    for (auto gene : geneprocess) {
+                        gene->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
+                    }
+                }),
 
                 slave_release([this]() {
                     lengthhypersuffstatarray->Clear();
@@ -312,24 +313,41 @@ class MultiGeneSingleOmegaModelShared {
         // mpiomegaref.add(gather<double>(*this, {"omegaarray"}));
         // mpiomegaref.add(gather(partition, *omegaarray));
 
-        mpitrace = make_group();
-        auto &mpitraceref = dynamic_cast<Group &>(*mpiomega);
-        // gather omegas
-        // mpitraceref.add(gather<double>(*this, {"omegaarray"}));
-        // mpitraceref.add(gather(partition, *omegaarray));
-        if (blmode != shared) {
-            // gather branch lengths across genes
-            // mpitraceref.add(gather<double>(*this, {"branchlengtharray"}));
-            // mpitraceref.add(gather(partition, *branchlengtharray));
-        }
-        if (nucmode != shared) {
-            // gather nucrates across genes
-            // mpitraceref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
-            // mpitraceref.add(gather(partition, *nucrelratearray, *nucstatarray));
-        }
-        // reduce log prior and log likelihoods across genes
-        // mpitraceref.add(reduce<double>(*this, {"genelogprior", "geneloglikelihood"}));
-        mpitraceref.add(reduce(GeneLogPrior, GeneLogLikelihood));
+        // clang-format off
+        mpitrace = make_group(
+            gather(partition, *omegaarray),
+
+            (blmode != shared) ?
+                gather(partition, *branchlengtharray) :
+                nullptr,
+
+            (nucmode != shared) ?
+                gather(partition, *nucrelratearray, *nucstatarray) :
+                nullptr,
+
+            reduce(GeneLogPrior, GeneLogLikelihood)
+        );
+        // clang-format on
+
+
+        // mpitrace = make_group();
+        // auto &mpitraceref = dynamic_cast<Group &>(*mpiomega);
+        // // gather omegas
+        // // mpitraceref.add(gather<double>(*this, {"omegaarray"}));
+        // // mpitraceref.add(gather(partition, *omegaarray));
+        // if (blmode != shared) {
+        //     // gather branch lengths across genes
+        //     // mpitraceref.add(gather<double>(*this, {"branchlengtharray"}));
+        //     // mpitraceref.add(gather(partition, *branchlengtharray));
+        // }
+        // if (nucmode != shared) {
+        //     // gather nucrates across genes
+        //     // mpitraceref.add(gather<double>(*this, {"nucrelratearray", "nucstatarray"}));
+        //     // mpitraceref.add(gather(partition, *nucrelratearray, *nucstatarray));
+        // }
+        // // reduce log prior and log likelihoods across genes
+        // // mpitraceref.add(reduce<double>(*this, {"genelogprior", "geneloglikelihood"}));
+        // mpitraceref.add(reduce(GeneLogPrior, GeneLogLikelihood));
     }
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
