@@ -197,9 +197,6 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
 
     ~IIDDirichlet() {}
 
-    //! set center of the Dirichlet distribution
-    void SetCenter(const std::vector<double> &incenter) { center = incenter; }
-
     //! set concentration of the Dirichlet distribution
     void SetConcentration(double inconcentration) { concentration = inconcentration; }
 
@@ -286,18 +283,10 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
         return m2;
     }
 
-    template <class T>
-    void serialization_interface(T &x) {
-        x.add(array, center, concentration);
-    }
-
   protected:
-    std::vector<double> center;
+    const std::vector<double>& center;
     double concentration;
 };
-
-template <>
-struct has_custom_serialization<IIDDirichlet> : std::true_type {};
 
 template <>
 struct has_size<IIDDirichlet> : std::true_type {};
