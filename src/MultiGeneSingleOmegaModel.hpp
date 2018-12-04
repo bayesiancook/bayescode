@@ -462,15 +462,11 @@ class MultiGeneSingleOmegaModelShared {
         if (blmode == shared) {
             t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
-            t.add("lengthpathsuffstatarray", *lengthpathsuffstatarray);
         } else {
             t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
             t.add("blhyperinvshape", blhyperinvshape);
             t.add("branchlengtharray", *branchlengtharray);
-            cerr << "should still add hyper suffstat array for branch lengths in declare_model\n";
-            exit(1);
-            // add hyper suffstat array
         }
 
         t.add("nucrelratehypercenter", nucrelratehypercenter);
@@ -479,17 +475,6 @@ class MultiGeneSingleOmegaModelShared {
         t.add("nucstathyperinvconc", nucstathyperinvconc);
         t.add("nucrelratearray", *nucrelratearray);
         t.add("nucstatarray", *nucstatarray);
-
-        if (nucmode == shared) {
-            t.add("nucpathsuffstat_rootcount", nucpathsuffstat.rootcount);
-            t.add("nucpathsuffstat_paircount", nucpathsuffstat.paircount);
-            t.add("nucpathsuffstat_pairbeta", nucpathsuffstat.pairbeta);
-        } else {
-            t.add("nucrelratesuffstat_sumlog", nucrelratesuffstat.sumlog);
-            t.add("nucrelratesuffstat_n", nucrelratesuffstat.n);
-            t.add("nucstatsuffstat_sumlog", nucstatsuffstat.sumlog);
-            t.add("nucstatsuffstat_n", nucstatsuffstat.n);
-        }
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
