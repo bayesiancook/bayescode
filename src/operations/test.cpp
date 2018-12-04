@@ -193,3 +193,17 @@ TEST_CASE("make_for_in_container") {
     group2->release();
     CHECK(ss.str() == "+1+2+3*2*3-1-2-3/2/3");
 }
+
+TEST_CASE("slave/master_only") {
+    MPI::p.reset(new Process(0, 2));
+    auto tmp = slave_only(make_release_operation([]() {}));
+    auto tmp2 = master_only(make_release_operation([]() {}));
+    CHECK(tmp.get() == nullptr);
+    CHECK(tmp2.get() != nullptr);
+
+    MPI::p.reset(new Process(1, 2));
+    auto tmp3 = slave_only(make_release_operation([]() {}));
+    auto tmp4 = master_only(make_release_operation([]() {}));
+    CHECK(tmp3.get() != nullptr);
+    CHECK(tmp4.get() == nullptr);
+}

@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "interfaces.hpp"
+#include "mpi_components/Process.hpp"
 
 /*
 ====================================================================================================
@@ -50,10 +51,14 @@ class Group : public Proxy {
     Group(std::unique_ptr<Proxy>&& operation, Operations&&... operations)
         : Group(std::forward<Operations>(operations)...) {
         /* -- */
-        this->operations.insert(this->operations.begin(), std::move(operation));
+        if (operation.get() != nullptr) {
+            this->operations.insert(this->operations.begin(), std::move(operation));
+        }
     }
 
-    void add(std::unique_ptr<Proxy> ptr) { operations.push_back(std::move(ptr)); }
+    void add(std::unique_ptr<Proxy> ptr) {
+        if (ptr.get() != nullptr) { operations.push_back(std::move(ptr)); }
+    }
 
     void acquire() final {
         for (auto&& operation : operations) { operation->acquire(); }
@@ -136,4 +141,12 @@ std::unique_ptr<Proxy> make_for_in_container(Container& container, GetProxy get_
 template <class Container>
 std::unique_ptr<Proxy> make_for_in_container(Container& container) {
     return std::unique_ptr<Proxy>(dynamic_cast<Proxy*>(new ForInContainer<Container>(container)));
+}
+
+std::unique_ptr<Proxy> slave_only(std::unique_ptr<Proxy>&& ptr) {
+    return MPI::p->rank ? std::move(ptr) : nullptr;
+}
+
+std::unique_ptr<Proxy> master_only(std::unique_ptr<Proxy>&& ptr) {
+    return (!MPI::p->rank) ? std::move(ptr) : nullptr;
 }
