@@ -486,11 +486,20 @@ int main(int argc, char *argv[]) {
              << '\n';
     }
 
-    stringstream ss;
-    ss << string(75, '=') <<  "\n~ Move report from process " << myid << " ~\n" << string(75, '=') << "\n";
-    gm->print(ss);
-    ss << string(75, '=') << "\n";
-    printf("%s", ss.str().c_str());
+    for (int i = 0; i < nprocs; i++) {
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (myid == i) {
+            stringstream ss;
+            ss << string(75, '=') << "\n~ Move report from process " << i << " ~\n"
+               << string(75, '=') << "\n";
+            gm->print(ss);
+            printf("%s", ss.str().c_str());
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (myid == 0) {
+        cout << string(75, '=') << "\n";
+    }
 
     MPI_Finalize();
 }
