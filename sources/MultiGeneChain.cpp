@@ -3,6 +3,10 @@
 #include <iostream>
 #include "Chrono.hpp"
 #include "MultiGeneProbModel.hpp"
+#include "monitoring.hpp"
+
+std::unique_ptr<MonitorManager> gm(new MonitorManager());
+
 using namespace std;
 
 // c++11
@@ -69,6 +73,34 @@ int MultiGeneChain::SlaveReceiveRunningStatus() {
 }
 
 void MultiGeneChain::Run() {
+    ofstream mvfile(name + "_p" + to_string(myid) + "_" + to_string(size) + "to" +
+                    to_string(until) + ".movestats");
+
+    int first_iteration = size + 1;
+
+    auto write_line = [this, &mvfile]() {
+        stringstream line;
+        for (auto& monitor : gm->monitors) {
+            if (line.str() != "") {
+                line << '\t';
+            }
+            line << dynamic_cast<MeanMonitor<double>*>(monitor.second.get())->tmp_mean();
+            dynamic_cast<MeanMonitor<double>*>(monitor.second.get())->tmp_reset();
+        }
+        mvfile << line.str() << "\n";
+    };
+
+    auto write_header = [this, &mvfile]() {
+        stringstream header;
+        for (auto& monitor : gm->monitors) {
+            if (header.str() != "") {
+                header << '\t';
+            }
+            header << monitor.first;
+        }
+        mvfile << header.str() << "\n";
+    };
+
     if (!myid) {
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
             MasterSendRunningStatus(1);
@@ -80,6 +112,11 @@ void MultiGeneChain::Run() {
             ofstream check_os((name + ".time").c_str());
             check_os << chrono.GetTime() << '\n';
             cerr << "* Iteration " << size - 1 << ": " << chrono.GetTime() / 1000 << "s\n";
+
+            if (size == first_iteration) {
+                write_header();
+            }
+            write_line();
         }
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());
@@ -87,6 +124,7 @@ void MultiGeneChain::Run() {
     } else {
         while (SlaveReceiveRunningStatus()) {
             Move();
+            write_line();
         }
     }
 }

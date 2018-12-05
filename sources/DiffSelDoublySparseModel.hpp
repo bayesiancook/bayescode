@@ -47,8 +47,6 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "Tree.hpp"
 #include "monitoring.hpp"
 
-std::unique_ptr<MonitorManager> gm(new MonitorManager());
-
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
  * DiffSelModel and DiffSelSparseModel)
