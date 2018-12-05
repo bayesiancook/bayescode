@@ -17,7 +17,7 @@ CC=mpic++
 SYSLIB=
 INCLUDES=
 #CPPFLAGS= $(USE_GSL) $(INCLUDES)
-CPPFLAGS= -std=c++11 -g -Wall -O3 -Wno-int-in-bool-context $(USE_GSL) $(INCLUDES)
+CPPFLAGS= -std=c++11 -g -Wall -O3 -Wno-deprecated-declarations -Wno-int-in-bool-context $(USE_GSL) $(INCLUDES)
 LDFLAGS=$(STATIC)
 INSTALL_DIR=
 INSTALL_LIB=

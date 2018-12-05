@@ -45,6 +45,9 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "ProbModel.hpp"
 #include "SubMatrixSelector.hpp"
 #include "Tree.hpp"
+#include "monitoring.hpp"
+
+std::unique_ptr<MonitorManager> gm(new MonitorManager());
 
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
@@ -861,7 +864,9 @@ class DiffSelDoublySparseModel : public ProbModel {
                 MoveBaselineFitness(weight);
                 CompMoveFitness(weight);
                 if (maskmode < 3) {
-                    MoveMasks(weight);
+                    gm->run_and_monitor<MeanMonitor<double>>(
+                        "MoveMasks(weight)",
+                        [this, weight]() -> double { return MoveMasks(weight); });
                 }
                 if (maskmode < 2) {
                     MoveMaskHyperParameters(10 * weight);
@@ -913,10 +918,18 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-                    &DiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-                    &DiffSelDoublySparseModel::NoUpdate, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(lambda, 1.0, 10)", [this]() -> double {
+                return ScalingMove(lambda, 1.0, 10,
+                                   &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+                                   &DiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(lambda, 0.3, 10)", [this]() -> double {
+                return ScalingMove(lambda, 0.3, 10,
+                                   &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+                                   &DiffSelDoublySparseModel::NoUpdate, this);
+            });
         blhypermean->SetAllBranches(1.0 / lambda);
     }
 
@@ -925,23 +938,47 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveNucRates(int nrep) {
         CorruptMatrices();
 
-        ProfileMove(nucrelrate, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
-                    &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.03, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
-                    &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucrelrate, 0.01, 3, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
-                    &DiffSelDoublySparseModel::CorruptMatrices, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelrate, 0.1, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucrelrate, 0.1, 1, nrep,
+                                   &DiffSelDoublySparseModel::NucRatesLogProb,
+                                   &DiffSelDoublySparseModel::CorruptMatrices, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelrate, 0.03, 3)", [this, nrep]() -> double {
+                return ProfileMove(nucrelrate, 0.03, 3, nrep,
+                                   &DiffSelDoublySparseModel::NucRatesLogProb,
+                                   &DiffSelDoublySparseModel::CorruptMatrices, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelrate, 0.01, 3)", [this, nrep]() -> double {
+                return ProfileMove(nucrelrate, 0.01, 3, nrep,
+                                   &DiffSelDoublySparseModel::NucRatesLogProb,
+                                   &DiffSelDoublySparseModel::CorruptMatrices, this);
+            });
 
-        ProfileMove(nucstat, 0.1, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
-                    &DiffSelDoublySparseModel::CorruptMatrices, this);
-        ProfileMove(nucstat, 0.01, 1, nrep, &DiffSelDoublySparseModel::NucRatesLogProb,
-                    &DiffSelDoublySparseModel::CorruptMatrices, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucstat, 0.1, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucstat, 0.1, 1, nrep,
+                                   &DiffSelDoublySparseModel::NucRatesLogProb,
+                                   &DiffSelDoublySparseModel::CorruptMatrices, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucstat, 0.01, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucstat, 0.01, 1, nrep,
+                                   &DiffSelDoublySparseModel::NucRatesLogProb,
+                                   &DiffSelDoublySparseModel::CorruptMatrices, this);
+            });
 
         CorruptMatrices();
     }
 
     //! MH compensatory move schedule on fitness parameters and hyper-parameters
-    void CompMoveFitness(int nrep) { CompMoveFitness(1.0, nrep); }
+    void CompMoveFitness(int nrep) {
+        gm->run_and_monitor<MeanMonitor<double>>("CompMoveFitness(1.0)", [this, nrep]() -> double {
+            return CompMoveFitness(1.0, nrep);
+        });
+    }
 
     //! \brief MH compensatory move on fitness parameters and hyper-parameters
     //!
@@ -1027,15 +1064,27 @@ class DiffSelDoublySparseModel : public ProbModel {
         // if masks are not activated (all entries equal to 1), move a random subset
         // of entries over the 20 amino-acids (2d parameter of call)
         if (maskmode == 3) {
-            MoveAllBaselineFitness(1.0, 3, nrep);
-            MoveAllBaselineFitness(1.0, 10, nrep);
-            MoveAllBaselineFitness(1.0, 20, nrep);
-            MoveAllBaselineFitness(0.3, 20, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveAllBaselineFitness(1.0, 3)",
+                [this, nrep]() -> double { return MoveAllBaselineFitness(1.0, 3, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveAllBaselineFitness(1.0, 10)",
+                [this, nrep]() -> double { return MoveAllBaselineFitness(1.0, 10, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveAllBaselineFitness(1.0, 20)",
+                [this, nrep]() -> double { return MoveAllBaselineFitness(1.0, 20, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveAllBaselineFitness(0.3, 20)",
+                [this, nrep]() -> double { return MoveAllBaselineFitness(0.3, 20, nrep); });
         }
         // if masks are activated, move all active entries
         else {
-            MoveBaselineFitness(1.0, nrep);
-            MoveBaselineFitness(0.3, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveBaselineFitness(1.0)",
+                [this, nrep]() -> double { return MoveBaselineFitness(1.0, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveBaselineFitness(0.3)",
+                [this, nrep]() -> double { return MoveBaselineFitness(0.3, nrep); });
         }
     }
 
@@ -1114,8 +1163,12 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! non-baseline conditions
     void MoveFitnessShifts(int nrep) {
         for (int k = 1; k < Ncond; k++) {
-            MoveFitnessShifts(k, 1, nrep);
-            MoveFitnessShifts(k, 0.3, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveFitnessShifts(" + to_string(k) + ", 1)",
+                [this, nrep, k]() -> double { return MoveFitnessShifts(k, 1, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveFitnessShifts(" + to_string(k) + ", 0.3)",
+                [this, nrep, k]() -> double { return MoveFitnessShifts(k, 0.3, nrep); });
         }
     }
 
@@ -1190,22 +1243,46 @@ class DiffSelDoublySparseModel : public ProbModel {
         hyperfitnesssuffstat.AddSuffStat(*fitness, *sitemaskarray, *toggle);
 
         if (fitnessshapemode < 2) {
-            ScalingMove(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
-            ScalingMove(fitnessshape, 0.1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ScalingMove(fitnessshape, 1.0)", [this, nrep]() -> double {
+                    return ScalingMove(fitnessshape, 1.0, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ScalingMove(fitnessshape, 0.3)", [this, nrep]() -> double {
+                    return ScalingMove(fitnessshape, 0.3, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ScalingMove(fitnessshape, 0.1)", [this, nrep]() -> double {
+                    return ScalingMove(fitnessshape, 0.1, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
         }
         fitness->SetShape(fitnessshape);
 
         if (fitnesscentermode < 2) {
-            ProfileMove(fitnesscenter, 0.3, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 1, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
-            ProfileMove(fitnesscenter, 0.1, 3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
-                        &DiffSelDoublySparseModel::NoUpdate, this);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ProfileMove(fitnesscenter, 0.3, 1)", [this, nrep]() -> double {
+                    return ProfileMove(fitnesscenter, 0.3, 1, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ProfileMove(fitnesscenter, 0.1, 1)", [this, nrep]() -> double {
+                    return ProfileMove(fitnesscenter, 0.1, 1, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "ProfileMove(fitnesscenter, 0.1, 3)", [this, nrep]() -> double {
+                    return ProfileMove(fitnesscenter, 0.1, 3, nrep,
+                                       &DiffSelDoublySparseModel::FitnessHyperLogProb,
+                                       &DiffSelDoublySparseModel::NoUpdate, this);
+                });
         }
     }
 
@@ -1397,22 +1474,46 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! MH move schedule on mask hyperparameter (maskprob)
     void MoveMaskHyperParameters(int nrep) {
-        SlidingMove(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
-                    &DiffSelDoublySparseModel::UpdateMask, this);
-        SlidingMove(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
-                    &DiffSelDoublySparseModel::UpdateMask, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "SlidingMove(maskprob, 1.0, 0.05, 0.975)", [this, nrep]() -> double {
+                return SlidingMove(maskprob, 1.0, nrep, 0.05, 0.975,
+                                   &DiffSelDoublySparseModel::MaskLogProb,
+                                   &DiffSelDoublySparseModel::UpdateMask, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "SlidingMove(maskprob, 0.1, 0.05, 0.975)", [this, nrep]() -> double {
+                return SlidingMove(maskprob, 0.1, nrep, 0.05, 0.975,
+                                   &DiffSelDoublySparseModel::MaskLogProb,
+                                   &DiffSelDoublySparseModel::UpdateMask, this);
+            });
     }
 
     //! MH move schedule on background fitness (maskepsilon)
     void MoveMaskEpsilon(int nrep) {
-        SlidingMove(maskepsilon, 1.0, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
-                    &DiffSelDoublySparseModel::UpdateAll, this);
-        SlidingMove(maskepsilon, 0.1, nrep, 0, 1.0, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
-                    &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 1.0, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
-                    &DiffSelDoublySparseModel::UpdateAll, this);
-        ScalingMove(maskepsilon, 0.1, nrep, &DiffSelDoublySparseModel::MaskEpsilonLogProb,
-                    &DiffSelDoublySparseModel::UpdateAll, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "SlidingMove(maskepsilon, 1.0, 0, 1.0)", [this, nrep]() -> double {
+                return SlidingMove(maskepsilon, 1.0, nrep, 0, 1.0,
+                                   &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+                                   &DiffSelDoublySparseModel::UpdateAll, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "SlidingMove(maskepsilon, 0.1, 0, 1.0)", [this, nrep]() -> double {
+                return SlidingMove(maskepsilon, 0.1, nrep, 0, 1.0,
+                                   &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+                                   &DiffSelDoublySparseModel::UpdateAll, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(maskepsilon, 1.0)", [this, nrep]() -> double {
+                return ScalingMove(maskepsilon, 1.0, nrep,
+                                   &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+                                   &DiffSelDoublySparseModel::UpdateAll, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(maskepsilon, 0.1)", [this, nrep]() -> double {
+                return ScalingMove(maskepsilon, 0.1, nrep,
+                                   &DiffSelDoublySparseModel::MaskEpsilonLogProb,
+                                   &DiffSelDoublySparseModel::UpdateAll, this);
+            });
     }
 
     //! MH move on fitness masks across sites
@@ -1536,7 +1637,9 @@ class DiffSelDoublySparseModel : public ProbModel {
     //! MH move schedule on toggles
     void MoveShiftToggles(int nrep) {
         for (int k = 1; k < Ncond; k++) {
-            MoveShiftToggles(k, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveShiftToggles(" + to_string(k) + ")",
+                [this, k, nrep]() -> double { return MoveShiftToggles(k, nrep); });
         }
     }
 

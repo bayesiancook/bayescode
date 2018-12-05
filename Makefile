@@ -7,4 +7,4 @@ format:
 
 .PHONY: test-mgdiffsel
 test-mgdiffsel: all
-	cd data/small_multigene/ && mpirun -np 2 ../multigenediffseldsparse -t tree.nwk.annotated -d verysmall.list -x 1 2 tmp
+	cd data/small_multigene/ && mpirun -np 2 ../multigenediffseldsparse -t tree.nwk.annotated -d verysmall.list -ncond 2 -x 1 1 tmp

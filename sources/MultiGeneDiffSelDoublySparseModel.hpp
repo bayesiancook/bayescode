@@ -737,28 +737,49 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &MultiGeneDiffSelDoublySparseModel::LambdaHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(lambda, 0.3, 10, &MultiGeneDiffSelDoublySparseModel::LambdaHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(lambda, 1.0, 10)", [this]() -> double {
+                return ScalingMove(lambda, 1.0, 10,
+                                   &MultiGeneDiffSelDoublySparseModel::LambdaHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(lambda, 0.3, 10)", [this]() -> double {
+                return ScalingMove(lambda, 0.3, 10,
+                                   &MultiGeneDiffSelDoublySparseModel::LambdaHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
         branchlength->SetScale(lambda);
     }
 
     void MoveBranchLengthsHyperParameters(int nrep) {
         for (int j = 0; j < Nbranch; j++) {
-            BranchLengthsHyperScalingMove(1.0, nrep);
-            BranchLengthsHyperScalingMove(0.3, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "BranchLengthsHyperScalingMove(1.0)",
+                [this, nrep]() -> double { return BranchLengthsHyperScalingMove(1.0, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "BranchLengthsHyperScalingMove(0.3)",
+                [this, nrep]() -> double { return BranchLengthsHyperScalingMove(0.3, nrep); });
         }
 
-        ScalingMove(blhyperinvshape, 1.0, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(blhyperinvshape, 0.3, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(blhyperinvshape, 0.1, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(blhyperinvshape, 1.0)", [this, nrep]() -> double {
+                return ScalingMove(blhyperinvshape, 1.0, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(blhyperinvshape, 0.3)", [this, nrep]() -> double {
+                return ScalingMove(blhyperinvshape, 0.3, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(blhyperinvshape, 0.1)", [this, nrep]() -> double {
+                return ScalingMove(blhyperinvshape, 0.1, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::BranchLengthsHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
 
         branchlengtharray->SetShape(1.0 / blhyperinvshape);
         MoveLambda();
@@ -794,43 +815,79 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     }
 
     void MoveNucRatesHyperParameters(int nrep) {
-        ProfileMove(nucrelratehypercenter, 1.0, 1, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.3, 1, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ProfileMove(nucrelratehypercenter, 0.1, 3, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 1.0, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.3, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucrelratehyperinvconc, 0.03, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelratehypercenter, 1.0, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucrelratehypercenter, 1.0, 1, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelratehypercenter, 0.3, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucrelratehypercenter, 0.3, 1, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucrelratehypercenter, 0.1, 3)", [this, nrep]() -> double {
+                return ProfileMove(nucrelratehypercenter, 0.1, 3, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucrelratehyperinvconc, 1.0)", [this, nrep]() -> double {
+                return ScalingMove(nucrelratehyperinvconc, 1.0, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucrelratehyperinvconc, 0.3)", [this, nrep]() -> double {
+                return ScalingMove(nucrelratehyperinvconc, 0.3, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucrelratehyperinvconc, 0.03)", [this, nrep]() -> double {
+                return ScalingMove(nucrelratehyperinvconc, 0.03, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
 
-        ProfileMove(nucstathypercenter, 1.0, 1, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.3, 1, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ProfileMove(nucstathypercenter, 0.1, 2, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 1.0, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.3, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
-        ScalingMove(nucstathyperinvconc, 0.03, nrep,
-                    &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
-                    &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucstathypercenter, 1.0, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucstathypercenter, 1.0, 1, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucstathypercenter, 0.3, 1)", [this, nrep]() -> double {
+                return ProfileMove(nucstathypercenter, 0.3, 1, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ProfileMove(nucstathypercenter, 0.1, 2)", [this, nrep]() -> double {
+                return ProfileMove(nucstathypercenter, 0.1, 2, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucstathyperinvconc, 1.0)", [this, nrep]() -> double {
+                return ScalingMove(nucstathyperinvconc, 1.0, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucstathyperinvconc, 0.3)", [this, nrep]() -> double {
+                return ScalingMove(nucstathyperinvconc, 0.3, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
+        gm->run_and_monitor<MeanMonitor<double>>(
+            "ScalingMove(nucstathyperinvconc, 0.03)", [this, nrep]() -> double {
+                return ScalingMove(nucstathyperinvconc, 0.03, nrep,
+                                   &MultiGeneDiffSelDoublySparseModel::NucRatesHyperLogProb,
+                                   &MultiGeneDiffSelDoublySparseModel::NoUpdate, this);
+            });
 
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
@@ -838,17 +895,23 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     void MoveShiftProbHyperParameters(int nrep) {
         if (pihyperinvconc) {
-            MovePi(0.3, nrep);
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MovePi(0.3)", [this, nrep]() -> double { return MovePi(0.3, nrep); });
         }
-        if (shiftmode)  {
-            MoveShiftProbHyperMean(0.3, nrep);
-            MoveShiftProbHyperInvConc(0.3, nrep);
+        if (shiftmode) {
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveShiftProbHyperMean(0.3)",
+                [this, nrep]() -> double { return MoveShiftProbHyperMean(0.3, nrep); });
+            gm->run_and_monitor<MeanMonitor<double>>(
+                "MoveShiftProbHyperInvConc(0.3)",
+                [this, nrep]() -> double { return MoveShiftProbHyperInvConc(0.3, nrep); });
         }
     }
 
     double MovePi(double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
+        assert(Ncond > 1);
         for (int k = 1; k < Ncond; k++) {
             for (int rep = 0; rep < nrep; rep++) {
                 double deltalogprob = -GetPiLogPrior(k) - GetCountLogProb(k);
