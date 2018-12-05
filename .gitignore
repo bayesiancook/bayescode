@@ -1,3 +1,12 @@
-sources*/*.o
-sources*/*.d
+*.d*
 data/*
+*.o
+.idea/
+cmake-build-debug/
+*~
+tmp*
+*_bin
+*.json
+_build*
+_test/
+_aamutsel/
