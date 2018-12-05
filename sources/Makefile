@@ -173,7 +173,3 @@ $(PROGSDIR)/ppredtest$(EXEEXT): PostPredTest.o $(OBJS)
 clean:
 	-rm -f *.o *.d *.d.*
 	-rm -f $(PROGS)
-
-.PHONY: format
-format:
-	clang-format -i *.hpp *.cpp
