@@ -20,7 +20,6 @@
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
 #include "SingleOmegaModel.hpp"
-#include "MultiGeneMPIModule.hpp"
 #include "components/ChainComponent.hpp"
 #include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
@@ -53,9 +52,8 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         : datafile(datafile),
           treefile(treefile),
           codonstatespace(Universal),
-          gene_set(parse_datafile(datafile)),
-          partition(gene_set, MPI::p->size - 1, 1),
-          mpi(MPI::p->rank, MPI::p->size),
+          gene_vector(parse_datafile(datafile)),
+          partition(gene_vector, MPI::p->size - 1, 1),
           blmode(blmode),
           nucmode(nucmode),
           omega_param(omega_param),
@@ -66,12 +64,9 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        mpi.AllocateAlignments(datafile);  // marked for deletion
-
-        // GeneLengths gene_lengths = parse_geneset_alignments(gene_set);
+        // GeneLengths gene_lengths = parse_geneset_alignments(gene_vector);
 
         // Branch lengths
-
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
         blhyperinvshape = 0.1;
@@ -112,11 +107,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
             partition.my_allocation_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
         if (MPI::p->rank > 0) {
-            geneprocess.assign(partition.my_partition_size(), (SingleOmegaModel *)0);
-            for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                geneprocess[gene] =
-                    new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
-                geneprocess[gene]->Update();
+            size_t nb_genes = partition.my_partition_size();
+            geneprocess.reserve(nb_genes);
+            for (size_t gene_i = 0; gene_i < nb_genes; gene_i++) {
+                geneprocess.emplace_back(
+                    new SingleOmegaModel(gene_vector.at(gene_i), treefile, blmode, nucmode));
+                geneprocess.back()->Update();
             }
         }
 
@@ -125,7 +121,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // MPI communication groups
     void declare_groups() {
-
         // branch lengths
         if (blmode == shared) {
             // clang-format off
@@ -133,14 +128,14 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 broadcast(*branchlength),
 
                 slave_acquire([this]() {
-                    for (auto gene : geneprocess) {
+                    for (auto& gene : geneprocess) {
                         gene->SetBranchLengths(*branchlength);
                     }
                 }),
 
                 slave_release([this]() {
                     lengthpathsuffstatarray->Clear();
-                    for (auto gene : geneprocess) {
+                    for (auto& gene : geneprocess) {
                         gene->CollectLengthSuffStat();
                         lengthpathsuffstatarray->Add(*gene->GetLengthPathSuffStatArray());
                     }
@@ -155,7 +150,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 broadcast(*branchlength, blhyperinvshape),
 
                 slave_acquire([this]() {
-                    for (auto gene : geneprocess) {
+                    for (auto& gene : geneprocess) {
                         gene->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
                     }
                 }),
@@ -180,14 +175,14 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 broadcast(*nucrelratearray,*nucstatarray),
 
                 slave_acquire([this]()  {
-                    for (auto gene : geneprocess)   {
+                    for (auto& gene : geneprocess)   {
                         gene->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
                     }
                 }),
 
                 slave_release([this]()  {
                     nucpathsuffstat.Clear();
-                    for (auto gene : geneprocess)   {
+                    for (auto& gene : geneprocess)   {
                         gene->CollectNucPathSuffStat();
                         nucpathsuffstat += gene->GetNucPathSuffStat();
                     }
@@ -204,7 +199,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                           nucstathypercenter, nucstathyperinvconc),
 
                 slave_acquire([this]()  {
-                    for (auto gene : geneprocess)   {
+                    for (auto& gene : geneprocess)   {
                         gene->SetNucRatesHyperParameters(nucrelratehypercenter,
                             nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
                     }
@@ -231,7 +226,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 broadcast(omega_param.hypermean, omega_param.hyperinvshape),
 
                 slave_acquire([this]()  {
-                    for (auto gene : geneprocess)   {
+                    for (auto& gene : geneprocess)   {
                         gene->SetOmegaHyperParameters(
                             omega_param.hypermean, omega_param.hyperinvshape);
                     }
@@ -306,7 +301,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
             slave_release([this]()  {
                 GeneLogPrior = 0;
                 GeneLogLikelihood = 0;
-                for (auto gene : geneprocess)   {
+                for (auto& gene : geneprocess)   {
                     GeneLogPrior += gene->GetLogPrior();
                     GeneLogLikelihood += gene->GetLogLikelihood();
                 }
@@ -491,13 +486,13 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
             double var = 0;
-            for (size_t g = 0; g < gene_set.size(); g++) {
+            for (size_t g = 0; g < gene_vector.size(); g++) {
                 double tmp = (*nucrelratearray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= gene_set.size();
-            var /= gene_set.size();
+            mean /= gene_vector.size();
+            var /= gene_vector.size();
             var -= mean * mean;
             tot += var;
         }
@@ -515,13 +510,13 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
             double var = 0;
-            for (size_t g = 0; g < gene_set.size(); g++) {
+            for (size_t g = 0; g < gene_vector.size(); g++) {
                 double tmp = (*nucstatarray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= gene_set.size();
-            var /= gene_set.size();
+            mean /= gene_vector.size();
+            var /= gene_vector.size();
             var -= mean * mean;
             tot += var;
         }
@@ -638,7 +633,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpiomega->acquire();
         mpigenevariables->acquire();
         syncgenevariables->acquire();
-        for (auto gene : geneprocess)   {
+        for (auto& gene : geneprocess)   {
             gene->Update();
         }
         mpitrace->release();
@@ -661,7 +656,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpigenevariables->acquire();
         syncgenevariables->acquire();
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->PostPred(name + mpi.GetLocalGeneName(gene));
+            geneprocess[gene]->PostPred(name + gene_vector.at(gene));
         }
     }
 
@@ -680,14 +675,14 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // slave move
     double MoveSlave() {
-        for (auto gene : geneprocess)   {
+        for (auto& gene : geneprocess)   {
             gene->ResampleSub(1.0);
         }
 
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            for (auto gene : geneprocess)   {
+            for (auto& gene : geneprocess)   {
                 gene->MoveParameters(1);
             }
 
@@ -899,13 +894,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
   protected:
     // each gene defines its own SingleOmegaModel
-    std::vector<SingleOmegaModel *> geneprocess;
+    std::vector<std::unique_ptr<SingleOmegaModel>> geneprocess;
 
     std::string datafile, treefile;
     CodonStateSpace codonstatespace;
-    GeneSet gene_set;
+    GeneSet gene_vector;
     Partition partition;
-    MultiGeneMPIModule mpi;
     std::unique_ptr<const Tree> tree;
 
     param_mode_t blmode;
