@@ -253,12 +253,40 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         // clang-format off
         mpigenevariables = make_group(
                 scatter(partition, *omegaarray),
+
                 (blmode != shared) ?
                     scatter(partition, *branchlengtharray) : 
                     nullptr,
 
+
                 (nucmode != shared) ? 
                     scatter(partition, *nucrelratearray, *nucstatarray) : 
+                    nullptr
+
+            );
+            //clang-format on
+        
+        syncgenevariables = make_group(
+                slave_acquire([this]()  {
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->SetOmega((*omegaarray)[gene]);
+                    }
+                }),
+
+                (blmode != shared) ?
+                    slave_acquire([this]()  {
+                        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                            geneprocess[gene]->SetBranchLengths((*branchlengtharray)[gene]);
+                        }
+                    }) :
+                    nullptr,
+
+                (nucmode != shared) ? 
+                    slave_acquire([this]()  {
+                        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                            geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                        }
+                    }) :
                     nullptr
             );
             //clang-format on
@@ -608,8 +636,9 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpinucrates->acquire();
         mpiomega->acquire();
         mpigenevariables->acquire();
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->Update();
+        syncgenevariables->acquire();
+        for (auto gene : geneprocess)   {
+            gene->Update();
         }
         mpitrace->release();
     }
@@ -620,6 +649,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpinucrates->release();
         mpiomega->release();
         mpigenevariables->release();
+        // syncgenevariables->release();
         mpitrace->acquire();
     }
 
@@ -628,6 +658,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpinucrates->acquire();
         mpiomega->acquire();
         mpigenevariables->acquire();
+        syncgenevariables->acquire();
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->PostPred(name + mpi.GetLocalGeneName(gene));
         }
@@ -639,6 +670,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpinucrates->release();
         mpiomega->release();
         mpigenevariables->release();
+        // syncgenevariables->release();
     }
 
     //-------------------
@@ -647,15 +679,15 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // slave move
     double MoveSlave() {
-        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-            geneprocess[gene]->ResampleSub(1.0);
+        for (auto gene : geneprocess)   {
+            gene->ResampleSub(1.0);
         }
 
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                geneprocess[gene]->MoveParameters(1);
+            for (auto gene : geneprocess)   {
+                gene->MoveParameters(1);
             }
 
             if (omega_param.variable) {
@@ -924,7 +956,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     // summed over all genes
     double GeneLogPrior;
 
-    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpigenevariables, mpitrace;
+    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpigenevariables, syncgenevariables, mpitrace;
 };
 
 template <class M>
