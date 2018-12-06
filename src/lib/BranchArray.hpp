@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include "MPIBuffer.hpp"
 #include "mpi_components/traits.hpp"
 #include "tree/implem.hpp"
 
@@ -31,14 +30,6 @@ class BranchSelector {
     virtual const Tree &GetTree() const = 0;
     //! const access to array element by index
     virtual const T &GetVal(int index) const = 0;
-
-    //! return size of entire array, when put into an MPI buffer
-    unsigned int GetMPISize() const { return this->GetNbranch() * MPISize(this->GetVal(0)); }
-
-    //! write array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetNbranch(); i++) { buffer << this->GetVal(i); }
-    }
 
     //! write array into generic output stream
     void ToStream(std::ostream &os) const {
@@ -73,11 +64,6 @@ class BranchArray : public BranchSelector<T> {
 
     //! non-const access to array element by index
     virtual T &operator[](int index) = 0;
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetNbranch(); i++) { buffer >> (*this)[i]; }
-    }
 
     //! get array from generic input stream
     void FromStream(std::istream &is) {

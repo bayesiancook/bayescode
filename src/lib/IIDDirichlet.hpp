@@ -3,7 +3,6 @@
 #define IIDDIR_H
 
 #include "Array.hpp"
-#include "MPIBuffer.hpp"
 #include "Random.hpp"
 #include "SuffStat.hpp"
 
@@ -86,33 +85,6 @@ class DirichletSuffStat : public SuffStat {
         return tot;
     }
 
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return sumlog.size() + 1; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer << sumlog[i]; }
-        buffer << n;
-    }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer >> sumlog[i]; }
-        buffer >> n;
-    }
-
-    //! read a DirichletSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double tmp;
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            buffer >> tmp;
-            sumlog[i] += tmp;
-        }
-        int temp;
-        buffer >> temp;
-        n += temp;
-    }
-
     template <class T>
     void serialization_interface(T &x) {
         x.add(sumlog, n);
@@ -155,24 +127,6 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
     DirichletSuffStatArray &operator+=(const DirichletSuffStatArray &from) {
         Add(from);
         return *this;
-    }
-
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return GetSize() * GetVal(0).GetMPISize(); }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
-    }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! read a DirichletSuffStatArray from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 
   private:

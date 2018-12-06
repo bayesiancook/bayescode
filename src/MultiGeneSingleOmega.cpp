@@ -1,6 +1,5 @@
 #include <cmath>
 #include <fstream>
-#include "MultiGeneChain.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
 #include "SlaveChainDriver.hpp"
 #include "components/ChainCheckpoint.hpp"

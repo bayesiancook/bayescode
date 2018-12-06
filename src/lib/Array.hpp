@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "MPIBuffer.hpp"
+#include <iostream>
 #include "mpi_components/traits.hpp"
 
 /**
@@ -46,14 +46,6 @@ class Selector {
     //! const access to array element by index
     virtual const T &GetVal(int index) const = 0;
 
-    //! return size of entire array, when put into an MPI buffer
-    unsigned int GetMPISize() const { return this->GetSize() * MPISize(this->GetVal(0)); }
-
-    //! write array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetSize(); i++) { buffer << this->GetVal(i); }
-    }
-
     //! write array into generic output stream
     void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetSize(); i++) { os << this->GetVal(i) << '\t'; }
@@ -89,11 +81,6 @@ class Array : public Selector<T> {
             exit(1);
         }
         for (int i = 0; i < this->GetSize(); i++) { (*this)[i] = from.GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get array from generic input stream

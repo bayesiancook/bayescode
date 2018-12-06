@@ -85,28 +85,6 @@ class GammaSuffStat : public SuffStat {
         }
     }
 
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return 3; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const { buffer << sum << sumlog << n; }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) { buffer >> sum >> sumlog >> n; }
-
-    //! read a GammaSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double temp;
-        buffer >> temp;
-        sum += temp;
-        buffer >> temp;
-        sumlog += temp;
-
-        int tmp;
-        buffer >> tmp;
-        n += tmp;
-    }
-
     //! return log prob, as a function of the given shape and scale parameters
     double GetLogProb(double shape, double scale) const {
         return n * (shape * log(scale) - Random::logGamma(shape)) + (shape - 1) * sumlog -
@@ -191,24 +169,6 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
         for (int gene = 0; gene < array.GetNgene(); gene++) {
             AddSuffStat(array.GetVal(gene), suffstatarray.GetVal(gene));
         }
-    }
-
-    //! return array size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return 3 * GetNbranch(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
-    }
-
-    //! read array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! read from MPI buffer and add to current array
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { (*this)[i].Add(buffer); }
     }
 
     //! set all suff stats to 0

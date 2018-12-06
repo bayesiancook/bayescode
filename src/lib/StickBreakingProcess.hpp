@@ -192,20 +192,6 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total /= nrep;
     }
 
-    //! specialized GetMPISize (ideally should try to override the default
-    //! FromStream instead of that)
-    unsigned int GetMPISizeSB() const { return 2 * GetSize(); }
-
-    //! get array from MPI buffer (specialized)
-    void MPIGetSB(const MPIBuffer &is) {
-        for (int k = 0; k < GetSize(); k++) { is >> (*this)[k] >> V[k]; }
-    }
-
-    //! write array into MPI buffer (specialized)
-    void MPIPutSB(MPIBuffer &os) const {
-        for (int k = 0; k < GetSize(); k++) { os << GetVal(k) << V[k]; }
-    }
-
   private:
     std::vector<double> V;
     double kappa;

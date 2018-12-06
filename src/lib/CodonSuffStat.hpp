@@ -3,7 +3,6 @@
 #include <cassert>
 #include <typeinfo>
 #include "CodonSubMatrixArray.hpp"
-#include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
 #include "PoissonSuffStat.hpp"
 
@@ -179,54 +178,6 @@ class NucPathSuffStat : public SuffStat {
     NucPathSuffStat &operator+=(const NucPathSuffStat &from) {
         Add(from);
         return *this;
-    }
-
-    //! return size of object, when put into an MPI buffer
-    unsigned int GetMPISize() const { return Nnuc + 2 * Nnuc * Nnuc; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < Nnuc; i++) { buffer << rootcount[i]; }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) { buffer << paircount[i][j]; }
-        }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) { buffer << pairbeta[i][j]; }
-        }
-    }
-
-    //! get object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < Nnuc; i++) { buffer >> rootcount[i]; }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) { buffer >> paircount[i][j]; }
-        }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) { buffer >> pairbeta[i][j]; }
-        }
-    }
-
-    //! get a nucpath suffstat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        int a;
-        for (int i = 0; i < Nnuc; i++) {
-            buffer >> a;
-            rootcount[i] += a;
-        }
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer >> a;
-                paircount[i][j] += a;
-            }
-        }
-
-        double d;
-        for (int i = 0; i < Nnuc; i++) {
-            for (int j = 0; j < Nnuc; j++) {
-                buffer >> d;
-                pairbeta[i][j] += d;
-            }
-        }
     }
 
     template <class T>
@@ -418,24 +369,6 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
         total += GetSize() * (shape * log(scale) - Random::logGamma(shape));
         return total;
     }
-
-    //! return array size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2 * GetSize(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! get an array from MPI buffer and then add it to this array
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
-    }
 };
 
 /**
@@ -514,24 +447,6 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
         }
         total += GetNbranch() * (shape * log(scale) - Random::logGamma(shape));
         return total;
-    }
-
-    //! return array size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2 * GetNbranch(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! get an array from MPI buffer and then add it to this array
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] += buffer; }
     }
 
   private:

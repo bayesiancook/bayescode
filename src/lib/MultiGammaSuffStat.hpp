@@ -115,33 +115,6 @@ class MultiGammaSuffStat : public SuffStat {
         for (int i = 0; i < array.GetSize(); i++) { AddSuffStat(array.GetVal(i), mask.GetVal(i)); }
     }
 
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return 3 * dim; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int k = 0; k < GetDim(); k++) { buffer << sum[k] << sumlog[k] << n[k]; }
-    }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int k = 0; k < GetDim(); k++) { buffer >> sum[k] >> sumlog[k] >> n[k]; }
-    }
-
-    //! read a MultiGammaSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double temp;
-        int tmp;
-        for (int k = 0; k < GetDim(); k++) {
-            buffer >> temp;
-            sum[k] += temp;
-            buffer >> temp;
-            sumlog[k] += temp;
-            buffer >> tmp;
-            n[k] += tmp;
-        }
-    }
-
     //! return log prob, as a function of the given shape and scale parameters
     double GetLogProb(double shape, const std::vector<double> &center) const {
         double tot = 0;

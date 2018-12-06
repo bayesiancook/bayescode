@@ -1673,6 +1673,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
   }
 
 
+    /*
     //! return size of model, when put into an MPI buffer (in multigene context)
     unsigned int GetMPISize() const {
         int size = 0;
@@ -1740,6 +1741,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             os << *toggle;
         }
     }
+    */
 };
 
 std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseModel> &m) {

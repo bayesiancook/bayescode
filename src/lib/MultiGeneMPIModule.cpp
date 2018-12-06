@@ -1,6 +1,5 @@
 
 #include "MultiGeneMPIModule.hpp"
-// #include "Parallel.hpp"
 
 #include <fstream>
 

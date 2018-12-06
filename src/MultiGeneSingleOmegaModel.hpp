@@ -19,8 +19,8 @@
 
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
-#include "MultiGeneMPIModule.hpp"
 #include "SingleOmegaModel.hpp"
+#include "MultiGeneMPIModule.hpp"
 #include "components/ChainComponent.hpp"
 #include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
 
 class MultiGeneSingleOmegaModelShared : public ChainComponent {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string treefile, param_mode_t blmode,
+    MultiGeneSingleOmegaModelShared(std::string datafile, std::string treefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
@@ -435,7 +435,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     double GetMeanLength() const {
         if (blmode == shared) {
-            cerr << "error: in getvarlength\n";
+            std::cerr << "error: in getvarlength\n";
             exit(1);
         }
 
@@ -444,7 +444,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     double GetVarLength() const {
         if (blmode == shared) {
-            cerr << "error: in getvarlength\n";
+            std::cerr << "error: in getvarlength\n";
             exit(1);
         }
 
@@ -455,7 +455,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     double GetVarNucRelRate() const {
         if (nucmode == shared) {
-            cerr << "error in getvarnucrelrate\n";
+            std::cerr << "error in getvarnucrelrate\n";
             exit(1);
         }
 
@@ -479,7 +479,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     double GetVarNucStat() const {
         if (nucmode == shared) {
-            cerr << "error in getvarnucstat\n";
+            std::cerr << "error in getvarnucstat\n";
             exit(1);
         }
 
@@ -623,7 +623,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         mpitrace->acquire();
     }
 
-    void PostPredSlave(string name) {
+    void PostPredSlave(std::string name) {
         mpibranchlengths->acquire();
         mpinucrates->acquire();
         mpiomega->acquire();
@@ -633,7 +633,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         }
     }
 
-    void PostPredMaster(string name) {
+    void PostPredMaster(std::string name) {
         FastUpdate();
         mpibranchlengths->release();
         mpinucrates->release();
@@ -825,12 +825,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     void MoveNucRates() {
-        vector<double> &nucrelrate = (*nucrelratearray)[0];
+        std::vector<double> &nucrelrate = (*nucrelratearray)[0];
         Move::Profile(nucrelrate, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucrelrate, 0.03, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucrelrate, 0.01, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
 
-        vector<double> &nucstat = (*nucstatarray)[0];
+        std::vector<double> &nucstat = (*nucstatarray)[0];
         Move::Profile(nucstat, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucstat, 0.01, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
     }
@@ -856,7 +856,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
-    void ToStream(ostream &os) { os << *this; }
+    void ToStream(std::ostream &os) { os << *this; }
 
     // ============================================================================================
     // ============================================================================================
@@ -897,12 +897,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     NucPathSuffStat nucpathsuffstat;
 
     // gene-specific nuc rates
-    vector<double> nucrelratehypercenter;
+    std::vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
     IIDDirichlet *nucrelratearray;
     DirichletSuffStat nucrelratesuffstat;
 
-    vector<double> nucstathypercenter;
+    std::vector<double> nucstathypercenter;
     double nucstathyperinvconc;
     IIDDirichlet *nucstatarray;
     DirichletSuffStat nucstatsuffstat;
@@ -928,7 +928,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 };
 
 template <class M>
-std::istream &operator>>(istream &is, unique_ptr<M> &m) {
+std::istream &operator>>(std::istream &is, std::unique_ptr<M> &m) {
     std::string model_name, datafile, treefile;
     int blmode, nucmode;
     omega_param_t omega_param;
@@ -948,7 +948,7 @@ std::istream &operator>>(istream &is, unique_ptr<M> &m) {
     return is;
 }
 
-std::ostream &operator<<(ostream &os, MultiGeneSingleOmegaModelShared &m) {
+std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m) {
     Tracer tracer{m, &MultiGeneSingleOmegaModelShared::declare_model};
     os << "MultiGeneSingleOmega"
        << "\t";

@@ -32,8 +32,6 @@ set(BAYESCODE_LIB
     src/lib/CodonSubMatrix.cpp
     src/lib/GTRSubMatrix.cpp
     src/lib/linalg.cpp
-    src/lib/MPIBuffer.cpp
-    src/lib/MultiGeneChain.cpp
     src/lib/MultiGeneMPIModule.cpp
     src/lib/PhyloProcess.cpp
     src/lib/Random.cpp
