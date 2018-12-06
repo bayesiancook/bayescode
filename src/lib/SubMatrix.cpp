@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include "linalg.hpp"
+// #include "linalg.hpp"
 using namespace std;
 
 int SubMatrix::nuni = 0;
@@ -171,51 +171,6 @@ double SubMatrix::CheckDiag() const {
         }
     }
     return max;
-}
-
-// ---------------------------------------------------------------------------
-//     Diagonalise()
-// ---------------------------------------------------------------------------
-
-int SubMatrix::OldDiagonalise() const {
-    if (!ptrQ) {
-        cerr << "error: in SubMatrix::OldDiagonalise: ptr not allocated\n";
-        exit(1);
-    }
-
-    if (!ArrayUpdated()) { UpdateMatrix(); }
-
-    int nmax = 1000;
-    double epsilon = 1e-20;
-
-    for (int i = 0; i < Nstate; i++) { ptrStationary[i] = mStationary[i]; }
-    for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) { ptrQ[i][j] = Q(i, j); }
-    }
-
-    int n = LinAlg::DiagonalizeRateMatrix(
-        ptrQ, ptrStationary, Nstate, ptrv, ptru, ptrinvu, nmax, epsilon);
-    bool failed = (n == nmax);
-    if (failed) {
-        cerr << "in submatrix: diag failed\n";
-        cerr << "n : " << n << '\t' << nmax << '\n';
-        ofstream os("mat");
-        ToStream(os);
-        exit(1);
-    }
-    diagflag = true;
-
-    for (int i = 0; i < Nstate; i++) {
-        for (int j = 0; j < Nstate; j++) {
-            invu(i, j) = ptrinvu[i][j];
-            u(i, j) = ptru[i][j];
-        }
-    }
-    for (int i = 0; i < Nstate; i++) { v[i] = ptrv[i]; }
-
-    double err = CheckDiag();
-    if (diagerr < err) { diagerr = err; }
-    return 0;
 }
 
 // ---------------------------------------------------------------------------

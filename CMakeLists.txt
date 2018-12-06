@@ -31,7 +31,6 @@ set(BAYESCODE_LIB
     src/lib/CodonStateSpace.cpp
     src/lib/CodonSubMatrix.cpp
     src/lib/GTRSubMatrix.cpp
-    src/lib/linalg.cpp
     src/lib/PhyloProcess.cpp
     src/lib/Random.cpp
     src/lib/RandomGeneSample.cpp
