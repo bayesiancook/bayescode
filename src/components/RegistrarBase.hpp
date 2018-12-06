@@ -14,6 +14,7 @@ class MultiDirichlet;
 class MultinomialAllocationVector;
 class GammaWhiteNoise;
 class GammaWhiteNoiseArray;
+class Dirichlet;
 
 /*
 ====================================================================================================
@@ -63,6 +64,7 @@ class RegistrarBase {
 
   public:
     CONVERT_REF_TO(IIDGamma, SimpleArray<double>);
+    CONVERT_REF_TO(Dirichlet, SimpleArray<double>);
     CONVERT_REF_TO(BranchIIDGamma, SimpleBranchArray<double>);
     CONVERT_REF_TO(IIDDirichlet, SimpleArray<std::vector<double>>);
     CONVERT_REF_TO(MultiDirichlet, SimpleArray<std::vector<double>>);
