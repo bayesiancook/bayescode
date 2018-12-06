@@ -6,7 +6,7 @@
 #include <string>
 #include "SequenceAlignment.hpp"
 
-using GeneSet = std::set<std::string>;
+using GeneSet = std::vector<std::string>;
 using GeneLengths = std::map<std::string, int>;
 
 GeneSet parse_datafile(std::string filename) {
@@ -17,7 +17,7 @@ GeneSet parse_datafile(std::string filename) {
     for (int i = 0; i < nb_genes; i++) {
         std::string name;
         is >> name;
-        result.insert(name);
+        result.push_back(name);
     }
     return result;
 }

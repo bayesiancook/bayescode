@@ -2,7 +2,6 @@
 
 #include <map>
 #include <numeric>
-#include <set>
 #include <string>
 #include <vector>
 #include "Process.hpp"
@@ -11,7 +10,7 @@
   Data types
 ==================================================================================================*/
 using Index = std::string;
-using IndexSet = std::set<Index>;
+using IndexSet = std::vector<Index>;
 using IndexMapping = std::map<Index, Index>;
 
 /*==================================================================================================
@@ -49,7 +48,7 @@ class Partition {
     IndexSet get_all() const {
         IndexSet result;
         for (auto subpartition : partition) {
-            result.insert(subpartition.second.begin(), subpartition.second.end());
+            result.insert(result.end(), subpartition.second.begin(), subpartition.second.end());
         }
         return result;
     }
@@ -98,7 +97,10 @@ class Partition {
       Other */
     int owner(Index index) const {
         for (auto subset : partition) {
-            if (subset.second.find(index) != subset.second.end()) { return subset.first; }
+            if (std::find(subset.second.begin(), subset.second.end(), index) !=
+                subset.second.end()) {
+                return subset.first;
+            }
         }
         return -1;
     }
