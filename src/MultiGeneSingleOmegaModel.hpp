@@ -624,6 +624,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     void SendRunningStatus(int status) { MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD); }
 
     void Update() { // TEMPORARY
+        MPI::p->message("Updating");
         if (!MPI::p->rank) {
             UpdateMaster();
         } else {
