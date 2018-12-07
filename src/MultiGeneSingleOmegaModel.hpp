@@ -19,10 +19,16 @@
 
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
-#include "MultiGeneMPIModule.hpp"
 #include "SingleOmegaModel.hpp"
 #include "components/ChainComponent.hpp"
+#include "datafile_parsers.hpp"
 #include "mpi_components/Process.hpp"
+#include "mpi_components/broadcast.hpp"
+#include "mpi_components/gather.hpp"
+#include "mpi_components/partition.hpp"
+#include "mpi_components/reduce.hpp"
+#include "mpi_components/scatter.hpp"
+#include "operations/proxies.hpp"
 
 struct omega_param_t {
     bool variable{false};
@@ -39,13 +45,15 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-class MultiGeneSingleOmegaModelShared {
+class MultiGeneSingleOmegaModelShared : public ChainComponent {
   public:
-    MultiGeneSingleOmegaModelShared(string datafile, string treefile, param_mode_t blmode,
+    MultiGeneSingleOmegaModelShared(std::string datafile, std::string treefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
-          mpi(MPI::p->rank, MPI::p->size),
+          codonstatespace(Universal),
+          gene_vector(parse_datafile(datafile)),
+          partition(gene_vector, MPI::p->size - 1, 1),
           blmode(blmode),
           nucmode(nucmode),
           omega_param(omega_param),
@@ -56,13 +64,9 @@ class MultiGeneSingleOmegaModelShared {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        mpi.AllocateAlignments(datafile);
-
-        refcodondata = new CodonSequenceAlignment(mpi.refdata, true);
-        taxonset = mpi.refdata->GetTaxonSet();
+        // GeneLengths gene_lengths = parse_geneset_alignments(gene_vector);
 
         // Branch lengths
-
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
         blhyperinvshape = 0.1;
@@ -72,7 +76,7 @@ class MultiGeneSingleOmegaModelShared {
         } else {
             branchlength->SetAllBranches(1.0 / lambda);
             branchlengtharray = new GammaWhiteNoiseArray(
-                mpi.GetLocalNgene(), *tree, *branchlength, 1.0 / blhyperinvshape);
+                partition.my_allocation_size(), *tree, *branchlength, 1.0 / blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -91,20 +95,223 @@ class MultiGeneSingleOmegaModelShared {
             nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
-            nucrelratearray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+            nucrelratearray = new IIDDirichlet(partition.my_allocation_size(),
+                nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(
-                mpi.GetLocalNgene(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+                partition.my_allocation_size(), nucstathypercenter, 1.0 / nucstathyperinvconc);
             nucmatrix = 0;
         }
 
         // Omega
+        omegaarray = new IIDGamma(
+            partition.my_allocation_size(), omega_param.hypermean, omega_param.hyperinvshape);
 
-        omegaarray =
-            new IIDGamma(mpi.GetLocalNgene(), omega_param.hypermean, omega_param.hyperinvshape);
+        if (MPI::p->rank > 0) {
+            size_t nb_genes = partition.my_partition_size();
+            geneprocess.reserve(nb_genes);
+            for (size_t gene_i = 0; gene_i < nb_genes; gene_i++) {
+                geneprocess.emplace_back(
+                    new SingleOmegaModel(gene_vector.at(gene_i), treefile, blmode, nucmode));
+                geneprocess.back()->Update();
+            }
+        }
+
+        declare_groups();
     }
 
-    int GetNtaxa() const { return mpi.refdata->GetNtaxa(); }
+    // MPI communication groups
+    void declare_groups() {
+        // branch lengths
+        if (blmode == shared) {
+            // clang-format off
+            mpibranchlengths = make_group(
+                broadcast(*branchlength),
+
+                slave_acquire([this]() {
+                    for (auto& gene : geneprocess) {
+                        gene->SetBranchLengths(*branchlength);
+                    }
+                }),
+
+                slave_release([this]() {
+                    lengthpathsuffstatarray->Clear();
+                    for (auto& gene : geneprocess) {
+                        gene->CollectLengthSuffStat();
+                        lengthpathsuffstatarray->Add(*gene->GetLengthPathSuffStatArray());
+                    }
+                }),
+
+                reduce(*lengthpathsuffstatarray)
+            );
+            //clang-format on
+        } else {
+            // clang-format off
+            mpibranchlengths = make_group(
+                broadcast(*branchlength, blhyperinvshape),
+
+                slave_acquire([this]() {
+                    for (auto& gene : geneprocess) {
+                        gene->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
+                    }
+                }),
+
+                slave_release([this]() {
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
+                    }
+                    lengthhypersuffstatarray->Clear();
+                    lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
+                }),
+
+                reduce(*lengthhypersuffstatarray)
+            );
+            //clang-format on
+        }
+
+        // nucleotide rates
+        if (nucmode == shared)  {
+            // clang-format off
+            mpinucrates = make_group(
+                broadcast(*nucrelratearray,*nucstatarray),
+
+                slave_acquire([this]()  {
+                    for (auto& gene : geneprocess)   {
+                        gene->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
+                    }
+                }),
+
+                slave_release([this]()  {
+                    nucpathsuffstat.Clear();
+                    for (auto& gene : geneprocess)   {
+                        gene->CollectNucPathSuffStat();
+                        nucpathsuffstat += gene->GetNucPathSuffStat();
+                    }
+                }),
+
+                reduce(nucpathsuffstat)
+            );
+            //clang-format on
+        }
+        else    {
+            // clang-format off
+            mpinucrates = make_group(
+                broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
+                          nucstathypercenter, nucstathyperinvconc),
+
+                slave_acquire([this]()  {
+                    for (auto& gene : geneprocess)   {
+                        gene->SetNucRatesHyperParameters(nucrelratehypercenter,
+                            nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
+                    }
+                }),
+
+                slave_release([this]()  {
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                    }
+                    nucrelratesuffstat.Clear();
+                    nucrelratearray->AddSuffStat(nucrelratesuffstat);
+                    nucstatsuffstat.Clear();
+                    nucstatarray->AddSuffStat(nucstatsuffstat);
+                }),
+
+                reduce(nucrelratesuffstat,nucstatsuffstat)
+            );
+            //clang-format on
+        }
+
+        // omega
+        // clang-format off
+        mpiomega = make_group(
+                broadcast(omega_param.hypermean, omega_param.hyperinvshape),
+
+                slave_acquire([this]()  {
+                    for (auto& gene : geneprocess)   {
+                        gene->SetOmegaHyperParameters(
+                            omega_param.hypermean, omega_param.hyperinvshape);
+                    }
+                }),
+
+                slave_release([this]()  {
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
+                    }
+                    omegahypersuffstat.Clear();
+                    omegahypersuffstat.AddSuffStat(*omegaarray);
+                }),
+
+                reduce(omegahypersuffstat)
+            );
+            //clang-format on
+
+        // all gene-specific variables; used when first setting up the model before starting the moves
+        // clang-format off
+        mpigenevariables = make_group(
+                scatter(partition, *omegaarray),
+
+                (blmode != shared) ?
+                    scatter(partition, *branchlengtharray) : 
+                    nullptr,
+
+
+                (nucmode != shared) ? 
+                    scatter(partition, *nucrelratearray, *nucstatarray) : 
+                    nullptr
+
+            );
+            //clang-format on
+        
+        syncgenevariables = make_group(
+                slave_acquire([this]()  {
+                    for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                        geneprocess[gene]->SetOmega((*omegaarray)[gene]);
+                    }
+                }),
+
+                (blmode != shared) ?
+                    slave_acquire([this]()  {
+                        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                            geneprocess[gene]->SetBranchLengths((*branchlengtharray)[gene]);
+                        }
+                    }) :
+                    nullptr,
+
+                (nucmode != shared) ? 
+                    slave_acquire([this]()  {
+                        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+                            geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                        }
+                    }) :
+                    nullptr
+            );
+            //clang-format on
+
+        // clang-format off
+        mpitrace = make_group(
+            gather(partition, *omegaarray),
+
+            (blmode != shared) ?
+                gather(partition, *branchlengtharray) :
+                nullptr,
+
+            (nucmode != shared) ?
+                gather(partition, *nucrelratearray, *nucstatarray) :
+                nullptr,
+
+            slave_release([this]()  {
+                GeneLogPrior = 0;
+                GeneLogLikelihood = 0;
+                for (auto& gene : geneprocess)   {
+                    GeneLogPrior += gene->GetLogPrior();
+                    GeneLogLikelihood += gene->GetLogLikelihood();
+                }
+            }),
+
+            reduce(GeneLogPrior, GeneLogLikelihood)
+        );
+        //clang-format on
+    }
+
     int GetNbranch() const { return tree->nb_nodes() - 1; }
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
@@ -196,7 +403,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
 
-    double GetLogLikelihood() const { return lnL; }
+    double GetLogLikelihood() const { return GeneLogLikelihood; }
 
     //-------------------
     // Suff Stat Log Probs
@@ -220,7 +427,7 @@ class MultiGeneSingleOmegaModelShared {
     // suff stat for global nuc rates, as a function of nucleotide matrix
     // (which itself depends on nucstat and nucrelrate)
     double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
+        return nucpathsuffstat.GetLogProb(*nucmatrix, codonstatespace);
     }
 
     // suff stat for gene-specific nuc rates, as a function of nucrate
@@ -241,12 +448,6 @@ class MultiGeneSingleOmegaModelShared {
         return omegahypersuffstat.GetLogProb(alpha, beta);
     }
 
-    CodonStateSpace *GetCodonStateSpace() const {
-        return (CodonStateSpace *)refcodondata->GetStateSpace();
-    }
-
-    const vector<double> &GetOmegaArray() const { return omegaarray->GetArray(); }
-
     // Branch lengths
 
     double GetMeanTotalLength() const {
@@ -257,7 +458,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double GetMeanLength() const {
         if (blmode == shared) {
-            cerr << "error: in getvarlength\n";
+            std::cerr << "error: in getvarlength\n";
             exit(1);
         }
 
@@ -266,7 +467,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double GetVarLength() const {
         if (blmode == shared) {
-            cerr << "error: in getvarlength\n";
+            std::cerr << "error: in getvarlength\n";
             exit(1);
         }
 
@@ -277,7 +478,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double GetVarNucRelRate() const {
         if (nucmode == shared) {
-            cerr << "error in getvarnucrelrate\n";
+            std::cerr << "error in getvarnucrelrate\n";
             exit(1);
         }
 
@@ -285,13 +486,13 @@ class MultiGeneSingleOmegaModelShared {
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
+            for (size_t g = 0; g < gene_vector.size(); g++) {
                 double tmp = (*nucrelratearray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
+            mean /= gene_vector.size();
+            var /= gene_vector.size();
             var -= mean * mean;
             tot += var;
         }
@@ -301,7 +502,7 @@ class MultiGeneSingleOmegaModelShared {
 
     double GetVarNucStat() const {
         if (nucmode == shared) {
-            cerr << "error in getvarnucstat\n";
+            std::cerr << "error in getvarnucstat\n";
             exit(1);
         }
 
@@ -309,13 +510,13 @@ class MultiGeneSingleOmegaModelShared {
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
             double var = 0;
-            for (int g = 0; g < mpi.GetNgene(); g++) {
+            for (size_t g = 0; g < gene_vector.size(); g++) {
                 double tmp = (*nucstatarray)[g][j];
                 mean += tmp;
                 var += tmp * tmp;
             }
-            mean /= mpi.GetNgene();
-            var /= mpi.GetNgene();
+            mean /= gene_vector.size();
+            var /= gene_vector.size();
             var -= mean * mean;
             tot += var;
         }
@@ -344,13 +545,16 @@ class MultiGeneSingleOmegaModelShared {
 
         t.add("omegahypermean", omega_param.hypermean);
         t.add("omegahyperinvshape", omega_param.hyperinvshape);
-        t.add("omegaarray", *omegaarray);
+        t.add("omegaarray", *omegaarray, partition);
+
+        t.add("genelogprior", GeneLogPrior);
+        t.add("geneloglikelihood", GeneLogLikelihood);
     }
 
     template <class C>
     void declare_stats(C &t) {
         t.add("logprior", this, &MultiGeneSingleOmegaModelShared::GetLogPrior);
-        t.add("lnL", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
+        t.add("GeneLogLikelihood", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
 
         if (blmode == shared) {
             t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
@@ -378,138 +582,156 @@ class MultiGeneSingleOmegaModelShared {
         }
     }
 
-  protected:
-    std::string datafile, treefile;
-    MultiGeneMPIModule mpi;
-    std::unique_ptr<const Tree> tree;
-    CodonSequenceAlignment *refcodondata;
-    const TaxonSet *taxonset;
+    // ============================================================================================
+    // ============================================================================================
+    //   MASTER THINGS
+    // ============================================================================================
+    // ============================================================================================
 
-    param_mode_t blmode;
-    param_mode_t nucmode;
-    omega_param_t omega_param;
+    using M = MultiGeneSingleOmegaModelShared;
 
-    // Branch lengths
-
-    double lambda;
-    BranchIIDGamma *branchlength;
-    GammaSuffStat hyperlengthsuffstat;
-
-    double blhyperinvshape;
-    GammaWhiteNoiseArray *branchlengtharray;
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStatBranchArray *lengthhypersuffstatarray;
-
-    // Nucleotide rates
-
-    // shared nuc rates
-    GTRSubMatrix *nucmatrix;
-    NucPathSuffStat nucpathsuffstat;
-
-    // gene-specific nuc rates
-    vector<double> nucrelratehypercenter;
-    double nucrelratehyperinvconc;
-    IIDDirichlet *nucrelratearray;
-    DirichletSuffStat nucrelratesuffstat;
-
-    vector<double> nucstathypercenter;
-    double nucstathyperinvconc;
-    IIDDirichlet *nucstatarray;
-    DirichletSuffStat nucstatsuffstat;
-
-    // Omega
-
-    // each gene has its own omega
-    // omegaarray[gene], for gene=1..Ngene
-    // iid gamma, with hyperparameters omegahypermean and hyperinvshape
-    IIDGamma *omegaarray;
-
-    // suffstat for gene-specific omega's
-    // as a function of omegahypermean and omegahyperinvshape
-    GammaSuffStat omegahypersuffstat;
-
-    // total log likelihood (summed across all genes)
-    double lnL;
-    // total logprior for gene-specific variables (here, omega only)
-    // summed over all genes
-    double GeneLogPrior;
-};
-
-class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
-                                        public ChainComponent {
-    using M = MultiGeneSingleOmegaModelMaster;
-
-  public:
-    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelMaster &m);
+    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m);
 
     //-------------------
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModelMaster(string datafile, string intreefile, param_mode_t blmode,
-        param_mode_t nucmode, omega_param_t omega_param)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        cerr << "number of taxa : " << GetNtaxa() << '\n';
-        cerr << "number of branches : " << GetNbranch() << '\n';
-        cerr << "tree and data fit together\n";
+    void start() override {}
+
+    void move(int) override {
+        MPI::p->message("Moving!");
+        if (!MPI::p->rank){
+            SendRunningStatus(1);
+            MoveMaster();
+        } else {
+            MoveSlave();
+        }
     }
 
-    void start() override {}
-    void move(int) override {
-        SendRunningStatus(1);
-        Move();
-    }
     void savepoint(int) override {}
-    void end() override { SendRunningStatus(0); }
+
+    void end() override {
+        if (!MPI::p->rank) {
+            SendRunningStatus(0);
+        }
+    }
 
     void SendRunningStatus(int status) { MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD); }
 
-    void Update() {
-        FastUpdate();
-
-        if (mpi.GetNprocs() > 1) {
-            SendBranchLengthsHyperParameters();
-            SendNucRatesHyperParameters();
-
-            if (blmode == shared) {
-                SendGlobalBranchLengths();
-            } else {
-                SendGeneBranchLengths();
-            }
-
-            if (nucmode == shared) {
-                SendGlobalNucRates();
-            } else {
-                SendGeneNucRates();
-            }
-
-            SendOmegaHyperParameters();
-            SendOmega();
-            ReceiveLogProbs();
+    void Update() { // TEMPORARY
+        MPI::p->message("Updating");
+        if (!MPI::p->rank) {
+            UpdateMaster();
+        } else {
+            UpdateSlave();
         }
     }
 
-    void PostPred(string name) {
-        FastUpdate();
-        if (mpi.GetNprocs() > 1) {
-            SendBranchLengthsHyperParameters();
-            SendNucRatesHyperParameters();
-
-            if (blmode == shared) {
-                SendGlobalBranchLengths();
-            } else {
-                SendGeneBranchLengths();
-            }
-
-            if (nucmode == shared) {
-                SendGlobalNucRates();
-            } else {
-                SendGeneNucRates();
-            }
-
-            SendOmegaHyperParameters();
-            SendOmega();
+    void UpdateSlave() {
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
+        mpigenevariables->acquire();
+        syncgenevariables->acquire();
+        for (auto& gene : geneprocess)   {
+            gene->Update();
         }
+        mpitrace->release();
+    }
+
+    void UpdateMaster() {
+        FastUpdate();
+        mpibranchlengths->release();
+        mpinucrates->release();
+        mpiomega->release();
+        mpigenevariables->release();
+        // syncgenevariables->release();
+        mpitrace->acquire();
+    }
+
+    void PostPredSlave(std::string name) {
+        mpibranchlengths->acquire();
+        mpinucrates->acquire();
+        mpiomega->acquire();
+        mpigenevariables->acquire();
+        syncgenevariables->acquire();
+        for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
+            geneprocess[gene]->PostPred(name + gene_vector.at(gene));
+        }
+    }
+
+    void PostPredMaster(std::string name) {
+        FastUpdate();
+        mpibranchlengths->release();
+        mpinucrates->release();
+        mpiomega->release();
+        mpigenevariables->release();
+        // syncgenevariables->release();
+    }
+
+    //-------------------
+    // Moves
+    //-------------------
+
+    // slave move
+    double MoveSlave() {
+        for (auto& gene : geneprocess)   {
+            gene->ResampleSub(1.0);
+        }
+
+        int nrep = 30;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            for (auto& gene : geneprocess)   {
+                gene->MoveParameters(1);
+            }
+
+            if (omega_param.variable) {
+                mpiomega->release();
+                mpiomega->acquire();
+            }
+
+            mpibranchlengths->release();
+            mpibranchlengths->acquire();
+
+            mpinucrates->release();
+            mpinucrates->acquire();
+        }
+
+        mpitrace->release();
+        return 1;
+    }
+
+    double MoveMaster() {
+        int nrep = 30;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            if (omega_param.variable) {
+                mpiomega->acquire();
+                MoveOmegaHyperParameters();
+                mpiomega->release();
+            }
+
+            mpibranchlengths->acquire();
+            if (blmode == shared) {
+                ResampleBranchLengths();
+                MoveLambda();
+            } else if (blmode == shrunken) {
+                MoveBranchLengthsHyperParameters();
+            }
+            mpibranchlengths->release();
+
+            // global nucrates, or gene nucrates hyperparameters
+            mpinucrates->acquire();
+            if (nucmode == shared) {
+                MoveNucRates();
+            } else if (nucmode == shrunken) {
+                MoveNucRatesHyperParameters();
+            }
+            mpinucrates->release();
+        }
+        mpitrace->acquire();
+        return 1;
     }
 
     //-------------------
@@ -554,64 +776,7 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
-
-    //-------------------
-    // Moves
-    //-------------------
-
-    // all methods starting with Master are called only by master
-    // for each such method, there is a corresponding method called by slave, and
-    // starting with Slave
-    //
-    // all methods starting with Gene are called only be slaves, and do some work
-    // across all genes allocated to that slave
-
-    double Move() {
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            if (omega_param.variable) {
-                ReceiveOmega();
-                MoveOmegaHyperParameters();
-                SendOmegaHyperParameters();
-            }
-
-            // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == shared) {
-                ReceiveBranchLengthsSuffStat();
-                ResampleBranchLengths();
-                MoveLambda();
-                SendGlobalBranchLengths();
-            } else if (blmode == shrunken) {
-                ReceiveBranchLengthsHyperSuffStat();
-                MoveBranchLengthsHyperParameters();
-                SendBranchLengthsHyperParameters();
-            }
-
-            // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == shared) {
-                ReceiveNucPathSuffStat();
-                MoveNucRates();
-                SendGlobalNucRates();
-            } else if (nucmode == shrunken) {
-                ReceiveNucRatesHyperSuffStat();
-                MoveNucRatesHyperParameters();
-                SendNucRatesHyperParameters();
-            }
-        }
-
-        // collect current state
-        if (blmode != shared) { ReceiveGeneBranchLengths(); }
-        if (nucmode != shared) { ReceiveGeneNucRates(); }
-        ReceiveOmega();
-        ReceiveLogProbs();
-        return 1;
-    }
-
     // Branch lengths
-
-    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
-
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -688,12 +853,12 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
     }
 
     void MoveNucRates() {
-        vector<double> &nucrelrate = (*nucrelratearray)[0];
+        std::vector<double> &nucrelrate = (*nucrelratearray)[0];
         Move::Profile(nucrelrate, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucrelrate, 0.03, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucrelrate, 0.01, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
 
-        vector<double> &nucstat = (*nucstatarray)[0];
+        std::vector<double> &nucstat = (*nucstatarray)[0];
         Move::Profile(nucstat, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucstat, 0.01, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
     }
@@ -717,376 +882,80 @@ class MultiGeneSingleOmegaModelMaster : public MultiGeneSingleOmegaModelShared,
         omegaarray->SetScale(beta);
     }
 
-    //-------------------
-    // MPI send / receive
-    //-------------------
-
-    // Branch lengths
-
-    void SendGlobalBranchLengths() { mpi.MasterSendGlobal(*branchlength); }
-
-    void SendBranchLengthsHyperParameters() {
-        mpi.MasterSendGlobal(*branchlength, blhyperinvshape);
-    }
-
-    void SendGeneBranchLengths() { mpi.MasterSendGeneArray(*branchlengtharray); }
-
-    void ReceiveGeneBranchLengths() { mpi.MasterReceiveGeneArray(*branchlengtharray); }
-
-    void ReceiveBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        mpi.MasterReceiveAdditive(*lengthpathsuffstatarray);
-    }
-
-    void ReceiveBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        mpi.MasterReceiveAdditive(*lengthhypersuffstatarray);
-    }
-
-    // Nucleotide Rates
-
-    void SendGlobalNucRates() {
-        mpi.MasterSendGlobal(nucrelratearray->GetVal(0), nucstatarray->GetVal(0));
-    }
-
-    void SendGeneNucRates() { mpi.MasterSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void ReceiveGeneNucRates() { mpi.MasterReceiveGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void SendNucRatesHyperParameters() {
-        mpi.MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        mpi.MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
-    }
-
-    void ReceiveNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucrelratesuffstat);
-
-        nucstatsuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucstatsuffstat);
-    }
-
-    void ReceiveNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        mpi.MasterReceiveAdditive(nucpathsuffstat);
-    }
-
-    // omega (and hyperparameters)
-
-    void ReceiveOmega() { mpi.MasterReceiveGeneArray(*omegaarray); }
-
-    void SendOmega() { mpi.MasterSendGeneArray(*omegaarray); }
-
-    // omega hyperparameters
-
-    void SendOmegaHyperParameters() {
-        mpi.MasterSendGlobal(omega_param.hypermean, omega_param.hyperinvshape);
-    }
-
-    // log probs
-
-    void ReceiveLogProbs() {
-        GeneLogPrior = 0;
-        mpi.MasterReceiveAdditive(GeneLogPrior);
-        lnL = 0;
-        mpi.MasterReceiveAdditive(lnL);
-    }
-
-    void ToStream(ostream &os) { os << *this; }
-};
-
-
-class MultiGeneSingleOmegaModelSlave : public ChainComponent,
-                                       public MultiGeneSingleOmegaModelShared {
-  private:
-    // each gene defines its own SingleOmegaModel
-    std::vector<SingleOmegaModel *> geneprocess;
-
-  public:
-    //-------------------
-    // Construction and allocation
-    //-------------------
-
-    MultiGeneSingleOmegaModelSlave(string datafile, string intreefile, param_mode_t blmode,
-        param_mode_t nucmode, omega_param_t omega_param)
-        : MultiGeneSingleOmegaModelShared(datafile, intreefile, blmode, nucmode, omega_param) {
-        geneprocess.assign(mpi.GetLocalNgene(), (SingleOmegaModel *)0);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene] =
-                new SingleOmegaModel(mpi.GetLocalGeneName(gene), treefile, blmode, nucmode);
-            geneprocess[gene]->Update();
-        }
-    }
-
-    void start() override {}
-    void move(int) override { Move(); }
-    void savepoint(int) override {}
-    void end() override {}
-
-    void Update() {
-        ReceiveBranchLengthsHyperParameters();
-        ReceiveNucRatesHyperParameters();
-
-        if (blmode == shared) {
-            ReceiveGlobalBranchLengths();
-        } else {
-            ReceiveGeneBranchLengths();
-        }
-        if (nucmode == shared) {
-            ReceiveGlobalNucRates();
-        } else {
-            ReceiveGeneNucRates();
-        }
-
-        ReceiveOmegaHyperParameters();
-        ReceiveOmega();
-        GeneUpdate();
-        SendLogProbs();
-    }
-
-    void GeneUpdate() {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) { geneprocess[gene]->Update(); }
-    }
-
-    void PostPred(string name) {
-        ReceiveBranchLengthsHyperParameters();
-        ReceiveNucRatesHyperParameters();
-
-        if (blmode == shared) {
-            ReceiveGlobalBranchLengths();
-        } else {
-            ReceiveGeneBranchLengths();
-        }
-        if (nucmode == shared) {
-            ReceiveGlobalNucRates();
-        } else {
-            ReceiveGeneNucRates();
-        }
-
-        ReceiveOmegaHyperParameters();
-        ReceiveOmega();
-        GenePostPred(name);
-    }
-
-    void GenePostPred(string name) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->PostPred(name + mpi.GetLocalGeneName(gene));
-        }
-    }
-
-    //-------------------
-    // Moves
-    //-------------------
-
-    // slave move
-    double Move() {
-        GeneResampleSub(1.0);
-
-        int nrep = 30;
-
-        for (int rep = 0; rep < nrep; rep++) {
-            MoveGeneParameters(1.0);
-
-            if (omega_param.variable) {
-                SendOmega();
-                ReceiveOmegaHyperParameters();
-            }
-
-            // global branch lengths, or gene branch lengths hyperparameters
-            if (blmode == shared) {
-                SendBranchLengthsSuffStat();
-                ReceiveGlobalBranchLengths();
-            } else if (blmode == shrunken) {
-                SendBranchLengthsHyperSuffStat();
-                ReceiveBranchLengthsHyperParameters();
-            }
-
-            // global nucrates, or gene nucrates hyperparameters
-            if (nucmode == shared) {
-                SendNucPathSuffStat();
-                ReceiveGlobalNucRates();
-            } else if (nucmode == shrunken) {
-                SendNucRatesHyperSuffStat();
-                ReceiveNucRatesHyperParameters();
-            }
-        }
-
-        // collect current state
-        if (blmode != shared) { SendGeneBranchLengths(); }
-        if (nucmode != shared) { SendGeneNucRates(); }
-        SendOmega();
-        SendLogProbs();
-        return 1;
-    }
-
-    void GeneResampleSub(double frac) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleSub(frac);
-        }
-    }
-
-    void MoveGeneParameters(int nrep) {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->MoveParameters(nrep);
-
-            (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            if (blmode != shared) {
-                geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-            }
-            if (nucmode != shared) {
-                geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-            }
-        }
-    }
-
-    // Branch lengths
-
     void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
-    void ResampleGeneBranchLengths() {
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->ResampleBranchLengths();
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-    }
+    void ToStream(std::ostream &os) { os << *this; }
 
-    //-------------------
-    // MPI send / receive
-    //-------------------
+    // ============================================================================================
+    // ============================================================================================
+    //   END OF THINGS
+    // ============================================================================================
+    // ============================================================================================
+
+  protected:
+    // each gene defines its own SingleOmegaModel
+    std::vector<std::unique_ptr<SingleOmegaModel>> geneprocess;
+
+    std::string datafile, treefile;
+    CodonStateSpace codonstatespace;
+    GeneSet gene_vector;
+    Partition partition;
+    std::unique_ptr<const Tree> tree;
+
+    param_mode_t blmode;
+    param_mode_t nucmode;
+    omega_param_t omega_param;
 
     // Branch lengths
 
-    void ReceiveGlobalBranchLengths() {
-        mpi.SlaveReceiveGlobal(*branchlength);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengths(*branchlength);
-        }
-    }
+    double lambda;
+    BranchIIDGamma *branchlength;
+    GammaSuffStat hyperlengthsuffstat;
 
-    void ReceiveBranchLengthsHyperParameters() {
-        mpi.SlaveReceiveGlobal(*branchlength, blhyperinvshape);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
-        }
-    }
+    double blhyperinvshape;
+    GammaWhiteNoiseArray *branchlengtharray;
+    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    GammaSuffStatBranchArray *lengthhypersuffstatarray;
 
-    void ReceiveGeneBranchLengths() {
-        mpi.SlaveReceiveGeneArray(*branchlengtharray);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetBranchLengths(branchlengtharray->GetVal(gene));
-        }
-    }
+    // Nucleotide rates
 
-    void SendGeneBranchLengths() {
-        // in principle, redundant..
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
-        }
-        mpi.SlaveSendGeneArray(*branchlengtharray);
-    }
+    // shared nuc rates
+    GTRSubMatrix *nucmatrix;
+    NucPathSuffStat nucpathsuffstat;
 
-    void SendBranchLengthsSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->CollectLengthSuffStat();
-            lengthpathsuffstatarray->Add(*geneprocess[gene]->GetLengthPathSuffStatArray());
-        }
-        mpi.SlaveSendAdditive(*lengthpathsuffstatarray);
-    }
+    // gene-specific nuc rates
+    std::vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    IIDDirichlet *nucrelratearray;
+    DirichletSuffStat nucrelratesuffstat;
 
-    void SendBranchLengthsHyperSuffStat() {
-        lengthhypersuffstatarray->Clear();
-        lengthhypersuffstatarray->AddSuffStat(*branchlengtharray);
-        mpi.SlaveSendAdditive(*lengthhypersuffstatarray);
-    }
+    std::vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+    IIDDirichlet *nucstatarray;
+    DirichletSuffStat nucstatsuffstat;
 
-    // Nucleotide Rates
+    // Omega
 
-    void ReceiveGlobalNucRates() {
-        mpi.SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
+    // each gene has its own omega
+    // omegaarray[gene], for gene=1..Ngene
+    // iid gamma, with hyperparameters omegahypermean and hyperinvshape
+    IIDGamma *omegaarray;
 
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
-        }
-    }
+    // suffstat for gene-specific omega's
+    // as a function of omegahypermean and omegahyperinvshape
+    GammaSuffStat omegahypersuffstat;
 
-    void ReceiveGeneNucRates() {
-        mpi.SlaveReceiveGeneArray(*nucrelratearray, *nucstatarray);
+    // total log likelihood (summed across all genes)
+    double GeneLogLikelihood;
+    // total logprior for gene-specific variables (here, omega only)
+    // summed over all genes
+    double GeneLogPrior;
 
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
-        }
-    }
-
-    void SendGeneNucRates() { mpi.SlaveSendGeneArray(*nucrelratearray, *nucstatarray); }
-
-    void ReceiveNucRatesHyperParameters() {
-        mpi.SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-        mpi.SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
-
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
-                nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
-        }
-    }
-
-    void SendNucRatesHyperSuffStat() {
-        nucrelratesuffstat.Clear();
-        nucrelratearray->AddSuffStat(nucrelratesuffstat);
-        mpi.SlaveSendAdditive(nucrelratesuffstat);
-
-        nucstatsuffstat.Clear();
-        nucstatarray->AddSuffStat(nucstatsuffstat);
-        mpi.SlaveSendAdditive(nucstatsuffstat);
-    }
-
-    void SendNucPathSuffStat() {
-        nucpathsuffstat.Clear();
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->CollectNucPathSuffStat();
-            nucpathsuffstat += geneprocess[gene]->GetNucPathSuffStat();
-        }
-
-        mpi.SlaveSendAdditive(nucpathsuffstat);
-    }
-
-    // omega (and hyperparameters)
-
-    void SendOmega() { mpi.SlaveSendGeneArray(*omegaarray); }
-
-    void ReceiveOmega() {
-        mpi.SlaveReceiveGeneArray(*omegaarray);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetOmega((*omegaarray)[gene]);
-        }
-    }
-
-    // omega hyperparameters
-
-    void ReceiveOmegaHyperParameters() {
-        mpi.SlaveReceiveGlobal(omega_param.hypermean, omega_param.hyperinvshape);
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetOmegaHyperParameters(
-                omega_param.hypermean, omega_param.hyperinvshape);
-        }
-    }
-
-    // log probs
-
-    void SendLogProbs() {
-        GeneLogPrior = 0;
-        lnL = 0;
-        for (int gene = 0; gene < mpi.GetLocalNgene(); gene++) {
-            GeneLogPrior += geneprocess[gene]->GetLogPrior();
-            lnL += geneprocess[gene]->GetLogLikelihood();
-        }
-        mpi.SlaveSendAdditive(GeneLogPrior);
-        mpi.SlaveSendAdditive(lnL);
-    }
+    std::unique_ptr<Proxy> mpiomega, mpibranchlengths, mpinucrates, mpigenevariables, syncgenevariables, mpitrace;
 };
 
 template <class M>
-std::istream &operator>>(istream &is, unique_ptr<M> &m) {
+std::istream &operator>>(std::istream &is, std::unique_ptr<M> &m) {
     std::string model_name, datafile, treefile;
     int blmode, nucmode;
     omega_param_t omega_param;
@@ -1106,7 +975,7 @@ std::istream &operator>>(istream &is, unique_ptr<M> &m) {
     return is;
 }
 
-std::ostream &operator<<(ostream &os, MultiGeneSingleOmegaModelMaster &m) {
+std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m) {
     Tracer tracer{m, &MultiGeneSingleOmegaModelShared::declare_model};
     os << "MultiGeneSingleOmega"
        << "\t";

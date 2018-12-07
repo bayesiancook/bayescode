@@ -1,5 +1,7 @@
+#include <sstream>
 #include "doctest.h"
-#include "partition.hpp"
+#include "mpi_components/partition.hpp"
+#include "mpi_components/utils.hpp"
 
 using namespace std;
 

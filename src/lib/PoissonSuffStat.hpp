@@ -3,7 +3,6 @@
 #include <cmath>
 #include "Array.hpp"
 #include "BranchArray.hpp"
-#include "MPIBuffer.hpp"
 #include "PhyloProcess.hpp"
 #include "SuffStat.hpp"
 
@@ -42,7 +41,7 @@
 
 class PoissonSuffStat : public SuffStat {
   public:
-    PoissonSuffStat() {}
+    PoissonSuffStat() { Clear(); }
     ~PoissonSuffStat() {}
 
     //! set count and beta to 0
@@ -69,25 +68,11 @@ class PoissonSuffStat : public SuffStat {
         return *this;
     }
 
-    //! return size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2; }
+    //! write structure into generic output stream
+    void ToStream(std::ostream &os) const { os << count << '\t' << beta << '\n'; }
 
-    //! put current value of count and beta into an MPI buffer
-    void MPIPut(MPIBuffer &buffer) const { buffer << beta << count; }
-
-    //! get value from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) { buffer >> beta >> count; }
-
-    //! get a PoissonSuffStat from MPI buffer and then add it to this object
-    void Add(const MPIBuffer &buffer) {
-        double temp;
-        buffer >> temp;
-        beta += temp;
-
-        int tmp;
-        buffer >> tmp;
-        count += tmp;
-    }
+    //! read structure from generic input stream
+    void FromStream(std::istream &is) { is >> count >> beta; }
 
     int GetCount() const { return count; }
 
@@ -104,10 +89,28 @@ class PoissonSuffStat : public SuffStat {
                Random::logGamma(shape + count);
     }
 
-  protected:
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(count, beta);
+    }
+
+    // protected:
     int count;
     double beta;
 };
+
+template <>
+struct has_custom_serialization<PoissonSuffStat> : std::true_type {};
+
+inline std::ostream &operator<<(std::ostream &os, const PoissonSuffStat &suffstat) {
+    suffstat.ToStream(os);
+    return os;
+}
+
+inline std::istream &operator>>(std::istream &is, PoissonSuffStat &suffstat) {
+    suffstat.FromStream(is);
+    return is;
+}
 
 /**
  * \brief An array of Poisson sufficient statistics
@@ -144,24 +147,6 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
     PoissonSuffStatArray &operator+=(const PoissonSuffStatArray &from) {
         Add(from);
         return *this;
-    }
-
-    //! return size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2 * GetSize(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! get array from MPI buffer and add it to this array (member-wise addition)
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 
     //! \brief get logprob, based on an array of rates (of same size)
@@ -240,24 +225,6 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
     //! PhyloProcess
     void AddLengthPathSuffStat(const PhyloProcess &process) { process.AddLengthSuffStat(*this); }
 
-    //! return array size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2 * GetNbranch(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) { buffer << GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! get an array from MPI buffer and then add it to this array
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] += buffer; }
-    }
-
     //! get total (summed) marginal log prob integrated over branch-specific rates
     //! (or lengths) iid from a gamma(shape,scale)
     double GetMarginalLogProb(double shape, double scale) const {
@@ -289,6 +256,9 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
         }
     }
 };
+
+template <>
+struct has_custom_serialization<PoissonSuffStatBranchArray> : std::true_type {};
 
 class PoissonSuffStatTreeArray : public Array<PoissonSuffStatBranchArray> {
   public:

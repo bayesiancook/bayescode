@@ -1,5 +1,4 @@
-#ifndef WHITENOISE_H
-#define WHITENOISE_H
+#pragma once
 
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
@@ -96,11 +95,26 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
         return m1;
     }
 
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(array, shape, mode);
+        // VL: what about blmean??
+    }
+
   protected:
     const BranchSelector<double> &blmean;
     double shape;
     int mode;
 };
+
+template <>
+struct has_custom_serialization<GammaWhiteNoise> : std::true_type {};
+
+template <>
+struct has_size<GammaWhiteNoise> : std::true_type {};
+
+template <>
+struct has_access_operator<GammaWhiteNoise> : std::true_type {};
 
 /**
  * \brief An array of GammaWhiteNoise
@@ -196,6 +210,8 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
         return total;
     }
 
+    size_t size() const { return blarray.size(); }
+
   private:
     int Ngene;
     const Tree &tree;
@@ -204,4 +220,11 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     std::vector<GammaWhiteNoise *> blarray;
 };
 
-#endif
+template <>
+struct has_custom_serialization<GammaWhiteNoiseArray> : std::true_type {};
+
+template <>
+struct has_size<GammaWhiteNoiseArray> : std::true_type {};
+
+template <>
+struct has_access_operator<GammaWhiteNoiseArray> : std::true_type {};

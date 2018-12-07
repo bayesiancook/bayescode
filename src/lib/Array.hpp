@@ -1,7 +1,8 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
-#include "MPIBuffer.hpp"
+#include "mpi_components/traits.hpp"
 
 /**
  * \brief An interface for an abstract indexed array of constant references over
@@ -45,14 +46,6 @@ class Selector {
     //! const access to array element by index
     virtual const T &GetVal(int index) const = 0;
 
-    //! return size of entire array, when put into an MPI buffer
-    unsigned int GetMPISize() const { return this->GetSize() * MPISize(this->GetVal(0)); }
-
-    //! write array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetSize(); i++) { buffer << this->GetVal(i); }
-    }
-
     //! write array into generic output stream
     void ToStream(std::ostream &os) const {
         for (int i = 0; i < this->GetSize(); i++) { os << this->GetVal(i) << '\t'; }
@@ -88,11 +81,6 @@ class Array : public Selector<T> {
             exit(1);
         }
         for (int i = 0; i < this->GetSize(); i++) { (*this)[i] = from.GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetSize(); i++) { buffer >> (*this)[i]; }
     }
 
     //! get array from generic input stream
@@ -195,9 +183,15 @@ class SimpleArray : public Array<T> {
     T &operator[](int index) override { return array[index]; }
     const T &GetVal(int index) const override { return array[index]; }
 
+    size_t size() const { return array.size(); }
+
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
     const std::vector<T> &GetArray() const { return array; }
+
+    //! return a ref to the std::vector<T> of which this class is the
+    //! interface
+    std::vector<T> &GetArray() { return array; }
 
     //! Apply a permutation over the arguments, such that entry indexed by i after
     //! the call is equal to entry formely indexed by permut[i]
@@ -222,6 +216,12 @@ class SimpleArray : public Array<T> {
   protected:
     std::vector<T> array;
 };
+
+template <class T>
+struct has_size<SimpleArray<T>> : std::true_type {};
+
+template <class T>
+struct has_access_operator<SimpleArray<T>> : std::true_type {};
 
 /**
  * \brief A Selector that distributes the components of a mixture over an array

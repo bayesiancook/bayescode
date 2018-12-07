@@ -1,6 +1,5 @@
 #include <cmath>
 #include <fstream>
-#include "MultiGeneChain.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
 #include "SlaveChainDriver.hpp"
 #include "components/ChainCheckpoint.hpp"
@@ -71,6 +70,7 @@ AppData<D, M> load_appdata(ChainCmdLine& cmd) {
         std::ifstream is = cmd.checkpoint_file();
         d.chain_driver = unique_ptr<D>(new D(is));
         is >> d.model;
+        d.model->Update();
         return d;
     } else {
         AppData<D, M> d;
@@ -90,7 +90,7 @@ void compute(int argc, char** argv) {
     ChainCmdLine cmd{argc, argv, "MultiGeneSingleOmega", ' ', "0.1"};
 
     if (!MPI::p->rank) {
-        auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelMaster>(cmd);
+        auto d = load_appdata<ChainDriver, MultiGeneSingleOmegaModelShared>(cmd);
         ConsoleLogger console_logger;
         ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *d.chain_driver, *d.model);
         StandardTracer trace(*d.model, cmd.chain_name());
@@ -100,7 +100,7 @@ void compute(int argc, char** argv) {
         d.chain_driver->add(trace);
         d.chain_driver->go();
     } else {
-        auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelSlave>(cmd);
+        auto d = load_appdata<SlaveChainDriver, MultiGeneSingleOmegaModelShared>(cmd);
         d.chain_driver->add(*d.model);
         d.chain_driver->go();
     }

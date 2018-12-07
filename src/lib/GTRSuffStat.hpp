@@ -6,7 +6,6 @@
 #include "AASubSelSubMatrixArray.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GTRSubMatrixArray.hpp"
-#include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
 
 class RelRateSuffStat : public SuffStat {
@@ -115,32 +114,6 @@ class RelRateSuffStat : public SuffStat {
         return *this;
     }
 
-    unsigned int GetMPISize() const { return 2 * nrr; }
-
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < nrr; i++) { buffer << rrcount[i]; }
-        for (int i = 0; i < nrr; i++) { buffer << rrbeta[i]; }
-    }
-
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < nrr; i++) { buffer >> rrcount[i]; }
-        for (int i = 0; i < nrr; i++) { buffer >> rrbeta[i]; }
-    }
-
-    void Add(const MPIBuffer &buffer) {
-        int tmp = 0;
-        for (int i = 0; i < nrr; i++) {
-            buffer >> tmp;
-            rrcount[i] += tmp;
-        }
-
-        double temp = 0;
-        for (int i = 0; i < nrr; i++) {
-            buffer >> temp;
-            rrbeta[i] += temp;
-        }
-    }
-
   private:
     int rrindex(int i, int j) {
         return (i < j) ? (2 * nstate - i - 1) * i / 2 + j - i - 1
@@ -223,32 +196,6 @@ class ProfileSuffStat : public SuffStat {
         return *this;
     }
 
-    unsigned int GetMPISize() const { return 2 * nstate; }
-
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < nstate; i++) { buffer << profilecount[i]; }
-        for (int i = 0; i < nstate; i++) { buffer << profilebeta[i]; }
-    }
-
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < nstate; i++) { buffer >> profilecount[i]; }
-        for (int i = 0; i < nstate; i++) { buffer >> profilebeta[i]; }
-    }
-
-    void Add(const MPIBuffer &buffer) {
-        int tmp = 0;
-        for (int i = 0; i < nstate; i++) {
-            buffer >> tmp;
-            profilecount[i] += tmp;
-        }
-
-        double temp = 0;
-        for (int i = 0; i < nstate; i++) {
-            buffer >> temp;
-            profilebeta[i] += temp;
-        }
-    }
-
   private:
     int nstate;
     vector<int> profilecount;
@@ -286,24 +233,6 @@ class ProfileSuffStatArray : public SimpleArray<ProfileSuffStat> {
             total += GetVal(i).GetLogProb(profilearray.GetVal(i));
         }
         return total;
-    }
-
-    //! return array size when put into an MPI buffer
-    unsigned int GetMPISize() const { return GetVal(0).GetMPISize() * GetSize(); }
-
-    //! put array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
-    }
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! get an array from MPI buffer and then add it to this array
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
     }
 };
 

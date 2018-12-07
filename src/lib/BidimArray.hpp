@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include "Array.hpp"
-#include "MPIBuffer.hpp"
 
 /**
  * \brief An interface for an abstract indexed bidim-array of constant
@@ -26,18 +25,6 @@ class BidimSelector {
     virtual int GetNcol() const = 0;
     //! const access to element array
     virtual const T &GetVal(int i, int j) const = 0;
-
-    //! return size of entire array, when put into an MPI buffer
-    unsigned int GetMPISize() const {
-        return this->GetNrow() * this->GetNcol() * MPISize(this->GetVal(0, 0));
-    }
-
-    //! write array into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) { buffer << this->GetVal(i, j); }
-        }
-    }
 
     //! write array into generic output stream
     void ToStream(std::ostream &os) const {
@@ -68,13 +55,6 @@ class BidimArray : public BidimSelector<T> {
 
     //! non-const access to array element
     virtual T &operator()(int i, int j) = 0;
-
-    //! get array from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) { buffer >> (*this)(i, j); }
-        }
-    }
 
     //! get array from generic input stream
     void FromStream(std::istream &is) {

@@ -79,6 +79,10 @@ run-app-tests: all
 	_build/mutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega read ===============================================\e[0m"
 	_build/readmutselomega _test/mutselomega_gal4
+	@make --no-print-directory run-multigeneglobom-test
+
+.PHONY: run-multigeneglobom-test
+run-multigeneglobom-test: all
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
 	cd data/small_multigene && mpirun -np 2 ../../_build/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 

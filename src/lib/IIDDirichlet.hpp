@@ -3,7 +3,6 @@
 #define IIDDIR_H
 
 #include "Array.hpp"
-#include "MPIBuffer.hpp"
 #include "Random.hpp"
 #include "SuffStat.hpp"
 
@@ -86,37 +85,18 @@ class DirichletSuffStat : public SuffStat {
         return tot;
     }
 
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return sumlog.size() + 1; }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer << sumlog[i]; }
-        buffer << n;
+    template <class T>
+    void serialization_interface(T &x) {
+        x.add(sumlog, n);
     }
 
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (unsigned int i = 0; i < sumlog.size(); i++) { buffer >> sumlog[i]; }
-        buffer >> n;
-    }
-
-    //! read a DirichletSuffStat from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        double tmp;
-        for (unsigned int i = 0; i < sumlog.size(); i++) {
-            buffer >> tmp;
-            sumlog[i] += tmp;
-        }
-        int temp;
-        buffer >> temp;
-        n += temp;
-    }
-
-  private:
+    // private:
     std::vector<double> sumlog;
     int n;
 };
+
+template <>
+struct has_custom_serialization<DirichletSuffStat> : std::true_type {};
 
 /**
  * \brief A SimpleArray of DirichletSuffStat
@@ -149,24 +129,6 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
         return *this;
     }
 
-    //! return object size, when put into an MPI buffer
-    unsigned int GetMPISize() const { return GetSize() * GetVal(0).GetMPISize(); }
-
-    //! put object into MPI buffer
-    void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetSize(); i++) { buffer << GetVal(i); }
-    }
-
-    //! read object from MPI buffer
-    void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { buffer >> (*this)[i]; }
-    }
-
-    //! read a DirichletSuffStatArray from MPI buffer and add it to this
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] += buffer; }
-    }
-
   private:
     int dim;
 };
@@ -188,9 +150,6 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     }
 
     ~IIDDirichlet() {}
-
-    //! set center of the Dirichlet distribution
-    void SetCenter(const std::vector<double> &incenter) { center = incenter; }
 
     //! set concentration of the Dirichlet distribution
     void SetConcentration(double inconcentration) { concentration = inconcentration; }
@@ -279,9 +238,15 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     }
 
   protected:
-    std::vector<double> center;
+    const std::vector<double> &center;
     double concentration;
 };
+
+template <>
+struct has_size<IIDDirichlet> : std::true_type {};
+
+template <>
+struct has_access_operator<IIDDirichlet> : std::true_type {};
 
 /**
  * \brief An array of Dirichlet random variables, each with its own center and
