@@ -121,10 +121,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
     std::string datafile;
     std::string treefile;
     int codonmodel;
-    param_mode_t blmode;            // branch lengths fixed or sampled
-    param_mode_t nucmode;           // mutation matrix parameters fixed or sampled
-    param_mode_t fitnessshapemode;  // estimation method for fitness hyperparameter (shape of
-                                    // multi-gamma distribution)
+    param_mode_t blmode;             // branch lengths fixed or sampled
+    param_mode_t nucmode;            // mutation matrix parameters fixed or sampled
+    param_mode_t fitnessshapemode;   // estimation method for fitness hyperparameter (shape of
+                                     // multi-gamma distribution)
     param_mode_t fitnesscentermode;  // estimation method for fitness hyperparameter (center of
                                      // multi-gamma distribution)
 
