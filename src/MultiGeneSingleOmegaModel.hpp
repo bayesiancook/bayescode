@@ -744,6 +744,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     void NoUpdate() {}
+    void VectorNoUpdate(int i) {}
 
     //-------------------
     // Log Probs for MH moves
@@ -761,6 +762,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
     }
 
+    // logprob for moving hyperparameters of gene-specific branchlengths
+    double BranchLengthsLocalHyperLogProb(int j) const {
+        return branchlength->GetLogProb(j) +
+                lengthhypersuffstatarray->GetVal(j).GetLogProb(1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
+    }
+
     // Nucleotide rates
 
     // log prob for moving nuc rates hyper params
@@ -776,7 +783,14 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
+    //-------------------
+    // MCMC moves
+    //-------------------
+
     // Branch lengths
+
+    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
+
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -786,43 +800,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     void MoveBranchLengthsHyperParameters() {
-        BranchLengthsHyperScalingMove(1.0, 10);
-        BranchLengthsHyperScalingMove(0.3, 10);
-
+        Move::VectorScaling(branchlength->GetArray(), 1.0, 10, &M::BranchLengthsLocalHyperLogProb, &M::VectorNoUpdate, this);
+        Move::VectorScaling(branchlength->GetArray(), 0.3, 10, &M::BranchLengthsLocalHyperLogProb, &M::VectorNoUpdate, this);
         Move::Scaling(blhyperinvshape, 1.0, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(blhyperinvshape, 0.3, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
-
         branchlengtharray->SetShape(1.0 / blhyperinvshape);
         MoveLambda();
-    }
-
-    double BranchLengthsHyperScalingMove(double tuning, int nrep) {
-        double nacc = 0;
-        double ntot = 0;
-        for (int rep = 0; rep < nrep; rep++) {
-            for (int j = 0; j < GetNbranch(); j++) {
-                double deltalogprob =
-                    -branchlength->GetLogProb(j) -
-                    lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                        1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
-                double m = tuning * (Random::Uniform() - 0.5);
-                double e = exp(m);
-                (*branchlength)[j] *= e;
-                deltalogprob +=
-                    branchlength->GetLogProb(j) +
-                    lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                        1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
-                deltalogprob += m;
-                int accepted = (log(Random::Uniform()) < deltalogprob);
-                if (accepted) {
-                    nacc++;
-                } else {
-                    (*branchlength)[j] /= e;
-                }
-                ntot++;
-            }
-        }
-        return nacc / ntot;
     }
 
     // Nucleotide rates
@@ -881,8 +864,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         omegaarray->SetShape(alpha);
         omegaarray->SetScale(beta);
     }
-
-    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
     void ToStream(std::ostream &os) { os << *this; }
 
