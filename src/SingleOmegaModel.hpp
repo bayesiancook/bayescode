@@ -50,6 +50,7 @@ class SingleOmegaModel : public ChainComponent {
 
     // Branch lengths
 
+    double One;
     double lambda;
     BranchIIDGamma *blhypermean;
     double blhyperinvshape;
@@ -131,11 +132,12 @@ class SingleOmegaModel : public ChainComponent {
 
         // Branch lengths
 
-        lambda = 10.0;
-        blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhypermean->SetAllBranches(1.0 / lambda);
+        One = 1.0;
+        lambda = 0.1;
+        blhypermean = new BranchIIDGamma(*tree, One, lambda);
+        blhypermean->SetAllBranches(lambda);
         blhyperinvshape = 1.0;
-        branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermean, blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // Nucleotide rates
@@ -236,7 +238,6 @@ class SingleOmegaModel : public ChainComponent {
         const BranchSelector<double> &inblmean, double inblinvshape) {
         blhypermean->Copy(inblmean);
         blhyperinvshape = inblinvshape;
-        branchlength->SetShape(1.0 / blhyperinvshape);
     }
 
     // Nucleotide rates
@@ -330,7 +331,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
-        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(lambda); }
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -342,7 +343,7 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(std::string name) {
-        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
+        if (blmode == independent) { blhypermean->SetAllBranches(lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -558,7 +559,7 @@ class SingleOmegaModel : public ChainComponent {
             &SingleOmegaModel::NoUpdate, this);
         Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
             &SingleOmegaModel::NoUpdate, this);
-        blhypermean->SetAllBranches(1.0 / lambda);
+        blhypermean->SetAllBranches(lambda);
     }
 
     // Nucleotide rates

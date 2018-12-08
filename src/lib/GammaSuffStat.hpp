@@ -86,7 +86,9 @@ class GammaSuffStat : public SuffStat {
     }
 
     //! return log prob, as a function of the given shape and scale parameters
-    double GetLogProb(double shape, double scale) const {
+    double GetLogProb(double mean, double invshape) const {
+        double shape = 1.0 / invshape;
+        double scale = shape / mean;
         return n * (shape * log(scale) - Random::logGamma(shape)) + (shape - 1) * sumlog -
                scale * sum;
     }
@@ -180,9 +182,7 @@ class GammaSuffStatBranchArray : public SimpleBranchArray<GammaSuffStat> {
     double GetLogProb(const BranchSelector<double> &blmean, double invshape) const {
         double total = 0;
         for (int i = 0; i < GetNbranch(); i++) {
-            double shape = 1.0 / invshape;
-            double scale = shape / blmean.GetVal(i);
-            total += GetVal(i).GetLogProb(shape, scale);
+            total += GetVal(i).GetLogProb(blmean.GetVal(i), invshape);
         }
         return total;
     }

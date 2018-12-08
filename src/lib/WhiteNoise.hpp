@@ -6,20 +6,15 @@
 
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
- * branch-specific means but same shape parameter
- *
- * One should be careful about the fact that the shape parameter is given by
- * copy (not by ref) to the array. Thus, each time the shape parameter is
- * modified during the MCMC, the new value should be given to the array (using
- * the SetShape method).
+ * branch-specific means but same invshape parameter
  */
 class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
     // mode 0 : ugam
     // mode 1 : wn
     GammaWhiteNoise(
-        const Tree &intree, const BranchSelector<double> &inblmean, double inshape, int inmode = 0)
-        : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape) {
+        const Tree &intree, const BranchSelector<double> &inblmean, const double& ininvshape, int inmode = 0)
+        : SimpleBranchArray<double>(intree), blmean(inblmean), invshape(ininvshape) {
         mode = inmode;
         Sample();
     }
@@ -28,18 +23,18 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
     void SetMode(int inmode) { mode = inmode; }
 
-    double GetShape() const { return shape; }
+    double GetShape() const { return 1.0 / invshape; }
 
-    void SetShape(double inshape) { shape = inshape; }
-
+    //! return the shape (alpha) parameter for branch i
     double GetAlpha(int i) const {
-        if (mode) { return shape * blmean.GetVal(i); }
-        return shape;
+        if (mode) { return blmean.GetVal(i) / invshape; }
+        return 1.0 / invshape;
     }
 
+    //! return the scale (beta) parameter for branch i
     double GetBeta(int i) const {
-        if (mode) { return shape; }
-        return shape / blmean.GetVal(i);
+        if (mode) { return 1.0 / invshape; }
+        return 1.0 / invshape / blmean.GetVal(i);
     }
 
     //! sample all entries from prior
@@ -57,7 +52,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
                 GetAlpha(i) + suffstat.GetCount(), GetBeta(i) + suffstat.GetBeta());
             if ((*this)[i] == 0) {
                 std::cerr << "gibbs null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t'
-                          << shape << '\t' << blmean.GetVal(i) << '\n';
+                          << invshape << '\t' << blmean.GetVal(i) << '\n';
                 (*this)[i] = 0.001;
             }
         }
@@ -70,7 +65,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
                 (*this)[i] = Random::GammaSample(GetAlpha(i), GetBeta(i));
                 if ((*this)[i] == 0) {
                     std::cerr << "empty null bl : " << GetAlpha(i) << '\t' << GetBeta(i) << '\t'
-                              << shape << '\t' << blmean.GetVal(i) << '\n';
+                              << invshape << '\t' << blmean.GetVal(i) << '\n';
                     (*this)[i] = 0.001;
                 }
             }
@@ -95,20 +90,11 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
         return m1;
     }
 
-    template <class T>
-    void serialization_interface(T &x) {
-        x.add(array, shape, mode);
-        // VL: what about blmean??
-    }
-
   protected:
     const BranchSelector<double> &blmean;
-    double shape;
+    const double& invshape;
     int mode;
 };
-
-template <>
-struct has_custom_serialization<GammaWhiteNoise> : std::true_type {};
 
 template <>
 struct has_size<GammaWhiteNoise> : std::true_type {};
@@ -131,26 +117,19 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
     GammaWhiteNoiseArray(
-        int inNgene, const Tree &intree, const BranchSelector<double> &inblmean, double inshape)
+        int inNgene, const Tree &intree, const BranchSelector<double> &inblmean, const double & ininvshape)
         : Ngene(inNgene),
           tree(intree),
           blmean(inblmean),
-          shape(inshape),
+          invshape(ininvshape),
           blarray(Ngene, (GammaWhiteNoise *)0) {
         for (int gene = 0; gene < Ngene; gene++) {
-            blarray[gene] = new GammaWhiteNoise(tree, blmean, shape);
+            blarray[gene] = new GammaWhiteNoise(tree, blmean, invshape);
         }
     }
 
     ~GammaWhiteNoiseArray() {
         for (int gene = 0; gene < Ngene; gene++) { delete blarray[gene]; }
-    }
-
-    //! set the shape parameter (should be called whenever the shape parameter has
-    //! changed during the MCMC)
-    void SetShape(double inshape) {
-        shape = inshape;
-        for (int gene = 0; gene < Ngene; gene++) { blarray[gene]->SetShape(shape); }
     }
 
     //! return total number of entries (number of genes)
@@ -216,12 +195,9 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     int Ngene;
     const Tree &tree;
     const BranchSelector<double> &blmean;
-    double shape;
+    const double& invshape;
     std::vector<GammaWhiteNoise *> blarray;
 };
-
-template <>
-struct has_custom_serialization<GammaWhiteNoiseArray> : std::true_type {};
 
 template <>
 struct has_size<GammaWhiteNoiseArray> : std::true_type {};

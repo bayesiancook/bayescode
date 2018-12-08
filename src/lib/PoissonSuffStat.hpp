@@ -84,7 +84,9 @@ class PoissonSuffStat : public SuffStat {
 
     //! return the log of the marginal probability when the rate is from a gamma
     //! distribution
-    double GetMarginalLogProb(double shape, double scale) const {
+    double GetMarginalLogProb(double mean, double invshape) const {
+        double shape = 1.0 / invshape;
+        double scale = shape / mean;
         return shape * log(scale) - Random::logGamma(shape) - (shape + count) * log(scale + beta) +
                Random::logGamma(shape + count);
     }
@@ -161,20 +163,11 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
 
     //! get marginal log prob, based on an array of rates that are iid from a
     //! gamma of given shape and scale parameters
-    double GetMarginalLogProb(double shape, double scale) const {
+    double GetMarginalLogProb(double mean, double invshape) const {
         double total = 0;
-        /*
         for (int i=0; i<GetSize(); i++)	{
-                total += GetVal(i).GetMarginalLogProb(shape,scale);
+                total += GetVal(i).GetMarginalLogProb(mean,invshape);
         }
-        */
-        // factoring out prior factor
-        for (int i = 0; i < GetSize(); i++) {
-            int count = GetVal(i).GetCount();
-            double beta = GetVal(i).GetBeta();
-            total += -(shape + count) * log(scale + beta) + Random::logGamma(shape + count);
-        }
-        total += GetSize() * (shape * log(scale) - Random::logGamma(shape));
         return total;
     }
 };
@@ -227,14 +220,11 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
 
     //! get total (summed) marginal log prob integrated over branch-specific rates
     //! (or lengths) iid from a gamma(shape,scale)
-    double GetMarginalLogProb(double shape, double scale) const {
+    double GetMarginalLogProb(double mean, double invshape) const {
         double total = 0;
         for (int i = 0; i < GetNbranch(); i++) {
-            int count = GetVal(i).GetCount();
-            double beta = GetVal(i).GetBeta();
-            total += -(shape + count) * log(scale + beta) + Random::logGamma(shape + count);
+            total += GetVal(i).GetMarginalLogProb(mean,invshape);
         }
-        total += GetNbranch() * (shape * log(scale) - Random::logGamma(shape));
         return total;
     }
 

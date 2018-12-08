@@ -76,7 +76,8 @@ class DirichletSuffStat : public SuffStat {
 
     //! return logprob, as a function of center (renormalized alpha) and
     //! concentration (sum of the alpha vector)
-    double GetLogProb(const std::vector<double> &center, double concentration) const {
+    double GetLogProb(const std::vector<double> &center, double invconcentration) const {
+        double concentration = 1.0/invconcentration;
         double tot = n * Random::logGamma(concentration);
         for (unsigned int i = 0; i < sumlog.size(); i++) {
             tot += -n * Random::logGamma(concentration * center[i]) +
@@ -140,19 +141,16 @@ class DirichletSuffStatArray : public SimpleArray<DirichletSuffStat> {
 class IIDDirichlet : public SimpleArray<std::vector<double>> {
   public:
     //! constructor, parameterized by array size and parameters of the Dirichlet
-    //! distribution (center and concentration)
-    IIDDirichlet(int insize, const std::vector<double> &incenter, double inconcentration)
+    //! distribution (center and inverse concentration)
+    IIDDirichlet(int insize, const std::vector<double> &incenter, const double& ininvconcentration)
         : SimpleArray<std::vector<double>>(insize),
           center(incenter),
-          concentration(inconcentration) {
+          invconcentration(ininvconcentration) {
         for (int i = 0; i < GetSize(); i++) { (*this)[i].assign(center.size(), 0); }
         Sample();
     }
 
     ~IIDDirichlet() {}
-
-    //! set concentration of the Dirichlet distribution
-    void SetConcentration(double inconcentration) { concentration = inconcentration; }
 
     //! set all entries equal to uniform vector
     void SetUniform() {
@@ -168,7 +166,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     //! sample from prior
     void Sample() {
         for (int i = 0; i < GetSize(); i++) {
-            Random::DirichletSample((*this)[i], center, concentration);
+            Random::DirichletSample((*this)[i], center, 1.0/invconcentration);
         }
     }
 
@@ -182,7 +180,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
 
     //! get log probability of entry i
     double GetLogProb(int i) const {
-        return Random::logDirichletDensity(GetVal(i), center, concentration);
+        return Random::logDirichletDensity(GetVal(i), center, 1.0/invconcentration);
     }
 
     //! add this array to sufficient statistic given as argument
@@ -202,7 +200,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
     void PriorResample(const Selector<int> &occupancy) {
         for (int i = 0; i < GetSize(); i++) {
             if (!occupancy.GetVal(i)) {
-                Random::DirichletSample((*this)[i], center, concentration);
+                Random::DirichletSample((*this)[i], center, 1.0/invconcentration);
             }
         }
     }
@@ -239,7 +237,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
 
   protected:
     const std::vector<double> &center;
-    double concentration;
+    const double& invconcentration;
 };
 
 template <>

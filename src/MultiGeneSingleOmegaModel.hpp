@@ -67,16 +67,17 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         // GeneLengths gene_lengths = parse_geneset_alignments(gene_vector);
 
         // Branch lengths
-        lambda = 10;
-        branchlength = new BranchIIDGamma(*tree, 1.0, lambda);
+        One = 1.0;
+        lambda = 0.1;
+        branchlength = new BranchIIDGamma(*tree, One, lambda);
         blhyperinvshape = 0.1;
         if (blmode == shared) {
             lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
             lengthhypersuffstatarray = 0;
         } else {
-            branchlength->SetAllBranches(1.0 / lambda);
+            branchlength->SetAllBranches(lambda);
             branchlengtharray = new GammaWhiteNoiseArray(
-                partition.my_allocation_size(), *tree, *branchlength, 1.0 / blhyperinvshape);
+                partition.my_allocation_size(), *tree, *branchlength, blhyperinvshape);
             lengthpathsuffstatarray = 0;
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
@@ -91,14 +92,14 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
         if (nucmode == shared) {
             nucrelratearray =
-                new IIDDirichlet(1, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-            nucstatarray = new IIDDirichlet(1, nucstathypercenter, 1.0 / nucstathyperinvconc);
+                new IIDDirichlet(1, nucrelratehypercenter, nucrelratehyperinvconc);
+            nucstatarray = new IIDDirichlet(1, nucstathypercenter, nucstathyperinvconc);
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
             nucrelratearray = new IIDDirichlet(partition.my_allocation_size(),
-                nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+                nucrelratehypercenter, nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(
-                partition.my_allocation_size(), nucstathypercenter, 1.0 / nucstathyperinvconc);
+                partition.my_allocation_size(), nucstathypercenter, nucstathyperinvconc);
             nucmatrix = 0;
         }
 
@@ -316,17 +317,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     virtual ~MultiGeneSingleOmegaModelShared() = default;
 
-    void FastUpdate() {
-        branchlength->SetScale(lambda);
-        if (blmode == shrunken) { branchlengtharray->SetShape(1.0 / blhyperinvshape); }
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
-
-        double alpha = 1.0 / omega_param.hyperinvshape;
-        double beta = alpha / omega_param.hypermean;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
-    }
+    // void FastUpdate() {}
 
     //-------------------
     // Log Prior and Likelihood
@@ -434,8 +425,8 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     // hyperparameters
     double NucRatesHyperSuffStatLogProb() const {
         double total = 0;
-        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-        total += nucstatsuffstat.GetLogProb(nucstathypercenter, 1.0 / nucstathyperinvconc);
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter, nucstathyperinvconc);
         return total;
     }
 
@@ -443,9 +434,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // suff stats for moving omega hyper parameters
     double OmegaHyperSuffStatLogProb() const {
-        double alpha = 1.0 / omega_param.hyperinvshape;
-        double beta = alpha / omega_param.hypermean;
-        return omegahypersuffstat.GetLogProb(alpha, beta);
+        return omegahypersuffstat.GetLogProb(omega_param.hypermean, omega_param.hyperinvshape);
     }
 
     // Branch lengths
@@ -457,31 +446,19 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     double GetMeanLength() const {
-        if (blmode == shared) {
-            std::cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
+        assert(blmode != shared);
         return branchlengtharray->GetMeanLength();
     }
 
     double GetVarLength() const {
-        if (blmode == shared) {
-            std::cerr << "error: in getvarlength\n";
-            exit(1);
-        }
-
+        assert(blmode != shared);
         return branchlengtharray->GetVarLength();
     }
 
     // Nucleotide rates
 
     double GetVarNucRelRate() const {
-        if (nucmode == shared) {
-            std::cerr << "error in getvarnucrelrate\n";
-            exit(1);
-        }
-
+        assert(nucmode != shared);
         double tot = 0;
         for (int j = 0; j < Nrr; j++) {
             double mean = 0;
@@ -501,11 +478,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     double GetVarNucStat() const {
-        if (nucmode == shared) {
-            std::cerr << "error in getvarnucstat\n";
-            exit(1);
-        }
-
+        assert(nucmode != shared);
         double tot = 0;
         for (int j = 0; j < Nnuc; j++) {
             double mean = 0;
@@ -640,7 +613,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     void UpdateMaster() {
-        FastUpdate();
+        // FastUpdate();
         mpibranchlengths->release();
         mpinucrates->release();
         mpiomega->release();
@@ -661,7 +634,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     }
 
     void PostPredMaster(std::string name) {
-        FastUpdate();
+        // FastUpdate();
         mpibranchlengths->release();
         mpinucrates->release();
         mpiomega->release();
@@ -764,8 +737,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // logprob for moving hyperparameters of gene-specific branchlengths
     double BranchLengthsLocalHyperLogProb(int j) const {
-        return branchlength->GetLogProb(j) +
-                lengthhypersuffstatarray->GetVal(j).GetLogProb(1.0 / blhyperinvshape, 1.0 / blhyperinvshape / branchlength->GetVal(j));
+        return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(branchlength->GetVal(j), blhyperinvshape);
     }
 
     // Nucleotide rates
@@ -796,7 +768,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         hyperlengthsuffstat.AddSuffStat(*branchlength);
         Move::Scaling(lambda, 1.0, 10, &M::LambdaHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(lambda, 0.3, 10, &M::LambdaHyperLogProb, &M::NoUpdate, this);
-        branchlength->SetScale(lambda);
     }
 
     void MoveBranchLengthsHyperParameters() {
@@ -804,7 +775,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         Move::VectorScaling(branchlength->GetArray(), 0.3, 10, &M::BranchLengthsLocalHyperLogProb, &M::VectorNoUpdate, this);
         Move::Scaling(blhyperinvshape, 1.0, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(blhyperinvshape, 0.3, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
-        branchlengtharray->SetShape(1.0 / blhyperinvshape);
         MoveLambda();
     }
 
@@ -830,9 +800,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         Move::Scaling(nucstathyperinvconc, 1.0, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(nucstathyperinvconc, 0.3, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(nucstathyperinvconc, 0.03, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
     }
 
     void MoveNucRates() {
@@ -858,11 +825,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
             omega_param.hyperinvshape, 1.0, 10, &M::OmegaHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(
             omega_param.hyperinvshape, 0.3, 10, &M::OmegaHyperLogProb, &M::NoUpdate, this);
-
-        double alpha = 1.0 / omega_param.hyperinvshape;
-        double beta = alpha / omega_param.hypermean;
-        omegaarray->SetShape(alpha);
-        omegaarray->SetScale(beta);
     }
 
     void ToStream(std::ostream &os) { os << *this; }
@@ -889,6 +851,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // Branch lengths
 
+    double One;
     double lambda;
     BranchIIDGamma *branchlength;
     GammaSuffStat hyperlengthsuffstat;
