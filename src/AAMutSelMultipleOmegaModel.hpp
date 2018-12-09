@@ -102,6 +102,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     int omegaNcat;
     MultinomialAllocationVector *omega_alloc;
+    double omega_weight_kappa;
     Dirichlet *omega_weight;
 
     double omega_shift;
@@ -398,7 +399,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         delta_omegahyperinvshape = 1.0;
         delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
 
-        omega_weight = new Dirichlet(omegaNcat, 1.0);
+        // will be a constant
+        omega_weight_kappa = 1.0;
+        omega_weight = new Dirichlet(omegaNcat, omega_weight_kappa);
         omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
 
         // Ncat*omegaNcat mut sel codon matrices (based on the Ncat fitness profiles of the mixture,
@@ -485,8 +488,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     void NoUpdate() {}
 
     void Update() {
-        baseweight->SetKappa(basekappa);
-        weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateProfileOccupancies();
         UpdateOmegaOccupancies();
@@ -495,8 +496,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     void PostPred(std::string name) {
-        baseweight->SetKappa(basekappa);
-        weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateOmegaOccupancies();
         UpdateProfileOccupancies();
@@ -975,7 +974,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             &AAMutSelMultipleOmegaModel::NoUpdate, this);
         Move::Scaling(kappa, 0.3, 10, &AAMutSelMultipleOmegaModel::StickBreakingHyperLogProb,
             &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        weight->SetKappa(kappa);
     }
 
     //! MCMC module for the base mixture
@@ -1133,7 +1131,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         Move::Scaling(basekappa, 0.3, 10,
             &AAMutSelMultipleOmegaModel::BaseStickBreakingHyperLogProb,
             &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        baseweight->SetKappa(basekappa);
     }
 
     //! MCMC module for the mixture of omega

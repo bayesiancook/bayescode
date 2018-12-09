@@ -629,8 +629,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void NoUpdate() {}
 
     void Update() {
-        baseweight->SetKappa(basekappa);
-        weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateOccupancies();
         UpdateMatrices();
@@ -638,8 +636,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     }
 
     void PostPred(std::string name) {
-        baseweight->SetKappa(basekappa);
-        weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateOccupancies();
         UpdateMatrices();
@@ -1330,7 +1326,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         Move::Scaling(kappa, 0.3, 10, &AAMutSelDSBDPOmegaModel::StickBreakingHyperLogProb,
             &AAMutSelDSBDPOmegaModel::NoUpdate, this);
-        weight->SetKappa(kappa);
     }
 
     //! MCMC module for the base mixture
@@ -1486,7 +1481,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
             &AAMutSelDSBDPOmegaModel::NoUpdate, this);
         Move::Scaling(basekappa, 0.3, 10, &AAMutSelDSBDPOmegaModel::BaseStickBreakingHyperLogProb,
             &AAMutSelDSBDPOmegaModel::NoUpdate, this);
-        baseweight->SetKappa(basekappa);
     }
 
     //-------------------

@@ -13,16 +13,12 @@ class Dirichlet : public SimpleArray<double> {
   public:
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
-    Dirichlet(int inncat, double inkappa) : SimpleArray<double>(inncat), kappa(inkappa) {
+    Dirichlet(int inncat, const double& inkappa) : SimpleArray<double>(inncat), kappa(inkappa) {
         Sample();
     }
 
     ~Dirichlet() = default;
 
-    //! set concentration parameter kappa to new value
-    void SetKappa(double inkappa) { kappa = inkappa; }
-
-    double &GetKappa() { return kappa; }
     const double &GetKappa() const { return kappa; }
 
     //! Sample (from prior distribution)
@@ -71,5 +67,5 @@ class Dirichlet : public SimpleArray<double> {
     }
 
   private:
-    double kappa;
+    const double& kappa;
 };

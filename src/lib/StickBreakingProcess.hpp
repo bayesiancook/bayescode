@@ -14,17 +14,13 @@ class StickBreakingProcess : public SimpleArray<double> {
   public:
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
-    StickBreakingProcess(int inncat, double inkappa)
+    StickBreakingProcess(int inncat, const double& inkappa)
         : SimpleArray<double>(inncat), V(inncat), kappa(inkappa) {
         Sample();
     }
 
     ~StickBreakingProcess() {}
 
-    //! set concentration parameter kappa to new value
-    void SetKappa(double inkappa) { kappa = inkappa; }
-
-    double &GetKappa() { return kappa; }
     const double &GetKappa() const { return kappa; }
 
     //! get underlying array of Beta variates
@@ -194,7 +190,7 @@ class StickBreakingProcess : public SimpleArray<double> {
 
   private:
     std::vector<double> V;
-    double kappa;
+    const double& kappa;
 };
 
 #endif
