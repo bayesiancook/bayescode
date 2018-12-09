@@ -82,7 +82,6 @@ class CodonM2aModel : public ChainComponent {
     void declare_model(C &t) {
         t.add("nucstat", nucstat);
         t.add("nucrelrate", nucrelrate);
-        t.add("lambda", lambda);
         t.add("branchlength", *branchlength);
     }
 
@@ -305,11 +304,7 @@ class CodonM2aModel : public ChainComponent {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const;
 
-    //! \brief log prior over hyperparameter of prior over branch lengths (here,
-    //! lambda ~ exponential of rate 10)
-    double LambdaHyperLogPrior() const;
-
-    //! log prior over branch lengths (iid exponential of rate lambda)
+    //! log prior over branch lengths (iid exponential)
     double BranchLengthsLogPrior() const;
 
     //! log prior over nucleotide relative exchangeabilities (nucrelrate) and eq.
@@ -360,10 +355,6 @@ class CodonM2aModel : public ChainComponent {
     //! codonmatrix are assumed to be updated.
     double PathSuffStatLogProb() const;
 
-    //! \brief return log prob of current branch lengths, as a function of branch
-    //! lengths hyperparameter lambda
-    double LambdaHyperSuffStatLogProb() const;
-
     //! \brief return log prob of current substitution mapping, as a function of
     //! nucleotide parameters (nucrelrate and nucstat)
     //!
@@ -382,12 +373,6 @@ class CodonM2aModel : public ChainComponent {
     //-------------------
     //  Log probs for MH moves
     //-------------------
-
-    //! \brief log prob factor to be recomputed when moving branch lengths
-    //! hyperparameters (here, lambda)
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
 
     //! \brief log prob factor to be recomputed when moving nucleotide mutation
     //! rate parameters (nucrelrate and nucstat)
@@ -412,23 +397,18 @@ class CodonM2aModel : public ChainComponent {
     void MoveParameters(int nrep);
 
     //
-    // Branch Lengths and hyperparam lambda
+    // Branch Lengths 
     //
 
     //! overall schedule branch length updatdes
     void MoveBranchLengths();
 
-    //! Gibbs resample branch lengths (based on sufficient statistics and current
-    //! value of lambda)
+    //! Gibbs resample branch lengths (based on sufficient statistics)
     void ResampleBranchLengths();
 
     //! collect sufficient statistics for moving branch lengths (directly from the
     //! substitution mappings)
     void CollectLengthSuffStat();
-
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
-    //! based on suffstats for branch lengths)
-    void MoveLambda();
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat();
@@ -505,9 +485,10 @@ class CodonM2aModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    double lambda;
-    BranchIIDGamma *blhypermean;
+    // Branch lengths
+    double blhypermean;
     double blhyperinvshape;
+    SimpleBranchArray<double>* blhypermeanarray;
     GammaWhiteNoise *branchlength;
 
     //
@@ -585,7 +566,6 @@ class CodonM2aModel : public ChainComponent {
     // suffstats
 
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStat hyperlengthsuffstat;
     OmegaPathSuffStatArray *siteomegapathsuffstatarray;
     PathSuffStatArray *sitepathsuffstatarray;
     PathSuffStatArray *componentpathsuffstatarray;

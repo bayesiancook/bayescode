@@ -80,12 +80,15 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    double lambda;
-    BranchIIDGamma *blhypermean;
+    // Branch lengths
+    double blhypermean;
     double blhyperinvshape;
+    SimpleBranchArray<double>* blhypermeanarray;
     GammaWhiteNoise *branchlength;
+
+    // Poisson suffstats for substitution histories, as a function of branch
+    // lengths
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide rates hyperparameters
     std::vector<double> nucrelratehypercenter;
@@ -270,7 +273,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     template <class C>
     void declare_model(C &t) {
         if (blmode < 2) {
-            t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
         }
         if (nucmode < 2) {
@@ -325,12 +327,11 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     //! allocate the model (data structures)
     void Allocate() {
-        // branch lengths
-        lambda = 10;
-        blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhypermean->SetAllBranches(1.0 / lambda);
+        // Branch lengths
+        blhypermean = 0.1;
         blhyperinvshape = 1.0;
-        branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
+        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
@@ -355,15 +356,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         basecenterhyperinvconc = 1.0 / Naa;
 
         basecenterarray =
-            new IIDDirichlet(baseNcat, basecenterhypercenter, 1.0 / basecenterhyperinvconc);
+            new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
         basecenterarray->SetUniform();
 
         baseconchypermean = Naa;
         baseconchyperinvshape = 1.0;
-        double alpha = 1.0 / baseconchyperinvshape;
-        double beta = alpha / baseconchypermean;
-
-        baseconcentrationarray = new IIDGamma(baseNcat, alpha, beta);
+        baseconcentrationarray = new IIDGamma(baseNcat, baseconchypermean, baseconchyperinvshape);
         for (int k = 0; k < baseNcat; k++) { (*baseconcentrationarray)[k] = 20.0; }
         if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
         // suff stats for component aa fitness arrays
@@ -398,9 +396,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         // omega (fixed to 1 by default)
         delta_omegahypermean = 1.0;
         delta_omegahyperinvshape = 1.0;
-        double delta_omegahypershape = 1.0 / delta_omegahyperinvshape;
-        double delta_omegahyperscale = delta_omegahypershape / delta_omegahypermean;
-        delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypershape, delta_omegahyperscale);
+        delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
 
         omega_weight = new Dirichlet(omegaNcat, 1.0);
         omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
@@ -488,33 +484,22 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
-    void UpdateOmega() {
-        double delta_omegahypershape = 1.0 / delta_omegahyperinvshape;
-        delta_omega_array->SetShape(delta_omegahypershape);
-        double delta_omegahyperscale = delta_omegahypershape / delta_omegahypermean;
-        delta_omega_array->SetScale(delta_omegahyperscale);
-    }
-
     void Update() {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateProfileOccupancies();
         UpdateOmegaOccupancies();
-        UpdateOmega();
         UpdateMatrices();
         ResampleSub(1.0);
     }
 
     void PostPred(std::string name) {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
         UpdateOmegaOccupancies();
         UpdateProfileOccupancies();
-        UpdateOmega();
         UpdateMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -548,14 +533,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
-    //! \brief log prior over hyperparameter of prior over branch lengths (here,
-    //! lambda ~ exponential of rate 10)
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
-
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == 0) { ret += LambdaHyperLogPrior(); }
         return ret;
     }
 
@@ -659,12 +639,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         return componentomegapathsuffstatarray->GetVal(k).GetLogProb(GetComponentOmega(k));
     }
 
-    //! return log prob of current branch lengths, as a function of branch lengths
-    //! hyperparameter lambda
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
     //! return log prob of first-level mixture components (i.e. all amino-acid
     //! profiles drawn from component k of the base distribution), as a function
     //! of the center and concentration parameters of this component
@@ -676,12 +650,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //-------------------
     //  Log probs for MH moves
     //-------------------
-
-    //! log prob factor to be recomputed when moving branch lengths hyperparameter
-    //! lambda
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
 
     //! log prob factor to be recomputed when moving nucleotide mutation rate
     //! parameters (nucrelrate and nucstat)
@@ -792,19 +760,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
-    }
-
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
-    //! based on suffstats for branch lengths)
-    void MoveLambda() {
-        hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &AAMutSelMultipleOmegaModel::LambdaHyperLogProb,
-            &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &AAMutSelMultipleOmegaModel::LambdaHyperLogProb,
-            &AAMutSelMultipleOmegaModel::NoUpdate, this);
-        blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH move on nucleotide rate parameters
@@ -1276,16 +1231,16 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         if (omegaNcat > 1) {
             Move::Scaling(delta_omegahypermean, 1.0, 10,
                 &AAMutSelMultipleOmegaModel::DeltaOmegaLogProb,
-                &AAMutSelMultipleOmegaModel::UpdateOmega, this);
+                &AAMutSelMultipleOmegaModel::NoUpdate, this);
             Move::Scaling(delta_omegahypermean, 0.3, 10,
                 &AAMutSelMultipleOmegaModel::DeltaOmegaLogProb,
-                &AAMutSelMultipleOmegaModel::UpdateOmega, this);
+                &AAMutSelMultipleOmegaModel::NoUpdate, this);
             Move::Scaling(delta_omegahyperinvshape, 1.0, 10,
                 &AAMutSelMultipleOmegaModel::DeltaOmegaLogProb,
-                &AAMutSelMultipleOmegaModel::UpdateOmega, this);
+                &AAMutSelMultipleOmegaModel::NoUpdate, this);
             Move::Scaling(delta_omegahyperinvshape, 0.3, 10,
                 &AAMutSelMultipleOmegaModel::DeltaOmegaLogProb,
-                &AAMutSelMultipleOmegaModel::UpdateOmega, this);
+                &AAMutSelMultipleOmegaModel::NoUpdate, this);
         }
     }
 

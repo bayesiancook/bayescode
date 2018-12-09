@@ -52,8 +52,7 @@
  * the most reasonable model settings for now.
  *
  * Priors (in a single-gene context):
- * - branch lengths iid exponential, of rate lambda
- * - lambda exponential of rate 10
+ * - branch lengths iid exponential
  * - rho and pi uniform Dirichlet
  * - omega: fixed to 1 or exponential of rate 1
  * - kappa: exponential of rate 0.1
@@ -84,12 +83,12 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    double lambda;
-    BranchIIDGamma *blhypermean;
+    // Branch lengths
+    double blhypermean;
     double blhyperinvshape;
+    SimpleBranchArray<double>* blhypermeanarray;
     GammaWhiteNoise *branchlength;
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide rates hyperparameters
     std::vector<double> nucrelratehypercenter;
@@ -291,7 +290,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     template <class C>
     void declare_model(C &t) {
         if (blmode < 2) {
-            t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
         }
         if (nucmode < 2) {
@@ -394,12 +392,11 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     //! allocate the model (data structures)
     void Allocate() {
-        // branch lengths
-        lambda = 10;
-        blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhypermean->SetAllBranches(1.0 / lambda);
+        // Branch lengths
+        blhypermean = 0.1;
         blhyperinvshape = 1.0;
-        branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
+        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
@@ -424,15 +421,12 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         basecenterhyperinvconc = 1.0 / Naa;
 
         basecenterarray =
-            new IIDDirichlet(baseNcat, basecenterhypercenter, 1.0 / basecenterhyperinvconc);
+            new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
         basecenterarray->SetUniform();
 
         baseconchypermean = Naa;
         baseconchyperinvshape = 1.0;
-        double alpha = 1.0 / baseconchyperinvshape;
-        double beta = alpha / baseconchypermean;
-
-        baseconcentrationarray = new IIDGamma(baseNcat, alpha, beta);
+        baseconcentrationarray = new IIDGamma(baseNcat, baseconchypermean, baseconchyperinvshape);
         for (int k = 0; k < baseNcat; k++) { (*baseconcentrationarray)[k] = 20.0; }
         if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
         // suff stats for component aa fitness arrays
@@ -542,11 +536,9 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(
-        const BranchSelector<double> &inblmean, double inblinvshape) {
-        blhypermean->Copy(inblmean);
+    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+        blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
-        branchlength->SetShape(1.0 / blhyperinvshape);
     }
 
     //! set omega to new value (multi-gene analyses)
@@ -637,7 +629,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     void NoUpdate() {}
 
     void Update() {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
@@ -647,7 +638,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     }
 
     void PostPred(std::string name) {
-        if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
         baseweight->SetKappa(basekappa);
         weight->SetKappa(kappa);
         UpdateBaseOccupancies();
@@ -686,15 +676,11 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
 
-    //! \brief log prior over hyperparameter of prior over branch lengths (here,
-    //! lambda ~ exponential of rate 10)
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
+    // Branch lengths
 
-    //! log prior over branch lengths (iid exponential of rate lambda)
+    //! log prior over branch lengths
     double BranchLengthsLogPrior() const {
-        double ret = branchlength->GetLogProb();
-        if (blmode == 0) { ret += LambdaHyperLogPrior(); }
-        return ret;
+        return branchlength->GetLogProb();
     }
 
     //! log prior over omega (gamma of mean omegahypermean and inverse shape
@@ -837,12 +823,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         ;
     }
 
-    //! return log prob of current branch lengths, as a function of branch lengths
-    //! hyperparameter lambda
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
     //! return log prob of first-level mixture components (i.e. all amino-acid
     //! profiles drawn from component k of the base distribution), as a function
     //! of the center and concentration parameters of this component
@@ -856,12 +836,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     //-------------------
     //  Log probs for MH moves
     //-------------------
-
-    //! log prob factor to be recomputed when moving branch lengths hyperparameter
-    //! lambda
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
 
     //! log prob factor to be recomputed when Theta=4*Ne*u
     double ThetaLogProb() const { return ThetaLogPrior() + PolySuffStatLogProb(); }
@@ -999,19 +973,6 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == 0) { MoveLambda(); }
-    }
-
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
-    //! based on suffstats for branch lengths)
-    void MoveLambda() {
-        hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,
-            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &AAMutSelDSBDPOmegaModel::LambdaHyperLogProb,
-            &AAMutSelDSBDPOmegaModel::NoUpdate, this);
-        blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH move on theta

@@ -31,11 +31,11 @@ void CodonM2aModel::init() {
 }
 
 void CodonM2aModel::Allocate() {
-    lambda = 10.0;
-    blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
-    blhypermean->SetAllBranches(1.0 / lambda);
+    // Branch lengths
+    blhypermean = 0.1;
     blhyperinvshape = 1.0;
-    branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
+    blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+    branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
 
     purom = 0.5;
     puromhypermean = 0.5;
@@ -94,7 +94,6 @@ void CodonM2aModel::Allocate() {
 }
 
 void CodonM2aModel::Update() {
-    if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     UpdateMatrices();
     GetIntegratedLogLikelihood();
@@ -102,7 +101,6 @@ void CodonM2aModel::Update() {
 }
 
 void CodonM2aModel::PostPred(string name) {
-    if (blmode == 0) { blhypermean->SetAllBranches(1.0 / lambda); }
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     UpdateMatrices();
     sitealloc->SampleAlloc();
@@ -120,11 +118,9 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double> &inbranchlength) const 
     inbranchlength.Copy(*branchlength);
 }
 
-void CodonM2aModel::SetBranchLengthsHyperParameters(
-    const BranchSelector<double> &inblmean, double inblinvshape) {
-    blhypermean->Copy(inblmean);
+void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+    blhypermeanarray->Copy(inblmeanarray);
     blhyperinvshape = inblinvshape;
-    branchlength->SetShape(1.0 / blhyperinvshape);
     // branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
 }
 
@@ -244,10 +240,6 @@ const PoissonSuffStatBranchArray *CodonM2aModel::GetLengthPathSuffStatArray() co
     return lengthpathsuffstatarray;
 }
 
-double CodonM2aModel::LambdaHyperSuffStatLogProb() const {
-    return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-}
-
 const NucPathSuffStat &CodonM2aModel::GetNucPathSuffStat() const { return nucpathsuffstat; }
 
 double CodonM2aModel::NucRatesSuffStatLogProb() const {
@@ -278,12 +270,9 @@ double CodonM2aModel::GetLogPrior() const {
 
 double CodonM2aModel::BranchLengthsLogPrior() const {
     double total = 0;
-    if (blmode == 0) { total += LambdaHyperLogPrior(); }
     total += branchlength->GetLogProb();
     return total;
 }
-
-double CodonM2aModel::LambdaHyperLogPrior() const { return -lambda / 10; }
 
 double CodonM2aModel::NucRatesLogPrior() const {
     double total = 0;
@@ -381,12 +370,11 @@ void CodonM2aModel::ResampleSub(double frac) {
 }
 
 //
-// Branch Lengths and hyperparam lambda
+// Branch Lengths 
 //
 
 void CodonM2aModel::MoveBranchLengths() {
     ResampleBranchLengths();
-    if (blmode == 0) { MoveLambda(); }
 }
 
 void CodonM2aModel::ResampleBranchLengths() {
@@ -397,16 +385,6 @@ void CodonM2aModel::ResampleBranchLengths() {
 void CodonM2aModel::CollectLengthSuffStat() {
     lengthpathsuffstatarray->Clear();
     lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
-}
-
-void CodonM2aModel::MoveLambda() {
-    hyperlengthsuffstat.Clear();
-    hyperlengthsuffstat.AddSuffStat(*branchlength);
-    Move::Scaling(
-        lambda, 1.0, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate, this);
-    Move::Scaling(
-        lambda, 0.3, 10, &CodonM2aModel::LambdaHyperLogProb, &CodonM2aModel::NoUpdate, this);
-    blhypermean->SetAllBranches(1.0 / lambda);
 }
 
 //
@@ -545,22 +523,6 @@ void CodonM2aModel::GetSitesPostProb(double *array) const {
 }
 
 /*
-void CodonM2aModel::ToStream(ostream &os) const {
-    os << lambda << '\t';
-    os << *branchlength << '\t';
-    os << purom << '\t' << dposom << '\t' << purw << '\t' << posw << '\t';
-    os << nucrelrate << '\t';
-    os << nucstat << '\t';
-}
-
-void CodonM2aModel::FromStream(istream &is) {
-    is >> lambda;
-    is >> *branchlength;
-    is >> purom >> dposom >> purw >> posw;
-    is >> nucrelrate;
-    is >> nucstat;
-}
-
 void CodonM2aModel::FromStreamCodeML(istream &is) {
     is >> purom >> dposom >> purw >> posw;
     cerr << "purw: " << purw << '\n';

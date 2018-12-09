@@ -164,13 +164,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //  model structure
     // -----
 
-    // branch lengths
-    double lambda;
-    BranchIIDGamma *blhypermean;
+    // Branch lengths
+    double blhypermean;
     double blhyperinvshape;
+    SimpleBranchArray<double>* blhypermeanarray;
     GammaWhiteNoise *branchlength;
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStat hyperlengthsuffstat;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary
     // probabilities) hyperparameters
@@ -343,12 +342,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         // allocating data structures and sampling initial configuration
 
-        // branch lengths
-        lambda = 10;
-        blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
-        blhypermean->SetAllBranches(1.0 / lambda);
+        // Branch lengths
+        blhypermean = 0.1;
         blhyperinvshape = 1.0;
-        branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
+        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
@@ -454,11 +452,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(
-        const BranchSelector<double> &inblmean, double inblinvshape) {
-        blhypermean->Copy(inblmean);
+    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+        blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
-        branchlength->SetShape(1.0 / blhyperinvshape);
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -547,7 +543,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetMaskEpsilon() const { return maskepsilon; }
 
     void Update() {
-        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -555,7 +550,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     void PostPred(std::string name) {
-        if (blmode == independent) { blhypermean->SetAllBranches(1.0 / lambda); }
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -633,14 +627,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return total;
     }
 
-    //! \brief log prior over hyperparameter of prior over branch lengths (here,
-    //! lambda ~ exponential of rate 10)
-    double BranchLengthsHyperLogPrior() const { return -log(10.0) - lambda / 10; }
-
-    //! log prior over branch lengths (iid exponential of rate lambda)
+    //! log prior over branch lengths
     double BranchLengthsLogPrior() const {
         double ret = branchlength->GetLogProb();
-        if (blmode == independent) { ret += BranchLengthsHyperLogPrior(); }
         return ret;
     }
 
@@ -750,12 +739,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return suffstatarray->GetLogProb(site, *condsubmatrixarray);
     }
 
-    //! \brief return log prob of current branch lengths, as a function of branch
-    //! lengths hyperparameter lambda
-    double BranchLengthsHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
     //! return log prob of current fitness parameters, conditional on their
     //! hyperparameters
     double FitnessHyperSuffStatLogProb() const {
@@ -765,12 +748,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // ---------------
     // log probs for MH moves
     // ---------------
-
-    //! \brief log prob factor to be recomputed when moving branch lengths
-    //! hyperparameters (here, lambda)
-    double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperLogPrior() + BranchLengthsHyperSuffStatLogProb();
-    }
 
     //! \brief log prob factor to be recomputed when moving nucleotide mutation
     //! rate parameters (nucrelrate and nucstat)
@@ -839,8 +816,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         phyloprocess->Move(frac);
     }
 
-    //! Gibbs resampling of branch lengths (based on sufficient statistics and
-    //! current value of lambda)
+    //! Gibbs resampling of branch lengths (based on sufficient statistics)
     void ResampleBranchLengths() {
         CollectLengthSuffStat();
         branchlength->GibbsResample(*lengthpathsuffstatarray);
@@ -849,19 +825,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! MCMC move schedule on branch lengths
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == independent) { MoveLambda(); }
-    }
-
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
-    //! based on suffstats for branch lengths)
-    void MoveLambda() {
-        hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-            &DiffSelDoublySparseModel::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &DiffSelDoublySparseModel::BranchLengthsHyperLogProb,
-            &DiffSelDoublySparseModel::NoUpdate, this);
-        blhypermean->SetAllBranches(1.0 / lambda);
     }
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
@@ -1648,7 +1611,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     template <class C>
     void declare_model(C &t) {
         if (blmode != shared) {
-            t.add("lambda", lambda);
             t.add("branchlength", *branchlength);
         }
         if (nucmode != shared) {
@@ -1685,77 +1647,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         t.add("nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
         t.add("gammanullcount", gammanullcount);
     }
-
-
-    /*
-    //! return size of model, when put into an MPI buffer (in multigene context)
-    unsigned int GetMPISize() const {
-        int size = 0;
-        if (blmode != shared) {
-            size++;
-            size += branchlength->GetMPISize();
-        }
-        if (nucmode !=shared) {
-            size += nucrelrate.size();
-            size += nucstat.size();
-        }
-        if (resampled(fitnessshapemode ) ) { size++; }
-        if (resampled(fitnesscentermode ) ) { size += fitnesscenter.size(); }
-        size += fitness->GetMPISize();
-        if (gene_specific_mask_mode(maskmode)) { size++; }
-        if (maskmode !=no_mask) { size += sitemaskarray->GetMPISize(); }
-        if (maskepsilonmode < 2) { size++; }
-        if (Ncond > 1) {
-            size += shiftprob.size();
-            size += toggle->GetMPISize();
-        }
-        return size;
-    }
-
-    //! get complete parameter configuration from MPI buffer
-    void MPIGet(const MPIBuffer &is) {
-        if (blmode != shared) {
-            is >> lambda;
-            is >> *branchlength;
-        }
-        if (nucmode != shared) {
-            is >> nucrelrate;
-            is >> nucstat;
-        }
-        if (resampled(fitnessshapemode ) ) { is >> fitnessshape; }
-        if (resampled(fitnesscentermode ) ) { is >> fitnesscenter; }
-        is >> *fitness;
-        if (gene_specific_mask_mode(maskmode)) { is >> maskprob; }
-        if (maskmode != no_mask) { is >> *sitemaskarray; }
-        if (maskepsilonmode < 2) { is >> maskepsilon; }
-        if (Ncond > 1) {
-            is >> shiftprob;
-            is >> *toggle;
-        }
-    }
-
-    //! write complete current parameter configuration into MPI buffer
-    void MPIPut(MPIBuffer &os) const {
-        if (blmode != shared) {
-            os << lambda;
-            os << *branchlength;
-        }
-        if (nucmode != shared) {
-            os << nucrelrate;
-            os << nucstat;
-        }
-        if (resampled(fitnessshapemode ) ) { os << fitnessshape; }
-        if (resampled(fitnesscentermode ) ) { os << fitnesscenter; }
-        os << *fitness;
-        if (gene_specific_mask_mode(maskmode)) { os << maskprob; }
-        if (maskmode!= no_mask) { os << *sitemaskarray; }
-        if (maskepsilonmode < 2) { os << maskepsilon; }
-        if (Ncond > 1) {
-            os << shiftprob;
-            os << *toggle;
-        }
-    }
-    */
 };
 
 std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseModel> &m) {
