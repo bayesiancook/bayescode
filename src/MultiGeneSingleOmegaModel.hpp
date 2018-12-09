@@ -1,21 +1,8 @@
 // this is a multigene version of singleomegamodel
 //
-// - branch lengths are shared across genes, and are iid Exponential of rate
-// lambda
-// - nucleotide relative exchangeabilities and stationaries are also shared
-// across genes (uniform Dirichlet)
 // - the array of gene-specific omega's are iid gamma with hyperparameters
 // omegahypermean and omegahyperinvshape
 //
-// the sequence of MCMC moves is as follows:
-// - genes resample substitution histories, gather path suff stats and move
-// their omega's
-// - master receives the array of omega's across genes, moves their
-// hyperparameters and then broadcast the new value of these hyperparams
-// - master collects branch length suff stats across genes, moves branch lengths
-// and broadcasts their new value
-// - master collects nuc path suffstats across genes, moves nuc rates and
-// broadcasts their new value
 
 #include "IIDDirichlet.hpp"
 #include "IIDGamma.hpp"
@@ -67,18 +54,29 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         // GeneLengths gene_lengths = parse_geneset_alignments(gene_vector);
 
         // Branch lengths
-        One = 1.0;
-        lambda = 0.1;
-        branchlength = new BranchIIDGamma(*tree, One, lambda);
-        blhyperinvshape = 0.1;
+
+        meanoverbranches = 0.1;
+        one = 1.0;
+
+        // if shared, then these are the global branch lengths
+        // otherwise, they are the bector of branch lengths hypermeans across branches
+        branchlength = new BranchIIDGamma(*tree, meanoverbranches, one);
+
+        // if branch lengths are not shared, this is the inv shape for the variation of branch lengths across GENES
+        blhyperinvshape = 1.0;
+
         if (blmode == shared) {
+            branchlengtharray = nullptr;
+            // an array across branches of suff stats (for substitution mappings across genes)
             lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-            lengthhypersuffstatarray = 0;
+            lengthhypersuffstatarray = nullptr;
         } else {
-            branchlength->SetAllBranches(lambda);
+            // just for ensuring reasonable initialization -- could possibly be removed
+            branchlength->SetAllBranches(meanoverbranches);
             branchlengtharray = new GammaWhiteNoiseArray(
                 partition.my_allocation_size(), *tree, *branchlength, blhyperinvshape);
-            lengthpathsuffstatarray = 0;
+            lengthpathsuffstatarray = nullptr;
+            // an array across branches of GammaSuffStats (for gene-specific branch lengths)
             lengthhypersuffstatarray = new GammaSuffStatBranchArray(*tree);
         }
 
@@ -145,7 +143,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 reduce(*lengthpathsuffstatarray)
             );
             //clang-format on
-        } else {
+        } else if (blmode == shrunken) {
             // clang-format off
             mpibranchlengths = make_group(
                 broadcast(*branchlength, blhyperinvshape),
@@ -167,6 +165,9 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 reduce(*lengthhypersuffstatarray)
             );
             //clang-format on
+        }
+        else    {
+            mpibranchlengths = make_group();
         }
 
         // nucleotide rates
@@ -193,7 +194,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
             );
             //clang-format on
         }
-        else    {
+        else if (nucmode == shrunken) {
             // clang-format off
             mpinucrates = make_group(
                 broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
@@ -329,9 +330,12 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
         // branch lengths
         if (blmode == shared) {
-            total += GlobalBranchLengthsLogPrior();
+            total += BranchLengthsMeanLogPrior();
+            total += BranchLengthsLogPrior();
         } else if (blmode == shrunken) {
-            total += GeneBranchLengthsHyperLogPrior();
+            total += BranchLengthsMeanLogPrior();
+            total += BranchLengthsLogPrior();
+            total += GeneBranchLengthsHyperInvShapeLogPrior();
         } else {
             // nothing: everything accounted for by gene component
         }
@@ -353,17 +357,16 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // Branch lengths
 
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
-
-    double GlobalBranchLengthsLogPrior() const {
-        return LambdaHyperLogPrior() + branchlength->GetLogProb();
+    double BranchLengthsMeanLogPrior() const   {
+        return -meanoverbranches / 0.1;
     }
 
-    // exponential of mean 1 for blhyperinvshape
-    double BranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
+    double GeneBranchLengthsHyperInvShapeLogPrior() const   {
+        return -blhyperinvshape;
+    }
 
-    double GeneBranchLengthsHyperLogPrior() const {
-        return BranchLengthsHyperInvShapeLogPrior() + branchlength->GetLogProb();
+    double BranchLengthsLogPrior() const   {
+        return branchlength->GetLogProb();
     }
 
     // Nucleotide rates
@@ -395,47 +398,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
 
     double GetLogLikelihood() const { return GeneLogLikelihood; }
-
-    //-------------------
-    // Suff Stat Log Probs
-    //-------------------
-
-    // Branch lengths
-
-    // suff stat for global branch lengths, as a function of lambda
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
-    }
-
-    // suff stat for gene-specific branch lengths, as a function of bl
-    // hyperparameters
-    double BranchLengthsHyperSuffStatLogProb() const {
-        return lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
-    }
-
-    // Nucleotide rates
-
-    // suff stat for global nuc rates, as a function of nucleotide matrix
-    // (which itself depends on nucstat and nucrelrate)
-    double NucRatesSuffStatLogProb() const {
-        return nucpathsuffstat.GetLogProb(*nucmatrix, codonstatespace);
-    }
-
-    // suff stat for gene-specific nuc rates, as a function of nucrate
-    // hyperparameters
-    double NucRatesHyperSuffStatLogProb() const {
-        double total = 0;
-        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, nucrelratehyperinvconc);
-        total += nucstatsuffstat.GetLogProb(nucstathypercenter, nucstathyperinvconc);
-        return total;
-    }
-
-    // Omega
-
-    // suff stats for moving omega hyper parameters
-    double OmegaHyperSuffStatLogProb() const {
-        return omegahypersuffstat.GetLogProb(omega_param.hypermean, omega_param.hyperinvshape);
-    }
 
     // Branch lengths
 
@@ -500,10 +462,10 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     template <class C>
     void declare_model(C &t) {
         if (blmode == shared) {
-            t.add("lambda", lambda);
+            t.add("meanoverbranches", meanoverbranches);
             t.add("branchlength", *branchlength);
         } else {
-            t.add("lambda", lambda);
+            t.add("meanoverbranches", meanoverbranches);
             t.add("branchlength", *branchlength);
             t.add("blhyperinvshape", blhyperinvshape);
             t.add("branchlengtharray", *branchlengtharray);
@@ -679,6 +641,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
+
             if (omega_param.variable) {
                 mpiomega->acquire();
                 MoveOmegaHyperParameters();
@@ -687,19 +650,19 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
             mpibranchlengths->acquire();
             if (blmode == shared) {
-                ResampleBranchLengths();
-                MoveLambda();
+                ResampleGlobalBranchLengths();
+                MoveGlobalBranchLengthsHyperMean();
             } else if (blmode == shrunken) {
-                MoveBranchLengthsHyperParameters();
+                MoveGeneBranchLengthsHyperParameters();
             }
             mpibranchlengths->release();
 
             // global nucrates, or gene nucrates hyperparameters
             mpinucrates->acquire();
             if (nucmode == shared) {
-                MoveNucRates();
+                MoveGlobalNucRates();
             } else if (nucmode == shrunken) {
-                MoveNucRatesHyperParameters();
+                MoveGeneNucRatesHyperParameters();
             }
             mpinucrates->release();
         }
@@ -725,35 +688,42 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // Branch lengths
 
-    // logprob for moving lambda
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
-
-    // logprob for moving hyperparameters of gene-specific branchlengths
+    // logprob for moving meanoverbranches
     double BranchLengthsHyperLogProb() const {
-        return BranchLengthsHyperInvShapeLogPrior() + BranchLengthsHyperSuffStatLogProb();
+        return BranchLengthsMeanLogPrior() + hyperlengthsuffstat.GetLogProb(meanoverbranches, 1.0);
     }
 
-    // logprob for moving hyperparameters of gene-specific branchlengths
-    double BranchLengthsLocalHyperLogProb(int j) const {
+    // logprob for moving blhyperinvshape (hyper invshape of gene-specific branchlengths)
+    double GeneBranchLengthsHyperInvShapeLogProb() const {
+        return GeneBranchLengthsHyperInvShapeLogPrior() + lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
+    }
+
+    // logprob for moving hyperparameters of gene-specific branchlengths (branchlength array, in bl shrunken mode)
+    double GeneBranchLengthsHyperMeanLogProb(int j) const {
         return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(branchlength->GetVal(j), blhyperinvshape);
     }
 
     // Nucleotide rates
 
-    // log prob for moving nuc rates hyper params
-    double NucRatesHyperLogProb() const {
-        return GeneNucRatesHyperLogPrior() + NucRatesHyperSuffStatLogProb();
+    // log prob for moving nuc rates
+    double GlobalNucRatesLogProb() const { 
+        return GlobalNucRatesLogPrior() + nucpathsuffstat.GetLogProb(*nucmatrix, codonstatespace);
     }
 
-    // log prob for moving nuc rates
-    double NucRatesLogProb() const { return GlobalNucRatesLogPrior() + NucRatesSuffStatLogProb(); }
+    // log prob for moving nuc rates hyper params
+    double GeneNucRatesHyperLogProb() const {
+        double total = GeneNucRatesHyperLogPrior();
+        total += nucrelratesuffstat.GetLogProb(nucrelratehypercenter, nucrelratehyperinvconc);
+        total += nucstatsuffstat.GetLogProb(nucstathypercenter, nucstathyperinvconc);
+        return total;
+    }
 
     // Omega
 
     // log prob for moving omega hyperparameters
-    double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
+    double OmegaHyperLogProb() const {
+        return OmegaHyperLogPrior() + omegahypersuffstat.GetLogProb(omega_param.hypermean, omega_param.hyperinvshape);
+    }
 
     //-------------------
     // MCMC moves
@@ -761,64 +731,65 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // Branch lengths
 
-    void ResampleBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
+    void ResampleGlobalBranchLengths() { branchlength->GibbsResample(*lengthpathsuffstatarray); }
 
-    void MoveLambda() {
+    void MoveGlobalBranchLengthsHyperMean() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &M::LambdaHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &M::LambdaHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(meanoverbranches, 1.0, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(meanoverbranches, 0.3, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
     }
 
-    void MoveBranchLengthsHyperParameters() {
-        Move::VectorScaling(branchlength->GetArray(), 1.0, 10, &M::BranchLengthsLocalHyperLogProb, &M::VectorNoUpdate, this);
-        Move::VectorScaling(branchlength->GetArray(), 0.3, 10, &M::BranchLengthsLocalHyperLogProb, &M::VectorNoUpdate, this);
-        Move::Scaling(blhyperinvshape, 1.0, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(blhyperinvshape, 0.3, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
-        MoveLambda();
+    void MoveGeneBranchLengthsHyperParameters() {
+        Move::VectorScaling(branchlength->GetArray(), 1.0, 10, &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
+        Move::VectorScaling(branchlength->GetArray(), 0.3, 10, &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
+        Move::Scaling(blhyperinvshape, 1.0, 10, &M::GeneBranchLengthsHyperInvShapeLogProb, &M::NoUpdate, this);
+        Move::Scaling(blhyperinvshape, 0.3, 10, &M::GeneBranchLengthsHyperInvShapeLogProb, &M::NoUpdate, this);
+
+        hyperlengthsuffstat.Clear();
+        hyperlengthsuffstat.AddSuffStat(*branchlength);
+        Move::Scaling(meanoverbranches, 1.0, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(meanoverbranches, 0.3, 10, &M::BranchLengthsHyperLogProb, &M::NoUpdate, this);
     }
 
     // Nucleotide rates
 
-    void MoveNucRatesHyperParameters() {
+    void MoveGeneNucRatesHyperParameters() {
         Move::Profile(
-            nucrelratehypercenter, 1.0, 1, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehypercenter, 1.0, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Profile(
-            nucrelratehypercenter, 0.3, 1, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehypercenter, 0.3, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Profile(
-            nucrelratehypercenter, 0.1, 3, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehypercenter, 0.1, 3, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(
-            nucrelratehyperinvconc, 1.0, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehyperinvconc, 1.0, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(
-            nucrelratehyperinvconc, 0.3, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehyperinvconc, 0.3, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(
-            nucrelratehyperinvconc, 0.03, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+            nucrelratehyperinvconc, 0.03, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
 
-        Move::Profile(nucstathypercenter, 1.0, 1, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.3, 1, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.1, 2, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 1.0, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.3, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.03, 10, &M::NucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(nucstathypercenter, 1.0, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(nucstathypercenter, 0.3, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(nucstathypercenter, 0.1, 2, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(nucstathyperinvconc, 1.0, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(nucstathyperinvconc, 0.3, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(nucstathyperinvconc, 0.03, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
     }
 
-    void MoveNucRates() {
+    void MoveGlobalNucRates() {
         std::vector<double> &nucrelrate = (*nucrelratearray)[0];
-        Move::Profile(nucrelrate, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.03, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.01, 3, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(nucrelrate, 0.1, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(nucrelrate, 0.03, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(nucrelrate, 0.01, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
 
         std::vector<double> &nucstat = (*nucstatarray)[0];
-        Move::Profile(nucstat, 0.1, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
-        Move::Profile(nucstat, 0.01, 1, 10, &M::NucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(nucstat, 0.1, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(nucstat, 0.01, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
     }
 
     // Omega
 
     void MoveOmegaHyperParameters() {
-        omegahypersuffstat.Clear();
-        omegahypersuffstat.AddSuffStat(*omegaarray);
-
         Move::Scaling(omega_param.hypermean, 1.0, 10, &M::OmegaHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(omega_param.hypermean, 0.3, 10, &M::OmegaHyperLogProb, &M::NoUpdate, this);
         Move::Scaling(
@@ -851,15 +822,15 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     // Branch lengths
 
-    double One;
-    double lambda;
+    double meanoverbranches;
+    double one;
     BranchIIDGamma *branchlength;
-    GammaSuffStat hyperlengthsuffstat;
-
     double blhyperinvshape;
     GammaWhiteNoiseArray *branchlengtharray;
+
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
     GammaSuffStatBranchArray *lengthhypersuffstatarray;
+    GammaSuffStat hyperlengthsuffstat;
 
     // Nucleotide rates
 

@@ -16,7 +16,7 @@
  * model
  *
  * The model has the following structure:
- * - branch lengths iid Exponential of rate lambda
+ * - branch lengths iid Exponential of mean blhypermean 
  * - nucleotide relative exchangeabilities and stationaries are uniform
  * Dirichlet
  * - there is one single omega=dN/dS for all sites and across all branches
@@ -49,23 +49,16 @@ class SingleOmegaModel : public ChainComponent {
     param_mode_t nucmode;
 
     // Branch lengths
-
-    double One;
-    double lambda;
-    BranchIIDGamma *blhypermean;
+    double blhypermean;
     double blhyperinvshape;
+    SimpleBranchArray<double>* blhypermeanarray;
     GammaWhiteNoise *branchlength;
 
     // Poisson suffstats for substitution histories, as a function of branch
     // lengths
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
 
-    // suff stats branch lengths, as a function of their hyper parameter lambda
-    // (bl are iid gamma, of scale parameter lambda)
-    GammaSuffStat hyperlengthsuffstat;
-
     // Nucleotide rates
-
     std::vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
     std::vector<double> nucstathypercenter;
@@ -131,13 +124,10 @@ class SingleOmegaModel : public ChainComponent {
         Nbranch = tree->nb_nodes() - 1;
 
         // Branch lengths
-
-        One = 1.0;
-        lambda = 0.1;
-        blhypermean = new BranchIIDGamma(*tree, One, lambda);
-        blhypermean->SetAllBranches(lambda);
+        blhypermean = 0.1;
         blhyperinvshape = 1.0;
-        branchlength = new GammaWhiteNoise(*tree, *blhypermean, blhyperinvshape);
+        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // Nucleotide rates
@@ -176,7 +166,6 @@ class SingleOmegaModel : public ChainComponent {
         t.add("omega", omega);
         t.add("nucstat", nucstat);
         t.add("nucrelrate", nucrelrate);
-        t.add("lambda", lambda);
         t.add("branchlength", *branchlength);
     }
 
@@ -206,22 +195,7 @@ class SingleOmegaModel : public ChainComponent {
     // Setting and updating
     // ------------------
 
-    //! \brief set estimation method for branch lengths and nuc rates
-    //!
-    //! Used in a multigene context.
-    //! - mode == 2: global
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetAcrossGenesModes(param_mode_t inblmode, param_mode_t innucmode) {
-        blmode = inblmode;
-        nucmode = innucmode;
-    }
-
     // Branch lengths
-
-    //! whether branch lengths are fixed externally (e.g. when branch lengths are
-    //! shared across genes in a multi-gene context)
-    bool FixedBranchLengths() const { return blmode == shared; }
 
     //! set branch lengths to a new value (multi-gene analyses)
     void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
@@ -234,17 +208,12 @@ class SingleOmegaModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(
-        const BranchSelector<double> &inblmean, double inblinvshape) {
-        blhypermean->Copy(inblmean);
+    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+        blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
     }
 
     // Nucleotide rates
-
-    //! whether nuc rates are fixed externally (e.g. when nuc rates are shared
-    //! across genes in a multi-gene context)
-    bool FixedNucRates() const { return nucmode == 2; }
 
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
@@ -331,7 +300,6 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
-        if (blmode == independent) { blhypermean->SetAllBranches(lambda); }
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -343,7 +311,6 @@ class SingleOmegaModel : public ChainComponent {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(std::string name) {
-        if (blmode == independent) { blhypermean->SetAllBranches(lambda); }
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -357,9 +324,8 @@ class SingleOmegaModel : public ChainComponent {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-
-        if (!FixedBranchLengths()) { total += BranchLengthsLogPrior(); }
-        if (!FixedNucRates()) { total += NucRatesLogPrior(); }
+        if (blmode != shared) { total += BranchLengthsLogPrior(); }
+        if (nucmode != shared) { total += NucRatesLogPrior(); }
         total += OmegaLogPrior();
         return total;
     }
@@ -373,17 +339,10 @@ class SingleOmegaModel : public ChainComponent {
 
     // Branch lengths
 
-    //! log prior over branch lengths (iid exponential of rate lambda)
+    //! log prior over branch lengths
     double BranchLengthsLogPrior() const {
-        double total = 0;
-        if (blmode == independent) { total += LambdaHyperLogPrior(); }
-        total += branchlength->GetLogProb();
-        return total;
+        return branchlength->GetLogProb();
     }
-
-    //! \brief log prior over hyperparameter of prior over branch lengths (here,
-    //! lambda ~ exponential of rate 10)
-    double LambdaHyperLogPrior() const { return -lambda / 10; }
 
     // Nucleotide rates
 
@@ -427,17 +386,6 @@ class SingleOmegaModel : public ChainComponent {
     void CollectLengthSuffStat() {
         lengthpathsuffstatarray->Clear();
         lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
-    }
-
-    //! \brief return log prob of current substitution mapping, as a function of
-    //! branch lengths
-    //!
-    //! Calculated using the lengthpathsuffstat
-    //! (which summarizes all information about how the prob of the substitution
-    //! mapping depends on branch lengths). lengthpathsuffstat is assumed to be
-    //! updated.
-    double LambdaHyperSuffStatLogProb() const {
-        return hyperlengthsuffstat.GetLogProb(1.0, lambda);
     }
 
     // Nucleotide rates
@@ -488,14 +436,6 @@ class SingleOmegaModel : public ChainComponent {
     //  Log probs for MH moves
     //-------------------
 
-    // Branch lengths
-
-    //! \brief log prob factor to be recomputed when moving branch lengths
-    //! hyperparameters (here, lambda)
-    double LambdaHyperLogProb() const {
-        return LambdaHyperLogPrior() + LambdaHyperSuffStatLogProb();
-    }
-
     // Nucleotide rates
 
     //! \brief log prob factor to be recomputed when moving nucleotide mutation
@@ -523,12 +463,14 @@ class SingleOmegaModel : public ChainComponent {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            if (!FixedBranchLengths()) { MoveBranchLengths(); }
+            if (blmode != shared) { 
+                MoveBranchLengths(); 
+            }
 
             CollectPathSuffStat();
             MoveOmega();
 
-            if (!FixedNucRates()) {
+            if (nucmode != shared) {
                 TouchMatrices();
                 MoveNucRates();
             }
@@ -540,26 +482,12 @@ class SingleOmegaModel : public ChainComponent {
     //! overall schedule branch length updatdes
     void MoveBranchLengths() {
         ResampleBranchLengths();
-        if (blmode == independent) { MoveLambda(); }
     }
 
-    //! Gibbs resample branch lengths (based on sufficient statistics and current
-    //! value of lambda)
+    //! Gibbs resample branch lengths (based on sufficient statistics)
     void ResampleBranchLengths() {
         CollectLengthSuffStat();
         branchlength->GibbsResample(*lengthpathsuffstatarray);
-    }
-
-    //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
-    //! based on suffstats for branch lengths)
-    void MoveLambda() {
-        hyperlengthsuffstat.Clear();
-        hyperlengthsuffstat.AddSuffStat(*branchlength);
-        Move::Scaling(lambda, 1.0, 10, &SingleOmegaModel::LambdaHyperLogProb,
-            &SingleOmegaModel::NoUpdate, this);
-        Move::Scaling(lambda, 0.3, 10, &SingleOmegaModel::LambdaHyperLogProb,
-            &SingleOmegaModel::NoUpdate, this);
-        blhypermean->SetAllBranches(lambda);
     }
 
     // Nucleotide rates
