@@ -143,7 +143,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 reduce(*lengthpathsuffstatarray)
             );
             //clang-format on
-        } else if (blmode == shrunken) {
+        } else {
             // clang-format off
             mpibranchlengths = make_group(
                 broadcast(*branchlength, blhyperinvshape),
@@ -165,9 +165,6 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
                 reduce(*lengthhypersuffstatarray)
             );
             //clang-format on
-        }
-        else    {
-            mpibranchlengths = make_group();
         }
 
         // nucleotide rates
@@ -194,7 +191,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
             );
             //clang-format on
         }
-        else if (nucmode == shrunken) {
+        else    {
             // clang-format off
             mpinucrates = make_group(
                 broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
