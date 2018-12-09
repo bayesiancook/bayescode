@@ -122,22 +122,19 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
     DiffSelDoublySparseFitnessArray(const BidimSelector<std::vector<double>> &infitness,
         const Selector<std::vector<int>> &inmask, const BidimSelector<std::vector<int>> &intoggle,
-        int inNlevel, double inepsilon)
+        int inNlevel, const double& inepsilon)
         : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
               std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           mask(inmask),
           toggle(intoggle),
-          Nlevel(inNlevel),
-          epsilon(inepsilon) {
+          epsilon(inepsilon),
+          Nlevel(inNlevel) {
         Update();
     }
 
     //! return dimension of fitness profiles (should normally be 20)
     int GetDim() const { return GetVal(0, 0).size(); }
-
-    //! notify new value for epsilon parameter
-    void SetEpsilon(double ineps) { epsilon = ineps; }
 
     //! full update of the array
     void Update() {
@@ -178,8 +175,8 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
     const BidimSelector<std::vector<double>> &fitness;
     const Selector<std::vector<int>> &mask;
     const BidimSelector<std::vector<int>> &toggle;
+    const double& epsilon;
     int Nlevel;
-    double epsilon;
 };
 
 /**
@@ -202,7 +199,7 @@ class MutSelSparseFitnessArray : public SimpleArray<std::vector<double>> {
     //! constructor, parameterized by input fitness array, mask array and epsilon
     //! (background fitness of low-fitness amino-acids)
     MutSelSparseFitnessArray(const Selector<std::vector<double>> &infitness,
-        const Selector<std::vector<int>> &inmask, double inepsilon)
+        const Selector<std::vector<int>> &inmask, const double& inepsilon)
         : SimpleArray<std::vector<double>>(
               infitness.GetSize(), std::vector<double>(infitness.GetVal(0).size(), 0)),
           fitness(infitness),
@@ -213,9 +210,6 @@ class MutSelSparseFitnessArray : public SimpleArray<std::vector<double>> {
 
     //! returns dimension of fitness profiles (should normally be 20)
     int GetDim() const { return GetVal(0).size(); }
-
-    //! notify new value for epsilon parameter
-    void SetEpsilon(double ineps) { epsilon = ineps; }
 
     //! full update of the array
     void Update() {
@@ -247,7 +241,7 @@ class MutSelSparseFitnessArray : public SimpleArray<std::vector<double>> {
   protected:
     const Selector<std::vector<double>> &fitness;
     const Selector<std::vector<int>> &mask;
-    double epsilon;
+    const double& epsilon;
 };
 
 #endif

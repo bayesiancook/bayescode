@@ -485,7 +485,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! \brief set value of background fitness of low-fitness amino-acids
     void SetMaskEpsilon(double in) {
         maskepsilon = in;
-        fitnessprofile->SetEpsilon(maskepsilon);
     }
 
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc)
@@ -590,7 +589,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! update fitness profiles and matrices across all sites and conditions
     void UpdateAll() {
-        fitnessprofile->SetEpsilon(maskepsilon);
         fitnessprofile->Update();
         CorruptMatrices();
     }
