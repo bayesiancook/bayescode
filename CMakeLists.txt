@@ -53,6 +53,38 @@ target_link_libraries(globom bayescode_lib tree_lib)
 add_executable(readglobom "src/ReadSingleOmega.cpp")
 target_link_libraries(readglobom bayescode_lib tree_lib)
 
+# Codon M2a
+add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
+target_link_libraries(codonm2a bayescode_lib tree_lib)
+
+# Read Codon M2a
+add_executable(readcodonm2a "src/ReadCodonM2a.cpp" "src/CodonM2aModel.cpp")
+target_link_libraries(readcodonm2a bayescode_lib tree_lib)
+
+# Mutation-Selection (aamutsel)
+add_executable(aamutsel "src/AAMutSelDSBDPOmega.cpp")
+target_link_libraries(aamutsel bayescode_lib tree_lib)
+
+# Read Mutation-Selection (readaamutsel)
+add_executable(readaamutsel "src/ReadAAMutSelDSBDPOmega.cpp")
+target_link_libraries(readaamutsel bayescode_lib tree_lib)
+
+# Mutation-Selection (mutselomega)
+add_executable(mutselomega "src/AAMutSelMultipleOmega.cpp")
+target_link_libraries(mutselomega bayescode_lib tree_lib)
+
+# Read Mutation-Selection (readmutselomega)
+add_executable(readmutselomega "src/ReadAAMutSelMultipleOmega.cpp")
+target_link_libraries(readmutselomega bayescode_lib tree_lib)
+
+# Diffsel double sparse (diffseldsparse)
+add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
+target_link_libraries(diffseldsparse bayescode_lib tree_lib)
+
+# Read diffsel double sparse (readdiffseldsparse)
+# add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
+# target_link_libraries(readdiffseldsparse bayescode_lib tree_lib)
+
 # Multi-gene single omega (multigeneglobom)
 add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
 target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
