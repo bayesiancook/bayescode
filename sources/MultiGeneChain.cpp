@@ -5,6 +5,7 @@
 #include "MultiGeneProbModel.hpp"
 #include "monitoring.hpp"
 #include <list>
+#include <ctime>
 
 std::unique_ptr<MonitorManager> gm(new MonitorManager());
 
@@ -103,8 +104,8 @@ void MultiGeneChain::Run() {
     };
 
     list<double> last_it_times;
-    double max_time = 24 * 60 * 60 * 1000; // 24 hours
-    // double max_time = 3 * 60 * 1000; // 3 minutes
+    time_t max_time = 24 * 60 * 60; // 24 hours * 60 mintues * 60 seconds
+    time_t start_time = std::time(nullptr);
 
     auto mean_and_trim = [this, &last_it_times] (double it_time) -> double {
         last_it_times.push_back(it_time);
@@ -124,8 +125,7 @@ void MultiGeneChain::Run() {
     //  MAIN LOOP
     //=============================================================================================
     if (!myid) {
-        Chrono total_time_chrono;
-        total_time_chrono.Start();
+        std::cout << "Computation started at " << std::asctime(std::localtime(&start_time));
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
             MasterSendRunningStatus(1);
             Chrono chrono;
@@ -134,15 +134,17 @@ void MultiGeneChain::Run() {
             chrono.Stop();
 
             double it_time = chrono.GetTime();
-            double mean_it_time = mean_and_trim(it_time);
-            total_time_chrono.Stop();
-            double total_time = total_time_chrono.GetTime();
+            double mean_it_time = mean_and_trim(it_time) / 1000;
+            time_t current_time = std::time(nullptr);
+            time_t total_time = current_time - start_time;
             int remaining_its = floor((max_time - total_time) / mean_it_time);
 
             ofstream check_os((name + ".time").c_str());
+            std::string time_str = std::asctime(std::localtime(&current_time));
+            time_str.pop_back();
             check_os << it_time << '\n';
-            cerr << "* Iteration " << size - 1 << ": " << it_time / 1000
-                 << "s (mean it time: " << mean_it_time / 1000 << "s; predicting "
+            cerr << "[" << time_str << "] Iteration " << size - 1 << ": " << it_time / 1000
+                 << "s (mean it time: " << mean_it_time << "s; predicting "
                  << remaining_its - 2 << " more iterations)\n";
 
             if (size == first_iteration) {
