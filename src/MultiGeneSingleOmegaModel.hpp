@@ -32,9 +32,9 @@ std::ostream &operator<<(std::ostream &os, omega_param_t &t) {
     return os;
 }
 
-class MultiGeneSingleOmegaModelShared : public ChainComponent {
+class MultiGeneSingleOmegaModel : public ChainComponent {
   public:
-    MultiGeneSingleOmegaModelShared(std::string datafile, std::string treefile, param_mode_t blmode,
+    MultiGeneSingleOmegaModel(std::string datafile, std::string treefile, param_mode_t blmode,
         param_mode_t nucmode, omega_param_t omega_param)
         : datafile(datafile),
           treefile(treefile),
@@ -388,7 +388,7 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
 
-    virtual ~MultiGeneSingleOmegaModelShared() = default;
+    virtual ~MultiGeneSingleOmegaModel() = default;
 
     // void FastUpdate() {}
 
@@ -560,13 +560,13 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
 
     template <class C>
     void declare_stats(C &t) {
-        t.add("logprior", this, &MultiGeneSingleOmegaModelShared::GetLogPrior);
-        t.add("GeneLogLikelihood", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
+        t.add("logprior", this, &MultiGeneSingleOmegaModel::GetLogPrior);
+        t.add("GeneLogLikelihood", this, &MultiGeneSingleOmegaModel::GetLogLikelihood);
 
         if (blmode == shared) {
-            t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
+            t.add("length", this, &MultiGeneSingleOmegaModel::GetMeanTotalLength);
         } else {
-            t.add("mean_length", this, &MultiGeneSingleOmegaModelShared::GetMeanLength);
+            t.add("mean_length", this, &MultiGeneSingleOmegaModel::GetMeanLength);
             t.add("sd_length", [this]() { return sqrt(GetVarLength()); });
         }
         t.add("omegaarray_mean", [this]() { return omegaarray->GetMean(); });
@@ -595,9 +595,9 @@ class MultiGeneSingleOmegaModelShared : public ChainComponent {
     // ============================================================================================
     // ============================================================================================
 
-    using M = MultiGeneSingleOmegaModelShared;
+    using M = MultiGeneSingleOmegaModel;
 
-    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m);
+    friend std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModel &m);
 
     //-------------------
     // Construction and allocation
@@ -1034,8 +1034,8 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<M> &m) {
     return is;
 }
 
-std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModelShared &m) {
-    Tracer tracer{m, &MultiGeneSingleOmegaModelShared::declare_model};
+std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModel &m) {
+    Tracer tracer{m, &MultiGeneSingleOmegaModel::declare_model};
     os << "MultiGeneSingleOmega"
        << "\t";
     os << m.datafile << '\t' << m.treefile << '\t';
