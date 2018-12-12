@@ -70,7 +70,11 @@ run-app-tests: all
 	@echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
 	_build/globom _test/globom_gal4
 	@echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
-	_build/readglobom _test/globom_gal4	
+	_build/readglobom _test/globom_gal4
+	@echo "\n\e[35m\e[1m== Dated Branch Omega run ===================================================\e[0m"
+	_build/dated -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/dated_gal4
+	@echo "\n\e[35m\e[1m== Dated Branch Omega restart ===============================================\e[0m"
+	_build/dated _test/dated_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a run =============================================================\e[0m"
 	_build/codonm2a -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a restart =========================================================\e[0m"
@@ -154,6 +158,14 @@ DM5: _build
 	_build/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 1.0 --freeomega --omegancat 10 --ncat 30 -u 30 _mutseldm5/bglobin
 	_build/readmutseldm5 _mutseldm5/bglobin
 	_build/mutseldm5 _mutseldm5/bglobin
+
+.PHONY: dated
+dated: _build
+	@cd _build ; make --no-print-directory -j8 dated
+	@rm -rf _dated
+	@mkdir _dated
+	_build/dated -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 _dated/gal4
+	_build/dated _dated/gal4
 
 .PHONY: diffseldsparse
 diffseldsparse: all
