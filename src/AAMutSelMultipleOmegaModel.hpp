@@ -371,7 +371,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
 
-        Nbranch = tree->nb_nodes() - 1;
+        Nbranch = tree->nb_branches();
 
         // Branch lengths
         blhypermean = 0.1;
