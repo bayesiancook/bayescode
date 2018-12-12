@@ -89,9 +89,9 @@ target_link_libraries(diffseldsparse bayescode_lib tree_lib)
 add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
 target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
 
-# Codon M2a
-add_executable(multigenecodonm2a "src/MultiGeneCodonM2a.cpp")
-target_link_libraries(multigenecodonm2a bayescode_lib tree_lib)
+# Multi Gene Codon M2a
+add_executable(multigenecodonm2a "src/MultiGeneCodonM2a.cpp" "src/CodonM2aModel.cpp")
+target_link_libraries(multigenecodonm2a bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")

@@ -51,9 +51,14 @@
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "WhiteNoise.hpp"
+#include "Move.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 
+// mode shared:      global
+// mode shrunken:    gene specific, with hyperparameters estimated across genes
+// mode independent: gene-specific, with fixed hyperparameters
+enum param_mode_t { shared, shrunken, independent };
 
 class CodonM2aModel : public ChainComponent {
   public:

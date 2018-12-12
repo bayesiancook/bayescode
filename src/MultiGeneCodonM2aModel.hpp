@@ -68,7 +68,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     // ------------------
 
     MultiGeneCodonM2aModel(std::string datafile, std::string treefile, param_mode_t blmode,
-        param_mode_t nucmode, omega_param_t omega_param)
+        param_mode_t nucmode)
         : datafile(datafile),
           treefile(treefile),
           codonstatespace(Universal),
@@ -157,17 +157,17 @@ class MultiGeneCodonM2aModel : public ChainComponent {
             nucmatrix = 0;
         }
 
-        puromarray = new IIDBeta(GetLocalNgene(), puromhypermean, puromhyperinvconc);
-        dposomarray = new IIDGamma(GetLocalNgene(), dposomhypermean, dposomhyperinvshape);
-        purwarray = new IIDBeta(GetLocalNgene(), purwhypermean, purwhyperinvconc);
-        poswarray = new IIDBernoulliBeta(GetLocalNgene(), pi, poswhypermean, poswhyperinvconc);
+        puromarray = new IIDBeta(partition.my_allocation_size(),puromhypermean, puromhyperinvconc);
+        dposomarray = new IIDGamma(partition.my_allocation_size(), dposomhypermean, dposomhyperinvshape);
+        purwarray = new IIDBeta(partition.my_allocation_size(), purwhypermean, purwhyperinvconc);
+        poswarray = new IIDBernoulliBeta(partition.my_allocation_size(), pi, poswhypermean, poswhyperinvconc);
 
         if (MPI::p->rank > 0) {
             size_t nb_genes = partition.my_partition_size();
             geneprocess.reserve(nb_genes);
             for (size_t gene_i = 0; gene_i < nb_genes; gene_i++) {
                 geneprocess.emplace_back(
-                    new CodomM2aModel(gene_vector.at(gene_i), treefile, 0.1));
+                    new CodonM2aModel(gene_vector.at(gene_i), treefile, 0.1));
                     // new SingleOmegaModel(gene_vector.at(gene_i), treefile, blmode, nucmode));
                 geneprocess.back()->Update();
             }
@@ -308,6 +308,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
             );
         }
 
+        globalomega = make_group();
+        /*
         // mpi comm, gene syncing, suffstat collection and reduction over genes when moving omega hyper params
         // used in update and move
         globalomega = make_group(
@@ -339,7 +341,10 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 // reduce suffstats on master
                 reduce(omegahypersuffstat)
             );
+        */
 
+        geneomega = make_group();
+        /*
         // mpi comm and gene syncing for gene-specific omega array
         // used in update and trace
         geneomega = make_group(
@@ -368,6 +373,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 // gather them onto master
                 gather(partition, *omegaarray)
             );
+        */
 
         // mpi comm and gene syncing for gene-specific branch lengths
         // used in update and trace
@@ -442,11 +448,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         //clang-format on
     }
 
-    virtual ~MultiGeneSingleOmegaModelShared() = default;
-
-    CodonStateSpace *GetCodonStateSpace() const {
-        return (CodonStateSpace *)refcodondata->GetStateSpace();
-    }
+    virtual ~MultiGeneCodonM2aModel() = default;
 
     int GetNbranch() const { return tree->nb_nodes() - 1; }
 
@@ -458,7 +460,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // summary statistics for tracing MCMC
     int GetNpos() const {
-        return GetNgene() - poswarray->GetNullSet(); 
+        return poswarray->GetSize() - poswarray->GetNullSet(); 
     }
 
     double GetMeanTotalLength() const {
@@ -537,14 +539,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     }
     */
 
-    double MultiGeneCodonM2aModel::GetMeanTotalLength() const {
-        double tot = 0;
-        for (int j = 0; j < Nbranch; j++) {
-            tot += branchlength->GetVal(j);
-        }
-        return tot;
-    }
-
+    template <class C>
     void declare_model(C &t) {
         if (blmode == shared) {
             t.add("meanoverbranches", meanoverbranches);
@@ -572,13 +567,13 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     template <class C>
     void declare_stats(C &t) {
 
-        t.add("logprior", this, &MultiGeneSingleOmegaModelShared::GetLogPrior);
-        t.add("GeneLogLikelihood", this, &MultiGeneSingleOmegaModelShared::GetLogLikelihood);
+        t.add("logprior", this, &MultiGeneCodonM2aModel::GetLogPrior);
+        t.add("GeneLogLikelihood", this, &MultiGeneCodonM2aModel::GetLogLikelihood);
 
         if (blmode == shared) {
-            t.add("length", this, &MultiGeneSingleOmegaModelShared::GetMeanTotalLength);
+            t.add("length", this, &MultiGeneCodonM2aModel::GetMeanTotalLength);
         } else {
-            t.add("mean_length", this, &MultiGeneSingleOmegaModelShared::GetMeanLength);
+            t.add("mean_length", this, &MultiGeneCodonM2aModel::GetMeanLength);
             t.add("sd_length", [this]() { return sqrt(GetVarLength()); });
         }
 
@@ -730,7 +725,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 gene->MoveParameters(1);
             }
 
-            if (omega_param.variable) {
+            // if (omega_param.variable) {
+            if (true)   {
                 // release suffstats
                 globalomega->release();
                 // here, master moves omega hyperparams
@@ -774,7 +770,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            if (omega_param.variable) {
+            if (true)   {
+            // if (omega_param.variable) {
                 // get suffstats from slaves
                 globalomega->acquire();
                 // move omega hyperparams
@@ -1087,6 +1084,16 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     void ToStream(std::ostream &os) { os << *this; }
 
   protected:
+
+    int modalprior;
+
+    int purommode;
+    int dposommode;
+    int purwmode;
+    int poswmode;
+
+    int writegenedata;
+
     std::vector<std::unique_ptr<CodonM2aModel>> geneprocess;
 
     std::string datafile, treefile;
