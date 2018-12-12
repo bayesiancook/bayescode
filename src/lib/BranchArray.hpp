@@ -150,6 +150,11 @@ class SimpleBranchArray : public BranchArray<T> {
 
     size_t size() const { return array.size(); }
 
+    SimpleBranchArray<T>& operator=(const SimpleBranchArray<T>& from)   {
+        array = from.array;
+        return *this;
+    }
+
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
     const std::vector<T> &GetArray() const { return array; }
@@ -171,8 +176,3 @@ class SimpleBranchArray : public BranchArray<T> {
 template <class T>
 struct has_custom_serialization<SimpleBranchArray<T>> : std::true_type {};
 
-template <class T>
-struct has_size<SimpleBranchArray<T>> : std::true_type {};
-
-template <class T>
-struct has_access_operator<SimpleBranchArray<T>> : std::true_type {};

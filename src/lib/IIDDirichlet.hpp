@@ -241,10 +241,7 @@ class IIDDirichlet : public SimpleArray<std::vector<double>> {
 };
 
 template <>
-struct has_size<IIDDirichlet> : std::true_type {};
-
-template <>
-struct has_access_operator<IIDDirichlet> : std::true_type {};
+struct has_custom_serialization<IIDDirichlet> : std::true_type {};
 
 /**
  * \brief An array of Dirichlet random variables, each with its own center and

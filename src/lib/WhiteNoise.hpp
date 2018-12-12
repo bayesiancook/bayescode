@@ -21,6 +21,11 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
     ~GammaWhiteNoise() {}
 
+    GammaWhiteNoise& operator=(const GammaWhiteNoise& from)   {
+        array = from.array;
+        return *this;
+    }
+
     void SetMode(int inmode) { mode = inmode; }
 
     double GetShape() const { return 1.0 / invshape; }
@@ -73,7 +78,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     }
 
     //! return total log prob summed over all entries
-    double GetLogProb() {
+    double GetLogProb() const {
         double total = 0;
         for (int i = 0; i < GetNbranch(); i++) { total += GetLogProb(i); }
         return total;
@@ -97,10 +102,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 };
 
 template <>
-struct has_size<GammaWhiteNoise> : std::true_type {};
-
-template <>
-struct has_access_operator<GammaWhiteNoise> : std::true_type {};
+struct has_custom_serialization<GammaWhiteNoise> : std::true_type {};
 
 /**
  * \brief An array of GammaWhiteNoise
@@ -112,40 +114,21 @@ struct has_access_operator<GammaWhiteNoise> : std::true_type {};
  * parameter uniform across all branches.
  */
 
-class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
+class GammaWhiteNoiseArray : public SimpleArray<GammaWhiteNoise> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
     GammaWhiteNoiseArray(
         int inNgene, const Tree &intree, const BranchSelector<double> &inblmean, const double & ininvshape)
-        : Ngene(inNgene),
-          tree(intree),
-          blmean(inblmean),
-          invshape(ininvshape),
-          blarray(Ngene, (GammaWhiteNoise *)0) {
-        for (int gene = 0; gene < Ngene; gene++) {
-            blarray[gene] = new GammaWhiteNoise(tree, blmean, invshape);
-        }
-    }
+        : SimpleArray(inNgene, GammaWhiteNoise(intree,inblmean,ininvshape)) {}
 
-    ~GammaWhiteNoiseArray() {
-        for (int gene = 0; gene < Ngene; gene++) { delete blarray[gene]; }
-    }
-
-    //! return total number of entries (number of genes)
-    int GetSize() const { return Ngene; }
+    ~GammaWhiteNoiseArray() {}
 
     //! return total number of genes
-    int GetNgene() const { return Ngene; }
+    int GetNgene() const { return size(); }
 
     //! return total number of branches of the underlying tree
-    int GetNbranch() const { return blarray[0]->GetNbranch(); }
-
-    //! const access to the GammaWhiteNoise BranchArray for the given gene
-    const GammaWhiteNoise &GetVal(int gene) const { return *blarray[gene]; }
-
-    //! non-const access to the GammaWhiteNoise BranchArray for the given gene
-    GammaWhiteNoise &operator[](int gene) { return *blarray[gene]; }
+    int GetNbranch() const { return array[0].GetNbranch(); }
 
     //! return mean tree length over genes
     double GetMeanLength() const {
@@ -153,7 +136,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
         for (int j = 0; j < GetNbranch(); j++) {
             double mean = 0;
             for (int g = 0; g < GetNgene(); g++) {
-                double tmp = blarray[g]->GetVal(j);
+                double tmp = array[g].GetVal(j);
                 mean += tmp;
             }
             mean /= GetNgene();
@@ -169,7 +152,7 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
             double mean = 0;
             double var = 0;
             for (int g = 0; g < GetNgene(); g++) {
-                double tmp = blarray[g]->GetVal(j);
+                double tmp = array[g].GetVal(j);
                 mean += tmp;
                 var += tmp * tmp;
             }
@@ -185,22 +168,11 @@ class GammaWhiteNoiseArray : public Array<GammaWhiteNoise> {
     //! return total log prob (over all genes and over all branches)
     double GetLogProb() const {
         double total = 0;
-        for (int gene = 0; gene < GetNgene(); gene++) { total += blarray[gene]->GetLogProb(); }
+        for (int gene = 0; gene < GetNgene(); gene++) { total += array[gene].GetLogProb(); }
         return total;
     }
-
-    size_t size() const { return blarray.size(); }
-
-  private:
-    int Ngene;
-    const Tree &tree;
-    const BranchSelector<double> &blmean;
-    const double& invshape;
-    std::vector<GammaWhiteNoise *> blarray;
 };
 
 template <>
-struct has_size<GammaWhiteNoiseArray> : std::true_type {};
+struct has_custom_serialization<GammaWhiteNoiseArray> : std::true_type {};
 
-template <>
-struct has_access_operator<GammaWhiteNoiseArray> : std::true_type {};

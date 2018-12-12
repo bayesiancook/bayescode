@@ -185,6 +185,11 @@ class SimpleArray : public Array<T> {
 
     size_t size() const { return array.size(); }
 
+    SimpleArray<T>& operator=(const SimpleArray<T>& from)   {
+        array = from.array;
+        return *this;
+    }
+
     //! return a const ref to the std::vector<T> of which this class is the
     //! interface
     const std::vector<T> &GetArray() const { return array; }
@@ -213,15 +218,14 @@ class SimpleArray : public Array<T> {
         (*this)[cat2] = tmp;
     }
 
+    template <class C>
+    void serialization_interface(C &x) {
+        x.add(array);
+    }
+
   protected:
     std::vector<T> array;
 };
-
-template <class T>
-struct has_size<SimpleArray<T>> : std::true_type {};
-
-template <class T>
-struct has_access_operator<SimpleArray<T>> : std::true_type {};
 
 /**
  * \brief A Selector that distributes the components of a mixture over an array

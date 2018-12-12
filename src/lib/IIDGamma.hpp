@@ -122,10 +122,7 @@ class IIDGamma : public SimpleArray<double> {
 };
 
 template <>
-struct has_size<IIDGamma> : std::true_type {};
-
-template <>
-struct has_access_operator<IIDGamma> : std::true_type {};
+struct has_custom_serialization<IIDGamma> : std::true_type {};
 
 /**
  * \brief A tree-structured branch-wise array of iid Gamma variables
@@ -205,14 +202,11 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
         return m2;
     }
 
-
   protected:
     const double& mean;
     const double& invshape;
 };
 
 template <>
-struct has_size<BranchIIDGamma> : std::true_type {};
+struct has_custom_serialization<BranchIIDGamma> : std::true_type {};
 
-template <>
-struct has_access_operator<BranchIIDGamma> : std::true_type {};

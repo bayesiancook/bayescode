@@ -32,7 +32,13 @@ class PartitionedBufferManager {
           _displs(partition.max_index(), 0) {}
 
     template <class T>
-    void add(T& x) {
+    void add(T& x)  {
+        custom_add_dispatch(x,has_custom_serialization<T>());
+    }
+
+  private:
+    template <class T>
+    void custom_add_dispatch(T& x, std::false_type) {
         static_assert(is_partitionable<T>::value,
             "PartitionedBufferManager::add: type T is not partitionable");
         assert(x.size() % partition.size_all() == 0);
@@ -48,6 +54,13 @@ class PartitionedBufferManager {
             i += nb_elements;
         }
     }
+
+    template <class T>
+    void custom_add_dispatch(T& x, std::true_type) {
+        x.serialization_interface(*this);
+    }
+
+  public:
 
     template <class Var, class... Vars>
     void add(Var& var, Vars&&... vars) {
