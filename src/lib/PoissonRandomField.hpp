@@ -16,7 +16,7 @@ class PoissonRandomField {
   public:
     //! \brief Constructor: takes a (const pointer to a) PolyData
     PoissonRandomField(
-        std::set<unsigned> sample_size_set, CodonStateSpace *instatespace, unsigned precision = 10);
+        std::set<unsigned> sample_size_set, CodonStateSpace *instatespace, unsigned precision = 6);
 
     ~PoissonRandomField() /*override*/ = default;
 

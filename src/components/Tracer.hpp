@@ -102,9 +102,6 @@ class Tracer : public RegistrarBase<Tracer> {
     void register_element(std::string const& name, StickBreakingProcess& sbp) {
         add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
 
-        auto& kappa = sbp.GetKappa();
-        add(name + "_kappa", kappa);
-
         auto& beta_variates = sbp.GetBetaVariates();
         add(name + "_betavariates", beta_variates);
     }
