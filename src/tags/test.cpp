@@ -1,6 +1,6 @@
 #include "doctest.h"
 
-#include "context.hpp"
+#include "decl_info.hpp"
 // #include <typeinfo>
 // #include <iostream>
 
@@ -76,4 +76,16 @@ TEST_CASE("remove_tag") {
     CHECK(e_has_mytag == false);
     CHECK(e_has_mytag2 == true);
     CHECK(e_has_mytag3 == false);
+}
+
+TEST_CASE("DeclInfo basic usage") {
+    double a = 2.33;
+    auto i = make_decl_info<MyTag, MyTag2>(a, "a");
+
+    CHECK(i.name == "a");
+    CHECK(i.target == 2.33);
+    bool target_is_double = is_same<double, decltype(i)::target_type>::value;
+    CHECK(target_is_double == true);
+    bool context_is_tag1_tag2 = is_same<Context<MyTag, MyTag2>, decltype(i)::context>::value;
+    CHECK(context_is_tag1_tag2 == true);
 }
