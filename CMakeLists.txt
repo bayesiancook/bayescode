@@ -109,5 +109,5 @@ target_link_libraries(mpi_par_test global_lib ${MPI_LIBRARIES})
 
 
 # TMP TMP TMP
-add_executable(mytest_bin "src/mytest.cpp")
+add_executable(mytest_bin "src/tags/decl_tmp.cpp")
 target_link_libraries(mytest_bin global_lib)

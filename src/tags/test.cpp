@@ -80,9 +80,8 @@ TEST_CASE("remove_tag") {
 
 TEST_CASE("DeclInfo basic usage") {
     double a = 2.33;
-    auto i = make_decl_info<MyTag, MyTag2>(a, "a");
+    auto i = make_decl_info<MyTag, MyTag2>(a);
 
-    CHECK(i.name == "a");
     CHECK(i.target == 2.33);
     bool target_is_double = is_same<double, decltype(i)::target_type>::value;
     CHECK(target_is_double == true);

@@ -12,14 +12,15 @@ namespace is_decl_info {
 template <class Target, class _Context>
 struct DeclInfo : is_decl_info::tag, _Context {
     static_assert(is_context::trait<_Context>::value, "_Context is not a context");
-    Target& target;
-    std::string name;
     using context = _Context;
     using target_type = Target;
-    DeclInfo(Target& target, std::string name) : target(target), name(name) {}
+
+    Target& target;
+
+    DeclInfo(Target& target) : target(target) {}
 };
 
 template <class... Tags, class Target>
-DeclInfo<Target, Context<Tags...>> make_decl_info(Target& target, std::string name) {
-    return DeclInfo<Target, Context<Tags...>>(target, name);
+DeclInfo<Target, Context<Tags...>> make_decl_info(Target& target) {
+    return DeclInfo<Target, Context<Tags...>>(target);
 }
