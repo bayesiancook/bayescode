@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuple>
 #include <type_traits>
 
 namespace is_context {
@@ -20,7 +21,6 @@ struct Context : is_context::tag, public Tags... {
         return Context<Tag, Tags...>();
     }
 
-
     template <class... OtherTags>
     static Context<Tags..., OtherTags...> merge_helper(Context<OtherTags...>) {
         return Context<Tags..., OtherTags...>();
@@ -30,6 +30,15 @@ struct Context : is_context::tag, public Tags... {
     static decltype(merge_helper(OtherContext())) merge(OtherContext) {
         static_assert(is_context::trait<OtherContext>::value, "OtherContext is not a context");
         return merge_helper(OtherContext());
+    }
+
+
+    template <class Tag>
+    static decltype(
+        std::tuple_cat<std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...)
+    remove_tag() {
+        return std::tuple_cat<
+            std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...;
     }
 };
 
