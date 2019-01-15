@@ -19,21 +19,20 @@ struct Context : is_context::tag, public Tags... {
     static Context<Tag, Tags...> add_tag() {
         return Context<Tag, Tags...>();
     }
+
+
+    template <class... OtherTags>
+    static Context<Tags..., OtherTags...> merge_helper(Context<OtherTags...>) {
+        return Context<Tags..., OtherTags...>();
+    }
+
+    template <class OtherContext>
+    static decltype(merge_helper(OtherContext())) merge(OtherContext) {
+        static_assert(is_context::trait<OtherContext>::value, "OtherContext is not a context");
+        return merge_helper(OtherContext());
+    }
 };
 
-
-// template <class _Context, class _Context2>
-// struct context_union {
-//     static_assert(is_context::trait<_Context>::value, "_Context is not a context");
-
-//     static _Context helper(Context<>) {}  // _Context2 is empty
-
-//     template <class Tag, class... Tags>
-//     static typename context_union<typename add_tag<_Context, Tag>::type, Context<Tags...>>::type
-//     helper(Context<Tag, Tags...>) {}
-
-//     using type = decltype(helper(_Context2()));
-// };
 
 // template <class _Context, class _Tag>
 // struct remove_tag {
@@ -50,7 +49,7 @@ struct Context : is_context::tag, public Tags... {
 //     static Context<> helper(Context<>) {}  // empty context: nothing to remove
 
 //     template <class Arg, class... Args>
-//     static decltype(select(typename std::is_same<Arg, _Tag>::type(), Context<Arg, Args...>()))  //
+//     static decltype(select(typename std::is_same<Arg, _Tag>::type(), Context<Arg, Args...>())) //
 //     helper(Context<Arg, Args...>) {}
 
 //     using type = decltype(helper(_Context()));

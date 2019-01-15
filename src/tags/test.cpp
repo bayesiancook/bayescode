@@ -36,21 +36,20 @@ TEST_CASE("add_tag") {
     CHECK(e_has_mytag == true);
 }
 
-// TEST_CASE("context_union") {
-//     Context<MyTag> c;
-//     Context<MyTag2, MyTag3> d;
-//     context_union<decltype(c), decltype(d)>::type e;
-//     // cout << typeid(e).name() << endl;
+TEST_CASE("context merge") {
+    Context<MyTag> c;
+    Context<MyTag2, MyTag3> d;
+    auto e = c.merge(d);
 
-//     bool e_has_mytag = decltype(e)::has_tag<MyTag>::value;
-//     bool e_has_mytag2 = decltype(e)::has_tag<MyTag2>::value;
-//     bool e_has_mytag3 = decltype(e)::has_tag<MyTag3>::value;
-//     bool e_has_mytag4 = decltype(e)::has_tag<MyTag4>::value;
-//     CHECK(e_has_mytag == true);
-//     CHECK(e_has_mytag2 == true);
-//     CHECK(e_has_mytag3 == true);
-//     CHECK(e_has_mytag4 == false);
-// }
+    bool e_has_mytag = decltype(e)::has_tag<MyTag>::value;
+    bool e_has_mytag2 = decltype(e)::has_tag<MyTag2>::value;
+    bool e_has_mytag3 = decltype(e)::has_tag<MyTag3>::value;
+    bool e_has_mytag4 = decltype(e)::has_tag<MyTag4>::value;
+    CHECK(e_has_mytag == true);
+    CHECK(e_has_mytag2 == true);
+    CHECK(e_has_mytag3 == true);
+    CHECK(e_has_mytag4 == false);
+}
 
 // TEST_CASE("remove_tag") {
 //     Context<MyTag, MyTag2> c;
