@@ -18,6 +18,11 @@ struct DeclInfo : is_decl_info::tag, _Context {
     Target& target;
 
     DeclInfo(Target& target) : target(target) {}
+
+    template <class Tag>
+    DeclInfo<Target, typename add_tag<_Context, Tag>::type> yolo() {
+        return DeclInfo<Target, typename add_tag<_Context, Tag>::type>(target);
+    }
 };
 
 template <class... Tags, class Target>

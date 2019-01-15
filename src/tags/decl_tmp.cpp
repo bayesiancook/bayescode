@@ -20,11 +20,18 @@ namespace ignore_name {
 }  // namespace ignore_name
 
 
-template <class _Context, class... Args>
-void declare(_Context& context, Args&&... args) {
-    ignore_name::declare(typename has_tag<typename _Context::context, ignore_name::tag>::type(),
+template <class _DeclInfo, class... Args>
+void declare(_DeclInfo& context, Args&&... args) {
+    ignore_name::declare(integral_constant < bool,
+        _DeclInfo::context::template has_tag<ignore_name::tag>::type::value or
+            ignore_name::trait<typename _DeclInfo::target_type>::value > (),
         context, std::forward<Args>(args)...);
 }
+
+// template <class _DeclInfo, class... Args>
+// void random_var(_DeclInfo& context, Args&&... args) {
+
+// }
 
 template <class... Tags, class Target, class Source>
 void use_interface(Target& target, Source& source) {
@@ -33,35 +40,37 @@ void use_interface(Target& target, Source& source) {
 
 
 class MyModel {
-    int i = 3;
+    int i = 3, k = 5;
     double j = 2.3;
 
   public:
-    template <class _Context>  // TODO: change name so that Context can be used here
-    void interface(_Context context) {
-        declare(context, "i", i);
-        declare(context, "j", j);
+    template <class _DeclInfo>
+    void interface(_DeclInfo info) {
+        declare(info, "i", i);
+        declare(info, "j", j);
+        declare(info, "k", k);
     }
 };
 
-struct User {
+struct Tracer {
     template <class T>
     void add(string name, T& i) {
         cout << "Variable " << name << " has value " << i << endl;
     }
 };
 
-struct User2 {
+struct Tracer2 : ignore_name::tag {
     template <class T>
     void add(T& i) {
-        cout << "Variable has value " << i << endl;
+        i++;
+        cout << "Variable has value+1 " << i << endl;
     }
 };
 
 int main() {
-    User u;
-    User2 u2;
+    Tracer u;
+    Tracer2 u2;
     MyModel m;
     use_interface(u, m);
-    use_interface<ignore_name::tag>(u2, m);
+    use_interface(u2, m);
 }

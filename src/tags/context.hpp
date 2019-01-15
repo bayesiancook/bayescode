@@ -9,12 +9,13 @@ namespace is_context {
 }  // namespace is_context
 
 template <class... Tags>
-struct Context : is_context::tag, public Tags... {};
+struct Context : is_context::tag, public Tags... {
+    using Self = Context<Tags...>;
 
-template <class _Context, class _Tag>
-struct has_tag : public std::integral_constant<bool, std::is_base_of<_Tag, _Context>::value> {
-    static_assert(is_context::trait<_Context>::value, "_Context is not a context");
+    template <class Tag>
+    struct has_tag : public std::integral_constant<bool, std::is_base_of<Tag, Self>::value> {};
 };
+
 
 template <class _Context, class _Tag>
 struct add_tag {
