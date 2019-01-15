@@ -10,7 +10,7 @@ namespace is_decl_info {
 }  // namespace is_decl_info
 
 template <class Target, class _Context>
-struct DeclInfo : is_decl_info::tag, _Context {
+struct DeclInfo : is_decl_info::tag {
     static_assert(is_context::trait<_Context>::value, "_Context is not a context");
     using context = _Context;
     using target_type = Target;
@@ -20,8 +20,8 @@ struct DeclInfo : is_decl_info::tag, _Context {
     DeclInfo(Target& target) : target(target) {}
 
     template <class Tag>
-    DeclInfo<Target, typename add_tag<_Context, Tag>::type> yolo() {
-        return DeclInfo<Target, typename add_tag<_Context, Tag>::type>(target);
+    DeclInfo<Target, decltype(_Context::template add_tag<Tag>())> add_tag() {
+        return DeclInfo<Target, decltype(_Context::template add_tag<Tag>())>(target);
     }
 };
 
