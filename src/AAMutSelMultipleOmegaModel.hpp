@@ -643,7 +643,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! of the center and concentration parameters of this component
     double BaseSuffStatLogProb(int k) const {
         return basesuffstatarray->GetVal(k).GetLogProb(
-            basecenterarray->GetVal(k), baseconcentrationarray->GetVal(k));
+            basecenterarray->GetVal(k), 1.0 / baseconcentrationarray->GetVal(k));
     }
 
     //-------------------
