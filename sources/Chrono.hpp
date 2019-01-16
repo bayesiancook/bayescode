@@ -60,6 +60,8 @@ class MeasureTime : public std::stringstream {
         stopped = true;
         duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - counter);
+        fineduration = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now() - counter);
     }
 
     template <int i>
@@ -79,9 +81,12 @@ class MeasureTime : public std::stringstream {
         print<i>("");
     }
 
+    int get_elapsed_time() const { return fineduration.count(); }
+
   private:
     std::chrono::time_point<std::chrono::high_resolution_clock> counter;
     std::chrono::milliseconds duration;
+    std::chrono::microseconds fineduration;
     bool stopped;
     std::stringstream ss;
 };

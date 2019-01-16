@@ -12,6 +12,8 @@ class AbstractMonitor {
 };
 
 class MonitorManager {
+    MeasureTime timer;
+
   public:
     std::map<std::string, std::unique_ptr<AbstractMonitor>> monitors;
 
@@ -28,7 +30,7 @@ class MonitorManager {
 
     void print(std::ostream& os) const {
         for (auto& monitor : monitors) {
-            os << monitor.first << ": ";
+            os << monitor.first << ":  ";
             monitor.second->print(os);
             os << "\n";
         }
@@ -39,9 +41,11 @@ class MonitorManager {
         if (monitors.find(name) == monitors.end()) {
             new_monitor<M>(name);  // HACKISH (no constructor params)
         }
+        timer.start();
         auto result = f(std::forward<Args>(args)...);
+        timer.stop();
         auto& monitor_ref = dynamic_cast<M&>(*monitors.at(name));
-        monitor_ref.update(result);
+        monitor_ref.update(timer.get_elapsed_time(), result);
     }
 };
 
@@ -51,27 +55,38 @@ extern std::unique_ptr<MonitorManager> gm;
 template <class T>
 class MeanMonitor : public AbstractMonitor {
     T sum{0};
+    int time_sum{0};
     int count{0};
 
     T tmp_sum{0};
+    int tmp_time_sum{0};
     int tmp_count{0};
 
   public:
-    void print(std::ostream& os) const final { os << sum / static_cast<double>(count); }
+    void print(std::ostream& os) const final {
+        os << 100 * sum / static_cast<double>(count)
+           << "%,  mean time: " << static_cast<double>(time_sum) / static_cast<double>(count)
+           << "ns,  total time: " << time_sum;
+    }
 
-    void update(T x) {
+    void update(int time, T x) {
         sum += x;
         tmp_sum += x;
         count++;
         tmp_count++;
+        time_sum += time;
+        tmp_time_sum += time;
     }
 
     void tmp_reset() {
         tmp_sum = 0;
         tmp_count = 0;
+        tmp_time_sum = 0;
     }
 
-    double tmp_mean() const {
-        return tmp_sum / tmp_count;
+    double tmp_mean() const { return tmp_sum / tmp_count; }
+    double tmp_time_mean() const {
+        return static_cast<double>(tmp_time_sum) / static_cast<double>(tmp_count);
     }
+    double tmp_time_total() const { return tmp_time_sum; }
 };
