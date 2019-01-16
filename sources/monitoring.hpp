@@ -55,11 +55,11 @@ extern std::unique_ptr<MonitorManager> gm;
 template <class T>
 class MeanMonitor : public AbstractMonitor {
     T sum{0};
-    int time_sum{0};
+    unsigned long time_sum{0};
     int count{0};
 
     T tmp_sum{0};
-    int tmp_time_sum{0};
+    unsigned long tmp_time_sum{0};
     int tmp_count{0};
 
   public:
