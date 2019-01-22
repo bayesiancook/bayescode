@@ -22,8 +22,8 @@ class IIDProfileMask : public SimpleArray<vector<int>> {
   public:
     //! constructor, parameterized by array size, mask dimension and Bernoulli
     //! probability parameter
-    IIDProfileMask(int size, int indim, double pi)
-        : SimpleArray(size, vector<int>(indim, 1)), dim(indim), pi(0.1) {}
+    IIDProfileMask(int size, int indim, double inpi)
+        : SimpleArray(size, vector<int>(indim, 1)), dim(indim), pi(inpi) {}
 
     //! return dimension of the masks
     int GetDim() const { return dim; }
