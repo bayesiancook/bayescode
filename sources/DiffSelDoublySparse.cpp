@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
         int ncond = 2;
         int nlevel = 2;
         int codonmodel = 1;
-        double epsilon = -1;
+        double epsilon = 0.001;
 
         double fitnessshape = 20;
         int fitnesscentermode = 3;

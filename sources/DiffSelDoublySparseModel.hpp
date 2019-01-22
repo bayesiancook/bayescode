@@ -839,9 +839,17 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
+        Chrono chrono1;
+        Chrono chrono2;
         gammanullcount = 0;
+        chrono1.Start();
         ResampleSub(1.0);
-        MoveParameters(3, 20);
+        chrono1.Stop();
+        
+        chrono2.Start();
+        MoveParameters(3, 9);
+        chrono2.Stop();
+        cerr << chrono1.GetTime() << '\t' << chrono2.GetTime() << '\n';
         return 1.0;
     }
 
@@ -1035,7 +1043,7 @@ class DiffSelDoublySparseModel : public ProbModel {
         // if masks are activated, move all active entries
         else {
             MoveBaselineFitness(1.0, nrep);
-            MoveBaselineFitness(0.3, nrep);
+            // MoveBaselineFitness(0.3, nrep);
         }
     }
 
@@ -1115,7 +1123,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     void MoveFitnessShifts(int nrep) {
         for (int k = 1; k < Ncond; k++) {
             MoveFitnessShifts(k, 1, nrep);
-            MoveFitnessShifts(k, 0.3, nrep);
+            // MoveFitnessShifts(k, 0.3, nrep);
         }
     }
 
@@ -1397,9 +1405,11 @@ class DiffSelDoublySparseModel : public ProbModel {
 
     //! MH move schedule on mask hyperparameter (maskprob)
     void MoveMaskHyperParameters(int nrep) {
+        /*
         SlidingMove(maskprob, 1.0, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
                     &DiffSelDoublySparseModel::UpdateMask, this);
-        SlidingMove(maskprob, 0.1, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
+        */
+        SlidingMove(maskprob, 0.03, nrep, 0.05, 0.975, &DiffSelDoublySparseModel::MaskLogProb,
                     &DiffSelDoublySparseModel::UpdateMask, this);
     }
 

@@ -668,7 +668,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-        int nrep = 10;
+        int nrep = 6;
 
         for (int rep = 0; rep < nrep; rep++) {
             movechrono.Start();

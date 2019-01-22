@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
         int saveall = 1;
         int writegenedata = 1;
         double fitnessshape = 20;
-        double epsilon = -1;
+        double epsilon = 0.001;
         int fitnesscentermode = 3;
         int blmode = 1;
         int nucmode = 1;
