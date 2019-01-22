@@ -313,7 +313,7 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
     }
 
   protected:
-    vector<double> center;
+    const vector<double>& center;
     double concentration;
 };
 
