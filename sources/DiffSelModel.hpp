@@ -530,7 +530,7 @@ class DiffSelModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
 
     // ---------------
     // collecting suff stats

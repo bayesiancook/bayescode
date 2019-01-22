@@ -332,7 +332,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
 
     double GetVarLength() const { return branchlengtharray->GetVarLength(); }
 
-    void TraceHeader(ostream &os) const {
+    void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "invshape\t";
         os << "meanwidth\t";
@@ -346,7 +346,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         os << '\n';
     }
 
-    void Trace(ostream &os) const {
+    void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t' << blhyperinvshape << '\t';
@@ -366,9 +366,9 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         os.flush();
     }
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
 
-    void MasterToStream(ostream &os) const {
+    void MasterToStream(ostream &os) const override {
         os << lambda << '\t';
         os << *branchlength << '\t';
         os << blhyperinvshape << '\t';
@@ -410,7 +410,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
         MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
     }
 
-    void MasterFromStream(istream &is) {
+    void MasterFromStream(istream &is) override {
         is >> lambda;
         is >> *branchlength;
         is >> blhyperinvshape;

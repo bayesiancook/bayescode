@@ -7,7 +7,7 @@
 
 class MultiGeneDiffSelModel : public MultiGeneProbModel {
   private:
-    const double minshiftprobhypermean = 0.01;
+    // const double minshiftprobhypermean = 0.01;
 
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
@@ -190,13 +190,13 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
 
     double GetVarLength() const { return branchlengtharray->GetVarLength(); }
 
-    void TraceHeader(ostream &os) const {
+    void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "stdev\t";
         os << '\n';
     }
 
-    void Trace(ostream &os) const {
+    void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << GetMeanLength() << '\t' << GetVarLength() << '\t';
@@ -204,9 +204,9 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
         os.flush();
     }
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
 
-    void MasterToStream(ostream &os) const {
+    void MasterToStream(ostream &os) const override {
         os << lambda << '\t';
         os << *branchlength << '\t';
         os << blhyperinvshape << '\t';
@@ -244,7 +244,7 @@ class MultiGeneDiffSelModel : public MultiGeneProbModel {
         MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
     }
 
-    void MasterFromStream(istream &is) {
+    void MasterFromStream(istream &is) override {
         is >> lambda;
         is >> *branchlength;
         is >> blhyperinvshape;

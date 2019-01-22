@@ -335,7 +335,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // Traces and Monitors
     //-------------------
 
-    void TraceHeader(ostream &os) const {
+    void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL";
         if (blmode == 2) {
             os << "\tlength";
@@ -354,7 +354,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         os << '\n';
     }
 
-    void Trace(ostream &os) const {
+    void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood();
 
@@ -458,9 +458,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         return tot;
     }
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
 
-    void MasterFromStream(istream &is) {
+    void MasterFromStream(istream &is) override {
 
         if (blmode == 2) {
             is >> lambda;
@@ -484,7 +484,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         is >> *omegaarray;
     }
 
-    void MasterToStream(ostream &os) const {
+    void MasterToStream(ostream &os) const override {
 
         if (blmode == 2) {
             os << lambda << '\t';

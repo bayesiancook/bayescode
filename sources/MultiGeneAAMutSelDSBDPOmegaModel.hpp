@@ -442,7 +442,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         return n;
     }
 
-    void TraceHeader(ostream &os) const {
+    void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\t";
         os << "length\t";
         if (blmode < 2) {
@@ -482,7 +482,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     double GetVarLength() const { return branchlengtharray->GetVarLength(); }
 
-    void Trace(ostream &os) const {
+    void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         if (blmode == 2) {
@@ -541,7 +541,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         os.flush();
     }
 
-    void Monitor(ostream &os) const {
+    void Monitor(ostream &os) const override {
         os << totchrono.GetTime() << '\t' << paramchrono.GetTime() << '\t' << basechrono.GetTime()
            << '\t' << blchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
         os << "prop time in param moves: " << paramchrono.GetTime() / totchrono.GetTime() << '\n';

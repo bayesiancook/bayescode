@@ -113,8 +113,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // Traces and Monitors
     // ------------------
 
-    void TraceHeader(ostream &os) const;
-    void Trace(ostream &os) const;
+    void TraceHeader(ostream &os) const override;
+    void Trace(ostream &os) const override;
 
     void TracePosWeight(ostream &os) const;
     void TracePosOm(ostream &os) const;
@@ -122,7 +122,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     void MasterTraceSitesPostProb(ostream &os);
     void SlaveTraceSitesPostProb();
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
     void MasterFromStream(istream &is) override;
     void MasterToStream(ostream &os) const override;
 
@@ -488,8 +488,6 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     int poswmode;
 
     int modalprior;
-
-    int ncycle;
 
     Chrono movechrono;
     Chrono mapchrono;

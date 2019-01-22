@@ -1,5 +1,5 @@
 
-#ifndef IIDMORMAL_H
+#ifndef IIDNORMAL_H
 #define IIDNORMAL_H
 
 #include "Array.hpp"

@@ -21,7 +21,7 @@ class DiffSelSample : public Sample {
   public:
     string GetModelType() override { return modeltype; }
 
-    DiffSelModel *GetModel() { return (DiffSelModel *)model; }
+    DiffSelModel *GetModel() override { return (DiffSelModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)

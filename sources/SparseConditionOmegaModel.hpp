@@ -396,7 +396,7 @@ class SparseConditionOmegaModel : public ProbModel {
 
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
-    void PostPred(string name) {
+    void PostPred(string name) override {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
@@ -440,7 +440,7 @@ class SparseConditionOmegaModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
 
     //! log prior over branch lengths (iid exponential of rate lambda)
     double BranchLengthsLogPrior() const {
@@ -557,7 +557,7 @@ class SparseConditionOmegaModel : public ProbModel {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move() {
+    double Move() override {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;
@@ -679,9 +679,9 @@ class SparseConditionOmegaModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void Monitor(ostream &os) const {}
+    void Monitor(ostream &os) const override {}
 
-    void ToStream(ostream &os) const {
+    void ToStream(ostream &os) const override {
         os << lambda << '\n';
         os << *branchlength << '\n';
         os << *condomegaarray << '\n';
@@ -689,7 +689,7 @@ class SparseConditionOmegaModel : public ProbModel {
         os << nucstat << '\n';
     }
 
-    void FromStream(istream &is) {
+    void FromStream(istream &is) override {
         is >> lambda;
         is >> *branchlength;
         is >> *condomegaarray;

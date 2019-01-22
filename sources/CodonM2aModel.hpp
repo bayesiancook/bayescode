@@ -350,7 +350,7 @@ class CodonM2aModel : public ProbModel {
     //-------------------
 
     //! \brief complete MCMC move schedule
-    double Move();
+    double Move() override;
 
     //! Gibbs resample substitution mappings conditional on current parameter
     //! configuration

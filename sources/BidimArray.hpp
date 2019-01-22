@@ -4,6 +4,7 @@
 
 #include <vector>
 #include "MPIBuffer.hpp"
+#include "Array.hpp"
 
 /**
  * \brief An interface for an abstract indexed bidim-array of constant

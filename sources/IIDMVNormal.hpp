@@ -2,7 +2,7 @@
 #ifndef IIDMVNORMAL_H
 #define IIDMVNORMAL_H
 
-// #include "Array.hpp"
+#include "Array.hpp"
 #include "BidimArray.hpp"
 
 /**

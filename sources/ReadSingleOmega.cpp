@@ -20,7 +20,7 @@ class SingleOmegaSample : public Sample {
   public:
     string GetModelType() override { return modeltype; }
 
-    SingleOmegaModel *GetModel() { return (SingleOmegaModel *)model; }
+    SingleOmegaModel *GetModel() override { return (SingleOmegaModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)

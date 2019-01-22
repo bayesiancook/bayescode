@@ -1,24 +1,12 @@
 #To compile with gsl, reactivate the following line (remove '#')
-#USE_GSL=-DGSL
 
-#To statically build the executables, uncomment the following line
-#STATIC=-static
+LIBS=
 
-ifdef USE_GSL
-#GSLLIB=-lgsl -lgslcblas
-else
-GSLLIB=
-endif
-
-LIBS=$(GSLLIB)
-#LIBS=$(GSLLIB) -lboost_regex
-
-CC=mpic++
+CC=g++
 SYSLIB=
 INCLUDES=
-#CPPFLAGS= $(USE_GSL) $(INCLUDES)
-CPPFLAGS= -std=c++11 -g -Wall -O3 -Wno-int-in-bool-context $(USE_GSL) $(INCLUDES)
-LDFLAGS=$(STATIC)
+CPPFLAGS= -std=c++11 -Wall -O3 $(INCLUDES)
+LDFLAGS= -I/usr/local/Cellar/open-mpi/4.0.0/include -L/usr/local/opt/libevent/lib -L/usr/local/Cellar/open-mpi/4.0.0/lib -lmpi
 INSTALL_DIR=
 INSTALL_LIB=
 SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp 

@@ -21,7 +21,7 @@ class CodonM2aSample : public Sample {
   public:
     string GetModelType() override { return modeltype; }
 
-    CodonM2aModel *GetModel() { return (CodonM2aModel *)model; }
+    CodonM2aModel *GetModel() override { return (CodonM2aModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)

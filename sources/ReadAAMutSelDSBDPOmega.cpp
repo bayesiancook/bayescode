@@ -23,7 +23,7 @@ class AAMutSelDSBDPOmegaSample : public Sample {
   public:
     string GetModelType() override { return modeltype; }
 
-    AAMutSelDSBDPOmegaModel *GetModel() { return (AAMutSelDSBDPOmegaModel *)model; }
+    AAMutSelDSBDPOmegaModel *GetModel() override { return (AAMutSelDSBDPOmegaModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)

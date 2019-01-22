@@ -28,7 +28,7 @@ class DiffSelDoublySparseSample : public Sample {
   public:
     string GetModelType() override { return modeltype; }
 
-    DiffSelDoublySparseModel *GetModel() { return (DiffSelDoublySparseModel *)model; }
+    DiffSelDoublySparseModel *GetModel() override { return (DiffSelDoublySparseModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)

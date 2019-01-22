@@ -592,7 +592,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
 
     //! return joint log prob (log prior + log likelihood)
-    double GetLogProb() const { return GetLogPrior() + GetLogLikelihood(); }
+    double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
 
     //! \brief log prior over hyperparameter of prior over branch lengths (here,
     //! lambda ~ exponential of rate 10)
@@ -802,7 +802,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //-------------------
 
     //! complete MCMC move schedule
-    double Move() {
+    double Move() override {
         ResampleSub(1.0);
         MoveParameters(30);
         return 1.0;

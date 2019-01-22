@@ -6,6 +6,36 @@
 #include "MPIBuffer.hpp"
 
 /**
+ * \brief output stream operator for a Selector<T>
+ *
+ * in practice, calls the ToStream method of Selector<T>
+ */
+
+/**
+ * \brief template for output stream operator for a std::vector<T>
+ */
+
+template <class T>
+ostream &operator<<(ostream &os, const vector<T> &array) {
+    for (unsigned int i = 0; i < array.size(); i++) {
+        os << array[i] << '\t';
+    }
+    return os;
+}
+
+/**
+ * \brief template for input stream operator for a std::vector<T>
+ */
+
+template <class T>
+istream &operator>>(istream &is, vector<T> &array) {
+    for (unsigned int i = 0; i < array.size(); i++) {
+        is >> array[i];
+    }
+    return is;
+}
+
+/**
  * \brief An interface for an abstract indexed array of constant references over
  * objects of type T
  *
@@ -99,54 +129,6 @@ class Array : public Selector<T> {
         }
     }
 };
-
-/**
- * \brief output stream operator for a Selector<T>
- *
- * in practice, calls the ToStream method of Selector<T>
- */
-
-template <class T>
-ostream &operator<<(ostream &os, const Selector<T> &array) {
-    array.ToStream(os);
-    return os;
-}
-
-/**
- * \brief input stream operator for a Array<T>
- *
- * in practice, calls the FromStream method of Array<T>
- */
-
-template <class T>
-istream &operator>>(istream &is, Array<T> &array) {
-    array.FromStream(is);
-    return is;
-}
-
-/**
- * \brief template for output stream operator for a std::vector<T>
- */
-
-template <class T>
-ostream &operator<<(ostream &os, const vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        os << array[i] << '\t';
-    }
-    return os;
-}
-
-/**
- * \brief template for input stream operator for a std::vector<T>
- */
-
-template <class T>
-istream &operator>>(istream &is, vector<T> &array) {
-    for (unsigned int i = 0; i < array.size(); i++) {
-        is >> array[i];
-    }
-    return is;
-}
 
 /**
  * \brief A Selector<T> that returns a reference to the same value T for any
@@ -262,5 +244,24 @@ class MixtureSelector : public Selector<T> {
     const Selector<T> *components;
     const Selector<int> *alloc;
 };
+
+
+template <class T>
+ostream &operator<<(ostream &os, const Selector<T> &array) {
+    array.ToStream(os);
+    return os;
+}
+
+/**
+ * \brief input stream operator for a Array<T>
+ *
+ * in practice, calls the FromStream method of Array<T>
+ */
+
+template <class T>
+istream &operator>>(istream &is, Array<T> &array) {
+    array.FromStream(is);
+    return is;
+}
 
 #endif
