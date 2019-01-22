@@ -211,9 +211,6 @@ class IIDDirichlet : public SimpleArray<vector<double>> {
 
     ~IIDDirichlet() {}
 
-    //! set center of the Dirichlet distribution
-    void SetCenter(const vector<double> &incenter) { center = incenter; }
-
     //! set concentration of the Dirichlet distribution
     void SetConcentration(double inconcentration) { concentration = inconcentration; }
 
