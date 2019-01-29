@@ -2,11 +2,11 @@
 
 LIBS=
 
-CC=g++
+CC=mpic++
 SYSLIB=
 INCLUDES=
 CPPFLAGS= -std=c++11 -Wall -O3 $(INCLUDES)
-LDFLAGS= -I/usr/local/Cellar/open-mpi/4.0.0/include -L/usr/local/opt/libevent/lib -L/usr/local/Cellar/open-mpi/4.0.0/lib -lmpi
+LDFLAGS=
 INSTALL_DIR=
 INSTALL_LIB=
 SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CodonM2aModel.cpp MultiGeneCodonM2aModel.cpp 

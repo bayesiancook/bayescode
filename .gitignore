@@ -1,3 +1,5 @@
 sources*/*.o
-sources*/*.d
+sources*/*.d*
 data/*
+.vscode
+_build
