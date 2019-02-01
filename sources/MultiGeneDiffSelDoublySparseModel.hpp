@@ -623,7 +623,7 @@ class MultiGeneDiffSelDoublySparseModel : public MultiGeneProbModel {
     // across all genes allocated to that slave
 
     void MasterMove() override {
-        int nrep = 10;
+        int nrep = 6;
 
         for (int rep = 0; rep < nrep; rep++) {
 
