@@ -107,12 +107,18 @@ class DiffSelDoublySparseSample : public Sample {
                 const vector<vector<int>> &toggle = GetModel()->GetCondToggleArray(k);
                 for (int j = 0; j < Nsite; j++) {
                     int n = 0;
-                    for (int a = 0; a < Naa; a++) {
-                        pp[k - 1][j][a] += toggle[j][a] * mask[j][a];
-                        n += toggle[j][a] * mask[j][a];
+                    int nb_active_aas = 0;
+                    for (int aa = 0; aa < Naa; aa++) {
+                        nb_active_aas += mask[j][aa];
                     }
-                    if (n) {
-                        sitepp[k - 1][j]++;
+                    if (nb_active_aas >= 2) {
+                        for (int a = 0; a < Naa; a++) {
+                            pp[k - 1][j][a] += toggle[j][a] * mask[j][a];
+                            n += toggle[j][a] * mask[j][a];
+                        }
+                        if (n) {
+                            sitepp[k - 1][j]++;
+                        }
                     }
                 }
             }
