@@ -1735,6 +1735,7 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << "prob" << k << '\t';
             os << "nshift" << k << '\t';
         }
+        os << "maskprob\t",
         os << "statent\t";
         os << "rrent\t";
         os << "gammanulls\n";
@@ -1763,6 +1764,7 @@ class DiffSelDoublySparseModel : public ProbModel {
             os << shiftprob[k - 1] << '\t';
             os << GetPropShift(k) << '\t';
         }
+        os << maskprob << '\t';
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\t';
         os << gammanullcount << '\n';
