@@ -225,6 +225,7 @@ class CodonM2aModel : public ProbModel {
     // void Monitor(ostream& os) const override {}
     void FromStream(istream &is) override;
     void ToStream(ostream &os) const override;
+    void ToStreamHeader(ostream &os) const override;
 
     //-------------------
     // Likelihood

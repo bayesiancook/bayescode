@@ -565,20 +565,31 @@ void CodonM2aModel::GetSitesPostProb(double *array) const {
     }
 }
 
+void CodonM2aModel::ToStreamHeader(ostream &os) const {
+    os << "purom" << '\t' << "dposom" << '\t' << "purw" << '\t' << "posw" << '\t';
+    os << "A2C\tA2G\tA2T\tC2G\tC2T\tG2T\t";
+    os << "piA\tpiC\tpiG\tpiT\t";
+    os << "lambda" << '\t';
+    for (int i=0; i<Nbranch; i++)  {
+        os << "bl" << i << '\t';
+    }
+    os << '\n';
+}
+
 void CodonM2aModel::ToStream(ostream &os) const {
-    os << lambda << '\t';
-    os << *branchlength << '\t';
     os << purom << '\t' << dposom << '\t' << purw << '\t' << posw << '\t';
     os << nucrelrate << '\t';
     os << nucstat << '\t';
+    os << lambda << '\t';
+    os << *branchlength << '\n';
 }
 
 void CodonM2aModel::FromStream(istream &is) {
-    is >> lambda;
-    is >> *branchlength;
     is >> purom >> dposom >> purw >> posw;
     is >> nucrelrate;
     is >> nucstat;
+    is >> lambda;
+    is >> *branchlength;
 }
 
 void CodonM2aModel::FromStreamCodeML(istream &is) {

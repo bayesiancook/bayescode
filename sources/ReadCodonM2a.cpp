@@ -17,6 +17,8 @@ class CodonM2aSample : public Sample {
     string datafile;
     string treefile;
     double pi;
+    double puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape;
+    double purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -44,6 +46,10 @@ class CodonM2aSample : public Sample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> pi;
+        is >> puromhypermean >> puromhyperinvconc;
+        is >> dposomhypermean >> dposomhyperinvshape;
+        is >> purwhypermean >> purwhyperinvconc;
+        is >> poswhypermean >> poswhyperinvconc;
         int check;
         is >> check;
         if (check) {
@@ -60,6 +66,9 @@ class CodonM2aSample : public Sample {
             exit(1);
         }
 
+        GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
+                                              dposomhyperinvshape, pi, purwhypermean, purwhyperinvconc,
+                                              poswhypermean, poswhyperinvconc);
         GetModel()->Allocate();
 
         // read model (i.e. chain's last point) from <name>.param

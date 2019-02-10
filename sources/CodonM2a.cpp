@@ -13,6 +13,8 @@ class CodonM2aChain : public Chain {
     // Chain parameters
     string modeltype, datafile, treefile;
     double pi;
+    double puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape;
+    double purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc;
 
   public:
     //! return the model, with its derived type (unlike ProbModel::GetModel)
@@ -23,9 +25,22 @@ class CodonM2aChain : public Chain {
     //! constructor for a new chain: datafile, treefile, pi (fraction of sites
     //! under positive selection) saving frequency, final chain size, chain name
     //! and overwrite flag -- calls New
-    CodonM2aChain(string indatafile, string intreefile, double inpi, int inevery, int inuntil,
-                  string inname, int force)
+    CodonM2aChain(string indatafile, string intreefile, double inpi, 
+                    double inpuromhypermean, double inpuromhyperinvconc,
+                    double indposomhypermean, double indposomhyperinvshape,
+                    double inpurwhypermean, double inpurwhyperinvconc,
+                    double inposwhypermean, double inposwhyperinvconc,
+                    int inevery, int inuntil,
+                    string inname, int force)
         : modeltype("CODONM2A"), datafile(indatafile), treefile(intreefile), pi(inpi) {
+        puromhypermean = inpuromhypermean;
+        puromhyperinvconc = inpuromhyperinvconc;
+        dposomhypermean = indposomhypermean;
+        dposomhyperinvshape = indposomhyperinvshape;
+        purwhypermean = inpurwhypermean;
+        purwhyperinvconc = inpurwhyperinvconc;
+        poswhypermean = inposwhypermean;
+        poswhyperinvconc = inposwhyperinvconc;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -42,6 +57,9 @@ class CodonM2aChain : public Chain {
 
     void New(int force) override {
         model = new CodonM2aModel(datafile, treefile, pi);
+        GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
+                                              dposomhyperinvshape, pi, purwhypermean, purwhyperinvconc,
+                                              poswhypermean, poswhyperinvconc);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -58,6 +76,10 @@ class CodonM2aChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile >> pi;
+        is >> puromhypermean >> puromhyperinvconc;
+        is >> dposomhypermean >> dposomhyperinvshape;
+        is >> purwhypermean >> purwhyperinvconc;
+        is >> poswhypermean >> poswhyperinvconc;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -73,6 +95,9 @@ class CodonM2aChain : public Chain {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        GetModel()->SetMixtureHyperParameters(puromhypermean, puromhyperinvconc, dposomhypermean,
+                                              dposomhyperinvshape, pi, purwhypermean, purwhyperinvconc,
+                                              poswhypermean, poswhyperinvconc);
         GetModel()->Allocate();
         GetModel()->FromStream(is);
         GetModel()->Update();
@@ -84,6 +109,10 @@ class CodonM2aChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << pi << '\n';
+        param_os << puromhypermean << '\t' << puromhyperinvconc << '\n';
+        param_os << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
+        param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
+        param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -164,6 +193,14 @@ int main(int argc, char *argv[]) {
         string datafile = "";
         string treefile = "";
         double pi = 0.1;
+        double puromhypermean = 0.5;
+        double puromhyperinvconc = 0.5;
+        double purwhypermean = 0.5;
+        double purwhyperinvconc = 0.5;
+        double poswhypermean = 0.5;
+        double poswhyperinvconc = 0.1;
+        double dposomhypermean = 1.0;
+        double dposomhyperinvshape = 0.5;
         string name = "";
         int force = 1;
         int every = 1;
@@ -189,6 +226,26 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-pi") {
                     i++;
                     pi = atof(argv[i]);
+                } else if (s == "-purom") {
+                    i++;
+                    puromhypermean = atof(argv[i]);
+                    i++;
+                    puromhyperinvconc = atof(argv[i]);
+                } else if (s == "-dposom") {
+                    i++;
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                } else if (s == "-purw") {
+                    i++;
+                    purwhypermean = atof(argv[i]);
+                    i++;
+                    purwhyperinvconc = atof(argv[i]);
+                } else if (s == "-posw") {
+                    i++;
+                    poswhypermean = atof(argv[i]);
+                    i++;
+                    poswhyperinvconc = atof(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -213,7 +270,7 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
 
-        CodonM2aChain *chain = new CodonM2aChain(datafile, treefile, pi, every, until, name, force);
+        CodonM2aChain *chain = new CodonM2aChain(datafile, treefile, pi, puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc, every, until, name, force);
         cerr << "chain " << name << " started\n";
         chain->Start();
         cerr << "chain " << name << " stopped\n";
