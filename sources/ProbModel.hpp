@@ -53,6 +53,9 @@ class ProbModel {
     //! get model configuration from stream
     virtual void FromStream(istream &is) {}
 
+    //! header for serialized model configuration 
+    virtual void ToStreamHeader(ostream &os) const {}
+
     //! write one line of trace of the current parameter configuration into trace
     //! file
     virtual void Trace(ostream & /*unused*/) const {}

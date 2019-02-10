@@ -25,6 +25,7 @@ void Chain::MakeFiles(int force) {
     ofstream param_os((name + ".param").c_str());
     if (saveall) {
         ofstream chain_os((name + ".chain").c_str());
+        model->ToStreamHeader(chain_os);
     }
     ofstream mon_os((name + ".monitor").c_str());
     ofstream trace_os((name + ".trace").c_str());
