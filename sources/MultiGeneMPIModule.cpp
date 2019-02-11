@@ -4,8 +4,9 @@
 
 #include <fstream>
 
-void MultiGeneMPIModule::AllocateAlignments(string datafile) {
-    ifstream is(datafile.c_str());
+void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) {
+    datapath = indatapath;
+    ifstream is((datapath + datafile).c_str());
     is >> Ngene;
     vector<string> genename(Ngene, "NoName");
     vector<int> genesize(Ngene, 0);
@@ -14,7 +15,7 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile) {
 
     for (int gene = 0; gene < Ngene; gene++) {
         is >> genename[gene];
-        SequenceAlignment *tmpdata = new FileSequenceAlignment(genename[gene]);
+        SequenceAlignment *tmpdata = new FileSequenceAlignment(datapath + genename[gene]);
 
         if (!gene) {
             refdata = tmpdata;

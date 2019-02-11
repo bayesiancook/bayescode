@@ -5,7 +5,7 @@
 // Constructing and setting the model
 // ------------------
 
-MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefile,
+MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile, string intreefile,
                                                double inpihypermean, double inpihyperinvconc,
                                                int inmyid, int innprocs)
     :
@@ -35,7 +35,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datafile, string intreefil
     pihyperinvconc = inpihyperinvconc;
     pi = pihypermean;
 
-    AllocateAlignments(datafile);
+    AllocateAlignments(datapath, datafile);
     treefile = intreefile;
 
     // all datafiles have all taxa (with missing data if needed) in same order
@@ -128,7 +128,7 @@ void MultiGeneCodonM2aModel::Allocate() {
         geneprocess.assign(GetLocalNgene(), (CodonM2aModel *)0);
 
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene] = new CodonM2aModel(GetLocalGeneName(gene), treefile, pi);
+            geneprocess[gene] = new CodonM2aModel(datapath, GetLocalGeneName(gene), treefile, pi);
             geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
             geneprocess[gene]->Allocate();
         }

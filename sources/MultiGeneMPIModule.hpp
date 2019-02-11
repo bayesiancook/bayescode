@@ -41,7 +41,7 @@ class MultiGeneMPIModule {
 
     int GetSlaveTotNsite(int proc) const { return SlaveTotNsite[proc]; }
 
-    void AllocateAlignments(string datafile);
+    void AllocateAlignments(string datafile, string datapath = "./");
 
     void PrintGeneList(ostream &os) const;
 
@@ -196,6 +196,8 @@ class MultiGeneMPIModule {
   protected:
     int myid;
     int nprocs;
+
+    string datapath;
 
     int Ngene;
     int LocalNgene;

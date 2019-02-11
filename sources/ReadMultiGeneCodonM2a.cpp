@@ -8,7 +8,8 @@ MPI_Datatype Propagate_arg;
 
 class MultiGeneCodonM2aSample : public MultiGeneSample {
   private:
-    string modeltype, datafile, treefile;
+    string modeltype, datapath, datafile, treefile;
+    string newpath;
     int writegenedata;
     int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
@@ -24,9 +25,10 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
     const MultiGeneCodonM2aModel *GetModel() const { return (MultiGeneCodonM2aModel *)model; }
     MultiGeneCodonM2aModel *GetModel() { return (MultiGeneCodonM2aModel *)model; }
 
-    MultiGeneCodonM2aSample(string filename, int inburnin, int inevery, int inuntil, int myid,
+    MultiGeneCodonM2aSample(string innewpath, string filename, int inburnin, int inevery, int inuntil, int myid,
                             int nprocs)
         : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
+        newpath = innewpath;
         Open();
     }
 
@@ -41,7 +43,10 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         }
 
         is >> modeltype;
-        is >> datafile >> treefile;
+        is >> datapath >> datafile >> treefile;
+        if (newpath != "None")  {
+            datapath = newpath;
+        }
         is >> writegenedata;
         is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
@@ -60,7 +65,7 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> chainevery >> chainuntil >> chainsize;
 
         if (modeltype == "MULTIGENECODONM2A") {
-            model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc,
+            model = new MultiGeneCodonM2aModel(datapath, datafile, treefile, pihypermean, pihyperinvconc,
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
@@ -98,6 +103,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 
+    string newpath = "None";
     int burnin = 0;
     int every = 1;
     int until = -1;
@@ -138,6 +144,9 @@ int main(int argc, char *argv[]) {
                 } else {
                     i--;
                 }
+            } else if (s == "-p")   {
+                i++;
+                newpath = argv[i];
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -156,7 +165,7 @@ int main(int argc, char *argv[]) {
     }
 
     MultiGeneCodonM2aSample *sample =
-        new MultiGeneCodonM2aSample(name, burnin, every, until, myid, nprocs);
+        new MultiGeneCodonM2aSample(newpath, name, burnin, every, until, myid, nprocs);
 
     if (ppred) {
         if (!myid) {

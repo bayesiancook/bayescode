@@ -3,12 +3,13 @@
 // constuction allocation
 //
 
-CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi) {
+CodonM2aModel::CodonM2aModel(string datapath, string datafile, string treefile, double inpi) {
     blmode = 0;
     nucmode = 0;
-    data = new FileSequenceAlignment(datafile);
+    data = new FileSequenceAlignment(datapath + datafile);
     if (data->GetNsite() % 3) {
         cerr << "error : not a correctly formatted codon-alignment: " << datafile << '\n';
+        cerr << "path  : " << datapath << '\n';
         exit(1);
     }
     codondata = new CodonSequenceAlignment(data, true);
@@ -20,7 +21,7 @@ CodonM2aModel::CodonM2aModel(string datafile, string treefile, double inpi) {
     taxonset = codondata->GetTaxonSet();
 
     // get tree from file (newick format)
-    tree = new Tree(treefile);
+    tree = new Tree(datapath + treefile);
 
     // check whether tree and data fits together
     tree->RegisterWith(taxonset);

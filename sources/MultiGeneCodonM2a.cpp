@@ -19,7 +19,7 @@ MPI_Datatype Propagate_arg;
 class MultiGeneCodonM2aChain : public MultiGeneChain {
   private:
     // Chain parameters
-    string modeltype, datafile, treefile;
+    string modeltype, datapath, datafile, treefile;
     int writegenedata;
     int blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode;
     double pihypermean, pihyperinvconc;
@@ -36,7 +36,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
 
     //! \brief constructor for a new MCMC
     //!
-    //! \param indatafile: name of file contanining sequence alignment
+    //! \param indatapath : path to directory containing sequence alignments (and their list)
+    //! \param indatafile: name of file contanining list of sequence alignments (with total number of genes as header)
     //! \param intreefile: name of file contaning tree
     //! \param inevery: thinning factor
     //! \param inuntil: maximum MCMC sample size
@@ -45,7 +46,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     //! shift probabilities \param name: base name for all files related to this
     //! MCMC run \param force: overwrite existing files with same name \param
     //! inmyid, int innprocs: process id and total number of MPI processes
-    MultiGeneCodonM2aChain(string indatafile, string intreefile, int inblmode, int inblsamplemode, int innucmode,
+    MultiGeneCodonM2aChain(string indatapath, string indatafile, string intreefile, int inblmode, int inblsamplemode, int innucmode,
                            int inpurommode, int indposommode, int inpurwmode, int inposwmode,
                            double inpihypermean, double inpihyperinvconc, double inpuromhypermean,
                            double inpuromhyperinvconc, double indposomhypermean,
@@ -56,6 +57,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                            string inname, int force, int inmyid, int innprocs)
         : MultiGeneChain(inmyid, innprocs),
           modeltype("MULTIGENECODONM2A"),
+          datapath(indatapath),
           datafile(indatafile),
           treefile(intreefile) {
         blmode = inblmode;
@@ -93,7 +95,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc, myid,
+        model = new MultiGeneCodonM2aModel(datapath, datafile, treefile, pihypermean, pihyperinvconc, myid,
                                            nprocs);
         GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode, poswmode);
         GetModel()->SetBLSamplingMode(blsamplemode);
@@ -123,7 +125,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> treefile;
+        is >> datapath >> datafile >> treefile;
         is >> writegenedata;
         is >> blmode >> blsamplemode >> nucmode >> dposommode >> purwmode >> poswmode;
         is >> pihypermean >> pihyperinvconc;
@@ -142,7 +144,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENECODONM2A") {
-            model = new MultiGeneCodonM2aModel(datafile, treefile, pihypermean, pihyperinvconc,
+            model = new MultiGeneCodonM2aModel(datapath, datafile, treefile, pihypermean, pihyperinvconc,
                                                myid, nprocs);
             GetModel()->SetAcrossGenesModes(blmode, nucmode, purommode, dposommode, purwmode,
                                             poswmode);
@@ -182,7 +184,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         if (!myid) {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
-            param_os << datafile << '\t' << treefile << '\n';
+            param_os << datapath << '\t' << datafile << '\t' << treefile << '\n';
             param_os << writegenedata << '\n';
             param_os << blmode << '\t' << blsamplemode << '\t' << nucmode << '\t' << dposommode << '\t' << purwmode << '\t'
                      << poswmode << '\n';
@@ -312,6 +314,7 @@ int main(int argc, char *argv[]) {
 
     // new chain
     else {
+        string datapath = "./";
         string datafile = "";
         string treefile = "";
 
@@ -359,6 +362,9 @@ int main(int argc, char *argv[]) {
                 if (s == "-d") {
                     i++;
                     datafile = argv[i];
+                } else if (s == "-p") {
+                    i++;
+                    datapath = argv[i];
                 } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
@@ -472,7 +478,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneCodonM2aChain(
-            datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
+            datapath, datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
             pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
             dposomhyperinvshape, purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc, modalprior,
             every, until, writegenedata, name, force, myid, nprocs);

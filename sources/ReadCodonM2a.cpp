@@ -14,6 +14,8 @@ using namespace std;
 class CodonM2aSample : public Sample {
   private:
     string modeltype;
+    string datapath;
+    string newpath;
     string datafile;
     string treefile;
     double pi;
@@ -27,8 +29,9 @@ class CodonM2aSample : public Sample {
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)
-    CodonM2aSample(string filename, int inburnin, int inevery, int inuntil)
+    CodonM2aSample(string innewpath, string filename, int inburnin, int inevery, int inuntil)
         : Sample(filename, inburnin, inevery, inuntil) {
+        newpath = innewpath;
         Open();
     }
 
@@ -44,7 +47,10 @@ class CodonM2aSample : public Sample {
 
         // read model type, and other standard fields
         is >> modeltype;
-        is >> datafile >> treefile;
+        is >> datapath >> datafile >> treefile;
+        if (newpath != "None")  {
+            datapath = newpath;
+        }
         is >> pi;
         is >> puromhypermean >> puromhyperinvconc;
         is >> dposomhypermean >> dposomhyperinvshape;
@@ -60,7 +66,7 @@ class CodonM2aSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "CODONM2A") {
-            model = new CodonM2aModel(datafile, treefile, pi);
+            model = new CodonM2aModel(datapath, datafile, treefile, pi);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);
@@ -94,6 +100,7 @@ class CodonM2aSample : public Sample {
 };
 
 int main(int argc, char *argv[]) {
+    string newpath = "None";
     int burnin = 0;
     int every = 1;
     int until = -1;
@@ -122,6 +129,9 @@ int main(int argc, char *argv[]) {
                 if (i == argc) throw(0);
                 s = argv[i];
                 until = atoi(argv[i]);
+            } else if (s == "-p") {
+                i++;
+                newpath = argv[i];
             } else if (s == "-ppred") {
                 ppred = 1;
             } else {
@@ -141,7 +151,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    CodonM2aSample *sample = new CodonM2aSample(name, burnin, every, until);
+    CodonM2aSample *sample = new CodonM2aSample(newpath, name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
     } else {

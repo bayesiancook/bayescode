@@ -64,7 +64,7 @@ class CodonM2aModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    CodonM2aModel(string datafile, string treefile, double inpi);
+    CodonM2aModel(string datapath, string datafile, string treefile, double inpi);
 
     //! model allocation
     void Allocate();

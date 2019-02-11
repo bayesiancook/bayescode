@@ -4,6 +4,7 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
+    string datapath = "./";
     string datafile = "";
     string treefile = "";
     string paramfile = "";
@@ -21,10 +22,13 @@ int main(int argc, char *argv[]) {
             if (s == "-d") {
                 i++;
                 datafile = argv[i];
+            } else if (s == "-p") {
+                i++;
+                datapath = argv[i];
             } else if ((s == "-t") || (s == "-T")) {
                 i++;
                 treefile = argv[i];
-            } else if (s == "-p") {
+            } else if (s == "-param") {
                 i++;
                 paramfile = argv[i];
             } else {
@@ -46,7 +50,7 @@ int main(int argc, char *argv[]) {
 
     double pi = 0.1;
     cerr << "new model\n";
-    CodonM2aModel *model = new CodonM2aModel(datafile, treefile, pi);
+    CodonM2aModel *model = new CodonM2aModel(datapath, datafile, treefile, pi);
     model->Allocate();
     cerr << "set lengths\n";
     model->SetLengthsFromTree();

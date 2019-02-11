@@ -60,7 +60,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // Constructors
     // ------------------
 
-    MultiGeneCodonM2aModel(string datafile, string intreefile, double inpihypermean,
+    MultiGeneCodonM2aModel(string datapath, string datafile, string intreefile, double inpihypermean,
                            double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
 
