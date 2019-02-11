@@ -35,7 +35,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile,
     pihyperinvconc = inpihyperinvconc;
     pi = pihypermean;
 
-    AllocateAlignments(datapath, datafile);
+    AllocateAlignments(datafile, datapath);
     treefile = intreefile;
 
     // all datafiles have all taxa (with missing data if needed) in same order
@@ -46,7 +46,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile,
     Ntaxa = refdata->GetNtaxa();
 
     // get tree from file (newick format)
-    tree = new Tree(treefile);
+    tree = new Tree(datapath + treefile);
 
     // check whether tree and data fits together
     tree->RegisterWith(taxonset);
@@ -315,22 +315,6 @@ void MultiGeneCodonM2aModel::SetMixtureArrays() {
 // ------------------
 
 void MultiGeneCodonM2aModel::MasterFromStream(istream &is) {
-    if (blmode == 2) {
-        is >> lambda;
-        is >> *branchlength;
-    } else {
-        is >> lambda;
-        is >> *branchlength;
-        is >> blhyperinvshape;
-        is >> *branchlengtharray;
-    }
-
-    is >> nucrelratehypercenter;
-    is >> nucrelratehyperinvconc;
-    is >> nucstathypercenter;
-    is >> nucstathyperinvconc;
-    is >> *nucrelratearray;
-    is >> *nucstatarray;
 
     is >> puromhypermean >> puromhyperinvconc;
     is >> dposomhypermean >> dposomhyperinvshape;
@@ -341,25 +325,27 @@ void MultiGeneCodonM2aModel::MasterFromStream(istream &is) {
     is >> *dposomarray;
     is >> *purwarray;
     is >> *poswarray;
+
+    is >> nucrelratehypercenter;
+    is >> nucrelratehyperinvconc;
+    is >> nucstathypercenter;
+    is >> nucstathyperinvconc;
+    is >> *nucrelratearray;
+    is >> *nucstatarray;
+
+    if (blmode == 2) {
+        is >> lambda;
+        is >> *branchlength;
+    } else {
+        is >> lambda;
+        is >> *branchlength;
+        is >> blhyperinvshape;
+        is >> *branchlengtharray;
+    }
 }
 
 void MultiGeneCodonM2aModel::MasterToStream(ostream &os) const {
-    if (blmode == 2) {
-        os << lambda << '\t';
-        os << *branchlength << '\t';
-    } else {
-        os << lambda << '\t';
-        os << *branchlength << '\t';
-        os << blhyperinvshape << '\t';
-        os << *branchlengtharray << '\t';
-    }
 
-    os << nucrelratehypercenter << '\t';
-    os << nucrelratehyperinvconc << '\t';
-    os << nucstathypercenter << '\t';
-    os << nucstathyperinvconc << '\t';
-    os << *nucrelratearray << '\t';
-    os << *nucstatarray << '\t';
     os << puromhypermean << '\t' << puromhyperinvconc << '\t';
     os << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
     os << purwhypermean << '\t' << purwhyperinvconc << '\t';
@@ -368,7 +354,24 @@ void MultiGeneCodonM2aModel::MasterToStream(ostream &os) const {
     os << *puromarray << '\t';
     os << *dposomarray << '\t';
     os << *purwarray << '\t';
-    os << *poswarray << '\n';
+    os << *poswarray << '\t';
+
+    os << nucrelratehypercenter << '\t';
+    os << nucrelratehyperinvconc << '\t';
+    os << nucstathypercenter << '\t';
+    os << nucstathyperinvconc << '\t';
+    os << *nucrelratearray << '\t';
+    os << *nucstatarray << '\t';
+
+    if (blmode == 2) {
+        os << lambda << '\t';
+        os << *branchlength << '\n';
+    } else {
+        os << lambda << '\t';
+        os << *branchlength << '\t';
+        os << blhyperinvshape << '\t';
+        os << *branchlengtharray << '\n';
+    }
 }
 
 //-------------------
@@ -439,7 +442,12 @@ void MultiGeneCodonM2aModel::TracePosWeight(ostream &os) const {
 
 void MultiGeneCodonM2aModel::TracePosOm(ostream &os) const {
     for (int gene = 0; gene < Ngene; gene++) {
-        os << 1 + dposomarray->GetVal(gene) << '\t';
+        if (poswarray->GetVal(gene))    {
+            os << 1 + dposomarray->GetVal(gene) << '\t';
+        }
+        else    {
+            os << 1.0 << '\t';
+        }
     }
     os << '\n';
     os.flush();
