@@ -218,6 +218,10 @@ class CodonM2aModel : public ProbModel {
     //! on one line
     void TracePostProb(ostream &os) const;
 
+    //! \brief write current site omega values implied by mixture model
+    //! on one line
+    void TraceSiteOmega(ostream &os) const;
+
     //! \brief get a copy of current site post probs (of being under positive
     //! selection) into array
     void GetSitesPostProb(double *array) const;

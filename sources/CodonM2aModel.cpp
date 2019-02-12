@@ -94,7 +94,12 @@ void CodonM2aModel::PostPred(string name) {
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     UpdateMatrices();
     sitealloc->SampleAlloc();
-    phyloprocess->PostPredSample(name);
+    phyloprocess->PostPredSample(name + ".ali");
+    ofstream os((name + ".truesiteom").c_str());
+    TraceSiteOmega(os);
+    ofstream pos((name + ".trueparam").c_str());
+    ToStreamHeader(pos);
+    ToStream(pos);
 }
 
 // setting model features and (hyper)parameters
@@ -575,6 +580,13 @@ void CodonM2aModel::Trace(ostream &os) const {
 void CodonM2aModel::TracePostProb(ostream &os) const {
     for (int i = 0; i < GetNsite(); i++) {
         os << sitepostprobarray[i][2] << '\t';
+    }
+    os << '\n';
+}
+
+void CodonM2aModel::TraceSiteOmega(ostream& os) const   {
+    for (int i = 0; i < GetNsite(); i++) {
+        os << componentomegaarray->GetVal(sitealloc->GetVal(i)) << '\t';
     }
     os << '\n';
 }
