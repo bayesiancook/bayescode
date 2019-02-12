@@ -31,33 +31,17 @@ CodonM2aModel::CodonM2aModel(string datapath, string datafile, string treefile, 
 }
 
 void CodonM2aModel::Allocate() {
+
     lambda = 10.0;
     blhypermean = new BranchIIDGamma(*tree, 1.0, lambda);
     blhypermean->SetAllBranches(1.0 / lambda);
     blhyperinvshape = 1.0;
     branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
 
-    purom = 0.5;
-    puromhypermean = 0.5;
-    puromhyperinvconc = 0.5;
-
-    dposom = 1.0;
-    dposomhypermean = 0.5;
-    dposomhyperinvshape = 0.5;
-
-    purw = 0.1;
-    purwhypermean = 0.5;
-    purwhyperinvconc = 0.5;
-
-    if (!pi) {
-        posw = 0;
-        poswhypermean = 0;
-        poswhyperinvconc = 0;
-    } else {
-        posw = 0.1;
-        poswhypermean = 0.5;
-        poswhyperinvconc = 0.5;
-    }
+    purom = puromhypermean;
+    dposom = dposomhypermean;
+    purw = purwhypermean;
+    posw = poswhypermean;
 
     componentomegaarray = new M2aMix(purom, dposom + 1, purw, posw);
     sitealloc = new MultinomialAllocationVector(GetNsite(), componentomegaarray->GetWeights());
@@ -186,6 +170,24 @@ void CodonM2aModel::SetMixtureHyperParameters(double inpuromhypermean, double in
     purwhyperinvconc = inpurwhyperinvconc;
     poswhypermean = inposwhypermean;
     poswhyperinvconc = inposwhyperinvconc;
+
+    if (!pi) {
+        poswhypermean = 0;
+        poswhyperinvconc = 0;
+    }
+
+    if (!puromhyperinvconc) {
+        purom = puromhypermean;
+    }
+    if (! dposomhyperinvshape)  {
+        dposom = dposomhypermean;
+    }
+    if (! purwhyperinvconc) {
+        purw = purwhypermean;
+    }
+    if (! poswhyperinvconc) {
+        posw = poswhypermean;
+    }
 }
 
 //
@@ -325,6 +327,9 @@ double CodonM2aModel::OmegaLogPrior() const {
 
 // Beta prior for purifmean
 double CodonM2aModel::PurOmegaLogPrior() const {
+    if (! puromhyperinvconc)    {
+        return 0;
+    }
     double alpha = puromhypermean / puromhyperinvconc;
     double beta = (1 - puromhypermean) / puromhyperinvconc;
     return Random::logBetaDensity(purom, alpha, beta);
@@ -332,6 +337,9 @@ double CodonM2aModel::PurOmegaLogPrior() const {
 
 // Gamma prior for dposom
 double CodonM2aModel::PosOmegaLogPrior() const {
+    if (! dposomhyperinvshape)  {
+        return 0;
+    }
     double alpha = 1.0 / dposomhyperinvshape;
     double beta = alpha / dposomhypermean;
     return Random::logGammaDensity(dposom, alpha, beta);
@@ -339,6 +347,9 @@ double CodonM2aModel::PosOmegaLogPrior() const {
 
 // Beta prior for purw
 double CodonM2aModel::PurWeightLogPrior() const {
+    if (! purwhyperinvconc) {
+        return 0;
+    }
     double alpha = purwhypermean / purwhyperinvconc;
     double beta = (1 - purwhypermean) / purwhyperinvconc;
     return Random::logBetaDensity(purw, alpha, beta);
@@ -353,6 +364,9 @@ double CodonM2aModel::PosWeightLogPrior() const {
             exit(1);
         }
 
+        if (! poswhyperinvconc)   {
+            return 0;
+        }
         double alpha = poswhypermean / poswhyperinvconc;
         double beta = (1 - poswhypermean) / poswhyperinvconc;
         return log(pi) + Random::logBetaDensity(posw, alpha, beta);
@@ -447,14 +461,23 @@ void CodonM2aModel::CollectComponentPathSuffStat() {
 }
 
 void CodonM2aModel::MoveOmega() {
+
     CollectOmegaPathSuffStat();
 
-    SlidingMove(purom, 0.1, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
-    SlidingMove(purw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+    if (puromhyperinvconc)  {
+        SlidingMove(purom, 0.1, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+    }
+    if (purwhyperinvconc)   {
+        SlidingMove(purw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+    }
     if (pi != 0) {
-        ScalingMove(dposom, 1.0, 10, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
-        SlidingMove(posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate,
+        if (dposomhyperinvshape)    {
+            ScalingMove(dposom, 1.0, 10, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+        }
+        if (poswhyperinvconc)   {
+            SlidingMove(posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate,
                     this);
+        }
     }
     if ((pi != 0) && (pi != 1)) {
         SwitchPosWeight(10);
