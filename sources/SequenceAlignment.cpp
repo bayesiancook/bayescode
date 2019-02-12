@@ -35,7 +35,8 @@ vector<double> SequenceAlignment::GetEmpiricalFreq() const {
 void SequenceAlignment::ToStream(ostream &os) const {
     os << Ntaxa << '\t' << GetPrintNsite() << '\n';
     for (int i = 0; i < Ntaxa; i++) {
-        os << taxset->GetTaxon(i) << '\t';
+        os << taxset->GetTaxon(i) << "  ";
+        // os << taxset->GetTaxon(i) << '\t';
         for (int j = 0; j < Nsite; j++) {
             os << statespace->GetState(GetState(i, j));
         }
