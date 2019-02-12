@@ -40,6 +40,8 @@ void Sample::OpenChainFile() {
         cerr << "error: cannot find file " << name << ".chain\n";
         exit(1);
     }
+    string line;
+    getline(*chain_is,line);
     for (int i = 0; i < burnin; i++) {
         model->FromStream(*chain_is);
     }
@@ -65,7 +67,8 @@ void Sample::PostPred() {
         cerr << '.';
         GetNextPoint();
         ostringstream s;
-        s << "ppred" << name << "_" << i << ".ali";
+        s << "ppred" << name << "_" << i;
+        // s << "ppred" << name << "_" << i << ".ali";
         model->PostPred(s.str());
     }
     cerr << '\n';
