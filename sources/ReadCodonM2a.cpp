@@ -35,6 +35,22 @@ class CodonM2aSample : public Sample {
         Open();
     }
 
+    void PostPredSimu(int null_model) {
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            if (null_model) {
+                GetModel()->SetMixtureParameters(GetModel()->GetPurOm(), 0, GetModel()->GetPurW(), 0);
+            }
+            ostringstream s;
+            s << "ppred" << name << "_" << i;
+            // s << "ppred" << name << "_" << i << ".ali";
+            model->PostPred(s.str());
+        }
+        cerr << '\n';
+    }
+
     void Open() override {
         // open <name>.param
         ifstream is((name + ".param").c_str());
@@ -105,6 +121,7 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int ppred = 0;
+    int null_model = 0;
 
     string name;
 
@@ -134,6 +151,8 @@ int main(int argc, char *argv[]) {
                 newpath = argv[i];
             } else if (s == "-ppred") {
                 ppred = 1;
+            } else if (s == "-null")  {
+                null_model = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -153,7 +172,7 @@ int main(int argc, char *argv[]) {
 
     CodonM2aSample *sample = new CodonM2aSample(newpath, name, burnin, every, until);
     if (ppred) {
-        sample->PostPred();
+        sample->PostPredSimu(null_model);
     } else {
         sample->Read();
     }
