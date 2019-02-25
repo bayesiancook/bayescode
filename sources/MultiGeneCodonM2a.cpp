@@ -205,7 +205,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
     void MakeFiles(int force) override {
         MultiGeneChain::MakeFiles(force);
 
-        if (writegenedata == 1) {
+        if (writegenedata >= 1) {
             ofstream pos((name + ".posw").c_str());
             ofstream omos((name + ".posom").c_str());
         }
@@ -216,7 +216,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata == 1) {
+        if (writegenedata >= 1) {
             if (!myid) {
                 ofstream posw_os((name + ".posw").c_str(), ios_base::app);
                 GetModel()->TracePosWeight(posw_os);
