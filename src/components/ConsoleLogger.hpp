@@ -1,12 +1,12 @@
 #pragma once
 
-#include <iostream>
 #include "ChainComponent.hpp"
+#include "Logger.hpp"
 
 class ConsoleLogger : public ChainComponent {
   public:
-    void start() override { std::cout << "Started\n"; }
-    void move(int i) override { std::cout << "Move " << i << "\n"; }
-    void savepoint(int i) override { std::cout << "Savepoint " << i << "\n"; }
-    void end() override { std::cout << "Ended\n"; }
+    void start() override { info("Started"); }
+    void move(int i) override { info("Move {}", i); }
+    void savepoint(int i) override { info("Savepoint {}", i); }
+    void end() override { info("Ended"); }
 };

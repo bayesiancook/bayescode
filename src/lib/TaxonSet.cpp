@@ -5,6 +5,7 @@ using namespace std;
 #include "BiologicalSequences.hpp"
 #include "TaxonSet.hpp"
 #include "tree/implem.hpp"
+#include "components/Logger.hpp"
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -42,7 +43,7 @@ std::vector<int> TaxonSet::get_index_table(const Tree *tree) const {
             ret[node] = GetTaxonIndex(tree->node_name(node));
         }
     }
-    cerr << "get index table ok\n";
+    info("[TaxonSet] Get index table ok");
     return ret;
 }
 

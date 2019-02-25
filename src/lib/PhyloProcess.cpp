@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "PathSuffStat.hpp"
 #include "PolySuffStat.hpp"
+#include "components/Logger.hpp"
 
 using namespace std;
 
@@ -88,13 +89,13 @@ void PhyloProcess::Unfold() {
 
     CreateMissingMap();
     FillMissingMap();
-    cerr << "recursive create\n";
+    info("[PhyloProcess] Recursive create");
     RecursiveCreate(GetRoot());
-    cerr << "create tbl\n";
+    info("[PhyloProcess] Create tbl");
     RecursiveCreateTBL(GetRoot());
-    cerr << "clamp data\n";
+    info("[PhyloProcess] Clamp data");
     ClampData();
-    cerr << "clamp data ok\n";
+    info("[PhyloProcess] Clamp data ok");
 }
 
 void PhyloProcess::Cleanup() {

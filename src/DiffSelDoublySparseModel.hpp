@@ -46,6 +46,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "SubMatrixSelector.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
+#include "components/Logger.hpp"
 #include "tree/implem.hpp"
 
 
@@ -317,7 +318,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
 
-        std::cerr << "-- Number of sites: " << Nsite << std::endl;
+        info("Number of sites: {}", Nsite);
 
         std::ifstream file(treefile);
         NHXParser parser{file};
