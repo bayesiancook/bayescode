@@ -21,6 +21,7 @@ include_directories("utils")
 # Static libs
 add_library (tree_lib STATIC "src/tree/implem.cpp")
 add_library (mpicomponent_lib STATIC "src/mpi_components/Process.cpp")
+add_library (logging_lib STATIC "src/logging.cpp")
 
 set(BAYESCODE_LIB
     src/lib/AAMutSelOmegaCodonSubMatrix.cpp
@@ -45,53 +46,59 @@ set(BAYESCODE_LIB
   )
 add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
 
+set(BASE_LIBS
+    bayescode_lib
+    logging_lib
+    tree_lib
+)
+
 # Single omega (globom)
 add_executable(globom "src/SingleOmega.cpp")
-target_link_libraries(globom bayescode_lib tree_lib)
+target_link_libraries(globom ${BASE_LIBS})
 
 # Read single omega (readglobom)
 add_executable(readglobom "src/ReadSingleOmega.cpp")
-target_link_libraries(readglobom bayescode_lib tree_lib)
+target_link_libraries(readglobom ${BASE_LIBS})
 
 # Codon M2a
 add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
-target_link_libraries(codonm2a bayescode_lib tree_lib)
+target_link_libraries(codonm2a ${BASE_LIBS})
 
 # Read Codon M2a
 add_executable(readcodonm2a "src/ReadCodonM2a.cpp" "src/CodonM2aModel.cpp")
-target_link_libraries(readcodonm2a bayescode_lib tree_lib)
+target_link_libraries(readcodonm2a ${BASE_LIBS})
 
 # Mutation-Selection (aamutsel)
 add_executable(aamutsel "src/AAMutSelDSBDPOmega.cpp")
-target_link_libraries(aamutsel bayescode_lib tree_lib)
+target_link_libraries(aamutsel ${BASE_LIBS})
 
 # Read Mutation-Selection (readaamutsel)
 add_executable(readaamutsel "src/ReadAAMutSelDSBDPOmega.cpp")
-target_link_libraries(readaamutsel bayescode_lib tree_lib)
+target_link_libraries(readaamutsel ${BASE_LIBS})
 
 # Mutation-Selection (mutselomega)
 add_executable(mutselomega "src/AAMutSelMultipleOmega.cpp")
-target_link_libraries(mutselomega bayescode_lib tree_lib)
+target_link_libraries(mutselomega ${BASE_LIBS})
 
 # Read Mutation-Selection (readmutselomega)
 add_executable(readmutselomega "src/ReadAAMutSelMultipleOmega.cpp")
-target_link_libraries(readmutselomega bayescode_lib tree_lib)
+target_link_libraries(readmutselomega ${BASE_LIBS})
 
 # Diffsel double sparse (diffseldsparse)
 add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
-target_link_libraries(diffseldsparse bayescode_lib tree_lib)
+target_link_libraries(diffseldsparse ${BASE_LIBS})
 
 # Read diffsel double sparse (readdiffseldsparse)
 # add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
-# target_link_libraries(readdiffseldsparse bayescode_lib tree_lib)
+# target_link_libraries(readdiffseldsparse ${BASE_LIBS})
 
 # Multi-gene single omega (multigeneglobom)
 add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
-target_link_libraries(multigeneglobom bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
+target_link_libraries(multigeneglobom ${BASE_LIBS} ${MPI_LIBRARIES} mpicomponent_lib)
 
 # Multi Gene Codon M2a
 add_executable(multigenecodonm2a "src/MultiGeneCodonM2a.cpp" "src/CodonM2aModel.cpp")
-target_link_libraries(multigenecodonm2a bayescode_lib tree_lib ${MPI_LIBRARIES} mpicomponent_lib)
+target_link_libraries(multigenecodonm2a ${BASE_LIBS} ${MPI_LIBRARIES} mpicomponent_lib)
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")

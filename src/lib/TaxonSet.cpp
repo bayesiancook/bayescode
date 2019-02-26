@@ -14,7 +14,7 @@ using namespace std;
 
 TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxlist(names) {
     for (int i = 0; i < Ntaxa; i++) {
-        if (taxmap[names[i]] != 0) { LIB_FAIL("Found several taxa with same name: {}", names[i]); }
+        if (taxmap[names[i]] != 0) {FAIL("Found several taxa with same name: {}", names[i]); }
         taxmap[names[i]] = i + 1;
     }
 }
@@ -32,11 +32,11 @@ std::vector<int> TaxonSet::get_index_table(const Tree *tree) const {
     std::vector<int> ret(tree->nb_nodes(), -1);
     for (size_t node = 0; node < tree->nb_nodes(); node++) {
         if (tree->is_leaf(node)) {
-            if (tree->node_name(node) == "") { LIB_FAIL("Leaf has no name"); }
+            if (tree->node_name(node) == "") {FAIL("Leaf has no name"); }
             ret[node] = GetTaxonIndex(tree->node_name(node));
         }
     }
-    LIB_INFO("Get index table ok");
+   INFO("Get index table ok");
     return ret;
 }
 
@@ -52,14 +52,14 @@ int TaxonSet::GetTaxonIndexWithIncompleteName(string taxname) const {
     int found = -1;
     for (int i = 0; i < Ntaxa; i++) {
         if (taxlist[i].substr(0, taxname.length()) == taxname) {
-            if (found != -1) { LIB_FAIL("Taxon found twice: {}", taxname); }
+            if (found != -1) {FAIL("Taxon found twice: {}", taxname); }
             found = i;
         }
     }
     if (found == -1) {
         for (int i = 0; i < Ntaxa; i++) {
             if (taxname.substr(0, taxlist[i].length()) == taxlist[i]) {
-                if (found != -1) { LIB_FAIL("Taxon found twice: {}", taxname); }
+                if (found != -1) {FAIL("Taxon found twice: {}", taxname); }
                 found = i;
             }
         }

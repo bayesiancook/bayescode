@@ -49,7 +49,6 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "logging.hpp"
 #include "tree/implem.hpp"
 
-
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
  * DiffSelModel and DiffSelSparseModel)
@@ -98,6 +97,18 @@ of the CeCILL-C license and that you accept its terms.*/
 //! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
 //! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
 enum param_mode_t { independent, shrunk, shared, fixed };
+std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
+    if (c == independent) {
+        os << "independent";
+    } else if (c == shrunk) {
+        os << "shrunk";
+    } else if (c == shared) {
+        os << "shared";
+    } else if (c == fixed) {
+        os << "fixed";
+    }
+    return os;
+}
 
 bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
 
@@ -118,6 +129,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
+
+    logger_t logger{stdout_logger("model")};
 
     std::string datafile;
     std::string treefile;
@@ -298,6 +311,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Nlevel = inNlevel;
         if (Ncond <= 2) { Nlevel = 1; }
 
+        logger->info(
+            "Model parameters are:\n\tdatafile: {}\n\ttreefile: {}\n\tfitnesscentermode: "
+            "{}\n\twithtoggle: "
+            "{}\n\tpihypermean: {}\n\tshiftprobmean: {}\n\tshiftprobinvconc: "
+            "{}\n\tcodonmodel: {}\n\tblmode: {}\n\tnucmode: {}\n\tfitnessshapemode: "
+            "{}\n\tfitnessshape: {}\n\t"
+            "maskepsilon: {}\n\tmaskmode: {}\n\tmaskepsilonmode: {}\n\tNcond: {}\n\tNlevel: {}",
+            datafile, treefile, fitnesscentermode, withtoggle, pihypermean, shiftprobmean,
+            shiftprobinvconc, codonmodel, blmode, nucmode, fitnessshapemode, fitnessshape,
+            maskepsilon, maskmode, maskepsilonmode, Ncond, Nlevel);
+
         ReadFiles(datafile, treefile);
         Allocate();
     }
@@ -309,22 +333,22 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! read files (and read out the distribution of conditions across branches,
     //! based on the tree read from treefile)
     void ReadFiles(std::string datafile, std::string treefile) {
-        // nucleotide sequence alignment
+        logger->info("Parsing nucleotide sequence alignment...");
         data = new FileSequenceAlignment(datafile);
 
-        // translated into codon sequence alignment
+        logger->info("Translating to codons...");
         codondata = new CodonSequenceAlignment(data, true);
-
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
+        logger->info("Alignment has {} sites and {} taxa", Nsite, Ntaxa);
 
-        info("Number of sites: {}", Nsite);
-
+        logger->info("Parsing tree...");
         std::ifstream file(treefile);
         NHXParser parser{file};
         tree = make_from_parser(parser);
         Nbranch = tree->nb_nodes() - 1;
 
+        logger->info("Building branch alloc...");
         auto v = branch_container_from_parser<std::string>(
             parser, [](int i, const AnnotatedTree &t) { return t.tag(i, "Condition"); });
         std::vector<int> iv(v.size(), 0);
