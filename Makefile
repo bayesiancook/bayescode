@@ -120,4 +120,4 @@ mutselomega: _build
 .PHONY: diffseldsparse
 diffseldsparse: all
 		@rm -f delme*.*
-		_build/diffseldsparse -a data/besnard/cyp_coding.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx -e 1 -u 1 tmp
+		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx -e 1 -u 3 tmp
