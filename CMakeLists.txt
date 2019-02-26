@@ -8,9 +8,9 @@ include_directories(${MPI_INCLUDE_PATH})
 # Compilation options
 option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
 if(COVERAGE_MODE)
-    set(CMAKE_CXX_FLAGS "-O0 --std=c++11 -fprofile-arcs -ftest-coverage") # coverage mode
+    set(CMAKE_CXX_FLAGS "-O0 --std=c++14 -fprofile-arcs -ftest-coverage") # coverage mode
 else()
-    set(CMAKE_CXX_FLAGS "-O3 --std=c++11 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
+    set(CMAKE_CXX_FLAGS "-O3 --std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
 endif(COVERAGE_MODE)
 unset(COVERAGE_MODE CACHE)
 

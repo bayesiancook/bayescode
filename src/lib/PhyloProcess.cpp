@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "PathSuffStat.hpp"
 #include "PolySuffStat.hpp"
-#include "components/Logger.hpp"
+#include "logging.hpp"
 
 using namespace std;
 
@@ -89,13 +89,13 @@ void PhyloProcess::Unfold() {
 
     CreateMissingMap();
     FillMissingMap();
-    info("[PhyloProcess] Recursive create");
+    LIB_INFO("Recursive create");
     RecursiveCreate(GetRoot());
-    info("[PhyloProcess] Create tbl");
+    LIB_INFO("Create tbl");
     RecursiveCreateTBL(GetRoot());
-    info("[PhyloProcess] Clamp data");
+    LIB_INFO("Clamp data");
     ClampData();
-    info("[PhyloProcess] Clamp data ok");
+    LIB_INFO("Clamp data ok");
 }
 
 void PhyloProcess::Cleanup() {
@@ -251,14 +251,8 @@ double PhyloProcess::GetFastLogProb() const {
 }
 
 double PhyloProcess::GetLogLikelihood() const {
-#if DEBUG > 1
-    MeasureTime timer;
-#endif
     double total = 0;
     for (int i = 0; i < GetNsite(); i++) { total += SiteLogLikelihood(i); }
-#if DEBUG > 1
-    timer.print<2>("GetLogProb. ");
-#endif
     return total;
 }
 
@@ -447,16 +441,10 @@ void PhyloProcess::DrawSites(double fraction) {
 
 void PhyloProcess::ResampleSub() {
     pruningchrono.Start();
-#if DEBUG > 1
-    MeasureTime timer;
-#endif
 
     for (int i = 0; i < GetNsite(); i++) {
         if (sitearray[i] != 0) { ResampleState(i); }
     }
-#if DEBUG > 1
-    timer.print<2>("ResampleSub - state. ");
-#endif
     pruningchrono.Stop();
 
     resamplechrono.Start();

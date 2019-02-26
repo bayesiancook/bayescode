@@ -2,7 +2,7 @@
 #include <sys/time.h>
 #include <cmath>
 #include <iostream>
-#include "components/Logger.hpp"
+#include "logging.hpp"
 
 /* =======================================================
    (VL) Magical constants, to be used only in this file.
@@ -33,7 +33,7 @@ class random_init {
     random_init() {
         Random::InitRandom();
         // Random::InitRandom(5301);
-        info("[Random] Seed : {}", Random::GetSeed());
+        LIB_INFO("Seed: {}", Random::GetSeed());
     }
 };
 

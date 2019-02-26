@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ChainComponent.hpp"
-#include "Logger.hpp"
+#include "logging.hpp"
 
 class ConsoleLogger : public ChainComponent {
   public:
