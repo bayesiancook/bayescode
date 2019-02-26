@@ -33,7 +33,7 @@ class random_init {
     random_init() {
         Random::InitRandom();
         // Random::InitRandom(5301);
-       spdlog::info("Seed: {}", Random::GetSeed());
+        spdlog::info("Seed: {}", Random::GetSeed());
     }
 };
 

@@ -89,13 +89,13 @@ void PhyloProcess::Unfold() {
 
     CreateMissingMap();
     FillMissingMap();
-   INFO("Recursive create");
+    INFO("Recursive create");
     RecursiveCreate(GetRoot());
-   INFO("Create tbl");
+    INFO("Create tbl");
     RecursiveCreateTBL(GetRoot());
-   INFO("Clamp data");
+    INFO("Clamp data");
     ClampData();
-   INFO("Clamp data ok");
+    INFO("Clamp data ok");
 }
 
 void PhyloProcess::Cleanup() {
