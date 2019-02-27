@@ -11,14 +11,20 @@ const string colored_pattern_prefix =
 // Formatting-related functions to keep it all in one place
 
 logger_t stdout_logger(string name) {
-    auto result = spdlog::stdout_color_mt(name);
-    result->set_pattern(colored_pattern_prefix + "%v");
+    auto result = spdlog::get(name);
+    if (result.get() == nullptr) {
+        result = spdlog::stdout_color_mt(name);
+        result->set_pattern(colored_pattern_prefix + "%v");
+    }
     return result;
 }
 
 logger_t file_logger(string name, string filename) {
-    auto result = spdlog::basic_logger_mt(name, filename);
-    result->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%P] [%n] [%^%l%$] %v");
+    auto result = spdlog::get(name);
+    if (result.get() == nullptr) {
+        result = spdlog::basic_logger_mt(name, filename);
+        result->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%P] [%n] [%^%l%$] %v");
+    }
     return result;
 }
 
