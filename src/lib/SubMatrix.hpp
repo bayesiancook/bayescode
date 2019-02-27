@@ -4,7 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 // using EMatrix = Eigen::MatrixXd;
 // using EVector = Eigen::VectorXd;

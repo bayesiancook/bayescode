@@ -3,8 +3,8 @@
 #define IIDDIR_H
 
 #include "Array.hpp"
-#include "Random.hpp"
 #include "SuffStat.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief A sufficient statistic for a collection of Dirichlet random variables,

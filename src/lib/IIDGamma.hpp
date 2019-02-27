@@ -3,7 +3,7 @@
 #include "Array.hpp"
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 #include "mpi_components/traits.hpp"
 
 /**

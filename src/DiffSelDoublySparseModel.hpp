@@ -46,7 +46,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "SubMatrixSelector.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
-#include "logging.hpp"
+#include "global/logging.hpp"
 #include "tree/implem.hpp"
 
 /**

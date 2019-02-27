@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "PathSuffStat.hpp"
 #include "PolySuffStat.hpp"
-#include "logging.hpp"
+#include "global/logging.hpp"
 
 using namespace std;
 

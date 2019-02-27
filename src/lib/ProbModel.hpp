@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <set>
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief A generic interface for MCMC probabilistic models

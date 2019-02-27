@@ -1,8 +1,7 @@
-#include "Random.hpp"
+#include "global/Random.hpp"
 #include <sys/time.h>
 #include <cmath>
 #include <iostream>
-#include "logging.hpp"
 
 /* =======================================================
    (VL) Magical constants, to be used only in this file.
@@ -24,20 +23,6 @@ const double gammacoefs[] = {0.9999999999995183, 676.5203681218835, -1259.139216
     771.3234287757674, -176.6150291498386, 12.50734324009056, -0.1385710331296526,
     0.9934937113930748e-05, 0.1659470187408462e-06};
 // const double Logroot2pi = 0.918938533204673;
-
-// -------------------------------------------------
-// just a trick for random number initialisation
-// function to be called before entering main()
-class random_init {
-  public:
-    random_init() {
-        Random::InitRandom();
-        // Random::InitRandom(5301);
-        spdlog::info("Seed: {}", Random::GetSeed());
-    }
-};
-
-static random_init init;
 
 int Random::Seed = 0;
 int Random::mt_index = 0;

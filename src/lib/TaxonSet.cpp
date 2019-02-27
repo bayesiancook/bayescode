@@ -1,7 +1,7 @@
 #include "TaxonSet.hpp"
 #include <iostream>
 #include "BiologicalSequences.hpp"
-#include "logging.hpp"
+#include "global/logging.hpp"
 #include "tree/implem.hpp"
 
 using namespace std;

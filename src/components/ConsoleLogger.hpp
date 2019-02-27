@@ -1,10 +1,10 @@
 #pragma once
 
 #include "ChainComponent.hpp"
-#include "logging.hpp"
+#include "global/logging.hpp"
 
 class ConsoleLogger : public ChainComponent {
-    logger_t logger{stdout_logger("console")};
+    logger_t logger{stdout_logger("chain_logger")};
 
   public:
     void start() override { logger->info("Started"); }

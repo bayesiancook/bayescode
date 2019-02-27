@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 #include "Exception.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 using namespace std;
 
 CodonSequenceAlignment::CodonSequenceAlignment(

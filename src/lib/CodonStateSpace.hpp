@@ -2,8 +2,8 @@
 #define CODONSTATESPACE_H
 
 #include <map>
-#include "Random.hpp"
 #include "StateSpace.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief A codon state space
