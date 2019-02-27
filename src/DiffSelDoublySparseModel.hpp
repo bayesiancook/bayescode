@@ -104,7 +104,7 @@ std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
         os << "shrunk";
     } else if (c == shared) {
         os << "shared";
-    } else if (c == fixed) {
+    } else if (c == param_mode_t::fixed) {
         os << "fixed";
     }
     return os;
@@ -269,8 +269,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode = fixed,
-        bool withtoggle = true)
+        double inshiftprobmean, double inshiftprobinvconc,
+        param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true)
         : datafile(datafile),
           treefile(treefile),
           fitnesscentermode(fitnesscentermode),
@@ -286,7 +286,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         nucmode = independent;
 
         if (inshape > 0) {
-            fitnessshapemode = fixed;
+            fitnessshapemode = param_mode_t::fixed;
             fitnessshape = inshape;
         } else {
             fitnessshapemode = independent;
