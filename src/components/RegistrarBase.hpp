@@ -4,8 +4,8 @@
 #include <set>
 #include <string>
 #include "lib/Array.hpp"
-#include "lib/BranchArray.hpp"
 #include "lib/BidimArray.hpp"
+#include "lib/BranchArray.hpp"
 class PoissonSuffStat;
 class PoissonSuffStatBranchArray;
 class IIDGamma;

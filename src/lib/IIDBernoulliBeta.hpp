@@ -35,7 +35,7 @@ class BernoulliBetaSuffStat : public SuffStat {
     }
 
     //! (*this) += from
-    void Add(const BernoulliBetaSuffStat &from) {
+    void Add(const BernoulliBetaSuffStat& from) {
         sumlog0 += from.GetSumLog0();
         sumlog1 += from.GetSumLog1();
         n0 += from.GetN0();
@@ -43,7 +43,7 @@ class BernoulliBetaSuffStat : public SuffStat {
     }
 
     //! (*this) += from, operator version
-    BernoulliBetaSuffStat &operator+=(const BernoulliBetaSuffStat &from) {
+    BernoulliBetaSuffStat& operator+=(const BernoulliBetaSuffStat& from) {
         Add(from);
         return *this;
     }
@@ -55,7 +55,7 @@ class BernoulliBetaSuffStat : public SuffStat {
         double beta = (1.0 - mean) / invconc;
         double logbern = n0 * log(1 - pi) + n1 * log(pi);
         double logbeta = n1 * (Random::logGamma(alpha + beta) - Random::logGamma(alpha) -
-                               Random::logGamma(beta)) +
+                                  Random::logGamma(beta)) +
                          (alpha - 1) * sumlog0 + (beta - 1) * sumlog1;
         return logbern + logbeta;
     }
@@ -70,7 +70,7 @@ class BernoulliBetaSuffStat : public SuffStat {
     double GetSumLog1() const { return sumlog1; }
 
     template <class T>
-    void serialization_interface(T &x) {
+    void serialization_interface(T& x) {
         x.add(sumlog0, sumlog1, n0, n1);
     }
 
@@ -103,7 +103,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     //! return alpha parameter of the Beta distribution
     double GetAlpha() const { return mean / invconc; }
     //! return beta parameter of the Beta distribution
-    double GetBeta() const { return (1-mean)/invconc; }
+    double GetBeta() const { return (1 - mean) / invconc; }
 
     //! sample all entries from prior distribution
     void Sample() {
@@ -120,9 +120,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     int GetNullSet() const {
         int tot = 0;
         for (int i = 0; i < GetSize(); i++) {
-            if (!GetVal(i)) {
-                tot++;
-            }
+            if (!GetVal(i)) { tot++; }
         }
         return tot;
     }
@@ -130,9 +128,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     //! return log probability summed over all entries
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
@@ -149,7 +145,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
     }
 
     //! add all entries to sufficient statistic
-    void AddSuffStat(BernoulliBetaSuffStat &suffstat) {
+    void AddSuffStat(BernoulliBetaSuffStat& suffstat) {
         for (int i = 0; i < GetSize(); i++) {
             if (!GetVal(i)) {
                 suffstat.AddNullSuffStat(1);
@@ -169,9 +165,7 @@ class IIDBernoulliBeta : public SimpleArray<double> {
                 tot++;
             }
         }
-        if (!tot) {
-            return 0;
-        }
+        if (!tot) { return 0; }
         m1 /= tot;
         return m1;
     }
@@ -184,4 +178,3 @@ class IIDBernoulliBeta : public SimpleArray<double> {
 
 template <>
 struct has_custom_serialization<IIDBernoulliBeta> : std::true_type {};
-

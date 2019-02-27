@@ -165,8 +165,8 @@ class PoissonSuffStatArray : public SimpleArray<PoissonSuffStat> {
     //! gamma of given shape and scale parameters
     double GetMarginalLogProb(double mean, double invshape) const {
         double total = 0;
-        for (int i=0; i<GetSize(); i++)	{
-                total += GetVal(i).GetMarginalLogProb(mean,invshape);
+        for (int i = 0; i < GetSize(); i++) {
+            total += GetVal(i).GetMarginalLogProb(mean, invshape);
         }
         return total;
     }
@@ -223,7 +223,7 @@ class PoissonSuffStatBranchArray : public SimpleBranchArray<PoissonSuffStat> {
     double GetMarginalLogProb(double mean, double invshape) const {
         double total = 0;
         for (int i = 0; i < GetNbranch(); i++) {
-            total += GetVal(i).GetMarginalLogProb(mean,invshape);
+            total += GetVal(i).GetMarginalLogProb(mean, invshape);
         }
         return total;
     }

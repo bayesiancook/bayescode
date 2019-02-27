@@ -16,7 +16,7 @@
  * model
  *
  * The model has the following structure:
- * - branch lengths iid Exponential of mean blhypermean 
+ * - branch lengths iid Exponential of mean blhypermean
  * - nucleotide relative exchangeabilities and stationaries are uniform
  * Dirichlet
  * - there is one single omega=dN/dS for all sites and across all branches
@@ -51,7 +51,7 @@ class SingleOmegaModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double>* blhypermeanarray;
+    SimpleBranchArray<double> *blhypermeanarray;
     GammaWhiteNoise *branchlength;
 
     // Poisson suffstats for substitution histories, as a function of branch
@@ -208,7 +208,8 @@ class SingleOmegaModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmeanarray, double inblinvshape) {
         blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
     }
@@ -340,9 +341,7 @@ class SingleOmegaModel : public ChainComponent {
     // Branch lengths
 
     //! log prior over branch lengths
-    double BranchLengthsLogPrior() const {
-        return branchlength->GetLogProb();
-    }
+    double BranchLengthsLogPrior() const { return branchlength->GetLogProb(); }
 
     // Nucleotide rates
 
@@ -463,9 +462,7 @@ class SingleOmegaModel : public ChainComponent {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            if (blmode != shared) { 
-                MoveBranchLengths(); 
-            }
+            if (blmode != shared) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             MoveOmega();
@@ -480,9 +477,7 @@ class SingleOmegaModel : public ChainComponent {
     // Branch lengths
 
     //! overall schedule branch length updatdes
-    void MoveBranchLengths() {
-        ResampleBranchLengths();
-    }
+    void MoveBranchLengths() { ResampleBranchLengths(); }
 
     //! Gibbs resample branch lengths (based on sufficient statistics)
     void ResampleBranchLengths() {

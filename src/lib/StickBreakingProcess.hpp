@@ -14,7 +14,7 @@ class StickBreakingProcess : public SimpleArray<double> {
   public:
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
-    StickBreakingProcess(int inncat, const double& inkappa)
+    StickBreakingProcess(int inncat, const double &inkappa)
         : SimpleArray<double>(inncat), V(inncat), kappa(inkappa) {
         Sample();
     }
@@ -190,7 +190,7 @@ class StickBreakingProcess : public SimpleArray<double> {
 
   private:
     std::vector<double> V;
-    const double& kappa;
+    const double &kappa;
 };
 
 #endif

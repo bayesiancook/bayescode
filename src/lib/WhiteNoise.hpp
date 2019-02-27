@@ -12,8 +12,8 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
     // mode 0 : ugam
     // mode 1 : wn
-    GammaWhiteNoise(
-        const Tree &intree, const BranchSelector<double> &inblmean, const double& ininvshape, int inmode = 0)
+    GammaWhiteNoise(const Tree &intree, const BranchSelector<double> &inblmean,
+        const double &ininvshape, int inmode = 0)
         : SimpleBranchArray<double>(intree), blmean(inblmean), invshape(ininvshape) {
         mode = inmode;
         Sample();
@@ -21,7 +21,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
     ~GammaWhiteNoise() {}
 
-    GammaWhiteNoise& operator=(const GammaWhiteNoise& from)   {
+    GammaWhiteNoise &operator=(const GammaWhiteNoise &from) {
         array = from.array;
         return *this;
     }
@@ -97,7 +97,7 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
 
   protected:
     const BranchSelector<double> &blmean;
-    const double& invshape;
+    const double &invshape;
     int mode;
 };
 
@@ -118,9 +118,9 @@ class GammaWhiteNoiseArray : public SimpleArray<GammaWhiteNoise> {
   public:
     //! constructor: parameterized by the number of genes, the tree, the means
     //! over branches and the shape parameter
-    GammaWhiteNoiseArray(
-        int inNgene, const Tree &intree, const BranchSelector<double> &inblmean, const double & ininvshape)
-        : SimpleArray(inNgene, GammaWhiteNoise(intree,inblmean,ininvshape)) {}
+    GammaWhiteNoiseArray(int inNgene, const Tree &intree, const BranchSelector<double> &inblmean,
+        const double &ininvshape)
+        : SimpleArray(inNgene, GammaWhiteNoise(intree, inblmean, ininvshape)) {}
 
     ~GammaWhiteNoiseArray() {}
 
@@ -175,4 +175,3 @@ class GammaWhiteNoiseArray : public SimpleArray<GammaWhiteNoise> {
 
 template <>
 struct has_custom_serialization<GammaWhiteNoiseArray> : std::true_type {};
-

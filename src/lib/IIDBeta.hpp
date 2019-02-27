@@ -90,7 +90,7 @@ struct has_custom_serialization<BetaSuffStat> : std::true_type {};
 class IIDBeta : public SimpleArray<double> {
   public:
     //! constructor parameterized by array size, and alpha and beta parameters
-    IIDBeta(int insize, const double& inmean, const double& ininvconc)
+    IIDBeta(int insize, const double &inmean, const double &ininvconc)
         : SimpleArray<double>(insize), mean(inmean), invconc(ininvconc) {
         Sample();
     }
@@ -100,7 +100,7 @@ class IIDBeta : public SimpleArray<double> {
     //! return value of the alpha parameter
     double GetAlpha() const { return mean / invconc; }
     //! return value of the beta parameter
-    double GetBeta() const { return (1.0-mean) / invconc; }
+    double GetBeta() const { return (1.0 - mean) / invconc; }
 
     //! sample from prior
     void Sample() {
@@ -112,14 +112,14 @@ class IIDBeta : public SimpleArray<double> {
     //! return log prior density of current values across array
     double GetLogProb() const {
         double total = 0;
-        for (int i = 0; i < GetSize(); i++) {
-            total += GetLogProb(i);
-        }
+        for (int i = 0; i < GetSize(); i++) { total += GetLogProb(i); }
         return total;
     }
 
     //! return log prior for entry i
-    double GetLogProb(int i) const { return Random::logBetaDensity(GetVal(i), GetAlpha(), GetBeta()); }
+    double GetLogProb(int i) const {
+        return Random::logBetaDensity(GetVal(i), GetAlpha(), GetBeta());
+    }
 
     //! add current values stored in array to BetaSuffStat given as argument
     void AddSuffStat(BetaSuffStat &suffstat) {
@@ -129,10 +129,9 @@ class IIDBeta : public SimpleArray<double> {
     }
 
   protected:
-    const double& mean;
-    const double& invconc;
+    const double &mean;
+    const double &invconc;
 };
 
 template <>
 struct has_custom_serialization<IIDBeta> : std::true_type {};
-

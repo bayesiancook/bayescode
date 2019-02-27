@@ -13,7 +13,7 @@
 class IIDGamma : public SimpleArray<double> {
   public:
     //! constructor specifies array size and initial shape and scale parameters
-    IIDGamma(int insize, const double& inmean, const double& ininvshape)
+    IIDGamma(int insize, const double &inmean, const double &ininvshape)
         : SimpleArray<double>(insize), mean(inmean), invshape(ininvshape) {
         Sample();
     }
@@ -28,7 +28,9 @@ class IIDGamma : public SimpleArray<double> {
 
     //! sample all entries, given current shape and scale params
     void Sample() {
-        for (int i = 0; i < GetSize(); i++) { (*this)[i] = Random::GammaSample(GetShape(), GetScale()); }
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i] = Random::GammaSample(GetShape(), GetScale());
+        }
     }
 
     //! resample all entries, given current shape and scale parameters and given
@@ -36,8 +38,8 @@ class IIDGamma : public SimpleArray<double> {
     void GibbsResample(const Selector<PoissonSuffStat> &suffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            (*this)[i] =
-                Random::GammaSample(GetShape() + suffstat.GetCount(), GetScale() + suffstat.GetBeta());
+            (*this)[i] = Random::GammaSample(
+                GetShape() + suffstat.GetCount(), GetScale() + suffstat.GetBeta());
         }
     }
 
@@ -117,8 +119,8 @@ class IIDGamma : public SimpleArray<double> {
     }
 
   protected:
-    const double& mean;
-    const double& invshape;
+    const double &mean;
+    const double &invshape;
 };
 
 template <>
@@ -131,7 +133,7 @@ struct has_custom_serialization<IIDGamma> : std::true_type {};
 
 class BranchIIDGamma : public SimpleBranchArray<double> {
   public:
-    BranchIIDGamma(const Tree &intree, const double& inmean, const double& ininvshape)
+    BranchIIDGamma(const Tree &intree, const double &inmean, const double &ininvshape)
         : SimpleBranchArray<double>(intree), mean(inmean), invshape(ininvshape) {
         Sample();
     }
@@ -148,7 +150,9 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
 
     //! sample all entries from prior
     void Sample() {
-        for (int i = 0; i < GetNbranch(); i++) { (*this)[i] = Random::GammaSample(GetShape(), GetScale()); }
+        for (int i = 0; i < GetNbranch(); i++) {
+            (*this)[i] = Random::GammaSample(GetShape(), GetScale());
+        }
     }
 
     //! resample all entries from posterior, conditional on BranchArray of
@@ -158,8 +162,8 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     void GibbsResample(const BranchArray<PoissonSuffStat> &suffstatarray) {
         for (int i = 0; i < GetNbranch(); i++) {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
-            (*this)[i] =
-                Random::GammaSample(GetShape() + suffstat.GetCount(), GetScale() + suffstat.GetBeta());
+            (*this)[i] = Random::GammaSample(
+                GetShape() + suffstat.GetCount(), GetScale() + suffstat.GetBeta());
         }
     }
 
@@ -171,7 +175,9 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     }
 
     //! get log prob for a given branch
-    double GetLogProb(int index) { return Random::logGammaDensity(GetVal(index), GetShape(), GetScale()); }
+    double GetLogProb(int index) {
+        return Random::logGammaDensity(GetVal(index), GetShape(), GetScale());
+    }
 
     //! get sum over all entries (name is rather specialized... could change..)
     double GetTotalLength() const {
@@ -203,10 +209,9 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     }
 
   protected:
-    const double& mean;
-    const double& invshape;
+    const double &mean;
+    const double &invshape;
 };
 
 template <>
 struct has_custom_serialization<BranchIIDGamma> : std::true_type {};
-

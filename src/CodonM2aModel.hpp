@@ -47,11 +47,11 @@
 #include "GammaSuffStat.hpp"
 #include "IIDGamma.hpp"
 #include "M2aMix.hpp"
+#include "Move.hpp"
 #include "MultinomialAllocationVector.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "WhiteNoise.hpp"
-#include "Move.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 
@@ -402,7 +402,7 @@ class CodonM2aModel : public ChainComponent {
     void MoveParameters(int nrep);
 
     //
-    // Branch Lengths 
+    // Branch Lengths
     //
 
     //! overall schedule branch length updatdes
@@ -493,7 +493,7 @@ class CodonM2aModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double>* blhypermeanarray;
+    SimpleBranchArray<double> *blhypermeanarray;
     GammaWhiteNoise *branchlength;
 
     //

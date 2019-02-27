@@ -32,8 +32,8 @@ class PartitionedBufferManager {
           _displs(partition.max_index(), 0) {}
 
     template <class T>
-    void add(T& x)  {
-        custom_add_dispatch(x,has_custom_serialization<T>());
+    void add(T& x) {
+        custom_add_dispatch(x, has_custom_serialization<T>());
     }
 
   private:
@@ -61,7 +61,6 @@ class PartitionedBufferManager {
     }
 
   public:
-
     template <class Var, class... Vars>
     void add(Var& var, Vars&&... vars) {
         add(var);

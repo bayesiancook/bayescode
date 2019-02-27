@@ -83,7 +83,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double>* blhypermeanarray;
+    SimpleBranchArray<double> *blhypermeanarray;
     GammaWhiteNoise *branchlength;
 
     // Poisson suffstats for substitution histories, as a function of branch
@@ -273,9 +273,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     template <class C>
     void declare_model(C &t) {
-        if (blmode < 2) {
-            t.add("branchlength", *branchlength);
-        }
+        if (blmode < 2) { t.add("branchlength", *branchlength); }
         if (nucmode < 2) {
             t.add("nucrelrate", nucrelrate);
             t.add("nucstat", nucstat);
@@ -356,8 +354,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         basecenterhypercenter.assign(Naa, 1.0 / Naa);
         basecenterhyperinvconc = 1.0 / Naa;
 
-        basecenterarray =
-            new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
+        basecenterarray = new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
         basecenterarray->SetUniform();
 
         baseconchypermean = Naa;
@@ -757,9 +754,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     //! MCMC move schedule on branch lengths
-    void MoveBranchLengths() {
-        ResampleBranchLengths();
-    }
+    void MoveBranchLengths() { ResampleBranchLengths(); }
 
     //! MH move on nucleotide rate parameters
     void MoveNucRates() {

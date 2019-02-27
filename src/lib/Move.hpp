@@ -69,13 +69,12 @@ class Move {
     //! update functions, as well as a pointer to the model itself. Returns
     //! success rate.
     template <class C>
-    static double VectorSliding(std::vector<double> &x, double tuning, int nrep, double min, double max,
-        VectorLogProbF<C> logprobf, VectorUpdateF<C> updatef, C *This) {
-
+    static double VectorSliding(std::vector<double> &x, double tuning, int nrep, double min,
+        double max, VectorLogProbF<C> logprobf, VectorUpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
-            for (unsigned int i=0; i<x.size(); i++) {
+            for (unsigned int i = 0; i < x.size(); i++) {
                 double bk = x[i];
                 double deltalogprob = -(This->*logprobf)(i);
                 double m = tuning * (Random::Uniform() - 0.5);
@@ -109,15 +108,15 @@ class Move {
     //! update functions, as well as a pointer to the model itself. Returns
     //! success rate.
     template <class C>
-    static double VectorSliding(std::vector<double> &x, double tuning, int nrep, const std::vector<double>& min, const std::vector<double>& max,
-        VectorLogProbF<C> logprobf, VectorUpdateF<C> updatef, C *This) {
-
+    static double VectorSliding(std::vector<double> &x, double tuning, int nrep,
+        const std::vector<double> &min, const std::vector<double> &max, VectorLogProbF<C> logprobf,
+        VectorUpdateF<C> updatef, C *This) {
         assert((x.size() == min.size()) && (min.size() == max.size()));
 
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
-            for (unsigned int i=0; i<x.size(); i++) {
+            for (unsigned int i = 0; i < x.size(); i++) {
                 double bk = x[i];
                 double deltalogprob = -(This->*logprobf)(i);
                 double m = tuning * (Random::Uniform() - 0.5);
@@ -179,12 +178,12 @@ class Move {
     //! Should give a pointer to a log prob and an update function.
     //! Return success rate.
     template <class C>
-    static double VectorScaling(
-        std::vector<double> &x, double tuning, int nrep, VectorLogProbF<C> logprobf, VectorUpdateF<C> updatef, C *This) {
+    static double VectorScaling(std::vector<double> &x, double tuning, int nrep,
+        VectorLogProbF<C> logprobf, VectorUpdateF<C> updatef, C *This) {
         double nacc = 0;
         double ntot = 0;
         for (int rep = 0; rep < nrep; rep++) {
-            for (unsigned int i=0; i<x.size(); i++) {
+            for (unsigned int i = 0; i < x.size(); i++) {
                 double deltalogprob = -(This->*logprobf)(i);
                 double m = tuning * (Random::Uniform() - 0.5);
                 double e = exp(m);

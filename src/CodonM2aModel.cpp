@@ -118,7 +118,8 @@ void CodonM2aModel::GetBranchLengths(BranchArray<double> &inbranchlength) const 
     inbranchlength.Copy(*branchlength);
 }
 
-void CodonM2aModel::SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+void CodonM2aModel::SetBranchLengthsHyperParameters(
+    const BranchSelector<double> &inblmeanarray, double inblinvshape) {
     blhypermeanarray->Copy(inblmeanarray);
     blhyperinvshape = inblinvshape;
     // branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
@@ -370,12 +371,10 @@ void CodonM2aModel::ResampleSub(double frac) {
 }
 
 //
-// Branch Lengths 
+// Branch Lengths
 //
 
-void CodonM2aModel::MoveBranchLengths() {
-    ResampleBranchLengths();
-}
+void CodonM2aModel::MoveBranchLengths() { ResampleBranchLengths(); }
 
 void CodonM2aModel::ResampleBranchLengths() {
     CollectLengthSuffStat();

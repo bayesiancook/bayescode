@@ -185,7 +185,7 @@ class SimpleArray : public Array<T> {
 
     size_t size() const { return array.size(); }
 
-    SimpleArray<T>& operator=(const SimpleArray<T>& from)   {
+    SimpleArray<T> &operator=(const SimpleArray<T> &from) {
         array = from.array;
         return *this;
     }

@@ -150,7 +150,7 @@ class SimpleBranchArray : public BranchArray<T> {
 
     size_t size() const { return array.size(); }
 
-    SimpleBranchArray<T>& operator=(const SimpleBranchArray<T>& from)   {
+    SimpleBranchArray<T> &operator=(const SimpleBranchArray<T> &from) {
         array = from.array;
         return *this;
     }
@@ -175,4 +175,3 @@ class SimpleBranchArray : public BranchArray<T> {
 
 template <class T>
 struct has_custom_serialization<SimpleBranchArray<T>> : std::true_type {};
-

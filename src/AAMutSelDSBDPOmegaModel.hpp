@@ -86,7 +86,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double>* blhypermeanarray;
+    SimpleBranchArray<double> *blhypermeanarray;
     GammaWhiteNoise *branchlength;
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
 
@@ -289,9 +289,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     template <class C>
     void declare_model(C &t) {
-        if (blmode < 2) {
-            t.add("branchlength", *branchlength);
-        }
+        if (blmode < 2) { t.add("branchlength", *branchlength); }
         if (nucmode < 2) {
             t.add("nucrelrate", nucrelrate);
             t.add("nucstat", nucstat);
@@ -420,8 +418,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         basecenterhypercenter.assign(Naa, 1.0 / Naa);
         basecenterhyperinvconc = 1.0 / Naa;
 
-        basecenterarray =
-            new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
+        basecenterarray = new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
         basecenterarray->SetUniform();
 
         baseconchypermean = Naa;
@@ -536,7 +533,8 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmeanarray, double inblinvshape) {
         blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
     }
@@ -675,9 +673,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     // Branch lengths
 
     //! log prior over branch lengths
-    double BranchLengthsLogPrior() const {
-        return branchlength->GetLogProb();
-    }
+    double BranchLengthsLogPrior() const { return branchlength->GetLogProb(); }
 
     //! log prior over omega (gamma of mean omegahypermean and inverse shape
     //! omegahyperinvshape)
@@ -967,9 +963,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
     }
 
     //! MCMC move schedule on branch lengths
-    void MoveBranchLengths() {
-        ResampleBranchLengths();
-    }
+    void MoveBranchLengths() { ResampleBranchLengths(); }
 
     //! MH move on theta
     void MoveTheta() {

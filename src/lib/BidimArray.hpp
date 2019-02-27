@@ -137,7 +137,7 @@ class SimpleBidimArray : public BidimArray<T> {
     //! return a const ref to the vector<T> corresponding to row i
     const std::vector<T> &GetSubArray(int i) const { return array[i]; }
 
-    std::vector<std::vector<T>>& GetArray() { return array; }
+    std::vector<std::vector<T>> &GetArray() { return array; }
 
   protected:
     int nrow;

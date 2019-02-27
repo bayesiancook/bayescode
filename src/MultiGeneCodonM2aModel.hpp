@@ -67,8 +67,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     // Constructors
     // ------------------
 
-    MultiGeneCodonM2aModel(std::string datafile, std::string treefile, param_mode_t blmode,
-        param_mode_t nucmode)
+    MultiGeneCodonM2aModel(
+        std::string datafile, std::string treefile, param_mode_t blmode, param_mode_t nucmode)
         : datafile(datafile),
           treefile(treefile),
           codonstatespace(Universal),
@@ -78,39 +78,37 @@ class MultiGeneCodonM2aModel : public ChainComponent {
           nucmode(nucmode),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
+        modalprior = 1;
+        pihypermean = 0.1;
+        pihyperinvconc = 0.2;
 
-            modalprior = 1;
-            pihypermean = 0.1;
-            pihyperinvconc = 0.2;
+        puromhypermean = 0.5;
+        puromhyperinvconc = 0.5;
+        purommode = 1;
 
-            puromhypermean = 0.5;
-            puromhyperinvconc = 0.5;
-            purommode = 1;
+        purwhypermean = 0.5;
+        purwhyperinvconc = 0.5;
+        purwmode = 1;
 
-            purwhypermean = 0.5;
-            purwhyperinvconc = 0.5;
-            purwmode = 1;
+        poswhypermean = 0.5;
+        poswhyperinvconc = 0.1;
+        poswmode = 1;
 
-            poswhypermean = 0.5;
-            poswhyperinvconc = 0.1;
-            poswmode = 1;
+        dposomhypermean = 1.0;
+        dposomhyperinvshape = 0.5;
+        dposommode = 1;
 
-            dposomhypermean = 1.0;
-            dposomhyperinvshape = 0.5;
-            dposommode = 1;
+        writegenedata = 1;
 
-            writegenedata = 1;
+        // get tree from file (newick format)
+        std::ifstream tree_stream{treefile};
+        NHXParser parser{tree_stream};
+        tree = make_from_parser(parser);
 
-            // get tree from file (newick format)
-            std::ifstream tree_stream{treefile};
-            NHXParser parser{tree_stream};
-            tree = make_from_parser(parser);
-
-            Allocate();
-      }
+        Allocate();
+    }
 
     void Allocate() {
-
         // Branch lengths
 
         meanoverbranches = 0.1;
@@ -120,7 +118,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         // otherwise, they are the bector of branch lengths hypermeans across branches
         branchlength = new BranchIIDGamma(*tree, meanoverbranches, one);
 
-        // if branch lengths are not shared, this is the inv shape for the variation of branch lengths across GENES
+        // if branch lengths are not shared, this is the inv shape for the variation of branch
+        // lengths across GENES
         blhyperinvshape = 1.0;
 
         if (blmode == shared) {
@@ -145,30 +144,30 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         nucstathyperinvconc = 0.1 / Nnuc;
 
         if (nucmode == shared) {
-            nucrelratearray =
-                new IIDDirichlet(1, nucrelratehypercenter, nucrelratehyperinvconc);
+            nucrelratearray = new IIDDirichlet(1, nucrelratehypercenter, nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(1, nucstathypercenter, nucstathyperinvconc);
             nucmatrix = new GTRSubMatrix(Nnuc, (*nucrelratearray)[0], (*nucstatarray)[0], true);
         } else {
-            nucrelratearray = new IIDDirichlet(partition.my_allocation_size(),
-                nucrelratehypercenter, nucrelratehyperinvconc);
+            nucrelratearray = new IIDDirichlet(
+                partition.my_allocation_size(), nucrelratehypercenter, nucrelratehyperinvconc);
             nucstatarray = new IIDDirichlet(
                 partition.my_allocation_size(), nucstathypercenter, nucstathyperinvconc);
             nucmatrix = 0;
         }
 
-        puromarray = new IIDBeta(partition.my_allocation_size(),puromhypermean, puromhyperinvconc);
-        dposomarray = new IIDGamma(partition.my_allocation_size(), dposomhypermean, dposomhyperinvshape);
+        puromarray = new IIDBeta(partition.my_allocation_size(), puromhypermean, puromhyperinvconc);
+        dposomarray =
+            new IIDGamma(partition.my_allocation_size(), dposomhypermean, dposomhyperinvshape);
         purwarray = new IIDBeta(partition.my_allocation_size(), purwhypermean, purwhyperinvconc);
-        poswarray = new IIDBernoulliBeta(partition.my_allocation_size(), pi, poswhypermean, poswhyperinvconc);
+        poswarray = new IIDBernoulliBeta(
+            partition.my_allocation_size(), pi, poswhypermean, poswhyperinvconc);
 
         if (MPI::p->rank > 0) {
             size_t nb_genes = partition.my_partition_size();
             geneprocess.reserve(nb_genes);
             for (size_t gene_i = 0; gene_i < nb_genes; gene_i++) {
-                geneprocess.emplace_back(
-                    new CodonM2aModel(gene_vector.at(gene_i), treefile, 0.1));
-                    // new SingleOmegaModel(gene_vector.at(gene_i), treefile, blmode, nucmode));
+                geneprocess.emplace_back(new CodonM2aModel(gene_vector.at(gene_i), treefile, 0.1));
+                // new SingleOmegaModel(gene_vector.at(gene_i), treefile, blmode, nucmode));
                 geneprocess.back()->Update();
             }
         }
@@ -176,11 +175,10 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // MPI communication groups
     void declare_groups() {
-
         //clang-format off
 
-        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving branch lengths
-        // used in update and move
+        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving branch
+        // lengths used in update and move
         if (blmode == shared) {
             globalbl = make_group(
 
@@ -191,9 +189,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
                 // sync gene processes
                 slave_acquire([this]() {
-                    for (auto& gene : geneprocess) {
-                        gene->SetBranchLengths(*branchlength);
-                    }
+                    for (auto &gene : geneprocess) { gene->SetBranchLengths(*branchlength); }
                 }),
 
                 // backward mode (from slaves to master)
@@ -201,15 +197,14 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 // collect bl suff stats across genes
                 slave_release([this]() {
                     lengthpathsuffstatarray->Clear();
-                    for (auto& gene : geneprocess) {
+                    for (auto &gene : geneprocess) {
                         gene->CollectLengthSuffStat();
                         lengthpathsuffstatarray->Add(*gene->GetLengthPathSuffStatArray());
                     }
                 }),
 
                 // reduce suffstats on master
-                reduce(*lengthpathsuffstatarray)
-            );
+                reduce(*lengthpathsuffstatarray));
         } else {
             globalbl = make_group(
 
@@ -220,7 +215,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
                 // sync gene processes
                 slave_acquire([this]() {
-                    for (auto& gene : geneprocess) {
+                    for (auto &gene : geneprocess) {
                         gene->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
                     }
                 }),
@@ -237,23 +232,22 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 }),
 
                 // reduce suffstats on master
-                reduce(*lengthhypersuffstatarray)
-            );
+                reduce(*lengthhypersuffstatarray));
         }
 
-        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving nuc rates 
-        // used in update and move
-        if (nucmode == shared)  {
+        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving nuc
+        // rates used in update and move
+        if (nucmode == shared) {
             globalnuc = make_group(
 
                 // forward mode (from master to slaves)
 
                 // broadcast global nuc rates
-                broadcast(*nucrelratearray,*nucstatarray),
+                broadcast(*nucrelratearray, *nucstatarray),
 
                 // sync gene processes
-                slave_acquire([this]()  {
-                    for (auto& gene : geneprocess)   {
+                slave_acquire([this]() {
+                    for (auto &gene : geneprocess) {
                         gene->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
                     }
                 }),
@@ -261,30 +255,28 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 // backward mode (from slaves to master)
 
                 // collect nuc path suffstat across genes, for each slave
-                slave_release([this]()  {
+                slave_release([this]() {
                     nucpathsuffstat.Clear();
-                    for (auto& gene : geneprocess)   {
+                    for (auto &gene : geneprocess) {
                         gene->CollectNucPathSuffStat();
                         nucpathsuffstat += gene->GetNucPathSuffStat();
                     }
                 }),
 
                 // reduce suff stats on master
-                reduce(nucpathsuffstat)
-            );
-        }
-        else    {
+                reduce(nucpathsuffstat));
+        } else {
             globalnuc = make_group(
 
                 // forward mode (from master to slaves)
 
                 // broadcast nucrates hyperparams
-                broadcast(nucrelratehypercenter, nucrelratehyperinvconc,
-                          nucstathypercenter, nucstathyperinvconc),
+                broadcast(nucrelratehypercenter, nucrelratehyperinvconc, nucstathypercenter,
+                    nucstathyperinvconc),
 
                 // sync gene processes
-                slave_acquire([this]()  {
-                    for (auto& gene : geneprocess)   {
+                slave_acquire([this]() {
+                    for (auto &gene : geneprocess) {
                         gene->SetNucRatesHyperParameters(nucrelratehypercenter,
                             nucrelratehyperinvconc, nucstathypercenter, nucstathyperinvconc);
                     }
@@ -293,9 +285,10 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 // backward mode (from slaves to master)
 
                 // collect gene-specific nuc rates and hyper suff stats
-                slave_release([this]()  {
+                slave_release([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                        geneprocess[gene]->GetNucRates(
+                            (*nucrelratearray)[gene], (*nucstatarray)[gene]);
                     }
                     nucrelratesuffstat.Clear();
                     nucrelratearray->AddSuffStat(nucrelratesuffstat);
@@ -304,13 +297,13 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 }),
 
                 // reduce suffstats on master
-                reduce(nucrelratesuffstat,nucstatsuffstat)
-            );
+                reduce(nucrelratesuffstat, nucstatsuffstat));
         }
 
         globalomega = make_group();
         /*
-        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving omega hyper params
+        // mpi comm, gene syncing, suffstat collection and reduction over genes when moving omega
+        hyper params
         // used in update and move
         globalomega = make_group(
 
@@ -377,14 +370,14 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
         // mpi comm and gene syncing for gene-specific branch lengths
         // used in update and trace
-        if (blmode != shared)   {
+        if (blmode != shared) {
             genebl = make_group(
 
                 // forward mode (from master to slaves)
 
                 scatter(partition, *branchlengtharray),
 
-                slave_acquire([this]()  {
+                slave_acquire([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
                         geneprocess[gene]->SetBranchLengths((*branchlengtharray)[gene]);
                     }
@@ -398,52 +391,51 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                     }
                 }),
 
-                gather(partition, *branchlengtharray)
-            );
+                gather(partition, *branchlengtharray));
         }
 
         // mpi comm and gene syncing for gene-specific nuc rates
         // used in update and trace
-        if (nucmode != shared)  {
+        if (nucmode != shared) {
             genenuc = make_group(
 
                 // forward mode (from master to slaves)
 
                 scatter(partition, *nucrelratearray, *nucstatarray),
 
-                slave_acquire([this]()  {
+                slave_acquire([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->SetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                        geneprocess[gene]->SetNucRates(
+                            (*nucrelratearray)[gene], (*nucstatarray)[gene]);
                     }
                 }),
 
                 // backward mode (from slaves to master)
 
-                slave_release([this]()  {
+                slave_release([this]() {
                     for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
-                        geneprocess[gene]->GetNucRates((*nucrelratearray)[gene], (*nucstatarray)[gene]);
+                        geneprocess[gene]->GetNucRates(
+                            (*nucrelratearray)[gene], (*nucstatarray)[gene]);
                     }
                 }),
 
-                gather(partition, *nucrelratearray, *nucstatarray)
-            );
+                gather(partition, *nucrelratearray, *nucstatarray));
         }
-        
+
         // reduction of summary statistics across genes
         // used in trace
         genestats = make_group(
 
-            slave_release([this]()  {
+            slave_release([this]() {
                 GeneLogPrior = 0;
                 GeneLogLikelihood = 0;
-                for (auto& gene : geneprocess)   {
+                for (auto &gene : geneprocess) {
                     GeneLogPrior += gene->GetLogPrior();
                     GeneLogLikelihood += gene->GetLogLikelihood();
                 }
             }),
 
-            reduce(GeneLogPrior, GeneLogLikelihood)
-        );
+            reduce(GeneLogPrior, GeneLogLikelihood));
 
         //clang-format on
     }
@@ -459,9 +451,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     // ------------------
 
     // summary statistics for tracing MCMC
-    int GetNpos() const {
-        return poswarray->GetSize() - poswarray->GetNullSet(); 
-    }
+    int GetNpos() const { return poswarray->GetSize() - poswarray->GetNullSet(); }
 
     double GetMeanTotalLength() const {
         double tot = 0;
@@ -566,7 +556,6 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     template <class C>
     void declare_stats(C &t) {
-
         t.add("logprior", this, &MultiGeneCodonM2aModel::GetLogPrior);
         t.add("GeneLogLikelihood", this, &MultiGeneCodonM2aModel::GetLogLikelihood);
 
@@ -612,7 +601,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     void move(int) override {
         MPI::p->message("Moving!");
-        if (!MPI::p->rank){
+        if (!MPI::p->rank) {
             SendRunningStatus(1);
             MoveMaster();
         } else {
@@ -623,14 +612,12 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     void savepoint(int) override {}
 
     void end() override {
-        if (!MPI::p->rank) {
-            SendRunningStatus(0);
-        }
+        if (!MPI::p->rank) { SendRunningStatus(0); }
     }
 
     void SendRunningStatus(int status) { MPI_Bcast(&status, 1, MPI_INT, 0, MPI_COMM_WORLD); }
 
-    void Update() { // TEMPORARY
+    void Update() {  // TEMPORARY
         MPI::p->message("Updating");
         if (!MPI::p->rank) {
             UpdateMaster();
@@ -640,21 +627,14 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     }
 
     void UpdateSlave() {
-
         globalbl->acquire();
         globalnuc->acquire();
         globalomega->acquire();
-        if (blmode != shared)   {
-            genebl->acquire();
-        }
-        if (nucmode != shared)  {
-            genenuc->acquire();
-        }
+        if (blmode != shared) { genebl->acquire(); }
+        if (nucmode != shared) { genenuc->acquire(); }
         geneomega->acquire();
 
-        for (auto& gene : geneprocess)   {
-            gene->Update();
-        }
+        for (auto &gene : geneprocess) { gene->Update(); }
 
         genestats->release();
     }
@@ -664,12 +644,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         globalbl->release();
         globalnuc->release();
         globalomega->release();
-        if (blmode != shared)   {
-            genebl->release();
-        }
-        if (nucmode != shared)  {
-            genenuc->release();
-        }
+        if (blmode != shared) { genebl->release(); }
+        if (nucmode != shared) { genenuc->release(); }
         geneomega->release();
 
         genestats->acquire();
@@ -679,12 +655,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         globalbl->acquire();
         globalnuc->acquire();
         globalomega->acquire();
-        if (blmode != shared)   {
-            genebl->acquire();
-        }
-        if (nucmode != shared)  {
-            genenuc->acquire();
-        }
+        if (blmode != shared) { genebl->acquire(); }
+        if (nucmode != shared) { genenuc->acquire(); }
         geneomega->acquire();
         for (size_t gene = 0; gene < partition.my_partition_size(); gene++) {
             geneprocess[gene]->PostPred(name + gene_vector.at(gene));
@@ -696,12 +668,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         globalbl->release();
         globalnuc->release();
         globalomega->release();
-        if (blmode != shared)   {
-            genebl->release();
-        }
-        if (nucmode != shared)  {
-            genenuc->release();
-        }
+        if (blmode != shared) { genebl->release(); }
+        if (nucmode != shared) { genenuc->release(); }
         geneomega->release();
     }
 
@@ -711,8 +679,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // slave move
     double MoveSlave() {
-
-        for (auto& gene : geneprocess)   {
+        for (auto &gene : geneprocess) {
             // resample substitution history
             gene->ResampleSub(1.0);
         }
@@ -720,13 +687,13 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            for (auto& gene : geneprocess)   {
+            for (auto &gene : geneprocess) {
                 // move whatever is gene-specific
                 gene->MoveParameters(1);
             }
 
             // if (omega_param.variable) {
-            if (true)   {
+            if (true) {
                 // release suffstats
                 globalomega->release();
                 // here, master moves omega hyperparams
@@ -734,7 +701,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 globalomega->acquire();
             }
 
-            if (blmode != independent)  {
+            if (blmode != independent) {
                 // release suffstats
                 globalbl->release();
                 // here, master moves global bl or genebl-hyperparams
@@ -753,12 +720,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
         // gather gene-specific variables on master
         geneomega->release();
-        if (blmode != shared)   {
-            genebl->release();
-        }
-        if (blmode != shared)   {
-            genenuc->release();
-        }
+        if (blmode != shared) { genebl->release(); }
+        if (blmode != shared) { genenuc->release(); }
 
         // reduce summary statistics across genes on master
         genestats->release();
@@ -769,9 +732,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-
-            if (true)   {
-            // if (omega_param.variable) {
+            if (true) {
+                // if (omega_param.variable) {
                 // get suffstats from slaves
                 globalomega->acquire();
                 // move omega hyperparams
@@ -780,7 +742,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
                 globalomega->release();
             }
 
-            if (blmode != independent)  {
+            if (blmode != independent) {
                 // get suffstats for global bl or gene-bl hyperparams
                 globalbl->acquire();
                 // move global variables
@@ -809,12 +771,8 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
         // gather gene-specific variables on master
         geneomega->acquire();
-        if (blmode != shared)   {
-            genebl->acquire();
-        }
-        if (nucmode != shared)  {
-            genenuc->acquire();
-        }
+        if (blmode != shared) { genebl->acquire(); }
+        if (nucmode != shared) { genenuc->acquire(); }
 
         // reduce summary statistics across genes on master
         genestats->acquire();
@@ -827,7 +785,6 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // total log prior
     double GetLogPrior() const {
-
         // gene contributions
         double total = GeneLogPrior;
 
@@ -859,17 +816,11 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // Branch lengths
 
-    double BranchLengthsMeanLogPrior() const   {
-        return -meanoverbranches / 0.1;
-    }
+    double BranchLengthsMeanLogPrior() const { return -meanoverbranches / 0.1; }
 
-    double GeneBranchLengthsHyperInvShapeLogPrior() const   {
-        return -blhyperinvshape;
-    }
+    double GeneBranchLengthsHyperInvShapeLogPrior() const { return -blhyperinvshape; }
 
-    double BranchLengthsLogPrior() const   {
-        return branchlength->GetLogProb();
-    }
+    double BranchLengthsLogPrior() const { return branchlength->GetLogProb(); }
 
     // Nucleotide rates
 
@@ -890,7 +841,6 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // mixture
     double MixtureHyperLogPrior() const {
-
         double total = 0;
         if (pi) {
             // beta distribution for pi, if not 0
@@ -978,18 +928,21 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // logprob for moving blhyperinvshape (hyper invshape of gene-specific branchlengths)
     double GeneBranchLengthsHyperInvShapeLogProb() const {
-        return GeneBranchLengthsHyperInvShapeLogPrior() + lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
+        return GeneBranchLengthsHyperInvShapeLogPrior() +
+               lengthhypersuffstatarray->GetLogProb(*branchlength, blhyperinvshape);
     }
 
-    // logprob for moving hyperparameters of gene-specific branchlengths (branchlength array, in bl shrunken mode)
+    // logprob for moving hyperparameters of gene-specific branchlengths (branchlength array, in bl
+    // shrunken mode)
     double GeneBranchLengthsHyperMeanLogProb(int j) const {
-        return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(branchlength->GetVal(j), blhyperinvshape);
+        return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(
+                                                 branchlength->GetVal(j), blhyperinvshape);
     }
 
     // Nucleotide rates
 
     // log prob for moving nuc rates
-    double GlobalNucRatesLogProb() const { 
+    double GlobalNucRatesLogProb() const {
         return GlobalNucRatesLogPrior() + nucpathsuffstat.GetLogProb(*nucmatrix, codonstatespace);
     }
 
@@ -1022,10 +975,14 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     }
 
     void MoveGeneBranchLengthsHyperParameters() {
-        Move::VectorScaling(branchlength->GetArray(), 1.0, 10, &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
-        Move::VectorScaling(branchlength->GetArray(), 0.3, 10, &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
-        Move::Scaling(blhyperinvshape, 1.0, 10, &M::GeneBranchLengthsHyperInvShapeLogProb, &M::NoUpdate, this);
-        Move::Scaling(blhyperinvshape, 0.3, 10, &M::GeneBranchLengthsHyperInvShapeLogProb, &M::NoUpdate, this);
+        Move::VectorScaling(branchlength->GetArray(), 1.0, 10,
+            &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
+        Move::VectorScaling(branchlength->GetArray(), 0.3, 10,
+            &M::GeneBranchLengthsHyperMeanLogProb, &M::VectorNoUpdate, this);
+        Move::Scaling(blhyperinvshape, 1.0, 10, &M::GeneBranchLengthsHyperInvShapeLogProb,
+            &M::NoUpdate, this);
+        Move::Scaling(blhyperinvshape, 0.3, 10, &M::GeneBranchLengthsHyperInvShapeLogProb,
+            &M::NoUpdate, this);
 
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
@@ -1049,28 +1006,34 @@ class MultiGeneCodonM2aModel : public ChainComponent {
         Move::Scaling(
             nucrelratehyperinvconc, 0.03, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
 
-        Move::Profile(nucstathypercenter, 1.0, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.3, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Profile(nucstathypercenter, 0.1, 2, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 1.0, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.3, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
-        Move::Scaling(nucstathyperinvconc, 0.03, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(
+            nucstathypercenter, 1.0, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(
+            nucstathypercenter, 0.3, 1, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Profile(
+            nucstathypercenter, 0.1, 2, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(
+            nucstathyperinvconc, 1.0, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(
+            nucstathyperinvconc, 0.3, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
+        Move::Scaling(
+            nucstathyperinvconc, 0.03, 10, &M::GeneNucRatesHyperLogProb, &M::NoUpdate, this);
     }
 
     void MoveGlobalNucRates() {
         std::vector<double> &nucrelrate = (*nucrelratearray)[0];
         Move::Profile(nucrelrate, 0.1, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.03, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
-        Move::Profile(nucrelrate, 0.01, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(
+            nucrelrate, 0.03, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
+        Move::Profile(
+            nucrelrate, 0.01, 3, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
 
         std::vector<double> &nucstat = (*nucstatarray)[0];
         Move::Profile(nucstat, 0.1, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
         Move::Profile(nucstat, 0.01, 1, 10, &M::GlobalNucRatesLogProb, &M::UpdateNucMatrix, this);
     }
 
-    void MoveOmegaMixture() {
-
-    }
+    void MoveOmegaMixture() {}
 
     /*
     // moving mixture hyper params
@@ -1084,7 +1047,6 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     void ToStream(std::ostream &os) { os << *this; }
 
   protected:
-
     int modalprior;
 
     int purommode;
@@ -1196,4 +1158,3 @@ std::ostream &operator<<(std::ostream &os, MultiGeneCodonM2aModel &m) {
     tracer.write_line(os);
     return os;
 }
-

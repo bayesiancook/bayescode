@@ -167,7 +167,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double>* blhypermeanarray;
+    SimpleBranchArray<double> *blhypermeanarray;
     GammaWhiteNoise *branchlength;
     PoissonSuffStatBranchArray *lengthpathsuffstatarray;
 
@@ -452,7 +452,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(const BranchSelector<double> &inblmeanarray, double inblinvshape) {
+    void SetBranchLengthsHyperParameters(
+        const BranchSelector<double> &inblmeanarray, double inblinvshape) {
         blhypermeanarray->Copy(inblmeanarray);
         blhyperinvshape = inblinvshape;
     }
@@ -483,9 +484,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! \brief set value of background fitness of low-fitness amino-acids
-    void SetMaskEpsilon(double in) {
-        maskepsilon = in;
-    }
+    void SetMaskEpsilon(double in) { maskepsilon = in; }
 
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc)
     //! to specified values (used in multi-gene context)
@@ -821,9 +820,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! MCMC move schedule on branch lengths
-    void MoveBranchLengths() {
-        ResampleBranchLengths();
-    }
+    void MoveBranchLengths() { ResampleBranchLengths(); }
 
     //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
     //! Move::Profile)
@@ -1608,9 +1605,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     template <class C>
     void declare_model(C &t) {
-        if (blmode != shared) {
-            t.add("branchlength", *branchlength);
-        }
+        if (blmode != shared) { t.add("branchlength", *branchlength); }
         if (nucmode != shared) {
             t.add("nucrelrate", nucrelrate);
             t.add("nucstat", nucstat);
