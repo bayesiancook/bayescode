@@ -33,13 +33,13 @@ struct Context : is_context::tag, public Tags... {
     }
 
 
-    template <class Tag>
-    static decltype(
-        std::tuple_cat<std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...)
-    remove_tag() {
-        return std::tuple_cat<
-            std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...;
-    }
+    // template <class Tag>
+    // static decltype(
+    //     std::tuple_cat<std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...)
+    // remove_tag() {
+    //     return std::tuple_cat<
+    //         std::conditional<std::is_same<Tag, Tags>::value, std::tuple<Tags>(), std::tuple<>()>>()...;
+    // }
 };
 
 

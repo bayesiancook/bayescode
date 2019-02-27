@@ -51,31 +51,31 @@ TEST_CASE("context merge") {
     CHECK(e_has_mytag4 == false);
 }
 
-TEST_CASE("remove_tag") {
-    Context<MyTag> c;
-    bool c_has_mytag = decltype(c)::has_tag<MyTag>::value;
-    bool c_has_mytag2 = decltype(c)::has_tag<MyTag2>::value;
-    bool c_has_mytag3 = decltype(c)::has_tag<MyTag3>::value;
-    CHECK(c_has_mytag == true);
-    CHECK(c_has_mytag2 == true);
-    CHECK(c_has_mytag3 == false);
+// TEST_CASE("remove_tag") {
+//     Context<MyTag> c;
+//     bool c_has_mytag = decltype(c)::has_tag<MyTag>::value;
+//     bool c_has_mytag2 = decltype(c)::has_tag<MyTag2>::value;
+//     bool c_has_mytag3 = decltype(c)::has_tag<MyTag3>::value;
+//     CHECK(c_has_mytag == true);
+//     CHECK(c_has_mytag2 == true);
+//     CHECK(c_has_mytag3 == false);
 
-    auto d = c.remove_tag<MyTag>();
-    bool d_has_mytag = decltype(d)::has_tag<MyTag>::value;
-    bool d_has_mytag2 = decltype(d)::has_tag<MyTag2>::value;
-    bool d_has_mytag3 = decltype(d)::has_tag<MyTag3>::value;
-    CHECK(d_has_mytag == false);
-    CHECK(d_has_mytag2 == true);
-    CHECK(d_has_mytag3 == false);
+//     auto d = c.remove_tag<MyTag>();
+//     bool d_has_mytag = decltype(d)::has_tag<MyTag>::value;
+//     bool d_has_mytag2 = decltype(d)::has_tag<MyTag2>::value;
+//     bool d_has_mytag3 = decltype(d)::has_tag<MyTag3>::value;
+//     CHECK(d_has_mytag == false);
+//     CHECK(d_has_mytag2 == true);
+//     CHECK(d_has_mytag3 == false);
 
-    auto e = d.remove_tag<MyTag3>();
-    bool e_has_mytag = decltype(e)::has_tag<MyTag>::value;
-    bool e_has_mytag2 = decltype(e)::has_tag<MyTag2>::value;
-    bool e_has_mytag3 = decltype(e)::has_tag<MyTag3>::value;
-    CHECK(e_has_mytag == false);
-    CHECK(e_has_mytag2 == true);
-    CHECK(e_has_mytag3 == false);
-}
+//     auto e = d.remove_tag<MyTag3>();
+//     bool e_has_mytag = decltype(e)::has_tag<MyTag>::value;
+//     bool e_has_mytag2 = decltype(e)::has_tag<MyTag2>::value;
+//     bool e_has_mytag3 = decltype(e)::has_tag<MyTag3>::value;
+//     CHECK(e_has_mytag == false);
+//     CHECK(e_has_mytag2 == true);
+//     CHECK(e_has_mytag3 == false);
+// }
 
 TEST_CASE("DeclInfo basic usage") {
     double a = 2.33;
