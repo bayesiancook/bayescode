@@ -10,11 +10,11 @@ matrix:
         sources:
         - ubuntu-toolchain-r-test
         packages:
-        - g++-5
+        - g++-6
         - libopenmpi-dev
         - openmpi-bin
     env:
-    - COMPILER=g++-5
+    - COMPILER=g++-6
     - OMPI_CXX=$COMPILER
     script:
     - make && make clean
@@ -28,7 +28,7 @@ matrix:
         - ubuntu-toolchain-r-test
         - llvm-toolchain-precise-3.6
         packages:
-        - g++-5
+        - g++-6
         - clang-3.6
         - libopenmpi-dev
         - openmpi-bin
