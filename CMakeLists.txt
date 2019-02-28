@@ -20,7 +20,6 @@ include_directories("utils")
 
 # Static libs
 add_library (tree_lib STATIC "src/tree/implem.cpp")
-add_library (global_lib STATIC "src/global/init.cpp" "src/global/Random.cpp")
 
 set(BAYESCODE_LIB
     src/lib/AAMutSelOmegaCodonSubMatrix.cpp
@@ -32,6 +31,7 @@ set(BAYESCODE_LIB
     src/lib/CodonSubMatrix.cpp
     src/lib/GTRSubMatrix.cpp
     src/lib/PhyloProcess.cpp
+    src/lib/Random.cpp
     src/lib/RandomGeneSample.cpp
     src/lib/Sample.cpp
     src/lib/SequenceAlignment.cpp
@@ -46,7 +46,6 @@ add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
 
 set(BASE_LIBS
     bayescode_lib
-    global_lib
     tree_lib
 )
 
@@ -100,10 +99,10 @@ target_link_libraries(multigenecodonm2a ${BASE_LIBS} ${MPI_LIBRARIES})
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")
-target_link_libraries(all_tests global_lib ${MPI_LIBRARIES})
+target_link_libraries(all_tests ${MPI_LIBRARIES})
 
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)
 
 add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
-target_link_libraries(mpi_par_test global_lib ${MPI_LIBRARIES})
+target_link_libraries(mpi_par_test ${MPI_LIBRARIES})

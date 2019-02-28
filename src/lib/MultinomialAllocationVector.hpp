@@ -3,7 +3,7 @@
 
 #include "Array.hpp"
 #include "OccupancySuffStat.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A multinomial allocation vector

@@ -1,8 +1,8 @@
 #include "SequenceAlignment.hpp"
 #include <fstream>
 #include "BiologicalSequences.hpp"
+#include "Random.hpp"
 #include "StringStreamUtils.hpp"
-#include "global/Random.hpp"
 using namespace std;
 
 // ---------------------------------------------------------------------------

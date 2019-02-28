@@ -2,7 +2,7 @@
 
 #include "PoissonSuffStat.hpp"
 #include "Product.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 class ConditionSpecificMeanGammaArray : public SimpleArray<double> {
   public:

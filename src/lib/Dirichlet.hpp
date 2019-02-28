@@ -3,7 +3,7 @@
 #include "Array.hpp"
 #include "OccupancySuffStat.hpp"
 #include "Permutation.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A truncated stick-breaking weight vector

@@ -3,7 +3,7 @@
 #define IIDMULTIGAMMA_H
 
 #include "BidimArray.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 class IIDMultiGamma : public SimpleArray<std::vector<double>> {
   public:

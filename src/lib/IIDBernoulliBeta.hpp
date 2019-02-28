@@ -4,7 +4,7 @@
 #include "Array.hpp"
 #include "CodonSuffStat.hpp"
 #include "PoissonSuffStat.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A sufficient statistic for a collection of random variables, from a

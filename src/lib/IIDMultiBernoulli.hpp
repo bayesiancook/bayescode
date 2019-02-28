@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BidimArray.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 /**
  * \brief A BidimArray of iid vectors (of dimension dim) of Bernoulli variables

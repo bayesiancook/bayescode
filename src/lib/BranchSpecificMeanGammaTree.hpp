@@ -2,7 +2,7 @@
 
 #include "BranchProduct.hpp"
 #include "PoissonSuffStat.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 class BranchSpecificMeanGammaTree : public SimpleBranchArray<double> {
   public:

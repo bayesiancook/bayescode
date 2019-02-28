@@ -4,7 +4,7 @@
 
 #include "Array.hpp"
 #include "BidimArray.hpp"
-#include "global/Random.hpp"
+#include "Random.hpp"
 
 /**
  * \brief An array of site- and condition-specific fitness profiles -- sparse
