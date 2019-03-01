@@ -29,6 +29,8 @@ namespace decl_utils {  // namespace to hide helpers
     struct HasTag {
         template <class Info>
         static auto test() {
+            static_assert(
+                is_decl_info::trait<Info>::value, "Info given to HasTag::test is not a decl info");
             return typename Info::context::template has_tag<Tag>();
         }
     };
@@ -37,6 +39,8 @@ namespace decl_utils {  // namespace to hide helpers
     struct HasType {
         template <class Info>
         static auto test() {
+            static_assert(
+                is_decl_info::trait<Info>::value, "Info given to HasType::test is not a decl info");
             return std::is_same<Type, typename Info::target_type>();
         }
     };
@@ -58,6 +62,8 @@ namespace decl_utils {  // namespace to hide helpers
 
         template <class Info, class... Args>
         void process_declaration(Info info, Args&&... args) {
+            static_assert(is_decl_info::trait<Info>::value,
+                "Info given to Filter::process_declaration is not a decl info");
             filter_dispatch(Test::template test<Info>(), info, std::forward<Args>(args)...);
         }
     };
