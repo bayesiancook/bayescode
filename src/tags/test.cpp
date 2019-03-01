@@ -105,3 +105,12 @@ TEST_CASE("DeclInfo::add_tag") {
     CHECK(j_has_mytag == true);
     CHECK(j_has_mytag2 == true);
 }
+
+TEST_CASE("DeclInfo::has_tag") {
+    double a = 3.22;
+    auto i = make_decl_info<MyTag2>(a);
+
+    CHECK(!i.has_tag<MyTag>());
+    CHECK(i.has_tag<MyTag2>());
+    CHECK(!i.has_tag<MyTag3>());
+}

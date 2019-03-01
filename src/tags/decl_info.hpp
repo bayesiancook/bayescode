@@ -30,14 +30,19 @@ struct DeclInfo : is_decl_info::tag {
     DeclInfo(Target& target) : target(target) {}
 
     template <class Tag>
-    auto add_tag() {
+    auto add_tag() const {  // returns a new object with added tag
         return DeclInfo<Target, decltype(context::template add_tag<Tag>())>(target);
+    }
+
+    template <class Tag>
+    bool has_tag() const {
+        return context::template has_tag<Tag>::value;
     }
 };
 
 /*--------------------------------------------------------------------------------------------------
   Decl info factory functions */
 template <class... Tags, class Target>
-DeclInfo<Target, Context<Tags...>> make_decl_info(Target& target) {
+auto make_decl_info(Target& target) {
     return DeclInfo<Target, Context<Tags...>>(target);
 }
