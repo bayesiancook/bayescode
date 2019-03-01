@@ -21,9 +21,9 @@ namespace is_decl_info {
   Decl info class. */
 template <class Target, class _Context>
 struct DeclInfo : is_decl_info::tag {
-    static_assert(is_context::trait<_Context>::value, "_Context is not a context");
     using context = _Context;
     using target_type = Target;
+    static_assert(is_context::trait<context>::value, "context is not a context");
 
     Target& target;
 
@@ -31,7 +31,7 @@ struct DeclInfo : is_decl_info::tag {
 
     template <class Tag>
     auto add_tag() {
-        return DeclInfo<Target, decltype(_Context::template add_tag<Tag>())>(target);
+        return DeclInfo<Target, decltype(context::template add_tag<Tag>())>(target);
     }
 };
 
