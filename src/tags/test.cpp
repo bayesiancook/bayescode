@@ -118,9 +118,9 @@ struct Provider {
 
     template <class User>
     void declare_interface(User& user) {
-        declare(user, "a", a);
-        declare(user, "b", b);
-        declare(user, "c", c);
+        declare<MyTag2>(user, "a", a);
+        declare<MyTag>(user, "b", b);
+        declare<MyTag, MyTag2>(user, "c", c);
     }
 };
 
@@ -131,17 +131,28 @@ struct User {
     void process_declaration(Info info, string) {
         sum += info.target;
     }
-
-    template <class Provider>
-    int sum_provider(Provider& provider) {
-        basic_apply(*this, provider);
-        return sum;
-    }
 };
 
 TEST_CASE("Decl utils base") {
     Provider p;
     User u;
 
-    CHECK(u.sum_provider(p) == 6);
+    basic_apply(u, p);
+    CHECK(u.sum == 6);
+}
+
+TEST_CASE("Decl utils filter") {
+    Provider p;
+    User u;
+
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 5);
+    u.sum = 0;
+
+    filter_apply<MyTag2>(u, p);
+    CHECK(u.sum == 4);
+    u.sum = 0;
+
+    filter_apply<MyTag3>(u, p);
+    CHECK(u.sum == 0);
 }
