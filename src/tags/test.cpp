@@ -128,13 +128,13 @@ struct User {
     int sum{0};
 
     template <class Info>
-    void process_declaration(Info info) {
+    void process_declaration(Info info, string) {
         sum += info.target;
     }
 
     template <class Provider>
     int sum_provider(Provider& provider) {
-        provider.declare_interface(*this);
+        basic_apply(*this, provider);
         return sum;
     }
 };
