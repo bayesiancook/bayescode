@@ -1,8 +1,6 @@
 #include "doctest.h"
 
-#include "decl_info.hpp"
-// #include <typeinfo>
-// #include <iostream>
+#include "decl_utils.hpp"
 
 using namespace std;
 
@@ -113,4 +111,37 @@ TEST_CASE("DeclInfo::has_tag") {
     CHECK(!i.has_tag<MyTag>());
     CHECK(i.has_tag<MyTag2>());
     CHECK(!i.has_tag<MyTag3>());
+}
+
+struct Provider {
+    int a{1}, b{2}, c{3};
+
+    template <class User>
+    void declare_interface(User& user) {
+        declare(user, "a", a);
+        declare(user, "b", b);
+        declare(user, "c", c);
+    }
+};
+
+struct User {
+    int sum{0};
+
+    template <class... Tags>
+    void process_declaration(int i) {
+        sum += i;
+    }
+
+    template <class Provider>
+    int sum_provider(Provider& provider) {
+        provider.declare_interface(*this);
+        return sum;
+    }
+};
+
+TEST_CASE("Decl utils base") {
+    Provider p;
+    User u;
+
+    CHECK(u.sum_provider(p) == 6);
 }
