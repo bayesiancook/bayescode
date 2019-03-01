@@ -25,6 +25,28 @@ void basic_apply(User& user, Provider& provider) {
 /*--------------------------------------------------------------------------------------------------
   Building bricks to construct application operations */
 namespace decl_utils {  // namespace to hide helpers
+
+    template <class User, class Forwarding>
+    class Start {
+        User& user;
+
+      public:
+        Start(User& user) : user(user) {}
+
+        template <class Info, class... Args>
+        void process_declaration(Info info, Args&&... args) {
+            Forwarding::forward_declaration(user, info, std::forward<Args>(args)...);
+        }
+    };
+
+    class End {
+      public:
+        template <class User, class... Args>
+        static void forward_declaration(User& user, Args&&... args) {
+            user.process_declaration(std::forward<Args>(args)...);
+        }
+    };
+
     template <class Tag>
     struct HasTag {
         template <class Info>
@@ -45,41 +67,39 @@ namespace decl_utils {  // namespace to hide helpers
         }
     };
 
-    template <class User, class Test>
+    template <class Test, class Forwarding>
     class Filter {
-        User& user;
-
-        template <class... Args>
-        void filter_dispatch(std::true_type, Args&&... args) {
-            user.process_declaration(std::forward<Args>(args)...);
+        template <class User, class... Args>
+        static void filter_dispatch(std::true_type, User& user, Args&&... args) {
+            Forwarding::forward_declaration(user, std::forward<Args>(args)...);
         }
 
-        template <class... Args>
-        void filter_dispatch(std::false_type, Args&&... args) {}
+        template <class User, class... Args>
+        static void filter_dispatch(std::false_type, User&, Args&&...) {}
 
       public:
-        Filter(User& user) : user(user) {}
-
-        template <class Info, class... Args>
-        void process_declaration(Info info, Args&&... args) {
+        template <class User, class Info, class... Args>
+        static void forward_declaration(User& user, Info info, Args&&... args) {
             static_assert(is_decl_info::trait<Info>::value,
                 "Info given to Filter::process_declaration is not a decl info");
-            filter_dispatch(Test::template test<Info>(), info, std::forward<Args>(args)...);
+            filter_dispatch(Test::template test<Info>(), user, info, std::forward<Args>(args)...);
         }
     };
 
-    template <class User, class Tag>
-    using FilterTag = Filter<User, HasTag<Tag>>;
+    template <class Tag, class Forwarding>
+    using FilterTag = Filter<HasTag<Tag>, Forwarding>;
 
-    template <class User, class Type>
-    using FilterType = Filter<User, HasType<Type>>;
+    template <class Type, class Forwarding>
+    using FilterType = Filter<HasType<Type>, Forwarding>;
+
 }  // namespace decl_utils
 
 /*--------------------------------------------------------------------------------------------------
   Filter apply: allows application of only declarations with a given tag */
 template <class Tag, class User, class Provider>
 void filter_apply(User& user, Provider& provider) {
-    decl_utils::FilterTag<User, Tag> helper(user);
+    using namespace decl_utils;
+    Start<User, FilterTag<Tag, End>> helper(user);
     basic_apply(helper, provider);
 }
 
@@ -87,6 +107,6 @@ void filter_apply(User& user, Provider& provider) {
   Typefilter apply: allows application of only declarations with a given target type */
 template <class Type, class User, class Provider>
 void typefilter_apply(User& user, Provider& provider) {
-    decl_utils::FilterType<User, Type> helper(user);
+    decl_utils::Start<User, decl_utils::FilterType<Type, decl_utils::End>> helper(user);
     basic_apply(helper, provider);
 }
