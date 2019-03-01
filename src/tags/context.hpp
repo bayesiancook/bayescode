@@ -9,7 +9,7 @@
   It is meant to be used to encode metadata for individual declarations in introspection interfaces.
 ==================================================================================================*/
 
-/*==================================================================================================
+/*--------------------------------------------------------------------------------------------------
   Context trait.
   A type trait used to check that a type passed is a Context. */
 namespace is_context {
@@ -18,7 +18,7 @@ namespace is_context {
     struct trait : public std::integral_constant<bool, std::is_base_of<tag, T>::value> {};
 }  // namespace is_context
 
-/*==================================================================================================
+/*--------------------------------------------------------------------------------------------------
   Context class. */
 template <class... Tags>
 class Context : is_context::tag, public Tags... {
