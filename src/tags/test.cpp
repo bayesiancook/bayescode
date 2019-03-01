@@ -156,3 +156,23 @@ TEST_CASE("Decl utils filter") {
     filter_apply<MyTag3>(u, p);
     CHECK(u.sum == 0);
 }
+
+struct Provider2 {
+    int a{2}, b{13};
+    string c;
+
+    template <class User>
+    void declare_interface(User& user) {
+        declare<MyTag>(user, "a", a);
+        declare<MyTag>(user, "b", b);
+        declare<MyTag2>(user, "c", c);
+    }
+};
+
+TEST_CASE("Filter apply: check that options that would not compile are not compiled if filtered") {
+    Provider2 p;
+    User u;
+
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 15);
+}
