@@ -127,9 +127,9 @@ struct Provider {
 struct User {
     int sum{0};
 
-    template <class... Tags>
-    void process_declaration(int i) {
-        sum += i;
+    template <class Info>
+    void process_declaration(Info info) {
+        sum += info.target;
     }
 
     template <class Provider>

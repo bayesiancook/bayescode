@@ -10,5 +10,5 @@ using std::string;
 
 template <class User, class Target, class... Tags>
 void declare(User& user, string name, Target& target) {
-    user.template process_declaration<Tags...>(target);
+    user.process_declaration(make_decl_info<Tags...>(target));
 }
