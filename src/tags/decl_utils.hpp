@@ -33,9 +33,9 @@ namespace decl_utils {  // namespace to hide helpers
       public:
         Start(User& user) : user(user) {}
 
-        template <class Info, class... Args>
-        void process_declaration(Info info, Args&&... args) {
-            Forwarding::forward_declaration(user, info, std::forward<Args>(args)...);
+        template <class... Args>
+        void process_declaration(Args&&... args) {
+            Forwarding::forward_declaration(user, std::forward<Args>(args)...);
         }
     };
 
@@ -107,6 +107,13 @@ void filter_apply(User& user, Provider& provider) {
   Typefilter apply: allows application of only declarations with a given target type */
 template <class Type, class User, class Provider>
 void typefilter_apply(User& user, Provider& provider) {
-    decl_utils::Start<User, decl_utils::FilterType<Type, decl_utils::End>> helper(user);
+    using namespace decl_utils;
+    Start<User, FilterType<Type, End>> helper(user);
     basic_apply(helper, provider);
 }
+
+/* TODO:
+  - check argument forwarding
+  - recursive thingy
+  - change declare_interface convention to use declare(user,...) instead of user->(...) ?
+*/
