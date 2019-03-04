@@ -106,8 +106,3 @@ target_link_libraries(tree_test tree_lib)
 
 add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
 target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
-
-
-# TMP TMP TMP
-add_executable(mytest_bin "src/tags/decl_tmp.cpp")
-target_link_libraries(mytest_bin)

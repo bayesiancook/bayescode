@@ -25,12 +25,13 @@ struct DeclInfo : is_decl_info::tag {
     static_assert(is_context::trait<context>::value, "context is not a context");
 
     Target& target;
+    std::string name;
 
-    DeclInfo(Target& target) : target(target) {}
+    DeclInfo(Target& target, std::string name) : target(target), name(name) {}
 
     template <class Tag>
     auto add_tag() const {  // returns a new object with added tag
-        return DeclInfo<Target, decltype(context::template add_tag<Tag>())>(target);
+        return DeclInfo<Target, decltype(context::template add_tag<Tag>())>(target, name);
     }
 
     template <class Tag>
@@ -42,6 +43,6 @@ struct DeclInfo : is_decl_info::tag {
 /*--------------------------------------------------------------------------------------------------
   Decl info factory functions */
 template <class... Tags, class Target>
-auto make_decl_info(Target& target) {
-    return DeclInfo<Target, Context<Tags...>>(target);
+auto make_decl_info(Target& target, std::string name) {
+    return DeclInfo<Target, Context<Tags...>>(target, name);
 }
