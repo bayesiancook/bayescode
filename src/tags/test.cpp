@@ -150,52 +150,51 @@ TEST_CASE("Decl utils base") {
     CHECK(u.sum == 6);
 }
 
-// /*--------------------------------------------------------------------------------------------------
-//   Filtering */
-// TEST_CASE("Decl utils filter") {
-//     Provider p;
-//     User u;
+/*--------------------------------------------------------------------------------------------------
+  Filtering */
+TEST_CASE("Decl utils filter") {
+    Provider p;
+    User u;
 
-//     filter_apply<MyTag>(u, p);
-//     CHECK(u.sum == 5);
-//     u.sum = 0;
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 5);
+    u.sum = 0;
 
-//     filter_apply<MyTag2>(u, p);
-//     CHECK(u.sum == 4);
-//     u.sum = 0;
+    filter_apply<MyTag2>(u, p);
+    CHECK(u.sum == 4);
+    u.sum = 0;
 
-//     filter_apply<MyTag3>(u, p);
-//     CHECK(u.sum == 0);
-// }
+    filter_apply<MyTag3>(u, p);
+    CHECK(u.sum == 0);
+}
 
-// struct Provider2 {
-//     int a{2}, b{13};
-//     string c;
+struct Provider2 {
+    int a{2}, b{13};
+    string c;
 
-//     template <class Info>
-//     void declare_interface(Info& info) {
-//         declare<MyTag>(info, "a", a);
-//         declare<MyTag>(info, "b", b);
-//         declare<MyTag2>(info, "c", c);
-//     }
-// };
+    template <class Info>
+    void declare_interface(Info& info) {
+        declare<MyTag>(info, "a", a);
+        declare<MyTag>(info, "b", b);
+        declare<MyTag2>(info, "c", c);
+    }
+};
 
-// TEST_CASE("Filter apply: check that options that would not compile are not compiled if filtered")
-// {
-//     Provider2 p;
-//     User u;
+TEST_CASE("Filter apply: check that options that would not compile are not compiled if filtered") {
+    Provider2 p;
+    User u;
 
-//     filter_apply<MyTag>(u, p);
-//     CHECK(u.sum == 15);
-// }
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 15);
+}
 
-// TEST_CASE("Filter by type") {
-//     Provider2 p;
-//     User u;
-//     typefilter_apply<int>(u, p);
+TEST_CASE("Filter by type") {
+    Provider2 p;
+    User u;
+    typefilter_apply<int>(u, p);
 
-//     CHECK(u.sum == 15);
-// }
+    CHECK(u.sum == 15);
+}
 
 // /*--------------------------------------------------------------------------------------------------
 //   Forwarding of other arguments */
