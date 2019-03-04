@@ -1,6 +1,7 @@
 #pragma once
 
 #include "context.hpp"
+#include "processing_info.hpp"
 
 /*==================================================================================================
   Decl info

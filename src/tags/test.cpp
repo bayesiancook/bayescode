@@ -125,30 +125,30 @@ TEST_CASE("DeclInfo::has_tag") {
 
 /*--------------------------------------------------------------------------------------------------
   Basic cases */
-// struct Provider {
-//     int a{1}, b{2}, c{3};
+struct Provider {
+    int a{1}, b{2}, c{3};
 
-//     template <class Info>
-//     void declare_interface(Info& info) {
-//         declare<MyTag2>(info, "a", a);
-//         declare<MyTag>(info, "b", b);
-//         declare<MyTag, MyTag2>(info, "c", c);
-//     }
-// };
+    template <class Info>
+    void declare_interface(Info& info) {
+        declare<MyTag2>(info, "a", a);
+        declare<MyTag>(info, "b", b);
+        declare<MyTag, MyTag2>(info, "c", c);
+    }
+};
 
-// struct User {
-//     int sum{0};
+struct User {
+    int sum{0};
 
-//     void process_declaration(string, int value) { sum += value; }
-// };
+    void process_declaration(string, int value) { sum += value; }
+};
 
-// TEST_CASE("Decl utils base") {
-//     Provider p;
-//     User u;
+TEST_CASE("Decl utils base") {
+    Provider p;
+    User u;
 
-//     basic_apply(u, p);
-//     CHECK(u.sum == 6);
-// }
+    basic_apply(u, p);
+    CHECK(u.sum == 6);
+}
 
 // /*--------------------------------------------------------------------------------------------------
 //   Filtering */
