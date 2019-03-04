@@ -225,54 +225,55 @@ TEST_CASE("Argument forwarding") {
     CHECK(u.sum == 13);
 }
 
-// /*--------------------------------------------------------------------------------------------------
-//   Recursive structures */
-// struct Recursive {};
+/*--------------------------------------------------------------------------------------------------
+  Recursive structures */
+struct Recursive {};
 
-// struct ProviderRec {
-//     Provider p;
-//     int a{213};
+struct ProviderRec {
+    Provider p;
+    int a{213};
 
-//     template <class Info>
-//     void declare_interface(Info info) {
-//         declare<Recursive>(info, "p", p);
-//         declare(info, "a", a);
-//     }
-// };
+    template <class Info>
+    void declare_interface(Info info) {
+        declare<Recursive>(info, "p", p);
+        declare(info, "a", a);
+    }
+};
 
-// TEST_CASE("Unroll one level") {
-//     User u;
-//     ProviderRec p;
+TEST_CASE("Unroll one level") {
+    User u;
+    ProviderRec p;
 
-//     unrollif_apply<Recursive>(u, p);
-//     CHECK(u.sum == 219);
-// }
+    unrollif_apply<Recursive>(u, p);
+    CHECK(u.sum == 219);
+}
 
-// struct ProviderRec2 {
-//     ProviderRec p;
-//     int a{15}, b{3};
+struct ProviderRec2 {
+    ProviderRec p;
+    int a{15}, b{3};
 
-//     template <class Info>
-//     void declare_interface(Info info) {
-//         declare<Recursive>(info, "p", p);
-//         declare(info, "a", a);
-//         declare(info, "b", b);
-//     }
-// };
+    template <class Info>
+    void declare_interface(Info info) {
+        declare<Recursive>(info, "p", p);
+        declare(info, "a", a);
+        declare(info, "b", b);
+    }
+};
 
-// TEST_CASE("Recursive unroll") {
-//     User u, u2;
-//     ProviderRec2 p;
+TEST_CASE("Recursive unroll") {
+    User u, u2;
+    ProviderRec2 p;
 
-//     // single unroll
-//     using namespace decl_utils;
-//     p.declare_interface<SimpleUnroll<HasTag<Recursive>, Filter<HasType<int>, End>>>(u);
-//     CHECK(u.sum == 231);
+    // single unroll
+    using namespace decl_utils;
+    p.declare_interface(
+        make_processing_info<SimpleUnroll<HasTag<Recursive>, Filter<HasType<int>, End>>>(u));
+    CHECK(u.sum == 231);
 
-//     // recursive unroll
-//     recif_apply<Recursive>(u2, p);
-//     CHECK(u2.sum == 237);
-// }
+    // recursive unroll
+    recif_apply<Recursive>(u2, p);
+    CHECK(u2.sum == 237);
+}
 
 /*--------------------------------------------------------------------------------------------------
   No name */

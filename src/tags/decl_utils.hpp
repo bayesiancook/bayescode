@@ -83,54 +83,55 @@ namespace decl_utils {  // namespace to hide helpers
     template <class Type, class Forwarding>
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
-    //     template <class Test, class Forwarding>
-    //     class SimpleUnroll {
-    //         template <class User, class Info, class... Args>  // to be unrolled
-    //         static void filter_dispatch(std::true_type, User& user, Info info, Args&&...) {
-    //             // NOTE: name and args are discarded! (FIXME?)
-    //             info.target.template declare_interface<Forwarding>(user);
-    //         }
+    template <class Test, class Forwarding>
+    class SimpleUnroll {
+        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled
+        static void filter_dispatch(std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+            // NOTE: name and args are discarded! (FIXME?)
+            // TODO: fix redundant info regarding current processing (prinfo + current class)
+            declinfo.target.declare_interface(make_processing_info<Forwarding>(prinfo.user));
+        }
 
-    //         template <class User, class... Args>  // not to be unrolled
-    //         static void filter_dispatch(std::false_type, User& user, Args&&... args) {
-    //             Forwarding::forward_declaration(user, std::forward<Args>(args)...);
-    //         }
+        template <class... Args>  // not to be unrolled
+        static void filter_dispatch(std::false_type, Args&&... args) {
+            Forwarding::forward_declaration(std::forward<Args>(args)...);
+        }
 
-    //       public:
-    //         template <class User, class Info, class... Args>
-    //         static void forward_declaration(User& user, Info info, Args&&... args) {
-    //             static_assert(is_decl_info::trait<Info>::value,
-    //                 "Info given to Unroll::process_declaration is not a decl info");
-    //             filter_dispatch(Test::template test<Info>(), user, info,
-    //             std::forward<Args>(args)...);
-    //         }
-    //     };
+      public:
+        template <class PrInfo, class DeclInfo, class... Args>
+        static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
+            // TODO check types
+            filter_dispatch(
+                Test::template test<DeclInfo>(), prinfo, declinfo, std::forward<Args>(args)...);
+        }
+    };
 
-    //     template <class Test, class Forwarding>
-    //     class RecursiveUnroll {
-    //         template <class User, class Info, class... Args>  // to be unrolled
-    //         static void filter_dispatch(std::true_type, User& user, Info info, Args&&...) {
-    //             // NOTE: name and args are discarded! (FIXME?)
-    //             info.target.template declare_interface<RecursiveUnroll<Test, Forwarding>>(user);
-    //         }
+    template <class Test, class Forwarding>
+    class RecursiveUnroll {
+        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled
+        static void filter_dispatch(std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+            // NOTE: name and args are discarded! (FIXME?)
+            // TODO: fix redundant info regarding current processing (prinfo + current class)
+            declinfo.target.declare_interface(prinfo);
+        }
 
-    //         template <class User, class... Args>  // not to be unrolled
-    //         static void filter_dispatch(std::false_type, User& user, Args&&... args) {
-    //             Forwarding::forward_declaration(user, std::forward<Args>(args)...);
-    //         }
+        template <class... Args>  // not to be unrolled
+        static void filter_dispatch(std::false_type, Args&&... args) {
+            Forwarding::forward_declaration(std::forward<Args>(args)...);
+        }
 
-    //       public:
-    //         template <class User, class Info, class... Args>
-    //         static void forward_declaration(User& user, Info info, Args&&... args) {
-    //             static_assert(is_decl_info::trait<Info>::value,
-    //                 "Info given to Unroll::process_declaration is not a decl info");
-    //             filter_dispatch(Test::template test<Info>(), user, info,
-    //             std::forward<Args>(args)...);
-    //         }
-    //     };
+      public:
+        template <class PrInfo, class DeclInfo, class... Args>
+        static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
+            // TODO check types
+            filter_dispatch(
+                Test::template test<DeclInfo>(), prinfo, declinfo, std::forward<Args>(args)...);
+        }
+    };
 
-    //     template <class Tag, class Forwarding>
-    //     using UnrollIf = SimpleUnroll<HasTag<Tag>, Forwarding>;
+
+    template <class Tag, class Forwarding>
+    using UnrollIf = SimpleUnroll<HasTag<Tag>, Forwarding>;
 
 }  // namespace decl_utils
 
@@ -160,18 +161,20 @@ void typefilter_apply(User& user, Provider& provider) {
     provider.declare_interface(processing_info);
 }
 
-// /*--------------------------------------------------------------------------------------------------
-//   Single unroll of structures with tag Tag */
-// template <class Tag, class User, class Provider>
-// void unrollif_apply(User& user, Provider& provider) {
-//     using namespace decl_utils;
-//     provider.template declare_interface<UnrollIf<Tag, End>>(user);
-// }
+/*--------------------------------------------------------------------------------------------------
+  Single unroll of structures with tag Tag */
+template <class Tag, class User, class Provider>
+void unrollif_apply(User& user, Provider& provider) {
+    using namespace decl_utils;
+    auto processing_info = make_processing_info<UnrollIf<Tag, End>>(user);
+    provider.declare_interface(processing_info);
+}
 
-// /*--------------------------------------------------------------------------------------------------
-//   Recursive unroll of structures with tag Tag */
-// template <class Tag, class User, class Provider>
-// void recif_apply(User& user, Provider& provider) {
-//     using namespace decl_utils;
-//     provider.template declare_interface<RecursiveUnroll<HasTag<Tag>, End>>(user);
-// }
+/*--------------------------------------------------------------------------------------------------
+  Recursive unroll of structures with tag Tag */
+template <class Tag, class User, class Provider>
+void recif_apply(User& user, Provider& provider) {
+    using namespace decl_utils;
+    auto processing_info = make_processing_info<RecursiveUnroll<HasTag<Tag>, End>>(user);
+    provider.declare_interface(processing_info);
+}
