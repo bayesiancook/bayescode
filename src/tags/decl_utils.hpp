@@ -30,13 +30,13 @@ namespace decl_utils {  // namespace to hide helpers
         }
     };
 
-    //     class NoNameEnd {
-    //       public:
-    //         template <class User, class Info, class... Args>
-    //         static void forward_declaration(User& user, Info info, string, Args&&... args) {
-    //             user.process_declaration(info.target, std::forward<Args>(args)...);
-    //         }
-    //     };
+    class NoNameEnd {
+      public:
+        template <class PrInfo, class DeclInfo, class... Args>
+        static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
+            prinfo.user.process_declaration(declinfo.target, std::forward<Args>(args)...);
+        }
+    };
 
     template <class Tag>
     struct HasTag {

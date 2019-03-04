@@ -129,7 +129,7 @@ struct Provider {
     int a{1}, b{2}, c{3};
 
     template <class Info>
-    void declare_interface(Info& info) {
+    void declare_interface(Info info) {
         declare<MyTag2>(info, "a", a);
         declare<MyTag>(info, "b", b);
         declare<MyTag, MyTag2>(info, "c", c);
@@ -173,7 +173,7 @@ struct Provider2 {
     string c;
 
     template <class Info>
-    void declare_interface(Info& info) {
+    void declare_interface(Info info) {
         declare<MyTag>(info, "a", a);
         declare<MyTag>(info, "b", b);
         declare<MyTag2>(info, "c", c);
@@ -202,7 +202,7 @@ TEST_CASE("Filter by type") {
 //     int a{2}, b{5}, c{11};
 
 //     template <class Info>
-//     void declare_interface(Info& info) {
+//     void declare_interface(Info info) {
 //         declare(info, "a", a, true);
 //         declare(info, "b", b, false);
 //         declare(info, "c", c, true);
@@ -234,7 +234,7 @@ TEST_CASE("Filter by type") {
 //     int a{213};
 
 //     template <class Info>
-//     void declare_interface(Info& info) {
+//     void declare_interface(Info info) {
 //         declare<Recursive>(info, "p", p);
 //         declare(info, "a", a);
 //     }
@@ -253,7 +253,7 @@ TEST_CASE("Filter by type") {
 //     int a{15}, b{3};
 
 //     template <class Info>
-//     void declare_interface(Info& info) {
+//     void declare_interface(Info info) {
 //         declare<Recursive>(info, "p", p);
 //         declare(info, "a", a);
 //         declare(info, "b", b);
@@ -274,17 +274,17 @@ TEST_CASE("Filter by type") {
 //     CHECK(u2.sum == 237);
 // }
 
-// /*--------------------------------------------------------------------------------------------------
-//   No name */
-// struct User3 {
-//     int sum{0};
+/*--------------------------------------------------------------------------------------------------
+  No name */
+struct User3 {
+    int sum{0};
 
-//     void process_declaration(int value) { sum += value; }
-// };
+    void process_declaration(int value) { sum += value; }
+};
 
-// TEST_CASE("NoName end brick") {
-//     User3 u;
-//     Provider p;
+TEST_CASE("NoName end brick") {
+    User3 u;
+    Provider p;
 
-//     p.declare_interface<decl_utils::NoNameEnd>(u);
-// }
+    p.declare_interface(make_processing_info<decl_utils::NoNameEnd>(u));
+}
