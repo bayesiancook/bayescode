@@ -196,34 +196,34 @@ TEST_CASE("Filter by type") {
     CHECK(u.sum == 15);
 }
 
-// /*--------------------------------------------------------------------------------------------------
-//   Forwarding of other arguments */
-// struct Provider3 {
-//     int a{2}, b{5}, c{11};
+/*--------------------------------------------------------------------------------------------------
+  Forwarding of other arguments */
+struct Provider3 {
+    int a{2}, b{5}, c{11};
 
-//     template <class Info>
-//     void declare_interface(Info info) {
-//         declare(info, "a", a, true);
-//         declare(info, "b", b, false);
-//         declare(info, "c", c, true);
-//     }
-// };
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "a", a, true);
+        declare(info, "b", b, false);
+        declare(info, "c", c, true);
+    }
+};
 
-// struct User2 {
-//     int sum{0};
+struct User2 {
+    int sum{0};
 
-//     void process_declaration(string, int value, bool toggle) {
-//         if (toggle) { sum += value; }
-//     }
-// };
+    void process_declaration(string, int value, bool toggle) {
+        if (toggle) { sum += value; }
+    }
+};
 
-// TEST_CASE("Argument forwarding") {
-//     User2 u;
-//     Provider3 p;
+TEST_CASE("Argument forwarding") {
+    User2 u;
+    Provider3 p;
 
-//     basic_apply(u, p);
-//     CHECK(u.sum == 13);
-// }
+    basic_apply(u, p);
+    CHECK(u.sum == 13);
+}
 
 // /*--------------------------------------------------------------------------------------------------
 //   Recursive structures */
