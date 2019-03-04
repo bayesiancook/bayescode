@@ -287,4 +287,5 @@ TEST_CASE("NoName end brick") {
     Provider p;
 
     p.declare_interface(make_processing_info<decl_utils::NoNameEnd>(u));
+    CHECK(u.sum == 6);
 }
