@@ -155,80 +155,79 @@ TEST_CASE("Decl utils base") {
 
 /*--------------------------------------------------------------------------------------------------
   Filtering */
-// TEST_CASE("Decl utils filter") {
-//     Provider p;
-//     User u;
+TEST_CASE("Decl utils filter") {
+    Provider p;
+    User u;
 
-//     filter_apply<MyTag>(u, p);
-//     CHECK(u.sum == 5);
-//     u.sum = 0;
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 5);
+    u.sum = 0;
 
-//     filter_apply<MyTag2>(u, p);
-//     CHECK(u.sum == 4);
-//     u.sum = 0;
+    filter_apply<MyTag2>(u, p);
+    CHECK(u.sum == 4);
+    u.sum = 0;
 
-//     filter_apply<MyTag3>(u, p);
-//     CHECK(u.sum == 0);
-// }
+    filter_apply<MyTag3>(u, p);
+    CHECK(u.sum == 0);
+}
 
-// struct Provider2 {
-//     int a{2}, b{13};
-//     string c;
+struct Provider2 {
+    int a{2}, b{13};
+    string c;
 
-//     template <class User>
-//     void declare_interface(User& user) {
-//         declare<MyTag>(user, "a", a);
-//         declare<MyTag>(user, "b", b);
-//         declare<MyTag2>(user, "c", c);
-//     }
-// };
+    template <class Processing, class User>
+    void declare_interface(User& user) {
+        declare<Processing, MyTag>(user, "a", a);
+        declare<Processing, MyTag>(user, "b", b);
+        declare<Processing, MyTag2>(user, "c", c);
+    }
+};
 
-// TEST_CASE("Filter apply: check that options that would not compile are not compiled if filtered")
-// {
-//     Provider2 p;
-//     User u;
+TEST_CASE("Filter apply: check that options that would not compile are not compiled if filtered") {
+    Provider2 p;
+    User u;
 
-//     filter_apply<MyTag>(u, p);
-//     CHECK(u.sum == 15);
-// }
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 15);
+}
 
-// TEST_CASE("Filter by type") {
-//     Provider2 p;
-//     User u;
-//     typefilter_apply<int>(u, p);
+TEST_CASE("Filter by type") {
+    Provider2 p;
+    User u;
+    typefilter_apply<int>(u, p);
 
-//     CHECK(u.sum == 15);
-// }
+    CHECK(u.sum == 15);
+}
 
-// /*--------------------------------------------------------------------------------------------------
-//   Forwarding of other arguments */
-// struct Provider3 {
-//     int a{2}, b{5}, c{11};
+/*--------------------------------------------------------------------------------------------------
+  Forwarding of other arguments */
+struct Provider3 {
+    int a{2}, b{5}, c{11};
 
-//     template <class User>
-//     void declare_interface(User& user) {
-//         declare(user, "a", a, true);
-//         declare(user, "b", b, false);
-//         declare(user, "c", c, true);
-//     }
-// };
+    template <class Processing, class User>
+    void declare_interface(User& user) {
+        declare<Processing>(user, "a", a, true);
+        declare<Processing>(user, "b", b, false);
+        declare<Processing>(user, "c", c, true);
+    }
+};
 
-// struct User2 {
-//     int sum{0};
+struct User2 {
+    int sum{0};
 
-//     template <class Info>
-//     void process_declaration(Info info, string, bool toggle) {
-//         if (toggle) { sum += info.target; }
-//     }
-// };
+    template <class Info>
+    void process_declaration(Info info, string, bool toggle) {
+        if (toggle) { sum += info.target; }
+    }
+};
 
-// TEST_CASE("Argument forwarding") {
-//     User2 u;
-//     Provider3 p;
+TEST_CASE("Argument forwarding") {
+    User2 u;
+    Provider3 p;
 
-//     basic_apply(u, p);
-//     CHECK(u.sum == 13);
-// }
+    basic_apply(u, p);
+    CHECK(u.sum == 13);
+}
 
 // /*--------------------------------------------------------------------------------------------------
 //   Recursive structures */

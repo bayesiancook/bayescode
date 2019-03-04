@@ -110,8 +110,7 @@ void basic_apply(User& user, Provider& provider) {
 template <class Tag, class User, class Provider>
 void filter_apply(User& user, Provider& provider) {
     using namespace decl_utils;
-    FilterTag<Tag, End> helper(user);
-    basic_apply(helper, provider);
+    provider.template declare_interface<FilterTag<Tag, End>>(user);
 }
 
 /*--------------------------------------------------------------------------------------------------
@@ -119,8 +118,7 @@ void filter_apply(User& user, Provider& provider) {
 template <class Type, class User, class Provider>
 void typefilter_apply(User& user, Provider& provider) {
     using namespace decl_utils;
-    FilterType<Type, End> helper(user);
-    basic_apply(helper, provider);
+    provider.template declare_interface<FilterType<Type, End>>(user);
 }
 
 /* TODO:
