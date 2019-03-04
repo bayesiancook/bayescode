@@ -22,11 +22,20 @@ namespace decl_utils {  // namespace to hide helpers
 
     class End {
       public:
-        template <class User, class... Args>
-        static void forward_declaration(User& user, Args&&... args) {
-            user.process_declaration(std::forward<Args>(args)...);
+        template <class User, class Info, class... Args>
+        static void forward_declaration(User& user, Info info, string name, Args&&... args) {
+            user.process_declaration(name, info.target, std::forward<Args>(args)...);
         }
     };
+
+    class NoNameEnd {
+      public:
+        template <class User, class Info, class... Args>
+        static void forward_declaration(User& user, Info info, string, Args&&... args) {
+            user.process_declaration(info.target, std::forward<Args>(args)...);
+        }
+    };
+
 
     template <class Tag>
     struct HasTag {

@@ -139,10 +139,7 @@ struct Provider {
 struct User {
     int sum{0};
 
-    template <class Info>
-    void process_declaration(Info info, string) {
-        sum += info.target;
-    }
+    void process_declaration(string, int value) { sum += value; }
 };
 
 TEST_CASE("Decl utils base") {
@@ -215,9 +212,8 @@ struct Provider3 {
 struct User2 {
     int sum{0};
 
-    template <class Info>
-    void process_declaration(Info info, string, bool toggle) {
-        if (toggle) { sum += info.target; }
+    void process_declaration(string, int value, bool toggle) {
+        if (toggle) { sum += value; }
     }
 };
 
@@ -276,4 +272,19 @@ TEST_CASE("Recursive unroll") {
     // recursive unroll
     recif_apply<Recursive>(u2, p);
     CHECK(u2.sum == 237);
+}
+
+/*--------------------------------------------------------------------------------------------------
+  No name */
+struct User3 {
+    int sum{0};
+
+    void process_declaration(int value) { sum += value; }
+};
+
+TEST_CASE("NoName end brick") {
+    User3 u;
+    Provider p;
+
+    p.declare_interface<decl_utils::NoNameEnd>(u);
 }
