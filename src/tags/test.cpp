@@ -9,6 +9,9 @@ struct MyTag2 {};
 struct MyTag3 {};
 struct MyTag4 {};
 
+/*==================================================================================================
+  Contexts
+==================================================================================================*/
 TEST_CASE("has_tag") {
     Context<MyTag2, MyTag> c;
     Context<MyTag2> d;
@@ -75,6 +78,9 @@ TEST_CASE("context merge") {
 //     CHECK(e_has_mytag3 == false);
 // }
 
+/*==================================================================================================
+  DeclInfo
+==================================================================================================*/
 TEST_CASE("DeclInfo basic usage") {
     double a = 2.33;
     auto i = make_decl_info<MyTag, MyTag2>(a);
@@ -113,6 +119,9 @@ TEST_CASE("DeclInfo::has_tag") {
     CHECK(!i.has_tag<MyTag3>());
 }
 
+/*==================================================================================================
+  Declaration and use
+==================================================================================================*/
 struct Provider {
     int a{1}, b{2}, c{3};
 
@@ -183,4 +192,32 @@ TEST_CASE("Filter by type") {
     typefilter_apply<int>(u, p);
 
     CHECK(u.sum == 15);
+}
+
+struct Provider3 {
+    int a{2}, b{5}, c{11};
+
+    template <class User>
+    void declare_interface(User& user) {
+        declare(user, "a", a, true);
+        declare(user, "b", b, false);
+        declare(user, "c", c, true);
+    }
+};
+
+struct User2 {
+    int sum{0};
+
+    template <class Info>
+    void process_declaration(Info info, string, bool toggle) {
+        if (toggle) { sum += info.target; }
+    }
+};
+
+TEST_CASE("Argument forwarding") {
+    User2 u;
+    Provider3 p;
+
+    basic_apply(u, p);
+    CHECK(u.sum == 13);
 }

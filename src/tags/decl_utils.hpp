@@ -113,7 +113,6 @@ void typefilter_apply(User& user, Provider& provider) {
 }
 
 /* TODO:
-  - check argument forwarding
   - recursive thingy
   - change declare_interface convention to use declare(user,...) instead of user->(...) ?
 */
