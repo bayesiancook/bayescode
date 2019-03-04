@@ -20,19 +20,6 @@ void declare(User& user, string name, Target& target, Args&&... args) {
   Building bricks to construct application operations */
 namespace decl_utils {  // namespace to hide helpers
 
-    // template <class User, class Forwarding>
-    // class Start {
-    //     User& user;
-
-    //   public:
-    //     Start(User& user) : user(user) {}
-
-    //     template <class... Args>
-    //     void process_declaration(Args&&... args) {
-    //         Forwarding::forward_declaration(user, std::forward<Args>(args)...);
-    //     }
-    // };
-
     class End {
       public:
         template <class User, class... Args>
@@ -86,15 +73,30 @@ namespace decl_utils {  // namespace to hide helpers
     template <class Type, class Forwarding>
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
-    // template <class Type, class Forwarding>
-    // class UnrollIf {
-    //     template <class User, class Info, class... Args>
-    //     static void forward_declaration(User& user, Info info, Args&&... args) {
-    //         static_assert(is_decl_info::trait<Info>::value,
-    //             "Info given to Unroll::process_declaration is not a decl info");
-    //         int a = 2;
-    //     }
-    // };
+    template <class Test, class Forwarding>
+    class Unroll {
+        template <class User, class Info, class... Args>  // to be unrolled
+        static void filter_dispatch(std::true_type, User& user, Info info, Args&&...) {
+            // NOTE: name and args are discarded! (FIXME?)
+            info.target.template declare_interface<Forwarding>(user);
+        }
+
+        template <class User, class... Args>  // not to be unrolled
+        static void filter_dispatch(std::false_type, User& user, Args&&... args) {
+            Forwarding::forward_declaration(user, std::forward<Args>(args)...);
+        }
+
+      public:
+        template <class User, class Info, class... Args>
+        static void forward_declaration(User& user, Info info, Args&&... args) {
+            static_assert(is_decl_info::trait<Info>::value,
+                "Info given to Unroll::process_declaration is not a decl info");
+            filter_dispatch(Test::template test<Info>(), user, info, std::forward<Args>(args)...);
+        }
+    };
+
+    template <class Tag, class Forwarding>
+    using UnrollIf = Unroll<HasTag<Tag>, Forwarding>;
 
 }  // namespace decl_utils
 
@@ -119,6 +121,14 @@ template <class Type, class User, class Provider>
 void typefilter_apply(User& user, Provider& provider) {
     using namespace decl_utils;
     provider.template declare_interface<FilterType<Type, End>>(user);
+}
+
+/*--------------------------------------------------------------------------------------------------
+  Typefilter apply: allows application of only declarations with a given target type */
+template <class Type, class User, class Provider>
+void unrollif_apply(User& user, Provider& provider) {
+    using namespace decl_utils;
+    provider.template declare_interface<UnrollIf<Type, End>>(user);
 }
 
 /* TODO:

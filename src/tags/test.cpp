@@ -229,25 +229,25 @@ TEST_CASE("Argument forwarding") {
     CHECK(u.sum == 13);
 }
 
-// /*--------------------------------------------------------------------------------------------------
-//   Recursive structures */
-// struct Recursive {};
+/*--------------------------------------------------------------------------------------------------
+  Recursive structures */
+struct Recursive {};
 
-// struct ProviderRec {
-//     Provider p;
-//     int a{213};
+struct ProviderRec {
+    Provider p;
+    int a{213};
 
-//     template <class User>
-//     void declare_interface(User& user) {
-//         declare<Recursive>(user, "p", p);
-//         declare(user, "a", a);
-//     }
-// };
+    template <class Processing, class User>
+    void declare_interface(User& user) {
+        declare<Processing, Recursive>(user, "p", p);
+        declare<Processing>(user, "a", a);
+    }
+};
 
-// TEST_CASE("Unroll one levelRecursive") {
-//     User u;
-//     ProviderRec p;
+TEST_CASE("Unroll one level") {
+    User u;
+    ProviderRec p;
 
-//     basic_apply(u, p);
-//     CHECK(u.sum == 219);
-// }
+    unrollif_apply<Recursive>(u, p);
+    CHECK(u.sum == 219);
+}
