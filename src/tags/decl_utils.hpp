@@ -74,7 +74,7 @@ namespace decl_utils {  // namespace to hide helpers
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
     template <class Test, class Forwarding>
-    class Unroll {
+    class SimpleUnroll {
         template <class User, class Info, class... Args>  // to be unrolled
         static void filter_dispatch(std::true_type, User& user, Info info, Args&&...) {
             // NOTE: name and args are discarded! (FIXME?)
@@ -95,8 +95,30 @@ namespace decl_utils {  // namespace to hide helpers
         }
     };
 
+    template <class Test, class Forwarding>
+    class RecursiveUnroll {
+        template <class User, class Info, class... Args>  // to be unrolled
+        static void filter_dispatch(std::true_type, User& user, Info info, Args&&...) {
+            // NOTE: name and args are discarded! (FIXME?)
+            info.target.template declare_interface<RecursiveUnroll<Test, Forwarding>>(user);
+        }
+
+        template <class User, class... Args>  // not to be unrolled
+        static void filter_dispatch(std::false_type, User& user, Args&&... args) {
+            Forwarding::forward_declaration(user, std::forward<Args>(args)...);
+        }
+
+      public:
+        template <class User, class Info, class... Args>
+        static void forward_declaration(User& user, Info info, Args&&... args) {
+            static_assert(is_decl_info::trait<Info>::value,
+                "Info given to Unroll::process_declaration is not a decl info");
+            filter_dispatch(Test::template test<Info>(), user, info, std::forward<Args>(args)...);
+        }
+    };
+
     template <class Tag, class Forwarding>
-    using UnrollIf = Unroll<HasTag<Tag>, Forwarding>;
+    using UnrollIf = SimpleUnroll<HasTag<Tag>, Forwarding>;
 
 }  // namespace decl_utils
 
@@ -124,11 +146,19 @@ void typefilter_apply(User& user, Provider& provider) {
 }
 
 /*--------------------------------------------------------------------------------------------------
-  Typefilter apply: allows application of only declarations with a given target type */
-template <class Type, class User, class Provider>
+  Single unroll of structures with tag Tag */
+template <class Tag, class User, class Provider>
 void unrollif_apply(User& user, Provider& provider) {
     using namespace decl_utils;
-    provider.template declare_interface<UnrollIf<Type, End>>(user);
+    provider.template declare_interface<UnrollIf<Tag, End>>(user);
+}
+
+/*--------------------------------------------------------------------------------------------------
+  Recursive unroll of structures with tag Tag */
+template <class Tag, class User, class Provider>
+void recif_apply(User& user, Provider& provider) {
+    using namespace decl_utils;
+    provider.template declare_interface<RecursiveUnroll<HasTag<Tag>, End>>(user);
 }
 
 /* TODO:

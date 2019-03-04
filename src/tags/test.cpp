@@ -251,3 +251,29 @@ TEST_CASE("Unroll one level") {
     unrollif_apply<Recursive>(u, p);
     CHECK(u.sum == 219);
 }
+
+struct ProviderRec2 {
+    ProviderRec p;
+    int a{15}, b{3};
+
+    template <class Processing, class User>
+    void declare_interface(User& user) {
+        declare<Processing, Recursive>(user, "p", p);
+        declare<Processing>(user, "a", a);
+        declare<Processing>(user, "b", b);
+    }
+};
+
+TEST_CASE("Recursive unroll") {
+    User u, u2;
+    ProviderRec2 p;
+
+    // single unroll
+    using namespace decl_utils;
+    p.declare_interface<SimpleUnroll<HasTag<Recursive>, Filter<HasType<int>, End>>>(u);
+    CHECK(u.sum == 231);
+
+    // recursive unroll
+    recif_apply<Recursive>(u2, p);
+    CHECK(u2.sum == 237);
+}
