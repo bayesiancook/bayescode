@@ -11,9 +11,9 @@ using std::string;
 
 /*--------------------------------------------------------------------------------------------------
   Basic declare function to be used in declare_interface methods */
-template <class... Tags, class PrInfo, class Target, class... Args>
-void declare(PrInfo& processing_info, string name, Target& target, Args&&... args) {
-    auto decl_info = make_decl_info<Tags...>(target, name);
+template <class... Tags, class PrInfo, class... Args>
+void declare(PrInfo& processing_info, string name, Args&&... args) {
+    auto decl_info = make_decl_info<Tags...>(name);
     PrInfo::processing::forward_declaration(
         processing_info, decl_info, std::forward<Args>(args)...);
 }
@@ -37,12 +37,12 @@ void filter_apply(User& user, Provider& provider) {
 
 /*--------------------------------------------------------------------------------------------------
   Typefilter apply: allows application of only declarations with a given target type */
-template <class Type, class User, class Provider>
-void typefilter_apply(User& user, Provider& provider) {
-    using namespace processing;
-    auto processing_info = make_processing_info<FilterType<Type, End>>(user);
-    provider.declare_interface(processing_info);
-}
+// template <class Type, class User, class Provider>
+// void typefilter_apply(User& user, Provider& provider) {
+//     using namespace processing;
+//     auto processing_info = make_processing_info<FilterType<Type, End>>(user);
+//     provider.declare_interface(processing_info);
+// }
 
 /*--------------------------------------------------------------------------------------------------
   Single unroll of structures with tag Tag */

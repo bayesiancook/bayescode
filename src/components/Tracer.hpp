@@ -11,11 +11,12 @@ class Tracer {
     std::vector<std::function<void(std::istream&)>> set_from_stream;
 
   public:
-    template <class Provider>
-    Tracer(Provider& p) {
+    template <class Provider, class Test = processing::HasTag<ModelNode>>
+    Tracer(Provider& p, Test test = processing::HasTag<ModelNode>()) {
         using namespace processing;
         auto prinfo =
-            make_processing_info<RecursiveUnroll<HasTag<SubStructure>, FullNameEnd>>(*this);
+            make_processing_info<RecursiveUnroll<HasTag<SubStructure>, Filter<Test, FullNameEnd>>>(
+                *this);
         p.declare_interface(prinfo);
     }
 
@@ -98,9 +99,9 @@ class Tracer {
     }
 
     template <class T>
-    void process_declaration(std::string name, T* o, double (T::*f)() const) {
+    void process_declaration(std::string name, T& o, double (T::*f)() const) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
-        data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
+        data_to_stream.push_back([&o, f](std::ostream& os) { os << (o.*f)(); });
         set_from_stream.push_back([](std::istream& is) {
             double d;
             is >> d;
@@ -111,7 +112,7 @@ class Tracer {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([f](std::ostream& os) { os << f(); });
         set_from_stream.emplace_back([](std::istream& is) {
-            double d;
+            double d;  // ignoring
             is >> d;
         });
     }

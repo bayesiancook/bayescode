@@ -11,8 +11,7 @@ namespace processing {  // namespace to hide helpers
       public:
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
-            prinfo.user.process_declaration(
-                declinfo.name, declinfo.target, std::forward<Args>(args)...);
+            prinfo.user.process_declaration(declinfo.name, std::forward<Args>(args)...);
         }
     };
 
@@ -21,7 +20,7 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             prinfo.user.process_declaration(
-                prinfo.name + declinfo.name, declinfo.target, std::forward<Args>(args)...);
+                prinfo.name + declinfo.name, std::forward<Args>(args)...);
         }
     };
 
@@ -29,12 +28,19 @@ namespace processing {  // namespace to hide helpers
       public:
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
-            prinfo.user.process_declaration(declinfo.target, std::forward<Args>(args)...);
+            prinfo.user.process_declaration(std::forward<Args>(args)...);
         }
     };
 
     /*----------------------------------------------------------------------------------------------
       Tests: boolean properties on types. */
+    struct AlwaysTrue {
+        template <class Info>
+        static auto test() {
+            return std::true_type();
+        }
+    };
+
     template <class Tag>
     struct HasTag {
         template <class Info>
@@ -45,15 +51,16 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
-    template <class Type>
-    struct HasType {
-        template <class Info>
-        static auto test() {
-            static_assert(
-                is_decl_info::trait<Info>::value, "Info given to HasType::test is not a decl info");
-            return std::is_same<Type, typename Info::target_type>();
-        }
-    };
+    // template <class Type>
+    // struct HasType {
+    //     template <class Info>
+    //     static auto test() {
+    //         static_assert(
+    //             is_decl_info::trait<Info>::value, "Info given to HasType::test is not a decl
+    //             info");
+    //         return std::is_same<Type, typename Info::target_type>();
+    //     }
+    // };
 
     /*----------------------------------------------------------------------------------------------
       Processing bricks. */
@@ -79,27 +86,26 @@ namespace processing {  // namespace to hide helpers
     template <class Tag, class Forwarding>
     using FilterTag = Filter<HasTag<Tag>, Forwarding>;
 
-    template <class Type, class Forwarding>
-    using FilterType = Filter<HasType<Type>, Forwarding>;
+    // template <class Type, class Forwarding>
+    // using FilterType = Filter<HasType<Type>, Forwarding>;
 
     template <class Test, class Forwarding, bool recursive>
     class Unroll {
-        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled once
-        static void filter_dispatch(
-            std::true_type, std::false_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+        template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled once
+        static void filter_dispatch(std::true_type, std::false_type, PrInfo prinfo,
+            DeclInfo declinfo, Target& target, Args&&...) {
             // TODO: fix redundant info regarding current processing (prinfo + current class) ?
             prinfo.name += declinfo.name + "_";
-            declinfo.target.declare_interface(make_processing_info<Forwarding>(prinfo.user));
+            target.declare_interface(make_processing_info<Forwarding>(prinfo.user));
         }
 
-        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled
-        static void filter_dispatch(
-            std::true_type, std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+        template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled
+        static void filter_dispatch(std::true_type, std::true_type, PrInfo prinfo,
+            DeclInfo declinfo, Target& target, Args&&...) {
             // TODO: fix redundant info regarding current processing (prinfo + current class) ?
             auto new_prinfo = make_processing_info<Unroll<Test, Forwarding, recursive>>(
                 prinfo.user, prinfo.name + declinfo.name + "_");
-
-            declinfo.target.declare_interface(new_prinfo);
+            target.declare_interface(new_prinfo);
         }
 
         template <class Anything, class... Args>  // not to be unrolled

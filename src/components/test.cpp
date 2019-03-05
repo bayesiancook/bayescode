@@ -20,7 +20,7 @@ struct TracerDummyModel {
 TEST_CASE("Tracer reading test") {
     stringstream ss("1.1 2.2 3.3 4.4 5.5");
     TracerDummyModel m = {-1, -1, {-1, -1, -1}};
-    Tracer t(m);
+    Tracer t(m, processing::AlwaysTrue());
 
     t.read_line(ss);
 
@@ -33,7 +33,7 @@ TEST_CASE("Tracer reading test") {
 TEST_CASE("Tracer writing test") {
     stringstream ss;
     TracerDummyModel m = {1.1, 2.2, {3.3, 4.4, 5.5}};
-    Tracer t(m);
+    Tracer t(m, processing::AlwaysTrue());
 
     t.write_header(ss);
     t.write_line(ss);
