@@ -5,6 +5,8 @@
 ==================================================================================================*/
 namespace processing {  // namespace to hide helpers
 
+    /*----------------------------------------------------------------------------------------------
+      Ending bricks. Objects that call the final user. */
     class End {
       public:
         template <class PrInfo, class DeclInfo, class... Args>
@@ -23,7 +25,6 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
-
     class NoNameEnd {
       public:
         template <class PrInfo, class DeclInfo, class... Args>
@@ -32,6 +33,8 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
+    /*----------------------------------------------------------------------------------------------
+      Tests: boolean properties on types. */
     template <class Tag>
     struct HasTag {
         template <class Info>
@@ -52,6 +55,8 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
+    /*----------------------------------------------------------------------------------------------
+      Processing bricks. */
     template <class Test, class Forwarding>
     class Filter {
         template <class... Args>
@@ -77,41 +82,26 @@ namespace processing {  // namespace to hide helpers
     template <class Type, class Forwarding>
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
-    template <class Test, class Forwarding>
-    class SimpleUnroll {
-        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled
-        static void filter_dispatch(std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
-            // NOTE: name and args are discarded! (FIXME?)
-            // TODO: fix redundant info regarding current processing (prinfo + current class)
+    template <class Test, class Forwarding, bool recursive>
+    class Unroll {
+        template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled once
+        static void filter_dispatch(
+            std::true_type, std::false_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+            // TODO: fix redundant info regarding current processing (prinfo + current class) ?
+            prinfo.name += declinfo.name + "_";
             declinfo.target.declare_interface(make_processing_info<Forwarding>(prinfo.user));
         }
 
-        template <class... Args>  // not to be unrolled
-        static void filter_dispatch(std::false_type, Args&&... args) {
-            Forwarding::forward_declaration(std::forward<Args>(args)...);
-        }
-
-      public:
-        template <class PrInfo, class DeclInfo, class... Args>
-        static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
-            // TODO check types
-            filter_dispatch(
-                Test::template test<DeclInfo>(), prinfo, declinfo, std::forward<Args>(args)...);
-        }
-    };
-
-    template <class Test, class Forwarding>
-    class RecursiveUnroll {
         template <class PrInfo, class DeclInfo, class... Args>  // to be unrolled
-        static void filter_dispatch(std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
-            // NOTE: name and args are discarded! (FIXME?)
-            // TODO: fix redundant info regarding current processing (prinfo + current class)
+        static void filter_dispatch(
+            std::true_type, std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
+            // TODO: fix redundant info regarding current processing (prinfo + current class) ?
             prinfo.name += declinfo.name + "_";
             declinfo.target.declare_interface(prinfo);
         }
 
-        template <class... Args>  // not to be unrolled
-        static void filter_dispatch(std::false_type, Args&&... args) {
+        template <class Anything, class... Args>  // not to be unrolled
+        static void filter_dispatch(std::false_type, Anything, Args&&... args) {
             Forwarding::forward_declaration(std::forward<Args>(args)...);
         }
 
@@ -119,11 +109,17 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO check types
-            filter_dispatch(
-                Test::template test<DeclInfo>(), prinfo, declinfo, std::forward<Args>(args)...);
+            filter_dispatch(Test::template test<DeclInfo>(),
+                std::integral_constant<bool, recursive>(), prinfo, declinfo,
+                std::forward<Args>(args)...);
         }
     };
 
+    template <class Test, class Forwarding>
+    using SimpleUnroll = Unroll<Test, Forwarding, false>;
+
+    template <class Test, class Forwarding>
+    using RecursiveUnroll = Unroll<Test, Forwarding, true>;
 
     template <class Tag, class Forwarding>
     using UnrollIf = SimpleUnroll<HasTag<Tag>, Forwarding>;
