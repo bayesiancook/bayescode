@@ -997,13 +997,13 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<M> &m) {
     is >> blmode >> nucmode;
     is >> omega_param;
     m.reset(new M(datafile, treefile, param_mode_t(blmode), param_mode_t(nucmode), omega_param));
-    Tracer tracer{*m, &M::declare_model};
+    Tracer tracer{*m};
     tracer.read_line(is);
     return is;
 }
 
 std::ostream &operator<<(std::ostream &os, MultiGeneSingleOmegaModel &m) {
-    Tracer tracer{m, &MultiGeneSingleOmegaModel::declare_model};
+    Tracer tracer{m};
     os << "MultiGeneSingleOmega"
        << "\t";
     os << m.datafile << '\t' << m.treefile << '\t';

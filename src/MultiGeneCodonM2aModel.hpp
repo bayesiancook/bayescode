@@ -1144,13 +1144,13 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<M> &m) {
     is >> treefile;
     is >> blmode >> nucmode;
     m.reset(new M(datafile, treefile, param_mode_t(blmode), param_mode_t(nucmode)));
-    Tracer tracer{*m, &M::declare_model};
+    Tracer tracer{*m};
     tracer.read_line(is);
     return is;
 }
 
 std::ostream &operator<<(std::ostream &os, MultiGeneCodonM2aModel &m) {
-    Tracer tracer{m, &MultiGeneCodonM2aModel::declare_model};
+    Tracer tracer{m};
     os << "MultiGeneCodonM2a"
        << "\t";
     os << m.datafile << '\t' << m.treefile << '\t';

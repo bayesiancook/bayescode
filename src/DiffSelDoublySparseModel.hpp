@@ -1687,13 +1687,13 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel,
         maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
         shiftprobinvconc, param_mode_t(fitnesscentermode)));
-    Tracer tracer{*m, &DiffSelDoublySparseModel::declare_model};
+    Tracer tracer{*m};
     tracer.read_line(is);
     return is;
 }
 
 std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel &m) {
-    Tracer tracer{m, &DiffSelDoublySparseModel::declare_model};
+    Tracer tracer{m};
     os << "DiffselDoublySparse" << '\t';
     os << m.datafile << '\t';
     os << m.treefile << '\t';

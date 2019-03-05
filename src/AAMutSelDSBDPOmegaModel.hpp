@@ -281,8 +281,7 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
         totb1 = totb2 = totb3 = totb4 = 0;
 
         Allocate();
-        tracer =
-            std::unique_ptr<Tracer>(new Tracer(*this, &AAMutSelDSBDPOmegaModel::declare_model));
+        tracer = std::unique_ptr<Tracer>(new Tracer(*this));
     }
 
     void move(int it) override { Move(); }

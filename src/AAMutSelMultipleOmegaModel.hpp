@@ -265,8 +265,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         Nbranch = tree->nb_nodes() - 1;
 
         Allocate();
-        tracer =
-            std::unique_ptr<Tracer>(new Tracer(*this, &AAMutSelMultipleOmegaModel::declare_model));
+        tracer = std::unique_ptr<Tracer>(new Tracer(*this));
     }
 
     void move(int it) override { Move(); }

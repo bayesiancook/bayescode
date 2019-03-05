@@ -57,13 +57,13 @@ target_link_libraries(globom ${BASE_LIBS})
 add_executable(readglobom "src/ReadSingleOmega.cpp")
 target_link_libraries(readglobom ${BASE_LIBS})
 
-# # Codon M2a
-# add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
-# target_link_libraries(codonm2a ${BASE_LIBS})
+# Codon M2a
+add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
+target_link_libraries(codonm2a ${BASE_LIBS})
 
-# # Read Codon M2a
-# add_executable(readcodonm2a "src/ReadCodonM2a.cpp" "src/CodonM2aModel.cpp")
-# target_link_libraries(readcodonm2a ${BASE_LIBS})
+# Read Codon M2a
+add_executable(readcodonm2a "src/ReadCodonM2a.cpp" "src/CodonM2aModel.cpp")
+target_link_libraries(readcodonm2a ${BASE_LIBS})
 
 # # Mutation-Selection (aamutsel)
 # add_executable(aamutsel "src/AAMutSelDSBDPOmega.cpp")
@@ -85,9 +85,9 @@ target_link_libraries(readglobom ${BASE_LIBS})
 # add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
 # target_link_libraries(diffseldsparse ${BASE_LIBS})
 
-# # Read diffsel double sparse (readdiffseldsparse)
-# # add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
-# # target_link_libraries(readdiffseldsparse ${BASE_LIBS})
+# Read diffsel double sparse (readdiffseldsparse)
+# add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
+# target_link_libraries(readdiffseldsparse ${BASE_LIBS})
 
 # # Multi-gene single omega (multigeneglobom)
 # add_executable(multigeneglobom "src/MultiGeneSingleOmega.cpp")
