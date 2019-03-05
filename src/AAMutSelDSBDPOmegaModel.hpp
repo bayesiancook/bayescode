@@ -286,52 +286,50 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     void move(int it) override { Move(); }
 
-    template <class C>
-    void declare_model(C &t) {
-        if (blmode < 2) { t.add("branchlength", *branchlength); }
+    template <class Info>
+    void declare_interface(Info info) {
+        if (blmode < 2) { model_node<SubStructure>(info, "branchlength", *branchlength); }
         if (nucmode < 2) {
-            t.add("nucrelrate", nucrelrate);
-            t.add("nucstat", nucstat);
+            model_node(info, "nucrelrate", nucrelrate);
+            model_node(info, "nucstat", nucstat);
         }
         if (basemode < 2) {
-            t.add("basekappa", basekappa);
-            t.add("baseweight", *baseweight);
-            t.add("componentalloc", *componentalloc);
-            t.add("*basecenterarray", *basecenterarray);
-            t.add("*baseconcentrationarray", *baseconcentrationarray);
+            model_node(info, "basekappa", basekappa);
+            model_node<SubStructure>(info, "baseweight", *baseweight);
+            model_node<SubStructure>(info, "componentalloc", *componentalloc);
+            model_node<SubStructure>(info, "*basecenterarray", *basecenterarray);
+            model_node<SubStructure>(info, "*baseconcentrationarray", *baseconcentrationarray);
         }
-        t.add("kappa", kappa);
-        t.add("weight", *weight);
-        t.add("componentaafitnessarray", *componentaafitnessarray);
-        t.add("sitealloc", *sitealloc);
-        if (omegamode < 2) { t.add("omega; ", omega); }
-        if (polyprocess != nullptr) { t.add("theta; ", theta); }
-    }
+        model_node(info, "kappa", kappa);
+        model_node<SubStructure>(info, "weight", *weight);
+        model_node<SubStructure>(info, "componentaafitnessarray", *componentaafitnessarray);
+        model_node<SubStructure>(info, "sitealloc", *sitealloc);
+        if (omegamode < 2) { model_node(info, "omega; ", omega); }
+        if (polyprocess != nullptr) { model_node(info, "theta; ", theta); }
 
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", [this]() { return GetLogPrior(); });
-        t.add("lnL", [this]() { return GetLogLikelihood(); });
+
+        model_stat(info, "logprior", [this]() { return GetLogPrior(); });
+        model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
         // 3x: per coding site (and not per nucleotide site)
-        t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); });
-        t.add("omega", omega);
-        t.add("theta", theta);
-        t.add("ncluster", [this]() { return GetNcluster(); });
-        t.add("kappa", kappa);
+        model_stat(info, "length", [this]() { return 3 * branchlength->GetTotalLength(); });
+        model_stat(info, "omega", omega);
+        model_stat(info, "theta", theta);
+        model_stat(info, "ncluster", [this]() { return GetNcluster(); });
+        model_stat(info, "kappa", kappa);
         if (baseNcat > 1) {
             if (basemin) {
-                t.add("basencluster", [this]() { return GetBaseNcluster(); });
-                t.add("baseweight1", [this]() { return baseweight->GetVal(1); });
+                model_stat(info, "basencluster", [this]() { return GetBaseNcluster(); });
+                model_stat(info, "baseweight1", [this]() { return baseweight->GetVal(1); });
             } else {
-                t.add("basencluster", [this]() { return GetBaseNcluster(); });
-                t.add("basekappa", basekappa);
+                model_stat(info, "basencluster", [this]() { return GetBaseNcluster(); });
+                model_stat(info, "basekappa", basekappa);
             }
         }
-        t.add("aaent", [this]() { return GetMeanAAEntropy(); });
-        t.add("meanaaconc", [this]() { return GetMeanComponentAAConcentration(); });
-        t.add("aacenterent", [this]() { return GetMeanComponentAAEntropy(); });
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+        model_stat(info, "aaent", [this]() { return GetMeanAAEntropy(); });
+        model_stat(info, "meanaaconc", [this]() { return GetMeanComponentAAConcentration(); });
+        model_stat(info, "aacenterent", [this]() { return GetMeanComponentAAEntropy(); });
+        model_stat(info, "statent", [&]() { return Random::GetEntropy(nucstat); });
+        model_stat(info, "rrent", [&]() { return Random::GetEntropy(nucrelrate); });
     }
 
     //! \brief set estimation method for branch lengths
