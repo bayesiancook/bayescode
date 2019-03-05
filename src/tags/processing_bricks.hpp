@@ -96,8 +96,10 @@ namespace processing {  // namespace to hide helpers
         static void filter_dispatch(
             std::true_type, std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
             // TODO: fix redundant info regarding current processing (prinfo + current class) ?
-            prinfo.name += declinfo.name + "_";
-            declinfo.target.declare_interface(prinfo);
+            auto new_prinfo = make_processing_info<Unroll<Test, Forwarding, recursive>>(
+                prinfo.user, prinfo.name + declinfo.name + "_");
+
+            declinfo.target.declare_interface(new_prinfo);
         }
 
         template <class Anything, class... Args>  // not to be unrolled
