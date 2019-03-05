@@ -168,6 +168,11 @@ class SimpleBranchArray : public BranchArray<T> {
         x.add(array);
     }
 
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "array", array);
+    }
+
   protected:
     const Tree &tree;
     std::vector<T> array;

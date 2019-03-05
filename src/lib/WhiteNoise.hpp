@@ -95,11 +95,6 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
         return m1;
     }
 
-    template <class Info>
-    void declare_interface(Info info) {
-        declare(info, "array", array);
-    }
-
   protected:
     const BranchSelector<double> &blmean;
     const double &invshape;
