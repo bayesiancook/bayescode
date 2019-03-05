@@ -14,9 +14,8 @@ class Tracer {
     template <class Provider, class Test = processing::HasTag<ModelNode>>
     Tracer(Provider& p, Test test = processing::HasTag<ModelNode>()) {
         using namespace processing;
-        auto prinfo =
-            make_processing_info<RecursiveUnroll<HasTag<SubStructure>, Filter<Test, FullNameEnd>>>(
-                *this);
+        using Processing = Filter<Test, RecursiveUnroll<HasTag<SubStructure>, FullNameEnd>>;
+        auto prinfo = make_processing_info<Processing>(*this);
         p.declare_interface(prinfo);
     }
 
