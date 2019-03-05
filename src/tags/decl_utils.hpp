@@ -30,6 +30,16 @@ namespace decl_utils {  // namespace to hide helpers
         }
     };
 
+    class FullNameEnd {
+      public:
+        template <class PrInfo, class DeclInfo, class... Args>
+        static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
+            prinfo.user.process_declaration(
+                prinfo.name + declinfo.name, declinfo.target, std::forward<Args>(args)...);
+        }
+    };
+
+
     class NoNameEnd {
       public:
         template <class PrInfo, class DeclInfo, class... Args>
@@ -112,6 +122,7 @@ namespace decl_utils {  // namespace to hide helpers
         static void filter_dispatch(std::true_type, PrInfo prinfo, DeclInfo declinfo, Args&&...) {
             // NOTE: name and args are discarded! (FIXME?)
             // TODO: fix redundant info regarding current processing (prinfo + current class)
+            prinfo.name += declinfo.name + "_";
             declinfo.target.declare_interface(prinfo);
         }
 

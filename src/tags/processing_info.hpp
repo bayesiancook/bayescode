@@ -1,12 +1,15 @@
 #pragma once
 
+#include <string>
+
 template <class User, class Processing>
 struct ProcessingInfo {
     using processing = Processing;
 
     User& user;
+    std::string name;
 
-    ProcessingInfo(User& user) : user(user) {}
+    ProcessingInfo(User& user, std::string name = "") : user(user), name(name) {}
 };
 
 template <class Processing, class User>

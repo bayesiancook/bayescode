@@ -1,5 +1,6 @@
 #include "doctest.h"
 
+#include <sstream>
 #include "decl_utils.hpp"
 
 using namespace std;
@@ -273,6 +274,24 @@ TEST_CASE("Recursive unroll") {
     // recursive unroll
     recif_apply<Recursive>(u2, p);
     CHECK(u2.sum == 237);
+}
+
+struct UserFullName {
+    std::stringstream ss;
+
+    void process_declaration(std::string name, int value) {
+        ss << name << ": " << value << std::endl;
+    }
+};
+
+TEST_CASE("Recursive unroll with full name") {
+    UserFullName u;
+    ProviderRec2 p;
+
+    using namespace decl_utils;
+    auto prinfo = make_processing_info<RecursiveUnroll<HasTag<Recursive>, FullNameEnd>>(u);
+    p.declare_interface(prinfo);
+    CHECK(u.ss.str() == "p_p_a: 1\np_p_b: 2\np_p_c: 3\np_a: 213\na: 15\nb: 3\n");
 }
 
 /*--------------------------------------------------------------------------------------------------
