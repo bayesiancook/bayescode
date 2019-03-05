@@ -5,7 +5,7 @@
 template <class Model>
 bool check_restart(Model& model, std::string tracefile) {
     // get stats from new model
-    Tracer tracer(model, &Model::declare_stats);
+    Tracer tracer(model);
     std::stringstream ss;
     tracer.write_line(ss);
 

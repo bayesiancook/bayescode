@@ -1,24 +1,22 @@
 #pragma once
+#include <functional>
 #include <iostream>
-#include "BidimArray.hpp"
-#include "BranchArray.hpp"
-#include "MultinomialAllocationVector.hpp"
-#include "StickBreakingProcess.hpp"
-#include "components/RegistrarBase.hpp"
+#include "components/common_tags.hpp"
 #include "mpi_components/partition.hpp"
+#include "tags/decl_utils.hpp"
 
-class Tracer : public RegistrarBase<Tracer> {
+class Tracer {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
     std::vector<std::function<void(std::ostream&)>> data_to_stream;
     std::vector<std::function<void(std::istream&)>> set_from_stream;
 
-    friend RegistrarBase<Tracer>;
-    using RegistrarBase<Tracer>::register_element;
-
   public:
-    template <class T>
-    Tracer(T& x, void (T::*f)(Tracer&)) {
-        (x.*f)(*this);
+    template <class Provider>
+    Tracer(Provider& p) {
+        using namespace processing;
+        auto prinfo =
+            make_processing_info<RecursiveUnroll<HasTag<SubStructure>, FullNameEnd>>(*this);
+        p.declare_interface(prinfo);
     }
 
     void write_header(std::ostream& os) const {
@@ -64,21 +62,21 @@ class Tracer : public RegistrarBase<Tracer> {
         for (auto& f : set_from_stream) f(is);
     }
 
-    void register_element(std::string const& name, double& d) {
+    void process_declaration(std::string name, double& d) {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
         set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
-    void register_element(std::string const& name, int& d) {
+    void process_declaration(std::string name, int& d) {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([&d](std::ostream& os) { os << d; });
         set_from_stream.emplace_back([&d](std::istream& is) { is >> d; });
     }
 
     template <class T>
-    void register_element(std::string const& name, std::vector<T>& v,
-        Partition partition = Partition(IndexSet(), 0)) {
+    void process_declaration(
+        std::string name, std::vector<T>& v, Partition partition = Partition(IndexSet(), 0)) {
         /* -- */
         header_to_stream.emplace_back([&v, name](std::ostream& os) {
             size_t n = v.size();
@@ -99,41 +97,8 @@ class Tracer : public RegistrarBase<Tracer> {
         });
     }
 
-    void register_element(std::string const& name, StickBreakingProcess& sbp) {
-        add(name + "_array", dynamic_cast<SimpleArray<double>&>(sbp));
-
-        auto& beta_variates = sbp.GetBetaVariates();
-        add(name + "_betavariates", beta_variates);
-    }
-
     template <class T>
-    void register_element(std::string const& name, BranchArray<T>& v) {
-        header_to_stream.push_back([&v, name](std::ostream& os) {
-            int n = v.GetNbranch();
-            if (n > 0) {
-                os << name << "[0]";
-                for (int i = 1; i < n; i++) os << "\t" << name << "[" << i << "]";
-            }
-        });
-        data_to_stream.push_back([&v](std::ostream& os) {
-            int n = v.GetNbranch();
-            if (n > 0) {
-                os << v.GetVal(0);
-                for (int i = 1; i < n; i++) os << "\t" << v.GetVal(i);
-            }
-        });
-        set_from_stream.push_back([&v](std::istream& is) {
-            for (int i = 0; i < v.GetNbranch(); i++) is >> v[i];
-        });
-    }
-
-    template <class T>
-    void register_element(std::string const& name, Array<T>& v) {
-        for (int i = 0; i < v.GetSize(); i++) { add(name + "[" + std::to_string(i) + "]", v[i]); }
-    }
-
-    template <class T>
-    void register_element(std::string const& name, T* o, double (T::*f)() const) {
+    void process_declaration(std::string name, T* o, double (T::*f)() const) {
         header_to_stream.push_back([name](std::ostream& os) { os << name; });
         data_to_stream.push_back([o, f](std::ostream& os) { os << (o->*f)(); });
         set_from_stream.push_back([](std::istream& is) {
@@ -142,7 +107,7 @@ class Tracer : public RegistrarBase<Tracer> {
         });
     }
 
-    void register_element(std::string const& name, std::function<double()> const& f) {
+    void process_declaration(std::string name, std::function<double()> const& f) {
         header_to_stream.emplace_back([name](std::ostream& os) { os << name; });
         data_to_stream.emplace_back([f](std::ostream& os) { os << f(); });
         set_from_stream.emplace_back([](std::istream& is) {

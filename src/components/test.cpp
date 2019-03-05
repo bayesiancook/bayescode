@@ -9,18 +9,18 @@ struct TracerDummyModel {
     double a, b;
     vector<double> v;
 
-    template <class T>
-    void my_declare_model(T& m) {
-        m.add("a", a);
-        m.add("v", v);
-        m.add("b", b);
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "a", a);
+        declare(info, "v", v);
+        declare(info, "b", b);
     }
 };
 
 TEST_CASE("Tracer reading test") {
     stringstream ss("1.1 2.2 3.3 4.4 5.5");
     TracerDummyModel m = {-1, -1, {-1, -1, -1}};
-    Tracer t(m, &TracerDummyModel::my_declare_model);
+    Tracer t(m);
 
     t.read_line(ss);
 
@@ -33,7 +33,7 @@ TEST_CASE("Tracer reading test") {
 TEST_CASE("Tracer writing test") {
     stringstream ss;
     TracerDummyModel m = {1.1, 2.2, {3.3, 4.4, 5.5}};
-    Tracer t(m, &TracerDummyModel::my_declare_model);
+    Tracer t(m);
 
     t.write_header(ss);
     t.write_line(ss);

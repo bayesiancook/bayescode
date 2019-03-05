@@ -161,23 +161,32 @@ class SingleOmegaModel : public ChainComponent {
 
     void move(int it) override { Move(); }
 
-    template <class C>
-    void declare_model(C &t) {
-        t.add("omega", omega);
-        t.add("nucstat", nucstat);
-        t.add("nucrelrate", nucrelrate);
-        t.add("branchlength", *branchlength);
+
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "omega", omega);
+        declare(info, "nucstat", nucstat);
+        declare(info, "nucrelrate", nucrelrate);
+        declare<SubStructure>(info, "branchlength", *branchlength);
     }
 
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
-        t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
-        t.add("length", [this]() { return branchlength->GetTotalLength(); });
-        t.add("omega", omega);
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
-    }
+    // template <class C>
+    // void declare_model(C &t) {
+    //     t.add("omega", omega);
+    //     t.add("nucstat", nucstat);
+    //     t.add("nucrelrate", nucrelrate);
+    //     t.add("branchlength", *branchlength);
+    // }
+
+    // template <class C>
+    // void declare_stats(C &t) {
+    //     t.add("logprior", this, &SingleOmegaModel::GetLogPrior);
+    //     t.add("lnL", this, &SingleOmegaModel::GetLogLikelihood);
+    //     t.add("length", [this]() { return branchlength->GetTotalLength(); });
+    //     t.add("omega", omega);
+    //     t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
+    //     t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+    // }
 
     //-------------------
     // Accessors
@@ -539,13 +548,13 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<SingleOmegaModel> &m)
     is >> treefile;
     is >> blmode >> nucmode;
     m.reset(new SingleOmegaModel(datafile, treefile));
-    Tracer tracer{*m, &SingleOmegaModel::declare_model};
+    Tracer tracer{*m};
     tracer.read_line(is);
     return is;
 }
 
 std::ostream &operator<<(std::ostream &os, SingleOmegaModel &m) {
-    Tracer tracer{m, &SingleOmegaModel::declare_model};
+    Tracer tracer{m};
     os << "SingleOmega" << '\t';
     os << m.datafile << '\t';
     os << m.treefile << '\t';

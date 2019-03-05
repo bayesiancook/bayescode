@@ -11,9 +11,7 @@ class StandardTracer : public ChainComponent {
   public:
     template <class M>
     StandardTracer(M& m, std::string chain_name)
-        : model_tracer(m, &M::declare_model),
-          stats_tracer(m, &M::declare_stats),
-          chain_name(chain_name) {}
+        : model_tracer(m), stats_tracer(m), chain_name(chain_name) {}
     void start() final {
         std::ofstream model_os{chain_file(chain_name), std::ios_base::trunc};
         model_tracer.write_header(model_os);

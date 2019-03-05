@@ -23,7 +23,7 @@ void stats_posterior(Model &model, ChainReader &cr, int const &every, int const 
     unsigned nbr_header_fields{0};
     std::stringstream ss_header;
     {
-        Tracer tracer(model, &Model::declare_stats);
+        Tracer tracer(model);  // FIXME: stats
         tracer.write_header(ss_header);
         nbr_header_fields = tracer.nbr_header_fields();
     }
@@ -33,7 +33,7 @@ void stats_posterior(Model &model, ChainReader &cr, int const &every, int const 
     for (int step = 0; step < size; step++) {
         std::cerr << '.';
         cr.skip(every);
-        Tracer tracer(model, &Model::declare_stats);
+        Tracer tracer(model);  // FIXME: stats
         std::vector<double> line_values = tracer.line_values();
         for (unsigned field{0}; field < nbr_header_fields; field++) {
             bidim_stats.at(field).at(step) = line_values.at(field);
