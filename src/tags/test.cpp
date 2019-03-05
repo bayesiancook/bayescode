@@ -266,7 +266,7 @@ TEST_CASE("Recursive unroll") {
     ProviderRec2 p;
 
     // single unroll
-    using namespace decl_utils;
+    using namespace processing;
     p.declare_interface(
         make_processing_info<SimpleUnroll<HasTag<Recursive>, Filter<HasType<int>, End>>>(u));
     CHECK(u.sum == 231);
@@ -288,7 +288,7 @@ TEST_CASE("Recursive unroll with full name") {
     UserFullName u;
     ProviderRec2 p;
 
-    using namespace decl_utils;
+    using namespace processing;
     auto prinfo = make_processing_info<RecursiveUnroll<HasTag<Recursive>, FullNameEnd>>(u);
     p.declare_interface(prinfo);
     CHECK(u.ss.str() == "p_p_a: 1\np_p_b: 2\np_p_c: 3\np_a: 213\na: 15\nb: 3\n");
@@ -306,6 +306,6 @@ TEST_CASE("NoName end brick") {
     User3 u;
     Provider p;
 
-    p.declare_interface(make_processing_info<decl_utils::NoNameEnd>(u));
+    p.declare_interface(make_processing_info<processing::NoNameEnd>(u));
     CHECK(u.sum == 6);
 }
