@@ -71,6 +71,8 @@ run-app-tests: all
 	_build/readaamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss _test/aamutsel_gal4
+	@echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega run ================================================\e[0m"
 	_build/mutselomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --freeomega --omegancat 3 -u ${POINTS} _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega restart ============================================\e[0m"
@@ -79,8 +81,7 @@ run-app-tests: all
 	_build/readmutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
 	@make --no-print-directory diffseldsparse
-# @echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
-# _build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
+
 # @make --no-print-directory run-multigeneglobom-test
 
 
