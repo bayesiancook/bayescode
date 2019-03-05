@@ -1628,42 +1628,44 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! write complete current parameter configuration to stream
     void ToStream(std::ostream &os) { os << *this; }
 
-    template <class C>
-    void declare_model(C &t) {
-        if (blmode != shared) { t.add("branchlength", *branchlength); }
+    template <class Info>
+    void declare_interface(Info info) {
+        if (blmode != shared) { model_node<SubStructure>(info, "branchlength", *branchlength); }
         if (nucmode != shared) {
-            t.add("nucrelrate", nucrelrate);
-            t.add("nucstat", nucstat);
+            model_node(info, "nucrelrate", nucrelrate);
+            model_node(info, "nucstat", nucstat);
         }
-        if (resampled(fitnessshapemode)) { t.add("fitnessshape", fitnessshape); }
-        if (resampled(fitnesscentermode)) { t.add("fitnesscenter", fitnesscenter); }
-        t.add("fitness", *fitness);
-        if (gene_specific_mask_mode(maskmode)) { t.add("maskprob", maskprob); }
-        if (maskmode != no_mask) { t.add("sitemaskarray", *sitemaskarray); }
-        if (maskepsilonmode < 2) { t.add("maskepsilon", maskepsilon); }
+        if (resampled(fitnessshapemode)) { model_node(info, "fitnessshape", fitnessshape); }
+        if (resampled(fitnesscentermode)) { model_node(info, "fitnesscenter", fitnesscenter); }
+        model_node<SubStructure>(info, "fitness", *fitness);
+        if (gene_specific_mask_mode(maskmode)) { model_node(info, "maskprob", maskprob); }
+        if (maskmode != no_mask) {
+            model_node<SubStructure>(info, "sitemaskarray", *sitemaskarray);
+        }
+        if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
         if (Ncond > 1) {
-            t.add("shiftprob", shiftprob);
-            t.add("toggle", *toggle);
+            model_node(info, "shiftprob", shiftprob);
+            model_node<SubStructure>(info, "toggle", *toggle);
         }
-    }
 
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &DiffSelDoublySparseModel::GetLogPrior);
-        t.add("lnL", this, &DiffSelDoublySparseModel::GetLogLikelihood);
-        t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
-        t.add("maskprob", maskprob);
-        t.add("meanwidth", this, &DiffSelDoublySparseModel::GetMeanWidth);
-        t.add("maskepsilon", maskepsilon);
-        t.add("fitnessshape", fitnessshape);
-        t.add("fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
+
+        model_stat(info, "logprior", *this, &DiffSelDoublySparseModel::GetLogPrior);
+        model_stat(info, "lnL", *this, &DiffSelDoublySparseModel::GetLogLikelihood);
+        model_stat(info, "length",
+            [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
+        model_stat(info, "maskprob", maskprob);
+        model_stat(info, "meanwidth", *this, &DiffSelDoublySparseModel::GetMeanWidth);
+        model_stat(info, "maskepsilon", maskepsilon);
+        model_stat(info, "fitnessshape", fitnessshape);
+        model_stat(
+            info, "fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
         for (int k = 1; k < Ncond; k++) {
-            t.add("shiftprob_" + std::to_string(k), shiftprob[k - 1]);
-            t.add("propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
+            model_stat(info, "shiftprob_" + std::to_string(k), shiftprob[k - 1]);
+            model_stat(info, "propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
         }
-        t.add("nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
-        t.add("gammanullcount", gammanullcount);
+        model_stat(info, "nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
+        model_stat(info, "nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
+        model_stat(info, "gammanullcount", gammanullcount);
     }
 };
 

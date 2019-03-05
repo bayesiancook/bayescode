@@ -77,11 +77,12 @@ run-app-tests: all
 	_build/mutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega read ===============================================\e[0m"
 	_build/readmutselomega _test/mutselomega_gal4
+	@echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
+	@make --no-print-directory diffseldsparse
 # @echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
 # _build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 # @make --no-print-directory run-multigeneglobom-test
-# @echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
-# @make --no-print-directory diffseldsparse
+
 
 .PHONY: run-multigeneglobom-test
 run-multigeneglobom-test: all

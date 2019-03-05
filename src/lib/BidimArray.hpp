@@ -139,6 +139,11 @@ class SimpleBidimArray : public BidimArray<T> {
 
     std::vector<std::vector<T>> &GetArray() { return array; }
 
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "array", array);
+    }
+
   protected:
     int nrow;
     int ncol;

@@ -81,9 +81,9 @@ target_link_libraries(mutselomega ${BASE_LIBS})
 add_executable(readmutselomega "src/ReadAAMutSelMultipleOmega.cpp")
 target_link_libraries(readmutselomega ${BASE_LIBS})
 
-# # Diffsel double sparse (diffseldsparse)
-# add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
-# target_link_libraries(diffseldsparse ${BASE_LIBS})
+# Diffsel double sparse (diffseldsparse)
+add_executable(diffseldsparse "src/DiffSelDoublySparse.cpp")
+target_link_libraries(diffseldsparse ${BASE_LIBS})
 
 # Read diffsel double sparse (readdiffseldsparse)
 # add_executable(readdiffseldsparse "src/ReadDiffSelDoublySparse.cpp")
