@@ -37,12 +37,12 @@ void filter_apply(User& user, Provider& provider) {
 
 /*--------------------------------------------------------------------------------------------------
   Typefilter apply: allows application of only declarations with a given target type */
-// template <class Type, class User, class Provider>
-// void typefilter_apply(User& user, Provider& provider) {
-//     using namespace processing;
-//     auto processing_info = make_processing_info<FilterType<Type, End>>(user);
-//     provider.declare_interface(processing_info);
-// }
+template <class Type, class User, class Provider>
+void typefilter_apply(User& user, Provider& provider) {
+    using namespace processing;
+    auto processing_info = make_processing_info<FilterType<Type, End>>(user);
+    provider.declare_interface(processing_info);
+}
 
 /*--------------------------------------------------------------------------------------------------
   Single unroll of structures with tag Tag */

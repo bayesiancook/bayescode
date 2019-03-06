@@ -181,13 +181,13 @@ TEST_CASE("Filter apply: check that options that would not compile are not compi
     CHECK(u.sum == 15);
 }
 
-// TEST_CASE("Filter by type") {
-//     Provider2 p;
-//     User u;
-//     typefilter_apply<int>(u, p);
+TEST_CASE("Filter by type") {
+    Provider2 p;
+    User u;
+    typefilter_apply<int>(u, p);
 
-//     CHECK(u.sum == 15);
-// }
+    CHECK(u.sum == 15);
+}
 
 /*--------------------------------------------------------------------------------------------------
   Forwarding of other arguments */

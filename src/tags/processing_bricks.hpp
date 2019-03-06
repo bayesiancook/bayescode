@@ -35,7 +35,7 @@ namespace processing {  // namespace to hide helpers
     /*----------------------------------------------------------------------------------------------
       Tests: boolean properties on types. */
     struct AlwaysTrue {
-        template <class Info>
+        template <class... Args>
         static auto test() {
             return std::true_type();
         }
@@ -43,24 +43,23 @@ namespace processing {  // namespace to hide helpers
 
     template <class Tag>
     struct HasTag {
-        template <class Info>
+        template <class DeclInfo, class... Args>
         static auto test() {
-            static_assert(
-                is_decl_info::trait<Info>::value, "Info given to HasTag::test is not a decl info");
-            return typename Info::context::template has_tag<Tag>();
+            static_assert(is_decl_info::trait<DeclInfo>::value,
+                "Info given to HasTag::test is not a decl info");
+            return typename DeclInfo::context::template has_tag<Tag>();
         }
     };
 
-    // template <class Type>
-    // struct HasType {
-    //     template <class Info>
-    //     static auto test() {
-    //         static_assert(
-    //             is_decl_info::trait<Info>::value, "Info given to HasType::test is not a decl
-    //             info");
-    //         return std::is_same<Type, typename Info::target_type>();
-    //     }
-    // };
+    template <class Type>
+    struct HasType {
+        template <class DeclInfo, class Target, class... Args>
+        static auto test() {
+            static_assert(is_decl_info::trait<DeclInfo>::value,
+                "Info given to HasType::test is not a decl info");
+            return std::is_same<Type, typename std::remove_reference<Target>::type>();
+        }
+    };
 
     /*----------------------------------------------------------------------------------------------
       Processing bricks. */
@@ -78,16 +77,16 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO: check infos are infos
-            filter_dispatch(
-                Test::template test<DeclInfo>(), prinfo, declinfo, std::forward<Args>(args)...);
+            filter_dispatch(Test::template test<DeclInfo, Args...>(), prinfo, declinfo,
+                std::forward<Args>(args)...);
         }
     };
 
     template <class Tag, class Forwarding>
     using FilterTag = Filter<HasTag<Tag>, Forwarding>;
 
-    // template <class Type, class Forwarding>
-    // using FilterType = Filter<HasType<Type>, Forwarding>;
+    template <class Type, class Forwarding>
+    using FilterType = Filter<HasType<Type>, Forwarding>;
 
     template <class Test, class Forwarding, bool recursive>
     class Unroll {
@@ -117,7 +116,7 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO check types
-            filter_dispatch(Test::template test<DeclInfo>(),
+            filter_dispatch(Test::template test<DeclInfo, Args...>(),
                 std::integral_constant<bool, recursive>(), prinfo, declinfo,
                 std::forward<Args>(args)...);
         }
