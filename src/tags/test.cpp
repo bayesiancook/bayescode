@@ -303,12 +303,17 @@ TEST_CASE("NoName end brick") {
 }
 
 /*--------------------------------------------------------------------------------------------------
-  Trait test */
+  More tests */
 
 template <class T>
-struct is_int : std::integral_constant<bool, std::is_same<T, int>::value> {};
+using is_int = std::is_same<T, int>;
 
-TEST_CASE("HasTrait") {
+template <class T>
+void fff() {
+    return T::yolo();
+}
+
+TEST_CASE("Using general traits") {
     User u;
     ProviderRec2 p;  // has a non-int member
 
@@ -316,4 +321,15 @@ TEST_CASE("HasTrait") {
     auto prinfo = make_processing_info<Filter<HasTrait<is_int>, End>>(u);
     p.declare_interface(prinfo);
     CHECK(u.sum == 18);
+    // fff<typename HasTrait<is_int>::trait>();
 }
+
+// TEST_CASE("Not") {
+//     Provider2 p;
+//     User u;
+
+//     using namespace processing;
+//     auto processing = make_processing_info<Filter<Not<HasTag<MyTag2>>, End>>(u);
+//     filter_apply<MyTag>(u, p);
+//     CHECK(u.sum == 15);
+// }

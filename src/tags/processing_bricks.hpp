@@ -33,47 +33,33 @@ namespace processing {  // namespace to hide helpers
     };
 
     /*----------------------------------------------------------------------------------------------
-      Tests: boolean properties on types. */
-    struct AlwaysTrue {
-        template <class... Args>
-        static auto test() {
-            return std::true_type();
-        }
-    };
-
+      Trait mappers. */
     template <class Tag>
     struct HasTag {
         template <class DeclInfo, class... Args>
-        static auto test() {
-            static_assert(is_decl_info::trait<DeclInfo>::value,
-                "Info given to HasTag::test is not a decl info");
-            return typename DeclInfo::context::template has_tag<Tag>();
-        }
+        using trait = typename DeclInfo::context::template has_tag<Tag>;
     };
 
     template <class Type>
     struct HasType {
         template <class DeclInfo, class Target, class... Args>
-        static auto test() {
-            static_assert(is_decl_info::trait<DeclInfo>::value,
-                "Info given to HasType::test is not a decl info");
-            return std::is_same<Type, typename std::remove_reference<Target>::type>();
-        }
+        using trait = std::is_same<Type, std::remove_reference_t<Target>>;
     };
 
-    template <template <typename T> class Trait>
+    template <template <class T> class Trait>
     struct HasTrait {
         template <class DeclInfo, class Target, class... Args>
-        static auto test() {
-            static_assert(is_decl_info::trait<DeclInfo>::value,
-                "Info given to HasType::test is not a decl info");
-            return Trait<typename std::remove_reference<Target>::type>();
-        }
+        using trait = Trait<std::remove_reference_t<Target>>;
+    };
+
+    struct AlwaysTrue {
+        template <class... Args>
+        using trait = std::true_type;
     };
 
     /*----------------------------------------------------------------------------------------------
       Processing bricks. */
-    template <class Test, class Forwarding>
+    template <class TraitMapper, class Forwarding>
     class Filter {
         template <class... Args>
         static void filter_dispatch(std::true_type, Args&&... args) {
@@ -87,8 +73,8 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO: check infos are infos
-            filter_dispatch(Test::template test<DeclInfo, Args...>(), prinfo, declinfo,
-                std::forward<Args>(args)...);
+            filter_dispatch(typename TraitMapper::template trait<DeclInfo, Args...>(), prinfo,
+                declinfo, std::forward<Args>(args)...);
         }
     };
 
@@ -98,7 +84,7 @@ namespace processing {  // namespace to hide helpers
     template <class Type, class Forwarding>
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
-    template <class Test, class Forwarding, bool recursive>
+    template <class TraitMapper, class Forwarding, bool recursive>
     class Unroll {
         template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled once
         static void filter_dispatch(std::true_type, std::false_type, PrInfo prinfo,
@@ -112,7 +98,7 @@ namespace processing {  // namespace to hide helpers
         static void filter_dispatch(std::true_type, std::true_type, PrInfo prinfo,
             DeclInfo declinfo, Target& target, Args&&...) {
             // TODO: fix redundant info regarding current processing (prinfo + current class) ?
-            auto new_prinfo = make_processing_info<Unroll<Test, Forwarding, recursive>>(
+            auto new_prinfo = make_processing_info<Unroll<TraitMapper, Forwarding, recursive>>(
                 prinfo.user, prinfo.name + declinfo.name + "_");
             target.declare_interface(new_prinfo);
         }
@@ -126,7 +112,7 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO check types
-            filter_dispatch(Test::template test<DeclInfo, Args...>(),
+            filter_dispatch(typename TraitMapper::template trait<DeclInfo, Args...>(),
                 std::integral_constant<bool, recursive>(), prinfo, declinfo,
                 std::forward<Args>(args)...);
         }
