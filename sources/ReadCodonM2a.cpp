@@ -35,14 +35,13 @@ class CodonM2aSample : public Sample {
         Open();
     }
 
-    void PostPredSimu(int null_model) {
+    void PostPredSimu(double shrinkposw, double shrinkdposom) {
         cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
-            if (null_model) {
-                GetModel()->SetMixtureParameters(GetModel()->GetPurOm(), 0, GetModel()->GetPurW(), 0);
-            }
+            GetModel()->ShrinkMixtureParameters(shrinkposw, shrinkdposom);
+           //  GetModel()->GetPurOm(), 0, GetModel()->GetPurW(), 0);
             ostringstream s;
             s << "ppred" << name << "_" << i;
             // s << "ppred" << name << "_" << i << ".ali";
@@ -121,7 +120,8 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int ppred = 0;
-    int null_model = 0;
+    double shrinkposw = 1.0;
+    double shrinkdposom = 1.0;
 
     string name;
 
@@ -152,7 +152,13 @@ int main(int argc, char *argv[]) {
             } else if (s == "-ppred") {
                 ppred = 1;
             } else if (s == "-null")  {
-                null_model = 1;
+                shrinkposw = 0;
+            } else if (s == "-shrinkposw")  {
+                i++;
+                shrinkposw = atof(argv[i]);
+            } else if (s == "-shrinkpdposom")  {
+                i++;
+                shrinkdposom = atof(argv[i]);
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -172,7 +178,7 @@ int main(int argc, char *argv[]) {
 
     CodonM2aSample *sample = new CodonM2aSample(newpath, name, burnin, every, until);
     if (ppred) {
-        sample->PostPredSimu(null_model);
+        sample->PostPredSimu(shrinkposw,shrinkdposom);
     } else {
         sample->Read();
     }

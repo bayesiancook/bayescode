@@ -153,6 +153,11 @@ class CodonM2aModel : public ProbModel {
     //! set omega mixture parameters to a new value
     void SetMixtureParameters(double inpurom, double indposom, double inpurw, double inposw);
 
+    //! shrink omega mixture parameters to a new value
+    void ShrinkMixtureParameters(double shrinkposw, double shrinkdposom)    {
+        SetMixtureParameters(purom, dposom*shrinkdposom, purw, posw*shrinkposw);
+    }
+
     //! get omega mixture parameter values
     void GetMixtureParameters(double &inpurom, double &indposom, double &inpurw,
                               double &inposw) const;
