@@ -588,13 +588,15 @@ double MultiGeneCodonM2aModel::MixtureHyperLogPrior() const {
         total += log(0);
         // total += Random::INFPROB;
     }
+
     // distribution mean should not be too close to 0 (hypermean>0.5)
-    /*
-    if (dposomhypermean < 0.5)  {
-        total += log(0);
-        // total += Random::INFPROB;
+    if (modalprior == 2)    {
+        if (dposomhypermean < 0.5)  {
+            total += log(0);
+            // total += Random::INFPROB;
+        }
     }
-    */
+
     // posw:
     // distribution across genes should be modal
     double alpha = poswhypermean / poswhyperinvconc;

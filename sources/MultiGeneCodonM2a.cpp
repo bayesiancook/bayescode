@@ -406,6 +406,8 @@ int main(int argc, char *argv[]) {
                     }
                 } else if (s == "-modalprior")  {
                     modalprior = 1;
+                } else if (s == "-gapmodalprior")   {
+                    modalprior = 2;
                 } else if (s == "-unconsprior")    {
                     modalprior = 0;
                 } else if (s == "-nucrates") {
