@@ -330,17 +330,30 @@ struct ProviderTags {
     template <class Info>
     void declare_interface(Info info) {
         declare<MyTag, MyTag2>(info, "a", a);
-        declare<MyTag2, MyTag3>(info, "b", b);
+        declare<MyTag2>(info, "b", b);
         declare<MyTag, MyTag3>(info, "c", c);
     }
 };
 
-TEST_CASE("Not") {
+TEST_CASE("Logic combinators") {
     ProviderTags p;
     User u;
 
     using namespace processing;
-    auto processing = make_processing_info<Filter<Not<HasTag<MyTag2>>, End>>(u);
+    using condition = Not<HasTag<MyTag2>>;
+    auto processing = make_processing_info<Filter<condition, End>>(u);
     p.declare_interface(processing);
+    CHECK(u.sum == 19);
+
+    u.sum = 0;
+    using condition2 = Or<HasTag<MyTag3>, HasTag<MyTag>>;
+    auto processing2 = make_processing_info<Filter<condition2, End>>(u);
+    p.declare_interface(processing2);
+    CHECK(u.sum == 32);
+
+    u.sum = 0;
+    using condition3 = And<HasTag<MyTag3>, HasTag<MyTag>>;
+    auto processing3 = make_processing_info<Filter<condition3, End>>(u);
+    p.declare_interface(processing3);
     CHECK(u.sum == 19);
 }

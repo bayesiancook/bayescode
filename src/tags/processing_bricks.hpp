@@ -64,6 +64,22 @@ namespace processing {  // namespace to hide helpers
             not Mapper::template constant<DeclInfo, Target, Args...>::value>;
     };
 
+    template <class Mapper1, class Mapper2>
+    struct Or {
+        template <class DeclInfo, class Target, class... Args>
+        using constant = std::integral_constant<bool,
+            Mapper1::template constant<DeclInfo, Target, Args...>::value or
+                Mapper2::template constant<DeclInfo, Target, Args...>::value>;
+    };
+
+    template <class Mapper1, class Mapper2>
+    struct And {
+        template <class DeclInfo, class Target, class... Args>
+        using constant = std::integral_constant<bool,
+            Mapper1::template constant<DeclInfo, Target, Args...>::value and
+                Mapper2::template constant<DeclInfo, Target, Args...>::value>;
+    };
+
     template <class TraitMapper, class... Args>
     auto get_constant_value() {
         return typename TraitMapper::template constant<Args...>();
