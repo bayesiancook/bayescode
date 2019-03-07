@@ -59,8 +59,9 @@ namespace processing {  // namespace to hide helpers
 
     template <class Mapper>
     struct Not {
-        template <class... Args>
-        using constant = std::integral_constant<bool, Mapper::template constant<Args...>>;
+        template <class DeclInfo, class Target, class... Args>
+        using constant = std::integral_constant<bool,
+            not Mapper::template constant<DeclInfo, Target, Args...>::value>;
     };
 
     template <class TraitMapper, class... Args>

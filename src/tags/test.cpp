@@ -324,12 +324,23 @@ TEST_CASE("Using general traits") {
     // fff<typename HasTrait<is_int>::trait>();
 }
 
+struct ProviderTags {
+    int a{13}, b{7}, c{19};
+
+    template <class Info>
+    void declare_interface(Info info) {
+        declare<MyTag, MyTag2>(info, "a", a);
+        declare<MyTag2, MyTag3>(info, "b", b);
+        declare<MyTag, MyTag3>(info, "c", c);
+    }
+};
+
 TEST_CASE("Not") {
-    Provider2 p;
+    ProviderTags p;
     User u;
 
     using namespace processing;
     auto processing = make_processing_info<Filter<Not<HasTag<MyTag2>>, End>>(u);
-    filter_apply<MyTag>(u, p);
-    CHECK(u.sum == 15);
+    p.declare_interface(processing);
+    CHECK(u.sum == 19);
 }
