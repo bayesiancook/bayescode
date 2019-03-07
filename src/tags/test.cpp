@@ -301,3 +301,19 @@ TEST_CASE("NoName end brick") {
     p.declare_interface(make_processing_info<processing::NoNameEnd>(u));
     CHECK(u.sum == 6);
 }
+
+/*--------------------------------------------------------------------------------------------------
+  Trait test */
+
+template <class T>
+struct is_int : std::integral_constant<bool, std::is_same<T, int>::value> {};
+
+TEST_CASE("HasTrait") {
+    User u;
+    ProviderRec2 p;  // has a non-int member
+
+    using namespace processing;
+    auto prinfo = make_processing_info<Filter<HasTrait<is_int>, End>>(u);
+    p.declare_interface(prinfo);
+    CHECK(u.sum == 18);
+}

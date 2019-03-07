@@ -61,6 +61,16 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
+    template <template <typename T> class Trait>
+    struct HasTrait {
+        template <class DeclInfo, class Target, class... Args>
+        static auto test() {
+            static_assert(is_decl_info::trait<DeclInfo>::value,
+                "Info given to HasType::test is not a decl info");
+            return Trait<typename std::remove_reference<Target>::type>();
+        }
+    };
+
     /*----------------------------------------------------------------------------------------------
       Processing bricks. */
     template <class Test, class Forwarding>
