@@ -324,12 +324,12 @@ TEST_CASE("Using general traits") {
     // fff<typename HasTrait<is_int>::trait>();
 }
 
-// TEST_CASE("Not") {
-//     Provider2 p;
-//     User u;
+TEST_CASE("Not") {
+    Provider2 p;
+    User u;
 
-//     using namespace processing;
-//     auto processing = make_processing_info<Filter<Not<HasTag<MyTag2>>, End>>(u);
-//     filter_apply<MyTag>(u, p);
-//     CHECK(u.sum == 15);
-// }
+    using namespace processing;
+    auto processing = make_processing_info<Filter<Not<HasTag<MyTag2>>, End>>(u);
+    filter_apply<MyTag>(u, p);
+    CHECK(u.sum == 15);
+}

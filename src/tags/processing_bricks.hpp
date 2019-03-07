@@ -37,25 +37,36 @@ namespace processing {  // namespace to hide helpers
     template <class Tag>
     struct HasTag {
         template <class DeclInfo, class... Args>
-        using trait = typename DeclInfo::context::template has_tag<Tag>;
+        using constant = typename DeclInfo::context::template has_tag<Tag>;
     };
 
     template <class Type>
     struct HasType {
         template <class DeclInfo, class Target, class... Args>
-        using trait = std::is_same<Type, std::remove_reference_t<Target>>;
+        using constant = std::is_same<Type, std::remove_reference_t<Target>>;
     };
 
-    template <template <class T> class Trait>
+    template <template <class> class Trait>
     struct HasTrait {
         template <class DeclInfo, class Target, class... Args>
-        using trait = Trait<std::remove_reference_t<Target>>;
+        using constant = Trait<std::remove_reference_t<Target>>;
     };
 
-    struct AlwaysTrue {
+    struct True {
         template <class... Args>
-        using trait = std::true_type;
+        using constant = std::true_type;
     };
+
+    template <class Mapper>
+    struct Not {
+        template <class... Args>
+        using constant = std::integral_constant<bool, Mapper::template constant<Args...>>;
+    };
+
+    template <class TraitMapper, class... Args>
+    auto get_constant_value() {
+        return typename TraitMapper::template constant<Args...>();
+    }
 
     /*----------------------------------------------------------------------------------------------
       Processing bricks. */
@@ -73,8 +84,8 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO: check infos are infos
-            filter_dispatch(typename TraitMapper::template trait<DeclInfo, Args...>(), prinfo,
-                declinfo, std::forward<Args>(args)...);
+            filter_dispatch(get_constant_value<TraitMapper, DeclInfo, Args...>(), prinfo, declinfo,
+                std::forward<Args>(args)...);
         }
     };
 
@@ -112,7 +123,7 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO check types
-            filter_dispatch(typename TraitMapper::template trait<DeclInfo, Args...>(),
+            filter_dispatch(get_constant_value<TraitMapper, DeclInfo, Args...>(),
                 std::integral_constant<bool, recursive>(), prinfo, declinfo,
                 std::forward<Args>(args)...);
         }
