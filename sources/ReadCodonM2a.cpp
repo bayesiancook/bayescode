@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
             } else if (s == "-shrinkposw")  {
                 i++;
                 shrinkposw = atof(argv[i]);
-            } else if (s == "-shrinkpdposom")  {
+            } else if (s == "-shrinkdposom")  {
                 i++;
                 shrinkdposom = atof(argv[i]);
             } else {
