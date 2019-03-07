@@ -61,3 +61,22 @@ void recif_apply(User& user, Provider& provider) {
     auto processing_info = make_processing_info<RecursiveUnroll<HasTag<Tag>, End>>(user);
     provider.declare_interface(processing_info);
 }
+
+/*--------------------------------------------------------------------------------------------------
+  Trait to check that a type has an interface */
+template <class T>
+struct has_interface {
+    template <class T2>
+    static constexpr auto helper(int)
+        -> std::is_same<void, decltype(std::declval<T2>().declare_interface(
+                                  std::declval<ProcessingInfo<int, processing::Ignore>>()))> {
+        return std::true_type();
+    }
+
+    template <class T2>
+    static constexpr auto helper(float) {
+        return std::false_type();
+    }
+
+    using constant = decltype(helper<T>(0));
+};

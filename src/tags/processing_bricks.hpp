@@ -32,6 +32,12 @@ namespace processing {  // namespace to hide helpers
         }
     };
 
+    class Ignore {
+      public:
+        template <class... Args>
+        static void forward_declaration(Args&&...) {}
+    };
+
     /*----------------------------------------------------------------------------------------------
       Trait mappers. */
     template <class Tag>

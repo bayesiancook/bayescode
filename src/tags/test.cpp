@@ -357,3 +357,8 @@ TEST_CASE("Logic combinators") {
     p.declare_interface(processing3);
     CHECK(u.sum == 19);
 }
+
+TEST_CASE("has_interface") {
+    CHECK(has_interface<Provider>::constant::value);
+    CHECK(not has_interface<User>::constant::value);
+}
