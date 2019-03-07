@@ -65,7 +65,7 @@ void recif_apply(User& user, Provider& provider) {
 /*--------------------------------------------------------------------------------------------------
   Trait to check that a type has an interface */
 template <class T>
-struct has_interface {
+class has_interface_helper {
     template <class T2>
     static constexpr auto helper(int)
         -> std::is_same<void, decltype(std::declval<T2>().declare_interface(
@@ -78,5 +78,9 @@ struct has_interface {
         return std::false_type();
     }
 
+  public:
     using constant = decltype(helper<T>(0));
 };
+
+template <class T>
+using has_interface = typename has_interface_helper<T>::constant;

@@ -359,6 +359,6 @@ TEST_CASE("Logic combinators") {
 }
 
 TEST_CASE("has_interface") {
-    CHECK(has_interface<Provider>::constant::value);
-    CHECK(not has_interface<User>::constant::value);
+    CHECK(has_interface<Provider>::value);
+    CHECK(not has_interface<User>::value);
 }
