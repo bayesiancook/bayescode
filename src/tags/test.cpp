@@ -360,5 +360,9 @@ TEST_CASE("Logic combinators") {
 
 TEST_CASE("has_interface") {
     CHECK(has_interface<Provider>::value);
+    bool check_true_type = std::is_base_of<std::true_type, has_interface<Provider>>::value;
+    CHECK(check_true_type);
     CHECK(not has_interface<User>::value);
+    bool check_false_type = std::is_base_of<std::false_type, has_interface<User>>::value;
+    CHECK(check_false_type);
 }
