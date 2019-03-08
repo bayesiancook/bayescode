@@ -13,7 +13,7 @@
 #include "StickBreakingProcess.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
-#include "components/common_tags.hpp"
+#include "components/model_decl_utils.hpp"
 #include "lib/Dirichlet.hpp"
 
 /**

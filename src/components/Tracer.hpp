@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 #include <iostream>
-#include "components/common_tags.hpp"
+#include "components/model_decl_utils.hpp"
 #include "mpi_components/partition.hpp"
 #include "tags/decl_utils.hpp"
 
@@ -32,7 +32,7 @@ class Tracer {
         }
     }
 
-    unsigned nbr_header_fields() const { return static_cast<unsigned>(header_to_stream.size()); }
+    size_t nbr_header_fields() const { return static_cast<size_t>(header_to_stream.size()); }
 
     std::vector<double> line_values() const {
         std::stringstream ss_line;

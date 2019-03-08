@@ -1,10 +1,5 @@
-// TODO rename file
-
 #pragma once
 #include "tags/decl_utils.hpp"
-
-// to be used in declarations to indicate a given declaration is a sub structure
-struct SubStructure {};
 
 struct ModelNode {};
 
