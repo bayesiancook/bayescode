@@ -87,7 +87,7 @@ class CodonM2aModel : public ChainComponent {
     void declare_interface(Info info) {
         model_node(info, "nucstat", nucstat);
         model_node(info, "nucrelrate", nucrelrate);
-        model_node<SubStructure>(info, "branchlength", *branchlength);
+        model_node(info, "branchlength", *branchlength);
 
         model_stat(info, "logprior", *this, &CodonM2aModel::GetLogPrior);
         model_stat(info, "lnL", *this, &CodonM2aModel::GetLogLikelihood);

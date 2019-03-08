@@ -1,5 +1,7 @@
 #pragma once
 
+#include "global/logging.hpp"
+
 /*==================================================================================================
   Building bricks to construct application operations
 ==================================================================================================*/
@@ -19,6 +21,7 @@ namespace processing {  // namespace to hide helpers
       public:
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
+            // INFO("Forwarding declaration {}", prinfo.name + declinfo.name);
             prinfo.user.process_declaration(
                 prinfo.name + declinfo.name, std::forward<Args>(args)...);
         }
@@ -131,7 +134,8 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled
         static void filter_dispatch(std::true_type, std::true_type, PrInfo prinfo,
             DeclInfo declinfo, Target& target, Args&&...) {
-            // TODO: fix redundant info regarding current processing (prinfo + current class) ?
+            /* -- */
+            DEBUG("Declaration {} must be unrolled. Context is {}", declinfo.name, prinfo.name);
             auto new_prinfo = make_processing_info<Unroll<TraitMapper, Forwarding, recursive>>(
                 prinfo.user, prinfo.name + declinfo.name + "_");
             target.declare_interface(new_prinfo);

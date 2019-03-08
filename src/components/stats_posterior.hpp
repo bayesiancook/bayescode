@@ -11,9 +11,9 @@ double mean(std::vector<double> const &v) {
 
 // Variance of a vector
 double var(std::vector<double> const &v) {
-    double s2 = std::accumulate(v.begin(), v.end(), 0.0, [](double a, double const &b) {
-        return a + b * b;
-    }) / v.size();
+    double s2 = std::accumulate(
+                    v.begin(), v.end(), 0.0, [](double a, double const &b) { return a + b * b; }) /
+                v.size();
     double s = mean(v);
     return s2 - s * s;
 }

@@ -1630,22 +1630,20 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        if (blmode != shared) { model_node<SubStructure>(info, "branchlength", *branchlength); }
+        if (blmode != shared) { model_node(info, "branchlength", *branchlength); }
         if (nucmode != shared) {
             model_node(info, "nucrelrate", nucrelrate);
             model_node(info, "nucstat", nucstat);
         }
         if (resampled(fitnessshapemode)) { model_node(info, "fitnessshape", fitnessshape); }
         if (resampled(fitnesscentermode)) { model_node(info, "fitnesscenter", fitnesscenter); }
-        model_node<SubStructure>(info, "fitness", *fitness);
+        model_node(info, "fitness", *fitness);
         if (gene_specific_mask_mode(maskmode)) { model_node(info, "maskprob", maskprob); }
-        if (maskmode != no_mask) {
-            model_node<SubStructure>(info, "sitemaskarray", *sitemaskarray);
-        }
+        if (maskmode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }
         if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
         if (Ncond > 1) {
             model_node(info, "shiftprob", shiftprob);
-            model_node<SubStructure>(info, "toggle", *toggle);
+            model_node(info, "toggle", *toggle);
         }
 
 

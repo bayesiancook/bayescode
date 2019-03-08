@@ -167,7 +167,7 @@ class SingleOmegaModel : public ChainComponent {
         model_node(info, "omega", omega);
         model_node(info, "nucstat", nucstat);
         model_node(info, "nucrelrate", nucrelrate);
-        model_node<SubStructure>(info, "branchlength", *branchlength);
+        model_node(info, "branchlength", *branchlength);
 
         model_stat(info, "omega", omega);
         model_stat(info, "logprior", *this, &SingleOmegaModel::GetLogPrior);

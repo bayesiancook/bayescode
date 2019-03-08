@@ -273,25 +273,25 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        if (blmode < 2) { model_node<SubStructure>(info, "branchlength", *branchlength); }
+        if (blmode < 2) { model_node(info, "branchlength", *branchlength); }
         if (nucmode < 2) {
             model_node(info, "nucrelrate", nucrelrate);
             model_node(info, "nucstat", nucstat);
         }
         if (basemode < 2) {
             model_node(info, "basekappa", basekappa);
-            model_node<SubStructure>(info, "baseweight", *baseweight);
-            model_node<SubStructure>(info, "componentalloc", *componentalloc);
-            model_node<SubStructure>(info, "*basecenterarray", *basecenterarray);
-            model_node<SubStructure>(info, "*baseconcentrationarray", *baseconcentrationarray);
+            model_node(info, "baseweight", *baseweight);
+            model_node(info, "componentalloc", *componentalloc);
+            model_node(info, "*basecenterarray", *basecenterarray);
+            model_node(info, "*baseconcentrationarray", *baseconcentrationarray);
         }
         model_node(info, "kappa", kappa);
-        model_node<SubStructure>(info, "weight", *weight);
-        model_node<SubStructure>(info, "componentaafitnessarray", *componentaafitnessarray);
-        model_node<SubStructure>(info, "profile_alloc", *profile_alloc);
-        model_node<SubStructure>(info, "delta_omega_array", *delta_omega_array);
-        model_node<SubStructure>(info, "omega_alloc", *omega_alloc);
-        model_node<SubStructure>(info, "omega_weight", *omega_weight);
+        model_node(info, "weight", *weight);
+        model_node(info, "componentaafitnessarray", *componentaafitnessarray);
+        model_node(info, "profile_alloc", *profile_alloc);
+        model_node(info, "delta_omega_array", *delta_omega_array);
+        model_node(info, "omega_alloc", *omega_alloc);
+        model_node(info, "omega_weight", *omega_weight);
         model_node(info, "delta_omegahyperinvshape", delta_omegahyperinvshape);
         model_node(info, "delta_omegahypermean", delta_omegahypermean);
 

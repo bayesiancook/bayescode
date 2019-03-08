@@ -288,22 +288,22 @@ class AAMutSelDSBDPOmegaModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        if (blmode < 2) { model_node<SubStructure>(info, "branchlength", *branchlength); }
+        if (blmode < 2) { model_node(info, "branchlength", *branchlength); }
         if (nucmode < 2) {
             model_node(info, "nucrelrate", nucrelrate);
             model_node(info, "nucstat", nucstat);
         }
         if (basemode < 2) {
             model_node(info, "basekappa", basekappa);
-            model_node<SubStructure>(info, "baseweight", *baseweight);
-            model_node<SubStructure>(info, "componentalloc", *componentalloc);
-            model_node<SubStructure>(info, "*basecenterarray", *basecenterarray);
-            model_node<SubStructure>(info, "*baseconcentrationarray", *baseconcentrationarray);
+            model_node(info, "baseweight", *baseweight);
+            model_node(info, "componentalloc", *componentalloc);
+            model_node(info, "*basecenterarray", *basecenterarray);
+            model_node(info, "*baseconcentrationarray", *baseconcentrationarray);
         }
         model_node(info, "kappa", kappa);
-        model_node<SubStructure>(info, "weight", *weight);
-        model_node<SubStructure>(info, "componentaafitnessarray", *componentaafitnessarray);
-        model_node<SubStructure>(info, "sitealloc", *sitealloc);
+        model_node(info, "weight", *weight);
+        model_node(info, "componentaafitnessarray", *componentaafitnessarray);
+        model_node(info, "sitealloc", *sitealloc);
         if (omegamode < 2) { model_node(info, "omega; ", omega); }
         if (polyprocess != nullptr) { model_node(info, "theta; ", theta); }
 

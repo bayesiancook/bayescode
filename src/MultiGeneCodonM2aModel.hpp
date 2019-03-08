@@ -175,7 +175,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
     // MPI communication groups
     void declare_groups() {
-        //clang-format off
+        // clang-format off
 
         // mpi comm, gene syncing, suffstat collection and reduction over genes when moving branch
         // lengths used in update and move
@@ -437,7 +437,7 @@ class MultiGeneCodonM2aModel : public ChainComponent {
 
             reduce(GeneLogPrior, GeneLogLikelihood));
 
-        //clang-format on
+        // clang-format on
     }
 
     virtual ~MultiGeneCodonM2aModel() = default;
@@ -935,8 +935,9 @@ class MultiGeneCodonM2aModel : public ChainComponent {
     // logprob for moving hyperparameters of gene-specific branchlengths (branchlength array, in bl
     // shrunken mode)
     double GeneBranchLengthsHyperMeanLogProb(int j) const {
-        return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                                                 branchlength->GetVal(j), blhyperinvshape);
+        return branchlength->GetLogProb(j) +
+               lengthhypersuffstatarray->GetVal(j).GetLogProb(
+                   branchlength->GetVal(j), blhyperinvshape);
     }
 
     // Nucleotide rates
