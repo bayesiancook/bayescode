@@ -1373,9 +1373,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
         double pialpha = dposompihypermean / dposompihyperinvconc;
         double pibeta = (1 - dposompihypermean) / dposompihyperinvconc;
-        double a0 = Random::sGamma(pialpha + n0);
-        double a1 = Random::sGamma(pibeta + n1);
-        dposompi = a1 / (a0 + a1);
+        double postalpha = Random::sGamma(pialpha + n1);
+        double postbeta = Random::sGamma(pibeta + n0);
+        dposompi = postalpha / (postalpha + postbeta);
     }
 
     //-------------------

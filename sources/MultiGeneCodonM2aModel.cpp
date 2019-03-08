@@ -1050,9 +1050,9 @@ void MultiGeneCodonM2aModel::ResamplePi() {
     }
     double pialpha = pihypermean / pihyperinvconc;
     double pibeta = (1 - pihypermean) / pihyperinvconc;
-    double a0 = Random::sGamma(pialpha + n0);
-    double a1 = Random::sGamma(pibeta + n1);
-    pi = a1 / (a0 + a1);
+    double postalpha = Random::sGamma(pialpha + n1);
+    double postbeta = Random::sGamma(pibeta + n0);
+    pi = postalpha / (postalpha + postbeta);
 }
 
 //-------------------
