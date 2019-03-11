@@ -46,8 +46,8 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "SubMatrixSelector.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
+#include "global/logging.hpp"
 #include "tree/implem.hpp"
-
 
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
@@ -97,6 +97,18 @@ of the CeCILL-C license and that you accept its terms.*/
 //! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
 //! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
 enum param_mode_t { independent, shrunk, shared, fixed };
+std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
+    if (c == independent) {
+        os << "independent";
+    } else if (c == shrunk) {
+        os << "shrunk";
+    } else if (c == shared) {
+        os << "shared";
+    } else if (c == param_mode_t::fixed) {
+        os << "fixed";
+    }
+    return os;
+}
 
 bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
 
@@ -117,6 +129,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
+
+    logger_t logger{stdout_logger("model")};
 
     std::string datafile;
     std::string treefile;
@@ -255,8 +269,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode = fixed,
-        bool withtoggle = true)
+        double inshiftprobmean, double inshiftprobinvconc,
+        param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true)
         : datafile(datafile),
           treefile(treefile),
           fitnesscentermode(fitnesscentermode),
@@ -272,7 +286,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         nucmode = independent;
 
         if (inshape > 0) {
-            fitnessshapemode = fixed;
+            fitnessshapemode = param_mode_t::fixed;
             fitnessshape = inshape;
         } else {
             fitnessshapemode = independent;
@@ -297,6 +311,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Nlevel = inNlevel;
         if (Ncond <= 2) { Nlevel = 1; }
 
+        logger->info(
+            "Model parameters are:\n\tdatafile: {}\n\ttreefile: {}\n\tfitnesscentermode: "
+            "{}\n\twithtoggle: "
+            "{}\n\tpihypermean: {}\n\tshiftprobmean: {}\n\tshiftprobinvconc: "
+            "{}\n\tcodonmodel: {}\n\tblmode: {}\n\tnucmode: {}\n\tfitnessshapemode: "
+            "{}\n\tfitnessshape: {}\n\t"
+            "maskepsilon: {}\n\tmaskmode: {}\n\tmaskepsilonmode: {}\n\tNcond: {}\n\tNlevel: {}",
+            datafile, treefile, fitnesscentermode, withtoggle, pihypermean, shiftprobmean,
+            shiftprobinvconc, codonmodel, blmode, nucmode, fitnessshapemode, fitnessshape,
+            maskepsilon, maskmode, maskepsilonmode, Ncond, Nlevel);
+
         ReadFiles(datafile, treefile);
         Allocate();
     }
@@ -308,22 +333,22 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! read files (and read out the distribution of conditions across branches,
     //! based on the tree read from treefile)
     void ReadFiles(std::string datafile, std::string treefile) {
-        // nucleotide sequence alignment
+        logger->info("Parsing nucleotide sequence alignment...");
         data = new FileSequenceAlignment(datafile);
 
-        // translated into codon sequence alignment
+        logger->info("Translating to codons...");
         codondata = new CodonSequenceAlignment(data, true);
-
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
+        logger->info("Alignment has {} sites and {} taxa", Nsite, Ntaxa);
 
-        std::cerr << "-- Number of sites: " << Nsite << std::endl;
-
+        logger->info("Parsing tree...");
         std::ifstream file(treefile);
         NHXParser parser{file};
         tree = make_from_parser(parser);
         Nbranch = tree->nb_nodes() - 1;
 
+        logger->info("Building branch alloc...");
         auto v = branch_container_from_parser<std::string>(
             parser, [](int i, const AnnotatedTree &t) { return t.tag(i, "Condition"); });
         std::vector<int> iv(v.size(), 0);
@@ -1603,42 +1628,42 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! write complete current parameter configuration to stream
     void ToStream(std::ostream &os) { os << *this; }
 
-    template <class C>
-    void declare_model(C &t) {
-        if (blmode != shared) { t.add("branchlength", *branchlength); }
+    template <class Info>
+    void declare_interface(Info info) {
+        if (blmode != shared) { model_node(info, "branchlength", *branchlength); }
         if (nucmode != shared) {
-            t.add("nucrelrate", nucrelrate);
-            t.add("nucstat", nucstat);
+            model_node(info, "nucrelrate", nucrelrate);
+            model_node(info, "nucstat", nucstat);
         }
-        if (resampled(fitnessshapemode)) { t.add("fitnessshape", fitnessshape); }
-        if (resampled(fitnesscentermode)) { t.add("fitnesscenter", fitnesscenter); }
-        t.add("fitness", *fitness);
-        if (gene_specific_mask_mode(maskmode)) { t.add("maskprob", maskprob); }
-        if (maskmode != no_mask) { t.add("sitemaskarray", *sitemaskarray); }
-        if (maskepsilonmode < 2) { t.add("maskepsilon", maskepsilon); }
+        if (resampled(fitnessshapemode)) { model_node(info, "fitnessshape", fitnessshape); }
+        if (resampled(fitnesscentermode)) { model_node(info, "fitnesscenter", fitnesscenter); }
+        model_node(info, "fitness", *fitness);
+        if (gene_specific_mask_mode(maskmode)) { model_node(info, "maskprob", maskprob); }
+        if (maskmode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }
+        if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
         if (Ncond > 1) {
-            t.add("shiftprob", shiftprob);
-            t.add("toggle", *toggle);
+            model_node(info, "shiftprob", shiftprob);
+            model_node(info, "toggle", *toggle);
         }
-    }
 
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &DiffSelDoublySparseModel::GetLogPrior);
-        t.add("lnL", this, &DiffSelDoublySparseModel::GetLogLikelihood);
-        t.add("length", [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
-        t.add("maskprob", maskprob);
-        t.add("meanwidth", this, &DiffSelDoublySparseModel::GetMeanWidth);
-        t.add("maskepsilon", maskepsilon);
-        t.add("fitnessshape", fitnessshape);
-        t.add("fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
+
+        model_stat(info, "logprior", *this, &DiffSelDoublySparseModel::GetLogPrior);
+        model_stat(info, "lnL", *this, &DiffSelDoublySparseModel::GetLogLikelihood);
+        model_stat(info, "length",
+            [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
+        model_stat(info, "maskprob", maskprob);
+        model_stat(info, "meanwidth", *this, &DiffSelDoublySparseModel::GetMeanWidth);
+        model_stat(info, "maskepsilon", maskepsilon);
+        model_stat(info, "fitnessshape", fitnessshape);
+        model_stat(
+            info, "fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
         for (int k = 1; k < Ncond; k++) {
-            t.add("shiftprob_" + std::to_string(k), shiftprob[k - 1]);
-            t.add("propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
+            model_stat(info, "shiftprob_" + std::to_string(k), shiftprob[k - 1]);
+            model_stat(info, "propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
         }
-        t.add("nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
-        t.add("gammanullcount", gammanullcount);
+        model_stat(info, "nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
+        model_stat(info, "nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
+        model_stat(info, "gammanullcount", gammanullcount);
     }
 };
 
@@ -1662,13 +1687,13 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel,
         maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
         shiftprobinvconc, param_mode_t(fitnesscentermode)));
-    Tracer tracer{*m, &DiffSelDoublySparseModel::declare_model};
+    Tracer tracer{*m};
     tracer.read_line(is);
     return is;
 }
 
 std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel &m) {
-    Tracer tracer{m, &DiffSelDoublySparseModel::declare_model};
+    Tracer tracer{m};
     os << "DiffselDoublySparse" << '\t';
     os << m.datafile << '\t';
     os << m.treefile << '\t';

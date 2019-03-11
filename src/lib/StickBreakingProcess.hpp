@@ -188,6 +188,12 @@ class StickBreakingProcess : public SimpleArray<double> {
         return total /= nrep;
     }
 
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "array", array);
+        declare(info, "betavariates", GetBetaVariates());
+    }
+
   private:
     std::vector<double> V;
     const double &kappa;

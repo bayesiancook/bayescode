@@ -36,7 +36,7 @@ format:
 # ==============================================================================================================
 #  TESTING
 # ==============================================================================================================
-POINTS=1
+POINTS=3
 
 .PHONY: run-unit-tests
 run-unit-tests: all
@@ -52,11 +52,11 @@ run-app-tests: all
 	@rm -rf _test
 	@mkdir _test
 	@echo "\n\e[35m\e[1m== Globom run ===============================================================\e[0m"
-	_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4
+	@_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4
 	@echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
 	_build/globom _test/globom_gal4
 	@echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
-	_build/readglobom _test/globom_gal4
+	_build/readglobom _test/globom_gal4	
 	@echo "\n\e[35m\e[1m== CodonM2a run =============================================================\e[0m"
 	_build/codonm2a -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a restart =========================================================\e[0m"
@@ -65,23 +65,25 @@ run-app-tests: all
 	_build/readcodonm2a _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== MutSel run ===============================================================\e[0m"
 	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/aamutsel_gal4
-	@echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
-	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 	@echo "\n\e[35m\e[1m== MutSel restart ===========================================================\e[0m"
 	_build/aamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read ==============================================================\e[0m"
 	_build/readaamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
 	_build/readaamutsel --ss _test/aamutsel_gal4
+	@echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
+	_build/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega run ================================================\e[0m"
 	_build/mutselomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --freeomega --omegancat 3 -u ${POINTS} _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega restart ============================================\e[0m"
 	_build/mutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega read ===============================================\e[0m"
 	_build/readmutselomega _test/mutselomega_gal4
-	@make --no-print-directory run-multigeneglobom-test
 	@echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
 	@make --no-print-directory diffseldsparse
+
+# @make --no-print-directory run-multigeneglobom-test
+
 
 .PHONY: run-multigeneglobom-test
 run-multigeneglobom-test: all
@@ -120,4 +122,4 @@ mutselomega: _build
 .PHONY: diffseldsparse
 diffseldsparse: all
 		@rm -f delme*.*
-		_build/diffseldsparse -a data/besnard/cyp_coding.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx -e 1 -u 1 tmp
+		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx -e 1 -u 3 tmp

@@ -11,9 +11,9 @@ double mean(std::vector<double> const &v) {
 
 // Variance of a vector
 double var(std::vector<double> const &v) {
-    double s2 = std::accumulate(v.begin(), v.end(), 0.0, [](double a, double const &b) {
-        return a + b * b;
-    }) / v.size();
+    double s2 = std::accumulate(
+                    v.begin(), v.end(), 0.0, [](double a, double const &b) { return a + b * b; }) /
+                v.size();
     double s = mean(v);
     return s2 - s * s;
 }
@@ -23,7 +23,7 @@ void stats_posterior(Model &model, ChainReader &cr, int const &every, int const 
     unsigned nbr_header_fields{0};
     std::stringstream ss_header;
     {
-        Tracer tracer(model, &Model::declare_stats);
+        Tracer tracer(model, processing::HasTag<Stat>());
         tracer.write_header(ss_header);
         nbr_header_fields = tracer.nbr_header_fields();
     }
@@ -33,7 +33,7 @@ void stats_posterior(Model &model, ChainReader &cr, int const &every, int const 
     for (int step = 0; step < size; step++) {
         std::cerr << '.';
         cr.skip(every);
-        Tracer tracer(model, &Model::declare_stats);
+        Tracer tracer(model, processing::HasTag<Stat>());
         std::vector<double> line_values = tracer.line_values();
         for (unsigned field{0}; field < nbr_header_fields; field++) {
             bidim_stats.at(field).at(step) = line_values.at(field);

@@ -74,12 +74,3 @@ TEST_CASE("Partition: obtain local process") {
     CHECK(p.my_partition_size() == 5);
     CHECK(p.my_partition() == ss2);
 }
-
-TEST_CASE("Process::message") {
-    stringstream ss;
-    Process p(1, 2);
-    p.message(ss, "Hello %d - %s", 3, "aa");
-
-    CHECK(ss.str() ==
-          "\e[0m\e[1m[\e[0m\e[32m1\e[0m\e[1m/\e[0m\e[32m2\e[0m\e[1m] \e[0mHello 3 - aa\n");
-}

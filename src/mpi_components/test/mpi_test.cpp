@@ -34,8 +34,10 @@ struct DummyModel {
         stringstream ss2;
         for (auto e : v2) { ss2 << e << " "; }
         p->message(
-            "Model state is:\n\ta  =  %.2f\n\tb  =  %.2f\n\tc  =  %.2f\n\tv  = {%s}\n\tv2 = "
-            "{%s}\n\tg  = (%d, %.2f, %.2f)\n\th  =  %.2f\n\ti  = (%d, %.2f)\n\tj  = (%d, %.2f)",
+            "Model state is:\n\ta  =  {:.2f}\n\tb  =  {:.2f}\n\tc  =  {:.2f}\n\tv  = {{{}}}\n\tv2 "
+            "= "
+            "{{{}}}\n\tg  = ({}, {:.2f}, {:.2f})\n\th  =  {:.2f}\n\ti  = ({}, {:.2f})\n\tj  = ({}, "
+            "{:.2f})",
             a, b, c, ss.str().c_str(), ss2.str().c_str(), g.a, g.b, g.c, h, i.a, i.b, j.a, j.b);
     }
 };
@@ -59,18 +61,18 @@ void compute(int, char**) {
 
         ReceiveBuffer rcvbuf(buf.size());
         memcpy(rcvbuf.data(), buf.data(), buf.size());
-        p->message("Unpacked ints: %d, %d, %d, %d", rcvbuf.unpack<int>(), rcvbuf.unpack<int>(),
+        p->message("Unpacked ints: {}, {}, {}, {}", rcvbuf.unpack<int>(), rcvbuf.unpack<int>(),
             rcvbuf.unpack<int>(), rcvbuf.unpack<int>());
-        p->message("Unpacked doubles: %.2f, %.2f, %.2f, %.2f", rcvbuf.unpack<double>(),
+        p->message("Unpacked doubles: {:.2f}, {:.2f}, {:.2f}, {:.2f}", rcvbuf.unpack<double>(),
             rcvbuf.unpack<double>(), rcvbuf.unpack<double>(), rcvbuf.unpack<double>());
 
         ReceiveBuffer rcvbuf2(buf.size());
         memcpy(rcvbuf2.data(), buf.data(), buf.size());
         auto v1 = rcvbuf2.unpack_vector<int>(4);
-        p->message("Unpacked ints: %d, %d, %d, %d", v1.at(0), v1.at(1), v1.at(2), v1.at(3));
+        p->message("Unpacked ints: {}, {}, {}, {}", v1.at(0), v1.at(1), v1.at(2), v1.at(3));
         auto v2 = rcvbuf2.unpack_vector<double>(4);
-        p->message(
-            "Unpacked doubles: %.2f, %.2f, %.2f, %.2f", v2.at(0), v2.at(1), v2.at(2), v2.at(3));
+        p->message("Unpacked doubles: {:.2f}, {:.2f}, {:.2f}, {:.2f}", v2.at(0), v2.at(1), v2.at(2),
+            v2.at(3));
     }
     if (!p->rank) {
         int i{1}, j{2}, k{3};
@@ -83,14 +85,14 @@ void compute(int, char**) {
 
         void* buf = b.send_buffer();
         size_t buf_size = b.buffer_size();
-        p->message("Size of buffer is %d", buf_size);
+        p->message("Size of buffer is {}", buf_size);
 
         void* rcvbuf = b.receive_buffer();
         memcpy(rcvbuf, buf, buf_size);
 
         b.receive();
-        p->message("%d, %d, %d, %.2f, %.2f, %.2f, {%d, %d, %d}, {%.2f, %.2f}", i, j, k, l, m, n,
-            v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
+        p->message("{}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {{{}, {}, {}}}, {{{:.2f}, {:.2f}}}", i, j,
+            k, l, m, n, v.at(0), v.at(1), v.at(2), v2.at(0), v2.at(1));
     }
     if (!p->rank) {
         IndexSet is{"a", "b", "c"};
@@ -105,7 +107,9 @@ void compute(int, char**) {
 
         auto void_buf = bm.send_buffer();
         auto buf = static_cast<double*>(void_buf);
-        p->message("Buf = %.2f, %.2f, %.2f, %.2f | %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f, %.2f",
+        p->message(
+            "Buf = {:.2f}, {:.2f}, {:.2f}, {:.2f} | {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, "
+            "{:.2f}, {:.2f}, {:.2f}",
             buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10],
             buf[11]);
     }

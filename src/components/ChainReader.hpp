@@ -8,7 +8,7 @@ class ChainReader {
 
   public:
     template <class M>
-    ChainReader(M& model, std::string filename) : tracer(model, &M::declare_model), is(filename) {
+    ChainReader(M& model, std::string filename) : tracer(model), is(filename) {
         tracer.ignore_header(is);
     }
 

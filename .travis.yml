@@ -17,7 +17,6 @@ matrix:
     - COMPILER=g++-5
     - OMPI_CXX=$COMPILER
     script:
-    - make && make clean
     - make coverage
     after_success:
     - bash <(curl -s https://codecov.io/bash)

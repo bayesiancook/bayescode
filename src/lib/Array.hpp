@@ -218,9 +218,14 @@ class SimpleArray : public Array<T> {
         (*this)[cat2] = tmp;
     }
 
-    template <class C>
+    template <class C>  // TODO: remove
     void serialization_interface(C &x) {
         x.add(array);
+    }
+
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "array", array);
     }
 
   protected:

@@ -83,21 +83,18 @@ class CodonM2aModel : public ChainComponent {
 
     void move(int it) override { Move(); }
 
-    template <class C>
-    void declare_model(C &t) {
-        t.add("nucstat", nucstat);
-        t.add("nucrelrate", nucrelrate);
-        t.add("branchlength", *branchlength);
-    }
+    template <class Info>
+    void declare_interface(Info info) {
+        model_node(info, "nucstat", nucstat);
+        model_node(info, "nucrelrate", nucrelrate);
+        model_node(info, "branchlength", *branchlength);
 
-    template <class C>
-    void declare_stats(C &t) {
-        t.add("logprior", this, &CodonM2aModel::GetLogPrior);
-        t.add("lnL", this, &CodonM2aModel::GetLogLikelihood);
-        t.add("length", [this]() { return branchlength->GetTotalLength(); });
-        // t.add("omega", omega);
-        t.add("statent", [&]() { return Random::GetEntropy(nucstat); });
-        t.add("rrent", [&]() { return Random::GetEntropy(nucrelrate); });
+        model_stat(info, "logprior", *this, &CodonM2aModel::GetLogPrior);
+        model_stat(info, "lnL", *this, &CodonM2aModel::GetLogLikelihood);
+        model_stat(info, "length", [this]() { return branchlength->GetTotalLength(); });
+        // model_stat(info, "omega", omega);
+        model_stat(info, "statent", [&]() { return Random::GetEntropy(nucstat); });
+        model_stat(info, "rrent", [&]() { return Random::GetEntropy(nucrelrate); });
     }
 
     //! model allocation

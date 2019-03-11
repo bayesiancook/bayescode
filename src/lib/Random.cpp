@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <cmath>
 #include <iostream>
+#include "global/logging.hpp"
 
 /* =======================================================
    (VL) Magical constants, to be used only in this file.
@@ -31,8 +32,7 @@ class random_init {
   public:
     random_init() {
         Random::InitRandom();
-        // Random::InitRandom(5301);
-        cerr << "-- [Random] Seed : " << Random::GetSeed() << endl;
+        INFO("Random seed is {}", Random::GetSeed());
     }
 };
 

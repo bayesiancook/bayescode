@@ -27,7 +27,7 @@ void CodonM2aModel::init() {
     Nbranch = tree->nb_nodes() - 1;
 
     Allocate();
-    tracer = unique_ptr<Tracer>(new Tracer(*this, &CodonM2aModel::declare_model));
+    tracer = unique_ptr<Tracer>(new Tracer(*this));
 }
 
 void CodonM2aModel::Allocate() {

@@ -1,10 +1,10 @@
-#include <cstdlib>
-#include <iostream>
-using namespace std;
-
-#include "BiologicalSequences.hpp"
 #include "TaxonSet.hpp"
+#include <iostream>
+#include "BiologicalSequences.hpp"
+#include "global/logging.hpp"
 #include "tree/implem.hpp"
+
+using namespace std;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -14,10 +14,7 @@ using namespace std;
 
 TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxlist(names) {
     for (int i = 0; i < Ntaxa; i++) {
-        if (taxmap[names[i]] != 0) {
-            cerr << "found several taxa with same name : " << names[i] << '\n';
-            exit(1);
-        }
+        if (taxmap[names[i]] != 0) { FAIL("Found several taxa with same name: {}", names[i]); }
         taxmap[names[i]] = i + 1;
     }
 }
@@ -35,14 +32,11 @@ std::vector<int> TaxonSet::get_index_table(const Tree *tree) const {
     std::vector<int> ret(tree->nb_nodes(), -1);
     for (size_t node = 0; node < tree->nb_nodes(); node++) {
         if (tree->is_leaf(node)) {
-            if (tree->node_name(node) == "") {
-                cerr << "error: leaf has no name\n";
-                exit(1);
-            }
+            if (tree->node_name(node) == "") { FAIL("Leaf has no name"); }
             ret[node] = GetTaxonIndex(tree->node_name(node));
         }
     }
-    cerr << "get index table ok\n";
+    INFO("Get index table ok");
     return ret;
 }
 
@@ -58,20 +52,14 @@ int TaxonSet::GetTaxonIndexWithIncompleteName(string taxname) const {
     int found = -1;
     for (int i = 0; i < Ntaxa; i++) {
         if (taxlist[i].substr(0, taxname.length()) == taxname) {
-            if (found != -1) {
-                cerr << "error : taxon found twice : " << taxname << '\n';
-                exit(1);
-            }
+            if (found != -1) { FAIL("Taxon found twice: {}", taxname); }
             found = i;
         }
     }
     if (found == -1) {
         for (int i = 0; i < Ntaxa; i++) {
             if (taxname.substr(0, taxlist[i].length()) == taxlist[i]) {
-                if (found != -1) {
-                    cerr << "error : taxon found twice : " << taxname << '\n';
-                    exit(1);
-                }
+                if (found != -1) { FAIL("Taxon found twice: {}", taxname); }
                 found = i;
             }
         }
