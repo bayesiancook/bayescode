@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <vector>
-#include "mpi_components/traits.hpp"
+#include "components/traits.hpp"
 
 /**
  * \brief An interface for an abstract indexed array of constant references over

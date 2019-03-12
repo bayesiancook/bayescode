@@ -29,6 +29,10 @@ template <class T> struct is_contiguously_serializable : std::integral_constant<
     is_partitionable<T>::value and is_default_serializable<typename value_type<T>::value>::value
 > {};
 
+template <class T> struct is_nontrivial_vector : std::integral_constant<bool,
+    is_partitionable<T>::value and not is_default_serializable<typename value_type<T>::value>::value
+> {};
+
 /*
 ====================================================================================================
   Vector traits
