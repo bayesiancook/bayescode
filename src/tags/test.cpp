@@ -372,19 +372,14 @@ TEST_CASE("has_interface") {
 struct MyData {
     int a{2};
     float b{7.2};
-    template <class Info>
-    void declare_interface(Info info) {
-        declare(info, "a", a);
-        declare(info, "b", b);
-    }
 };
 
 template <>
 struct external_interface<MyData> {
     template <class Info, class Target>
     static void declare_interface(Info info, Target& target) {
-        declare<Recursive>(info, "a", target.a);
-        declare<Recursive>(info, "b", target.b);
+        declare(info, "a", target.a);
+        declare(info, "b", target.b);
     }
 };
 

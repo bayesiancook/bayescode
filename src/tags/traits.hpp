@@ -5,7 +5,7 @@
 
 template <class, class>
 struct ProcessingInfo;
-class Ignore;
+struct Ignore;
 
 /*--------------------------------------------------------------------------------------------------
   Trait to check that a type has an interface */
@@ -31,11 +31,5 @@ class has_interface_helper {
 template <class T>
 using has_interface = typename has_interface_helper<T>::constant;
 
-
 template <class T>
-struct external_interface {
-    template <class Prinfo, class Target>
-    static void declare_interface(Prinfo prinfo, Target& target) {
-        WARNING("Called empty external interface.");
-    }
-};
+struct external_interface;
