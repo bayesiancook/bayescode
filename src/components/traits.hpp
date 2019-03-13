@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include "tags/decl_utils.hpp"
 
 /*
 ====================================================================================================
@@ -41,3 +42,11 @@ template <class T> struct has_size<std::vector<T>> :            std::true_type {
 template <class T> struct has_access_operator<std::vector<T>> : std::true_type {};
 template <class T> struct value_type<std::vector<T>>         { using value = T; };
 // clang-format on
+
+template <class T>
+struct external_interface<std::vector<T>> {
+    template <class Info, class Target>
+    static void declare_interface(Info info, Target& target) {
+        for (size_t i = 0; i < target.size(); i++) { declare(info, std::to_string(i), target[i]); }
+    }
+};

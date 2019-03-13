@@ -23,7 +23,7 @@ class AAMutSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
           omega_shift(inomega_shift),
           matrixarray(infitnessarray->GetSize(),
               std::vector<AAMutSelOmegaCodonSubMatrix *>(
-                          indelta_omega_array->GetSize(), (AAMutSelOmegaCodonSubMatrix *)0)) {
+                  indelta_omega_array->GetSize(), (AAMutSelOmegaCodonSubMatrix *)0)) {
         Create();
     }
 
