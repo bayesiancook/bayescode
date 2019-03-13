@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "mpi_components/traits.hpp"
+#include "components/traits.hpp"
 #include "tree/implem.hpp"
 
 /**

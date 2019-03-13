@@ -1,6 +1,6 @@
 #pragma once
 
-#include "global/logging.hpp"
+#include "traits.hpp"
 
 /*==================================================================================================
   Building bricks to construct application operations
@@ -33,12 +33,6 @@ namespace processing {  // namespace to hide helpers
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             prinfo.user.process_declaration(std::forward<Args>(args)...);
         }
-    };
-
-    class Ignore {
-      public:
-        template <class... Args>
-        static void forward_declaration(Args&&...) {}
     };
 
     /*----------------------------------------------------------------------------------------------
@@ -121,28 +115,46 @@ namespace processing {  // namespace to hide helpers
     template <class Type, class Forwarding>
     using FilterType = Filter<HasType<Type>, Forwarding>;
 
+    /*----------------------------------------------------------------------------------------------
+      Function to select and run interface declaration */
+    // TODO: move to other file?
+    template <class Prinfo, class Target>  // has_interface
+    void call_interface_helper(std::true_type, Prinfo prinfo, Target& target) {
+        target.declare_interface(prinfo);
+    }
+
+    template <class Prinfo, class Target>  // does not have interface (then call external)
+    void call_interface_helper(std::false_type, Prinfo prinfo, Target& target) {
+        external_interface<Target>::declare_interface(prinfo, target);
+    }
+
+    template <class Prinfo, class Target>
+    void call_interface(Prinfo prinfo, Target& target) {
+        call_interface_helper(has_interface<Target>(), prinfo, target);
+    }
+
     template <class TraitMapper, class Forwarding, bool recursive>
     class Unroll {
         template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled once
-        static void filter_dispatch(std::true_type, std::false_type, PrInfo prinfo,
-            DeclInfo declinfo, Target& target, Args&&...) {
+        static void dispatch(std::true_type, std::false_type, PrInfo prinfo, DeclInfo declinfo,
+            Target& target, Args&&...) {
             // TODO: fix redundant info regarding current processing (prinfo + current class) ?
-            prinfo.name += declinfo.name + "_";
-            target.declare_interface(make_processing_info<Forwarding>(prinfo.user));
+            auto new_prinfo = make_processing_info<Forwarding>(prinfo.user, declinfo.name + "_");
+            call_interface(new_prinfo, target);
         }
 
         template <class PrInfo, class DeclInfo, class Target, class... Args>  // to be unrolled
-        static void filter_dispatch(std::true_type, std::true_type, PrInfo prinfo,
-            DeclInfo declinfo, Target& target, Args&&...) {
+        static void dispatch(std::true_type, std::true_type, PrInfo prinfo, DeclInfo declinfo,
+            Target& target, Args&&...) {
             /* -- */
             DEBUG("Declaration {} must be unrolled. Context is {}", declinfo.name, prinfo.name);
             auto new_prinfo = make_processing_info<Unroll<TraitMapper, Forwarding, recursive>>(
                 prinfo.user, prinfo.name + declinfo.name + "_");
-            target.declare_interface(new_prinfo);
+            call_interface(new_prinfo, target);
         }
 
         template <class Anything, class... Args>  // not to be unrolled
-        static void filter_dispatch(std::false_type, Anything, Args&&... args) {
+        static void dispatch(std::false_type, Anything, Args&&... args) {
             Forwarding::forward_declaration(std::forward<Args>(args)...);
         }
 
@@ -150,7 +162,7 @@ namespace processing {  // namespace to hide helpers
         template <class PrInfo, class DeclInfo, class... Args>
         static void forward_declaration(PrInfo prinfo, DeclInfo declinfo, Args&&... args) {
             // TODO check types
-            filter_dispatch(get_constant_value<TraitMapper, DeclInfo, Args...>(),
+            dispatch(get_constant_value<TraitMapper, DeclInfo, Args...>(),
                 std::integral_constant<bool, recursive>(), prinfo, declinfo,
                 std::forward<Args>(args)...);
         }

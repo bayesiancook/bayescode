@@ -4,7 +4,7 @@
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
 #include "Random.hpp"
-#include "mpi_components/traits.hpp"
+#include "components/traits.hpp"
 
 /**
  * \brief An array of IID gamma random variables

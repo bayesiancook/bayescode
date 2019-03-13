@@ -798,9 +798,8 @@ class MultiGeneSingleOmegaModel : public ChainComponent {
     // logprob for moving hyperparameters of gene-specific branchlengths (branchlength array, in bl
     // shrunken mode)
     double GeneBranchLengthsHyperMeanLogProb(int j) const {
-        return branchlength->GetLogProb(j) +
-               lengthhypersuffstatarray->GetVal(j).GetLogProb(
-                   branchlength->GetVal(j), blhyperinvshape);
+        return branchlength->GetLogProb(j) + lengthhypersuffstatarray->GetVal(j).GetLogProb(
+                                                 branchlength->GetVal(j), blhyperinvshape);
     }
 
     // Nucleotide rates

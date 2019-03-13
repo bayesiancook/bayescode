@@ -366,3 +366,40 @@ TEST_CASE("has_interface") {
     bool check_false_type = std::is_base_of<std::false_type, has_interface<User>>::value;
     CHECK(check_false_type);
 }
+
+/*--------------------------------------------------------------------------------------------------
+  External interfaces */
+struct MyData {
+    int a{2};
+    float b{7.2};
+};
+
+template <>
+struct external_interface<MyData> {
+    template <class Info, class Target>
+    static void declare_interface(Info info, Target& target) {
+        declare(info, "a", target.a);
+        declare(info, "b", target.b);
+    }
+};
+
+struct MyStruct2 {
+    int a{4};
+    MyData b{2};
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "a", a);
+        declare<Recursive>(info, "b", b);
+    }
+};
+
+TEST_CASE("") {
+    UserFullName u;
+    MyStruct2 p;
+
+    using namespace processing;
+    using Processing = RecursiveUnroll<HasTag<Recursive>, FullNameEnd>;
+    auto prinfo = make_processing_info<Processing>(u);
+    p.declare_interface(prinfo);
+    CHECK(u.ss.str() == "a: 4\nb_a: 2\nb_b: 7\n");
+}

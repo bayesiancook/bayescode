@@ -53,6 +53,39 @@ TEST_CASE("Tracer writing test") {
           "a\tv[0]\tv[1]\tv[2]\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
 }
 
+struct MyTracerData {
+    int x, y;
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "x", x);
+        declare(info, "y", y);
+    }
+};
+
+struct MyTracerStruct {
+    int a{17};
+    vector<int> b{2, 3, 4, 5};
+    vector<MyTracerData> c{{1, 2}, {2, 3}};
+    template <class Info>
+    void declare_interface(Info info) {
+        declare(info, "a", a);
+        declare(info, "b", b);
+        declare(info, "c", c);
+    }
+};
+
+TEST_CASE("Tracer unrolling test") {
+    MyTracerStruct s;
+    Tracer t(s, processing::True());
+    stringstream ss;
+
+    t.write_header(ss);
+    t.write_line(ss);
+    CHECK(ss.str() ==
+          "a	b[0]	b[1]	b[2]	b[3]	c_0_x	c_0_y	c_1_x	c_1_y\n17	2	"
+          "3	4	5	1	2	2	3");
+}
+
 struct MyArgs : public BaseArgParse {
     MyArgs(ChainCmdLine& cmd) : BaseArgParse(cmd) {}
     ValueArg<std::string> treefile{"t", "tree", "", true, "", "string", cmd};

@@ -35,7 +35,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
           nucmatrix(innucmatrix),
           matrixarray(infitnessarray.GetNrow(),
               std::vector<AAMutSelOmegaCodonSubMatrix *>(
-                          infitnessarray.GetNcol(), (AAMutSelOmegaCodonSubMatrix *)0)) {
+                  infitnessarray.GetNcol(), (AAMutSelOmegaCodonSubMatrix *)0)) {
         Create();
     }
 

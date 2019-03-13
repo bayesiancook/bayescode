@@ -89,8 +89,8 @@ class CodonM2aModel : public ChainComponent {
         model_node(info, "nucrelrate", nucrelrate);
         model_node(info, "branchlength", *branchlength);
 
-        model_stat(info, "logprior", *this, &CodonM2aModel::GetLogPrior);
-        model_stat(info, "lnL", *this, &CodonM2aModel::GetLogLikelihood);
+        model_stat(info, "logprior", [this]() { return GetLogPrior(); });
+        model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
         model_stat(info, "length", [this]() { return branchlength->GetTotalLength(); });
         // model_stat(info, "omega", omega);
         model_stat(info, "statent", [&]() { return Random::GetEntropy(nucstat); });

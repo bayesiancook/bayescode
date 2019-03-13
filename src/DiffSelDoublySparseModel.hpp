@@ -1647,12 +1647,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
 
 
-        model_stat(info, "logprior", *this, &DiffSelDoublySparseModel::GetLogPrior);
-        model_stat(info, "lnL", *this, &DiffSelDoublySparseModel::GetLogLikelihood);
+        model_stat(info, "logprior", [this]() { return GetLogPrior(); });
+        model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
         model_stat(info, "length",
             [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
         model_stat(info, "maskprob", maskprob);
-        model_stat(info, "meanwidth", *this, &DiffSelDoublySparseModel::GetMeanWidth);
+        model_stat(info, "meanwidth", [this]() { return GetMeanWidth(); });
         model_stat(info, "maskepsilon", maskepsilon);
         model_stat(info, "fitnessshape", fitnessshape);
         model_stat(

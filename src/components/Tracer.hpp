@@ -1,9 +1,10 @@
 #pragma once
 #include <functional>
 #include <iostream>
-#include "components/model_decl_utils.hpp"
+#include "model_decl_utils.hpp"
 #include "mpi_components/partition.hpp"
 #include "tags/decl_utils.hpp"
+#include "traits.hpp"
 
 class Tracer {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
@@ -14,7 +15,7 @@ class Tracer {
     template <class Provider, class Test = processing::HasTag<ModelNode>>
     Tracer(Provider& p, Test test = processing::HasTag<ModelNode>()) {
         using namespace processing;
-        using must_be_unrolled = And<HasTrait<has_interface>, Not<HasTag<Stat>>>;
+        using must_be_unrolled = Or<HasTrait<has_interface>, HasTrait<is_nontrivial_vector>>;
         using recursive_processing = RecursiveUnroll<must_be_unrolled, FullNameEnd>;
         using toplevel_filter = Filter<Test, recursive_processing>;
         auto prinfo = make_processing_info<toplevel_filter>(*this);
@@ -96,16 +97,6 @@ class Tracer {
         });
         set_from_stream.emplace_back([&v](std::istream& is) {
             for (auto& e : v) is >> e;
-        });
-    }
-
-    template <class T>
-    void process_declaration(std::string name, T& o, double (T::*f)() const) {
-        header_to_stream.push_back([name](std::ostream& os) { os << name; });
-        data_to_stream.push_back([&o, f](std::ostream& os) { os << (o.*f)(); });
-        set_from_stream.push_back([](std::istream& is) {
-            double d;
-            is >> d;
         });
     }
 

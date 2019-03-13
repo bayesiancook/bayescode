@@ -3,7 +3,7 @@
 #include <numeric>
 #include "ReceiveBuffer.hpp"
 #include "SendBuffer.hpp"
-#include "traits.hpp"
+#include "components/traits.hpp"
 
 /*
 ====================================================================================================
