@@ -1,9 +1,10 @@
 #pragma once
 #include <functional>
 #include <iostream>
-#include "components/model_decl_utils.hpp"
+#include "model_decl_utils.hpp"
 #include "mpi_components/partition.hpp"
 #include "tags/decl_utils.hpp"
+#include "traits.hpp"
 
 class Tracer {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
@@ -14,7 +15,7 @@ class Tracer {
     template <class Provider, class Test = processing::HasTag<ModelNode>>
     Tracer(Provider& p, Test test = processing::HasTag<ModelNode>()) {
         using namespace processing;
-        using must_be_unrolled = HasTrait<has_interface>;
+        using must_be_unrolled = Or<HasTrait<has_interface>, HasTrait<is_nontrivial_vector>>;
         using recursive_processing = RecursiveUnroll<must_be_unrolled, FullNameEnd>;
         using toplevel_filter = Filter<Test, recursive_processing>;
         auto prinfo = make_processing_info<toplevel_filter>(*this);
