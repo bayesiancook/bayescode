@@ -137,7 +137,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     int Nlevel;
 
     // which branch is under which condition
-    SimpleBranchArray<int> *branchalloc;
+    std::unique_ptr<SimpleBranchArray<int>> branchalloc;
 
     // -----
     //  model structure
@@ -316,14 +316,25 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Nbranch = tree->nb_nodes() - 1;
 
         INFO("Building branch alloc...");
-        auto v = branch_container_from_parser<std::string>(
-            parser, [](int i, const AnnotatedTree &t) { return t.tag(i, "Condition"); });
-        std::vector<int> iv(v.size(), 0);
-        for (size_t i = 0; i < v.size(); i++) {
-            iv[i] = atoi(v[i].c_str());
-            if (iv[i] >= Ncond) { iv[i] = Ncond - 1; }
-        }
-        branchalloc = new SimpleBranchArray<int>(*tree, iv);
+        auto condition_array =
+            branch_container_from_parser<int>(parser, [this](int i, const AnnotatedTree &t) -> int {
+                auto condition = atoi(t.tag(i, "Condition").c_str());
+                if (condition >= Ncond) {
+                    WARNING(
+                        "Found condition {} in tree although model has Ncond={}. Setting condition "
+                        "to {}",
+                        condition, Ncond, Ncond - 1);
+                    return Ncond - 1;
+                } else {
+                    return condition;
+                }
+            });
+        // std::vector<int> iv(v.size(), 0);
+        // for (size_t i = 0; i < v.size(); i++) {
+        //     iv[i] = atoi(v[i].c_str());
+        //     if (iv[i] >= Ncond) { iv[i] = Ncond - 1; }
+        // }
+        branchalloc = std::make_unique<SimpleBranchArray<int>>(*tree, condition_array);
     }
 
     //! allocate the model (data structures)
@@ -1615,7 +1626,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
             model_node(info, "toggle", *toggle);
         }
 
-
         model_stat(info, "logprior", [this]() { return GetLogPrior(); });
         model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
         model_stat(info, "length",
@@ -1628,7 +1638,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             info, "fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
         for (int k = 1; k < Ncond; k++) {
             model_stat(info, "shiftprob_" + std::to_string(k), shiftprob[k - 1]);
-            model_stat(info, "propshift_" + std::to_string(k), [&]() { return GetPropShift(k); });
+            model_stat(
+                info, "propshift_" + std::to_string(k), [k, this]() { return GetPropShift(k); });
         }
         model_stat(info, "nucstat_entropy", [&]() { return Random::GetEntropy(nucstat); });
         model_stat(info, "nucrelrate_entropy", [&]() { return Random::GetEntropy(nucrelrate); });
@@ -1653,9 +1664,9 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     is >> treefile;
     is >> Ncond >> Nlevel >> codonmodel >> maskepsilonmode >> fitnessshapemode >> pihypermean >>
         shiftprobmean >> shiftprobinvconc >> fitnesscentermode;
-    m.reset(new DiffSelDoublySparseModel(datafile, treefile, Ncond, Nlevel, codonmodel,
+    m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel, codonmodel,
         maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
-        shiftprobinvconc, param_mode_t(fitnesscentermode)));
+        shiftprobinvconc, param_mode_t(fitnesscentermode));
     Tracer tracer{*m};
     tracer.read_line(is);
     return is;

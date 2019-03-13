@@ -35,8 +35,8 @@ std::vector<int> taxa_index_from_parser(TreeParser& parser, const std::vector<st
 std::unique_ptr<const Tree> make_from_parser(TreeParser& parser);
 
 template <class Element>
-std::vector<Element> node_container_from_parser(
-    TreeParser& parser, Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&)) {
+std::vector<Element> node_container_from_parser(TreeParser& parser,
+    std::function<Element(AnnotatedTree::NodeIndex, const AnnotatedTree&)> init) {
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
     std::vector<Element> result;
@@ -45,8 +45,8 @@ std::vector<Element> node_container_from_parser(
 }
 
 template <class Element>
-std::vector<Element> branch_container_from_parser(
-    TreeParser& parser, Element (*init)(AnnotatedTree::NodeIndex, const AnnotatedTree&)) {
+std::vector<Element> branch_container_from_parser(TreeParser& parser,
+    std::function<Element(AnnotatedTree::NodeIndex, const AnnotatedTree&)> init) {
     using NodeIndex = AnnotatedTree::NodeIndex;
     auto& tree = parser.get_tree();
     std::vector<Element> result;

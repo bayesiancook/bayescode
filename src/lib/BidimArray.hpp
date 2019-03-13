@@ -131,11 +131,11 @@ class SimpleBidimArray : public BidimArray<T> {
     int GetNrow() const override { return nrow; }
     int GetNcol() const override { return ncol; }
 
-    T &operator()(int i, int j) override { return array[i][j]; }
-    const T &GetVal(int i, int j) const override { return array[i][j]; }
+    T &operator()(int i, int j) override { return array.at(i).at(j); }
+    const T &GetVal(int i, int j) const override { return array.at(i).at(j); }
 
     //! return a const ref to the vector<T> corresponding to row i
-    const std::vector<T> &GetSubArray(int i) const { return array[i]; }
+    const std::vector<T> &GetSubArray(int i) const { return array.at(i); }
 
     std::vector<std::vector<T>> &GetArray() { return array; }
 
