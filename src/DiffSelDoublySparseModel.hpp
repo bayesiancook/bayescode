@@ -46,6 +46,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "SubMatrixSelector.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
+#include "components/param_enums.hpp"
 #include "global/logging.hpp"
 #include "tree/implem.hpp"
 
@@ -91,46 +92,10 @@ of the CeCILL-C license and that you accept its terms.*/
  * that the corresponding toggle is equal to 1.
  */
 
-
-//! - mode == 3: global == "fixed"
-//! - mode == 2: global but estimated == "shared"
-//! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
-//! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
-enum param_mode_t { independent, shrunk, shared, fixed };
-std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
-    if (c == independent) {
-        os << "independent";
-    } else if (c == shrunk) {
-        os << "shrunk";
-    } else if (c == shared) {
-        os << "shared";
-    } else if (c == param_mode_t::fixed) {
-        os << "fixed";
-    }
-    return os;
-}
-
-bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
-
-//! Used in a multigene context.
-//! - mode == 3: no mask "no_mask"
-//! - mode == 2: parameter (maskprob) shared across genes "shared_mask"
-//! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
-//! across genes "gene_spec_mask_est_hyper"
-//! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
-//! "gene_spec_mask_fixed_hyper"
-enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };
-
-bool gene_specific_mask_mode(mask_mode_t p) {
-    return p == gene_spec_mask_fixed_hyper || p == gene_spec_mask_est_hyper;
-}
-
 class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     // model selectors
     // -----
-
-    logger_t logger{stdout_logger("model")};
 
     std::string datafile;
     std::string treefile;
@@ -153,8 +118,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // -----
 
     std::unique_ptr<const Tree> tree;
-    FileSequenceAlignment *data;
-    CodonSequenceAlignment *codondata;
+    std::unique_ptr<FileSequenceAlignment> data;
+    std::unique_ptr<CodonSequenceAlignment> codondata;
 
     // number of sites
     int Nsite;
@@ -181,9 +146,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    SimpleBranchArray<double> *blhypermeanarray;
-    GammaWhiteNoise *branchlength;
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    std::unique_ptr<SimpleBranchArray<double>> blhypermeanarray;
+    std::unique_ptr<GammaWhiteNoise> branchlength;
+    std::unique_ptr<PoissonSuffStatBranchArray> lengthpathsuffstatarray;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary
     // probabilities) hyperparameters
@@ -194,15 +159,15 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // parameters
     std::vector<double> nucrelrate;
     std::vector<double> nucstat;
-    GTRSubMatrix *nucmatrix;
+    std::unique_ptr<GTRSubMatrix> nucmatrix;
 
     double fitnessshape;
     std::vector<double> fitnesscenter;
-    BidimIIDMultiGamma *fitness;
+    std::unique_ptr<BidimIIDMultiGamma> fitness;
 
     double maskprob;
     double maskepsilon;
-    IIDProfileMask *sitemaskarray;
+    std::unique_ptr<IIDProfileMask> sitemaskarray;
 
     // shiftprob (across conditions):
     // either Beta(shiftprobhypermean,shiftprobhyperinvconc), estimated across
@@ -216,28 +181,28 @@ class DiffSelDoublySparseModel : public ChainComponent {
     std::vector<double> shiftprobhyperinvconc;
     std::vector<double> shiftprob;
 
-    BidimIIDMultiBernoulli *toggle;
+    std::unique_ptr<BidimIIDMultiBernoulli> toggle;
 
     // fitness profiles (combinations of baseline and delta)
     // across conditions and across sites
-    DiffSelDoublySparseFitnessArray *fitnessprofile;
+    std::unique_ptr<DiffSelDoublySparseFitnessArray> fitnessprofile;
 
     // codon substitution matrices
     // across conditions and sites
-    AADiffSelCodonMatrixBidimArray *condsubmatrixarray;
+    std::unique_ptr<AADiffSelCodonMatrixBidimArray> condsubmatrixarray;
 
     // branch- and site-substitution matrices (for phyloprocess)
-    SubMatrixSelector *submatrixarray;
+    std::unique_ptr<SubMatrixSelector> submatrixarray;
     // and for root (condition 0)
-    RootSubMatrixSelector *rootsubmatrixarray;
+    std::unique_ptr<RootSubMatrixSelector> rootsubmatrixarray;
 
     // phyloprocess
-    PhyloProcess *phyloprocess;
+    std::unique_ptr<PhyloProcess> phyloprocess;
 
     // suff stats
 
     // path suff stats across conditions and sites
-    PathSuffStatBidimArray *suffstatarray;
+    std::unique_ptr<PathSuffStatBidimArray> suffstatarray;
 
     MultiGammaSuffStat hyperfitnesssuffstat;
 
@@ -273,18 +238,18 @@ class DiffSelDoublySparseModel : public ChainComponent {
         param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true)
         : datafile(datafile),
           treefile(treefile),
+          codonmodel(incodonmodel),
+          blmode(independent),
+          nucmode(independent),
           fitnesscentermode(fitnesscentermode),
           withtoggle(withtoggle),
+          Ncond(inNcond),
+          Nlevel(inNlevel),
+          pihypermean(inpihypermean),
+          shiftprobmean(inshiftprobmean),
+          shiftprobinvconc(inshiftprobinvconc),
           hyperfitnesssuffstat(Naa) {
-        pihypermean = inpihypermean;
-        shiftprobmean = inshiftprobmean;
-        shiftprobinvconc = inshiftprobinvconc;
-
-        codonmodel = incodonmodel;
-
-        blmode = independent;
-        nucmode = independent;
-
+        /* -- */
         if (inshape > 0) {
             fitnessshapemode = param_mode_t::fixed;
             fitnessshape = inshape;
@@ -307,11 +272,13 @@ class DiffSelDoublySparseModel : public ChainComponent {
             maskepsilon = 0.01;
         }
 
-        Ncond = inNcond;
-        Nlevel = inNlevel;
-        if (Ncond <= 2) { Nlevel = 1; }
+        if (Nlevel > 2 or Nlevel < 1) { FAIL("Nlevel should be set to 1 or 2"); }
+        if (Ncond <= 2 and Nlevel == 2) {
+            WARNING("Nlevel set to 2 although there are no more than two conditions");
+            Nlevel = 1;
+        }
 
-        logger->info(
+        INFO(
             "Model parameters are:\n\tdatafile: {}\n\ttreefile: {}\n\tfitnesscentermode: "
             "{}\n\twithtoggle: "
             "{}\n\tpihypermean: {}\n\tshiftprobmean: {}\n\tshiftprobinvconc: "
@@ -328,27 +295,27 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     DiffSelDoublySparseModel(const DiffSelDoublySparseModel &) = delete;
 
-    ~DiffSelDoublySparseModel() {}
+    ~DiffSelDoublySparseModel() = default;
 
     //! read files (and read out the distribution of conditions across branches,
     //! based on the tree read from treefile)
     void ReadFiles(std::string datafile, std::string treefile) {
-        logger->info("Parsing nucleotide sequence alignment...");
-        data = new FileSequenceAlignment(datafile);
+        INFO("Parsing nucleotide sequence alignment...");
+        data = std::make_unique<FileSequenceAlignment>(datafile);
 
-        logger->info("Translating to codons...");
-        codondata = new CodonSequenceAlignment(data, true);
+        INFO("Translating to codons...");
+        codondata = std::make_unique<CodonSequenceAlignment>(data.get(), true);
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
-        logger->info("Alignment has {} sites and {} taxa", Nsite, Ntaxa);
+        INFO("Alignment has {} sites and {} taxa", Nsite, Ntaxa);
 
-        logger->info("Parsing tree...");
+        INFO("Parsing tree...");
         std::ifstream file(treefile);
         NHXParser parser{file};
         tree = make_from_parser(parser);
         Nbranch = tree->nb_nodes() - 1;
 
-        logger->info("Building branch alloc...");
+        INFO("Building branch alloc...");
         auto v = branch_container_from_parser<std::string>(
             parser, [](int i, const AnnotatedTree &t) { return t.tag(i, "Condition"); });
         std::vector<int> iv(v.size(), 0);
@@ -370,9 +337,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // Branch lengths
         blhypermean = 0.1;
         blhyperinvshape = 1.0;
-        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
-        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
-        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+        blhypermeanarray = std::make_unique<SimpleBranchArray<double>>(*tree, blhypermean);
+        branchlength = std::make_unique<GammaWhiteNoise>(*tree, *blhypermeanarray, blhyperinvshape);
+        lengthpathsuffstatarray = std::make_unique<PoissonSuffStatBranchArray>(*tree);
 
         nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
         nucrelratehyperinvconc = 1.0 / Nrr;
@@ -385,20 +352,21 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
         nucstat.assign(Nnuc, 0);
         Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
-        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
+        nucmatrix = std::make_unique<GTRSubMatrix>(Nnuc, nucrelrate, nucstat, true);
 
         // fitness parameters: IID Gamma, across all conditions, sites, and
         // amino-acids those are not the final fitness values (depends on the system
         // of masks and toggles, specified below)
         fitnesscenter.assign(Naa, 1.0 / Naa);
-        fitness = new BidimIIDMultiGamma(Ncond, Nsite, Naa, fitnessshape, fitnesscenter);
+        fitness =
+            std::make_unique<BidimIIDMultiGamma>(Ncond, Nsite, Naa, fitnessshape, fitnesscenter);
 
         // profiles across sites are masked:
         // each site has a 20-dim mask, iid bernoulli of prob maskprob, conditional
         // on at least one entry being 1 if mask[a] == 0 for amino-acid a, then its
         // fitness is equal to maskepsilon, across all conditions, for that site
         maskprob = 0.1;
-        sitemaskarray = new IIDProfileMask(Nsite, Naa, maskprob);
+        sitemaskarray = std::make_unique<IIDProfileMask>(Nsite, Naa, maskprob);
 
         // hyperparameters for the system of toggles
         // shiftprob is a vector of Ncond-1 probabilities;
@@ -414,7 +382,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // toggles specifying the sites and amino-acids displaying fitness
         // modulations across conditions for each k=1..Ncond; all toggles across all
         // sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
-        toggle = new BidimIIDMultiBernoulli(Ncond - 1, Nsite, Naa, shiftprob);
+        toggle = std::make_unique<BidimIIDMultiBernoulli>(Ncond - 1, Nsite, Naa, shiftprob);
         if (!withtoggle) { toggle->Reset(); }
 
         // final amino-acid fitness profiles across sites
@@ -426,26 +394,27 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // sitemaskarray[i][a] == 1 : fitnessprofile(k,i)[a] determined by the
         // system of fitness(0:Ncond,i)[a] and toggle(1:Ncond,i)[a] as in the simple
         // DiffSelSparseModel
-        fitnessprofile = new DiffSelDoublySparseFitnessArray(
+        fitnessprofile = std::make_unique<DiffSelDoublySparseFitnessArray>(
             *fitness, *sitemaskarray, *toggle, Nlevel, maskepsilon);
 
         // codon matrices
         // per condition and per site
-        condsubmatrixarray =
-            new AADiffSelCodonMatrixBidimArray(*fitnessprofile, *GetCodonStateSpace(), *nucmatrix);
+        condsubmatrixarray = std::make_unique<AADiffSelCodonMatrixBidimArray>(
+            *fitnessprofile, *GetCodonStateSpace(), *nucmatrix);
 
         // sub matrices per branch and per site
-        submatrixarray = new SubMatrixSelector(*condsubmatrixarray, *branchalloc);
+        submatrixarray = std::make_unique<SubMatrixSelector>(*condsubmatrixarray, *branchalloc);
         // sub matrices for root, across sites
-        rootsubmatrixarray = new RootSubMatrixSelector(*condsubmatrixarray);
+        rootsubmatrixarray = std::make_unique<RootSubMatrixSelector>(*condsubmatrixarray);
 
         // create phyloprocess
-        phyloprocess = new PhyloProcess(
-            tree.get(), codondata, branchlength, 0, submatrixarray, rootsubmatrixarray);
+        // TODO: FIX this mysterious nullptr?
+        phyloprocess = std::make_unique<PhyloProcess>(tree.get(), codondata.get(),
+            branchlength.get(), nullptr, submatrixarray.get(), rootsubmatrixarray.get());
         phyloprocess->Unfold();
 
         // create suffstat arrays
-        suffstatarray = new PathSuffStatBidimArray(Ncond, Nsite);
+        suffstatarray = std::make_unique<PathSuffStatBidimArray>(Ncond, Nsite);
     }
 
 
@@ -733,10 +702,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // collecting suff stats
     // ---------------
 
-    //! \brief const access to array of length-pathsuffstats across branches
-    const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
-        return lengthpathsuffstatarray;
-    }
+    // //! \brief const access to array of length-pathsuffstats across branches
+    // const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
+    //     return lengthpathsuffstatarray;
+    // }
 
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {

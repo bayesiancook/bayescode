@@ -84,6 +84,7 @@ int main(int argc, char *argv[]) {
     if (cmd.resume_from_checkpoint()) {
         ifstream is = cmd.checkpoint_file();
         chain_driver = new ChainDriver(is);
+        FAIL("Resuming from checkpoint not implemented (yet) for diffsel");
         //  model = new DiffSelDoublySparseModel(is); TODO : IMPLEMENT
     } else {
         InferenceAppArgParse args(cmd);
@@ -91,12 +92,12 @@ int main(int argc, char *argv[]) {
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
-        model = unique_ptr<DiffSelDoublySparseModel>(new DiffSelDoublySparseModel(
-            args.alignment.getValue(), args.treefile.getValue(), ddargs.ncond.getValue(),
-            ddargs.nlevel.getValue(), codonmodel, ddargs.epsilon.getValue(),
-            ddargs.fitnessshape.getValue(), ddargs.pihypermean.getValue(),
-            ddargs.shiftprobmean.getValue(), ddargs.shiftprobinvconc.getValue(),
-            param_mode_t(ddargs.fitnesscentermode.getValue()), true));
+        model = make_unique<DiffSelDoublySparseModel>(args.alignment.getValue(),
+            args.treefile.getValue(), ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel,
+            ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
+            ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
+            ddargs.shiftprobinvconc.getValue(), param_mode_t(ddargs.fitnesscentermode.getValue()),
+            true);
         model->Update();
     }
 

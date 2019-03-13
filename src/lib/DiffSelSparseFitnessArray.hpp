@@ -1,6 +1,4 @@
-
-#ifndef DIFFSELSPARSEFIT_H
-#define DIFFSELSPARSEFIT_H
+#pragma once
 
 #include "Array.hpp"
 #include "BidimArray.hpp"
@@ -243,5 +241,3 @@ class MutSelSparseFitnessArray : public SimpleArray<std::vector<double>> {
     const Selector<std::vector<int>> &mask;
     const double &epsilon;
 };
-
-#endif
