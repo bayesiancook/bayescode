@@ -82,8 +82,7 @@ TEST_CASE("Tracer unrolling test") {
     t.write_header(ss);
     t.write_line(ss);
     CHECK(ss.str() ==
-          "a	b[0]	b[1]	b[2]	b[3]	c_0_x	c_0_y	c_1_x	c_1_y\n17	2	"
-          "3	4	5	1	2	2	3");
+          "a\tb[0]\tb[1]\tb[2]\tb[3]\tc_0_x\tc_0_y\tc_1_x\tc_1_y\n17\t2\t3\t4\t5\t1\t2\t2\t3");
 }
 
 struct MyArgs : public BaseArgParse {
