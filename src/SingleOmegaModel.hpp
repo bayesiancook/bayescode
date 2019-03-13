@@ -161,7 +161,6 @@ class SingleOmegaModel : public ChainComponent {
 
     void move(int it) override { Move(); }
 
-
     template <class Info>
     void declare_interface(Info info) {
         model_node(info, "omega", omega);
@@ -170,8 +169,8 @@ class SingleOmegaModel : public ChainComponent {
         model_node(info, "branchlength", *branchlength);
 
         model_stat(info, "omega", omega);
-        model_stat(info, "logprior", *this, &SingleOmegaModel::GetLogPrior);
-        model_stat(info, "lnL", *this, &SingleOmegaModel::GetLogLikelihood);
+        model_stat(info, "logprior", [this]() { return GetLogPrior(); });
+        model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
         model_stat(info, "length", [this]() { return branchlength->GetTotalLength(); });
         model_stat(info, "statent", [&]() { return Random::GetEntropy(nucstat); });
         model_stat(info, "rrent", [&]() { return Random::GetEntropy(nucrelrate); });
