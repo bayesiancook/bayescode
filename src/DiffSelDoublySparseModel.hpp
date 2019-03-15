@@ -1460,20 +1460,40 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return ret;
     }
 
-    // number of aas that are active in baseline (nshift) and active + convergent (nmask)
-    struct mask_counts_t {
-        int nshift{0};
-        int nmask{0};
-    };
+    //-----------------------------------------
+    // Toggle-related move and utilities
+    // ----------------------------------------
 
     // shift/mask counts for an array of sites
-    struct global_mask_counts_t {
+    struct MaskCounts {
+        struct mask_counts_t {
+            int nshift{0};
+            int nmask{0};
+        };
+
         std::vector<mask_counts_t> counts;
         mask_counts_t totals;
+
+        friend MaskCounts gather_mask_counts(int);
+
+      public:
+        int nshift() const { return totals.nshift; }
+        int nmask() const { return totals.nmask; }
+        int nb_active(int site) { return counts.at(site).nmask; }
+        void add_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift++;
+            counts.at(site).nshift++;
+        }
+        void remove_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift--;
+            counts.at(site).nshift--;
+        }
     };
 
-    global_mask_counts_t gather_mask_counts(int condition) const {
-        global_mask_counts_t result;
+    MaskCounts gather_mask_counts(int condition) {
+        MaskCounts result;
         result.counts.reserve(Nsite);  // pre-allocating for Nsite sites
 
         for (int site = 0; site < Nsite; site++) {  // for all sites
@@ -1504,9 +1524,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             ntot++;
             nacc++;
         }
-
         void reject() { ntot++; }
-
         double ratio() const { return nacc / ntot; }
     };
 
@@ -1518,93 +1536,55 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // a fitness shift in current condition nmask : number of amino-acids that
         // are active in baseline both are summed across all sites: sufficient
         // statistics for shiftprob
-        global_mask_counts_t mask_counts = gather_mask_counts(k);
-        INFO("Moving shift toggles for condition {}; nmask = {}; nshift = {}", k,
-            mask_counts.totals.nmask, mask_counts.totals.nshift);
-        // int nshift = 0;
-        // int nmask = 0;
-        // for (int i = 0; i < Nsite; i++) {  // for every site...
-        //     const std::vector<int> &site_toggle_ref = (*toggle)(k - 1, i);
-        //     const std::vector<int> &site_mask_ref = sitemaskarray->GetVal(i);
+        MaskCounts mask_counts = gather_mask_counts(k);
+        DEBUG("move_shift_toggles k={}; nmask={}; nshift={}", k, mask_counts.nmask(),
+            mask_counts.nshift());
 
-        //     int site_nshift = 0;
-        //     int site_nmask = 0;
-        //     for (int aa = 0; aa < Naa; aa++) {  // for every aa...
-        //         site_nshift += site_mask_ref[aa] * site_toggle_ref[aa];
-        //         site_nmask += site_mask_ref[aa];
-        //     }
-
-        //     // fitness shifts are counted (have an effect) only if there are at least
-        //     // 2 active amino-acids
-        //     if (site_nmask > 1) {
-        //         nmask += site_nmask;
-        //         nshift += site_nshift;
-        //     }
-        // }
-
-        // counters to compute acceptance ratio
         AcceptanceStats acceptance_stats;
-        // double ntot = 0;
-        // double nacc = 0;
         for (int rep = 0; rep < nrep; rep++) {  // repeating move nrep times
             for (int i = 0; i < Nsite; i++) {   // for every site...
-                // const std::vector<int> &t = (*toggle)(k - 1, i);
-                const std::vector<int> &m = sitemaskarray->GetVal(i);
+                const std::vector<int> &site_mask = sitemaskarray->GetVal(i);
 
-                // compute nshift and nmask for this site only
-                // int ns = 0;
-                // int nm = 0;
-                // for (int a = 0; a < Naa; a++) {
-                //     ns += m[a] * t[a];
-                //     nm += m[a];
-                // }
-
-                int nb_active = mask_counts.counts.at(i).nmask;
+                int nb_active = mask_counts.nb_active(i);
                 // do move only if there are at least 2 active amino-acids
                 if (nb_active > 1) {
                     // randomly choose one active amino-acid (for which mask[a] == 1)
-                    int b = (int)(nb_active * Random::Uniform()) + 1;
-                    int a = 0;
-                    while (b && (a < Naa)) {
-                        if (m[a]) { b--; }
-                        if (b) { a++; }
+                    int nth_active = (int)(nb_active * Random::Uniform()) + 1;
+                    int index = 0;
+                    while (nth_active && (index < Naa)) {
+                        if (site_mask[index] == 1) { nth_active--; }
+                        if (nth_active > 0) { index++; }
                     }
-                    assert(a != Naa);
-                    assert(m[a] > 0);
-                    // if (a == Naa) {
-                    //     std::cerr << "error in move shift toggles: overflow when choosing "
-                    //                  "target amino-acid\n";
-                    //     exit(1);
-                    // }
-                    // if (!m[a]) {
-                    //     std::cerr << "error in move shift toggles: a is not within mask\n";
-                    //     exit(1);
-                    // }
+                    assert(index != Naa);
+                    assert(site_mask[index] > 0);
+
+                    int chosen_aa = index;
 
                     // 0 -> 1 case
-                    if (!(*toggle)(k - 1, i)[a]) {
-                        double deltalogprob = -ToggleMarginalLogPrior(mask_counts.totals.nmask,
-                                                  mask_counts.totals.nshift, k) -
-                                              SiteSuffStatLogProb(i);
-                        (*toggle)(k - 1, i)[a] = 1;
+                    if (!(*toggle)(k - 1, i)[chosen_aa]) {
+                        double deltalogprob =
+                            -ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) -
+                            SiteSuffStatLogProb(i);
+                        (*toggle)(k - 1, i)[chosen_aa] = 1;
                         // redraw fitness parameter
-                        (*fitness)(k, i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                        if (!(*fitness)(k, i)[a]) {
+                        (*fitness)(k, i)[chosen_aa] =
+                            Random::sGamma(fitnessshape * fitnesscenter[chosen_aa]);
+                        if (!(*fitness)(k, i)[chosen_aa]) {
                             gammanullcount++;
-                            (*fitness)(k, i)[a] = 1e-8;
+                            (*fitness)(k, i)[chosen_aa] = 1e-8;
                         }
                         UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(mask_counts.totals.nmask,
-                                            mask_counts.totals.nshift + 1, k) +
+                        deltalogprob += ToggleMarginalLogPrior(
+                                            mask_counts.nmask(), mask_counts.nshift() + 1, k) +
                                         SiteSuffStatLogProb(i);
 
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
                             acceptance_stats.accept();
-                            mask_counts.totals.nshift++;
+                            mask_counts.add_shift(i);
                         } else {
                             acceptance_stats.reject();
-                            (*toggle)(k - 1, i)[a] = 0;
+                            (*toggle)(k - 1, i)[chosen_aa] = 0;
                             UpdateSite(i);
                         }
                     }
@@ -1614,7 +1594,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         double deltalogprob = -ToggleMarginalLogPrior(mask_counts.totals.nmask,
                                                   mask_counts.totals.nshift, k) -
                                               SiteSuffStatLogProb(i);
-                        (*toggle)(k - 1, i)[a] = 0;
+                        (*toggle)(k - 1, i)[chosen_aa] = 0;
                         UpdateSite(i);
                         deltalogprob += ToggleMarginalLogPrior(mask_counts.totals.nmask,
                                             mask_counts.totals.nshift - 1, k) +
@@ -1623,10 +1603,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         int accepted = (log(Random::Uniform()) < deltalogprob);
                         if (accepted) {
                             acceptance_stats.accept();
-                            mask_counts.totals.nshift--;
+                            mask_counts.remove_shift(i);
                         } else {
                             acceptance_stats.reject();
-                            (*toggle)(k - 1, i)[a] = 1;
+                            (*toggle)(k - 1, i)[chosen_aa] = 1;
                             UpdateSite(i);
                         }
                     }
