@@ -44,6 +44,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "PathSuffStat.hpp"
 #include "PhyloProcess.hpp"
 #include "SubMatrixSelector.hpp"
+#include "components/AcceptanceStats.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 #include "components/param_enums.hpp"
@@ -1531,19 +1532,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
     };
 
-    class AcceptanceStats {
-        double ntot{0};
-        double nacc{0};
-
-      public:
-        void accept() {
-            ntot++;
-            nacc++;
-        }
-        void reject() { ntot++; }
-        double ratio() const { return nacc / ntot; }
-    };
-
     //! elementary MH move on toggles
     double move_shift_toggles(int k, int nrep) {
         // to achieve better MCMC mixing, shiftprob[k-1] is integrated out during
@@ -1557,9 +1545,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
             mask_counts.nshift());
 
         AcceptanceStats acceptance_stats;
-        for (int rep = 0; rep < nrep; rep++) {  // repeating move nrep times
-            for (int i = 0; i < Nsite; i++) {   // for every site...
-                assert(mask_counts.check(*this, k));
+        for (int rep = 0; rep < nrep; rep++) {        // repeating move nrep times
+            for (int i = 0; i < Nsite; i++) {         // for every site...
+                assert(mask_counts.check(*this, k));  // checking mask_count consistency (costly)
 
                 const std::vector<int> &site_mask = sitemaskarray->GetVal(i);
 
