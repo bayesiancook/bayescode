@@ -1559,6 +1559,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         AcceptanceStats acceptance_stats;
         for (int rep = 0; rep < nrep; rep++) {  // repeating move nrep times
             for (int i = 0; i < Nsite; i++) {   // for every site...
+                assert(mask_counts.check(*this, k));
+
                 const std::vector<int> &site_mask = sitemaskarray->GetVal(i);
 
                 int nb_active = mask_counts.nb_active(i);
@@ -1605,7 +1607,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         acceptance_stats.accept();
                     } else {
                         acceptance_stats.reject();
-                        chosen_toggle_ref = 0;
+                        chosen_toggle_ref = 1 - chosen_toggle_ref;  // toggle back
                         mask_counts.update_toggle(i, chosen_toggle_ref);
                         UpdateSite(i);
                     }
