@@ -7,10 +7,17 @@ include_directories(${MPI_INCLUDE_PATH})
 
 # Compilation options
 option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
+option(DEBUG_MODE "Debug mode (with asserts and such) " OFF) #OFF by default
+set(ALWAYSON_CXX_FLAGS "--std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors ")
 if(COVERAGE_MODE)
-    set(CMAKE_CXX_FLAGS "-O0 --std=c++14 -fprofile-arcs -ftest-coverage") # coverage mode
+    set(CMAKE_CXX_FLAGS "-O0 -fprofile-arcs -ftest-coverage ${ALWAYSON_CXX_FLAGS}") # coverage mode
+    message("-- INFO: Compiling in coverage mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
+elseif(DEBUG_MODE)
+    set(CMAKE_CXX_FLAGS "-O2 -g ${ALWAYSON_CXX_FLAGS}") # debug mode
+    message("-- INFO: Compiling in debug mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
 else()
-    set(CMAKE_CXX_FLAGS "-O3 --std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors") # normal mode
+    set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG ${ALWAYSON_CXX_FLAGS}") # release mode
+    message("-- INFO: Compiling in release mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
 endif(COVERAGE_MODE)
 unset(COVERAGE_MODE CACHE)
 

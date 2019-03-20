@@ -17,7 +17,7 @@ matrix:
     - COMPILER=g++-5
     - OMPI_CXX=$COMPILER
     script:
-    - make coverage
+    - make coverage && make test
     after_success:
     - bash <(curl -s https://codecov.io/bash)
 
@@ -35,7 +35,7 @@ matrix:
     - COMPILER=clang++-3.6
     - OMPI_CXX=$COMPILER
     script:
-    - make && make test
+    - make debug && make test
 
 before_script:
   - export CXX=$COMPILER

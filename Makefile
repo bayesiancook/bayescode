@@ -5,7 +5,7 @@
 all: _build
 	@cd _build ; make --no-print-directory -j8
 
-_build: CMakeLists.txt
+_build: CMakeLists.txt # default mode is release
 	@rm -rf _build
 	@mkdir _build
 	@cd _build ; cmake ..
@@ -16,8 +16,20 @@ coverage:
 	@mkdir _build
 	@cd _build ; cmake -DCOVERAGE_MODE=ON ..
 	@make --no-print-directory test
-	# find _build_coverage -type f -name "*.gcno" -exec mv -t src/ {} +
-	# find _build_coverage -type f -name "*.gcda" -exec mv -t src/ {} +
+
+.PHONY: debug
+debug:
+	@rm -rf _build
+	@mkdir _build
+	@cd _build ; cmake -DDEBUG_MODE=ON ..
+	@make --no-print-directory
+
+.PHONY: release
+release:
+	@rm -rf _build
+	@mkdir _build
+	@cd _build ; cmake ..
+	@make --no-print-directory
 
 .PHONY: clean
 clean:
