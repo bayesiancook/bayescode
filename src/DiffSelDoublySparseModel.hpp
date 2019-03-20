@@ -1474,6 +1474,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
         std::vector<mask_counts_t> counts;
         mask_counts_t totals;
 
+        void add_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift++;
+            counts.at(site).nshift++;
+        }
+        void remove_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift--;
+            counts.at(site).nshift--;
+        }
+
       public:
         MaskCounts(DiffSelDoublySparseModel &model, int condition) {
             counts.reserve(model.Nsite);  // pre-allocating for model.Nsite sites
@@ -1499,15 +1510,24 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift() const { return totals.nshift; }
         int nmask() const { return totals.nmask; }
         int nb_active(int site) { return counts.at(site).nmask; }
-        void add_shift(int site) {
-            assert(nb_active(site) > 1);
-            totals.nshift++;
-            counts.at(site).nshift++;
+        void update_toggle(int site, int new_value) {
+            if (new_value == 1) {
+                add_shift(site);
+            } else {
+                remove_shift(site);
+            }
         }
-        void remove_shift(int site) {
-            assert(nb_active(site) > 1);
-            totals.nshift--;
-            counts.at(site).nshift--;
+
+        bool check(DiffSelDoublySparseModel &model, int condition) const {
+            MaskCounts other(model, condition);
+            if (other.counts.size() != counts.size()) { return false; }
+            if (totals.nshift != other.totals.nshift) { return false; }
+            if (totals.nmask != other.totals.nmask) { return false; }
+            for (size_t i = 0; i < counts.size(); i++) {
+                if (other.counts.at(i).nshift != counts.at(i).nshift) { return false; }
+                if (other.counts.at(i).nmask != counts.at(i).nmask) { return false; }
+            }
+            return true;
         }
     };
 
@@ -1555,56 +1575,39 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     assert(site_mask[index] > 0);
 
                     int chosen_aa = index;
+                    int &chosen_toggle_ref = (*toggle)(k - 1, i)[chosen_aa];
+                    double &chosen_aa_fitness_ref = (*fitness)(k, i)[chosen_aa];
 
-                    // 0 -> 1 case
-                    if (!(*toggle)(k - 1, i)[chosen_aa]) {
-                        double deltalogprob =
-                            -ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) -
-                            SiteSuffStatLogProb(i);
-                        (*toggle)(k - 1, i)[chosen_aa] = 1;
-                        // redraw fitness parameter
-                        (*fitness)(k, i)[chosen_aa] =
+                    double logprob_before =
+                        ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) +
+                        SiteSuffStatLogProb(i);
+                    chosen_toggle_ref = 1 - chosen_toggle_ref;  // 1->0 or 0->1
+
+                    if (chosen_toggle_ref == 1) {  // if toggle turned on then redraw fitness
+                        chosen_aa_fitness_ref =
                             Random::sGamma(fitnessshape * fitnesscenter[chosen_aa]);
-                        if (!(*fitness)(k, i)[chosen_aa]) {
+                        if (chosen_aa_fitness_ref == 0) {
                             gammanullcount++;
-                            (*fitness)(k, i)[chosen_aa] = 1e-8;
-                        }
-                        UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(
-                                            mask_counts.nmask(), mask_counts.nshift() + 1, k) +
-                                        SiteSuffStatLogProb(i);
-
-                        int accepted = (log(Random::Uniform()) < deltalogprob);
-                        if (accepted) {
-                            acceptance_stats.accept();
-                            mask_counts.add_shift(i);
-                        } else {
-                            acceptance_stats.reject();
-                            (*toggle)(k - 1, i)[chosen_aa] = 0;
-                            UpdateSite(i);
+                            chosen_aa_fitness_ref = 1e-8;
                         }
                     }
 
-                    // 1 -> 0 case
-                    else {
-                        double deltalogprob =
-                            -ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) -
-                            SiteSuffStatLogProb(i);
-                        (*toggle)(k - 1, i)[chosen_aa] = 0;
-                        UpdateSite(i);
-                        deltalogprob += ToggleMarginalLogPrior(
-                                            mask_counts.nmask(), mask_counts.nshift() - 1, k) +
-                                        SiteSuffStatLogProb(i);
+                    UpdateSite(i);
+                    mask_counts.update_toggle(i, chosen_toggle_ref);
 
-                        int accepted = (log(Random::Uniform()) < deltalogprob);
-                        if (accepted) {
-                            acceptance_stats.accept();
-                            mask_counts.remove_shift(i);
-                        } else {
-                            acceptance_stats.reject();
-                            (*toggle)(k - 1, i)[chosen_aa] = 1;
-                            UpdateSite(i);
-                        }
+                    double logprob_after =
+                        ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) +
+                        SiteSuffStatLogProb(i);
+
+                    double acceptance_prob = logprob_after - logprob_before;
+                    int accepted = (log(Random::Uniform()) < acceptance_prob);
+                    if (accepted) {
+                        acceptance_stats.accept();
+                    } else {
+                        acceptance_stats.reject();
+                        chosen_toggle_ref = 0;
+                        mask_counts.update_toggle(i, chosen_toggle_ref);
+                        UpdateSite(i);
                     }
                 }
             }
