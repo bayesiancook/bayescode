@@ -19,7 +19,6 @@ else()
     set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG ${ALWAYSON_CXX_FLAGS}") # release mode
     message("-- INFO: Compiling in release mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
 endif(COVERAGE_MODE)
-unset(COVERAGE_MODE CACHE)
 
 include_directories("src")
 include_directories("src/lib")
