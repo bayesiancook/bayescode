@@ -100,6 +100,73 @@ using std::vector;
  */
 
 class DiffSelDoublySparseModel : public ChainComponent {
+    // shift/mask counts for an array of sites
+    class MaskCounts {
+        struct mask_counts_t {
+            int nshift{0};
+            int nmask{0};
+        };
+
+        vector<mask_counts_t> counts;
+        mask_counts_t totals;
+
+        void add_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift++;
+            counts.at(site).nshift++;
+        }
+        void remove_shift(int site) {
+            assert(nb_active(site) > 1);
+            totals.nshift--;
+            counts.at(site).nshift--;
+        }
+
+      public:
+        MaskCounts(DiffSelDoublySparseModel &model, int condition) {
+            counts.reserve(model.Nsite);  // pre-allocating for model.Nsite sites
+
+            for (int site = 0; site < model.Nsite; site++) {  // for all sites
+                counts.emplace_back();
+                auto &current_count = counts.back();
+
+                for (int aa = 0; aa < Naa; aa++) {  // for all aas
+                    int active = model.sitemaskarray->GetVal(site).at(aa);
+                    int convergent = active * model.get_toggle(condition, site, aa);
+                    current_count.nmask += active;
+                    current_count.nshift += convergent;
+                }
+
+                if (current_count.nmask > 1) {
+                    totals.nmask += current_count.nmask;
+                    totals.nshift += current_count.nshift;
+                }
+            }
+        }
+
+        int nshift() const { return totals.nshift; }
+        int nmask() const { return totals.nmask; }
+        int nb_active(int site) { return counts.at(site).nmask; }
+        void update_toggle(int site, int new_value) {
+            if (new_value == 1) {
+                add_shift(site);
+            } else {
+                remove_shift(site);
+            }
+        }
+
+        bool check(DiffSelDoublySparseModel &model, int condition) const {
+            MaskCounts other(model, condition);
+            if (other.counts.size() != counts.size()) { return false; }
+            if (totals.nshift != other.totals.nshift) { return false; }
+            if (totals.nmask != other.totals.nmask) { return false; }
+            for (size_t i = 0; i < counts.size(); i++) {
+                if (other.counts.at(i).nshift != counts.at(i).nshift) { return false; }
+                if (other.counts.at(i).nmask != counts.at(i).nmask) { return false; }
+            }
+            return true;
+        }
+    };
+
     // -----
     // model selectors
     // -----
@@ -149,6 +216,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // -----
     //  model structure
     // -----
+
+    cond_vector<MaskCounts> mask_counts;
 
     // Site-wise nodes and toggles
     bool site_wise{false};
@@ -250,7 +319,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
         double inshiftprobmean, double inshiftprobinvconc,
         param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true,
-        bool site_wise = true)
+        bool site_wise = false)
         : datafile(datafile),
           treefile(treefile),
           codonmodel(incodonmodel),
@@ -446,6 +515,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         // create suffstat arrays
         suffstatarray = std::make_unique<PathSuffStatBidimArray>(Ncond, Nsite);
+
+        // gathering mask counts
+        for (int k = 1; k < Ncond; k++) {
+            assert(mask_counts.size() == 0);
+            mask_counts.emplace_back(*this, k);
+        }
     }
 
     // toggle accessors (should be removed ideally)
@@ -481,6 +556,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (condition == 0) { WARNING("Querying toggle for condition 0"); }
 #endif
         return sw_toggles[condition][site];
+    }
+
+    // mask count functions
+    MaskCounts &get_mask_counts(int condition) { return mask_counts.at(condition - 1); }
+
+    void update_mask_counts(int condition) {
+        get_mask_counts(condition) = MaskCounts(*this, condition);
+    }
+
+    bool check_mask_counts(int condition) {
+        return get_mask_counts(condition).check(*this, condition);
     }
 
     //! \brief set estimation method for nuc rates
@@ -1513,73 +1599,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // Toggle-related move and utilities
     // ----------------------------------------
 
-    // shift/mask counts for an array of sites
-    class MaskCounts {
-        struct mask_counts_t {
-            int nshift{0};
-            int nmask{0};
-        };
-
-        vector<mask_counts_t> counts;
-        mask_counts_t totals;
-
-        void add_shift(int site) {
-            assert(nb_active(site) > 1);
-            totals.nshift++;
-            counts.at(site).nshift++;
-        }
-        void remove_shift(int site) {
-            assert(nb_active(site) > 1);
-            totals.nshift--;
-            counts.at(site).nshift--;
-        }
-
-      public:
-        MaskCounts(DiffSelDoublySparseModel &model, int condition) {
-            counts.reserve(model.Nsite);  // pre-allocating for model.Nsite sites
-
-            for (int site = 0; site < model.Nsite; site++) {  // for all sites
-                counts.emplace_back();
-                auto &current_count = counts.back();
-
-                for (int aa = 0; aa < Naa; aa++) {  // for all aas
-                    int active = model.sitemaskarray->GetVal(site).at(aa);
-                    int convergent = active * (*model.toggle)(condition - 1, site).at(aa);
-                    current_count.nmask += active;
-                    current_count.nshift += convergent;
-                }
-
-                if (current_count.nmask > 1) {
-                    totals.nmask += current_count.nmask;
-                    totals.nshift += current_count.nshift;
-                }
-            }
-        }
-
-        int nshift() const { return totals.nshift; }
-        int nmask() const { return totals.nmask; }
-        int nb_active(int site) { return counts.at(site).nmask; }
-        void update_toggle(int site, int new_value) {
-            if (new_value == 1) {
-                add_shift(site);
-            } else {
-                remove_shift(site);
-            }
-        }
-
-        bool check(DiffSelDoublySparseModel &model, int condition) const {
-            MaskCounts other(model, condition);
-            if (other.counts.size() != counts.size()) { return false; }
-            if (totals.nshift != other.totals.nshift) { return false; }
-            if (totals.nmask != other.totals.nmask) { return false; }
-            for (size_t i = 0; i < counts.size(); i++) {
-                if (other.counts.at(i).nshift != counts.at(i).nshift) { return false; }
-                if (other.counts.at(i).nmask != counts.at(i).nmask) { return false; }
-            }
-            return true;
-        }
-    };
-
     //! elementary MH move on toggles
     double move_shift_toggles(int k, int nrep) {
         // to achieve better MCMC mixing, shiftprob[k-1] is integrated out during
@@ -1588,18 +1607,18 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // a fitness shift in current condition nmask : number of amino-acids that
         // are active in baseline both are summed across all sites: sufficient
         // statistics for shiftprob
-        MaskCounts mask_counts(*this, k);
+        update_mask_counts(k);
         DEBUG("move_shift_toggles k={}; nmask={}; nshift={}", k, mask_counts.nmask(),
             mask_counts.nshift());
 
         AcceptanceStats acceptance_stats;
-        for (int rep = 0; rep < nrep; rep++) {        // repeating move nrep times
-            for (int i = 0; i < Nsite; i++) {         // for every site...
-                assert(mask_counts.check(*this, k));  // checking mask_count consistency (costly)
+        for (int rep = 0; rep < nrep; rep++) {  // repeating move nrep times
+            for (int i = 0; i < Nsite; i++) {   // for every site...
+                assert(check_mask_counts(k));   // checking mask_count consistency (costly)
 
                 const vector<int> &site_mask = sitemaskarray->GetVal(i);
 
-                int nb_active = mask_counts.nb_active(i);
+                int nb_active = get_mask_counts(k).nb_active(i);
                 // do move only if there are at least 2 active amino-acids
                 if (nb_active > 1) {
                     // randomly choose one active amino-acid (for which mask[a] == 1)
@@ -1616,9 +1635,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     int &chosen_toggle_ref = get_toggle(k, i, chosen_aa);
                     double &chosen_aa_fitness_ref = (*fitness)(k, i)[chosen_aa];
 
-                    double logprob_before =
-                        ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) +
-                        SiteSuffStatLogProb(i);
+                    // core of the MH move (logprobs and value change)
+                    double logprob_before = ToggleMarginalLogPrior(get_mask_counts(k).nmask(),
+                                                get_mask_counts(k).nshift(), k) +
+                                            SiteSuffStatLogProb(i);
                     chosen_toggle_ref = 1 - chosen_toggle_ref;  // 1->0 or 0->1
 
                     if (chosen_toggle_ref == 1) {  // if toggle turned on then redraw fitness
@@ -1631,12 +1651,13 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     }
 
                     UpdateSite(i);
-                    mask_counts.update_toggle(i, chosen_toggle_ref);
+                    get_mask_counts(k).update_toggle(i, chosen_toggle_ref);
 
-                    double logprob_after =
-                        ToggleMarginalLogPrior(mask_counts.nmask(), mask_counts.nshift(), k) +
-                        SiteSuffStatLogProb(i);
+                    double logprob_after = ToggleMarginalLogPrior(get_mask_counts(k).nmask(),
+                                               get_mask_counts(k).nshift(), k) +
+                                           SiteSuffStatLogProb(i);
 
+                    // MH move accept/reject
                     double acceptance_prob = logprob_after - logprob_before;
                     int accepted = (log(Random::Uniform()) < acceptance_prob);
                     if (accepted) {
@@ -1644,7 +1665,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     } else {
                         acceptance_stats.reject();
                         chosen_toggle_ref = 1 - chosen_toggle_ref;  // toggle back
-                        mask_counts.update_toggle(i, chosen_toggle_ref);
+                        get_mask_counts(k).update_toggle(i, chosen_toggle_ref);
                         UpdateSite(i);
                     }
                 }
