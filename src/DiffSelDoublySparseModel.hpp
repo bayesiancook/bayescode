@@ -363,8 +363,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (site_wise) {
             set_all_to(sw_toggle_prob, Ncond, 0.02);
             draw_bernoulli_iid(sw_toggles, Ncond, Nsite, sw_toggle_prob);
-            INFO("Site-wise nodes: {} toggles in condition 1 on out of {} sites",
-                count_indicators(sw_toggles.at(1)), Nsite);
         }
 
         // Branch lengths
