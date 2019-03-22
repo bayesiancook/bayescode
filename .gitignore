@@ -10,3 +10,5 @@ _test/
 _aamutsel/
 _mutselomega/
 data/
+.vscode/
+*.profraw
