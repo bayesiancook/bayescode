@@ -10,10 +10,10 @@ using indicator_t = int;  // FIXME? any benefit to change to char?
 /*--------------------------------------------------------------------------------------------------
   Type aliases to make delcarations more informative */
 template <class T>
-using cond_vector = vector<T>;
+using per_cond = vector<T>;
 
 template <class T>
-using site_vector = vector<T>;
+using per_site = vector<T>;
 
 /*--------------------------------------------------------------------------------------------------
   Functions to set vectors to specific values */

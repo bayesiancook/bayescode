@@ -217,14 +217,14 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //  model structure
     // -----
 
-    cond_vector<MaskCounts> mask_counts;
+    per_cond<MaskCounts> mask_counts;
 
     // Site-wise nodes and toggles
     bool site_wise{false};
     // double sw_toggle_hypermean{0.0};
     // double sw_toggle_hyperinvshape{0.0};
-    cond_vector<double> sw_toggle_prob;
-    cond_vector<site_vector<indicator_t>> sw_toggles;
+    per_cond<double> sw_toggle_prob;
+    per_cond<per_site<indicator_t>> sw_toggles;
 
     // Branch lengths
     double blhypermean;
@@ -569,120 +569,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return get_mask_counts(condition).check(*this, condition);
     }
 
-    //! \brief set estimation method for nuc rates
-    //!
-    //! Used in a multigene context.
-    //! - mode == 2: global
-    //! - mode == 1: gene specific, with hyperparameters estimated across genes
-    //! - mode == 0: gene-specific, with fixed hyperparameters
-    void SetNucMode(param_mode_t in) { nucmode = in; }
-
-    //! \brief set estimation method for background fitness (maskepsilon)
-    void SetMaskEpsilonMode(int in) { maskepsilonmode = in; }
-
     // ------------------
     // Update system
     // ------------------
-
-    //! \brief set branch lengths to a new value
-    //!
-    //! Used in a multigene context.
-    void SetBranchLengths(const BranchSelector<double> &inbranchlength) {
-        branchlength->Copy(inbranchlength);
-    }
-
-    //! get a copy of branch lengths into array given as argument
-    void GetBranchLengths(BranchArray<double> &inbranchlength) const {
-        inbranchlength.Copy(*branchlength);
-    }
-
-    //! set branch lengths hyperparameters to a new value (multi-gene analyses)
-    void SetBranchLengthsHyperParameters(
-        const BranchSelector<double> &inblmeanarray, double inblinvshape) {
-        blhypermeanarray->Copy(inblmeanarray);
-        blhyperinvshape = inblinvshape;
-    }
-
-    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
-    void SetNucRatesHyperParameters(const vector<double> &innucrelratehypercenter,
-        double innucrelratehyperinvconc, const vector<double> &innucstathypercenter,
-        double innucstathyperinvconc) {
-        nucrelratehypercenter = innucrelratehypercenter;
-        nucrelratehyperinvconc = innucrelratehyperinvconc;
-        nucstathypercenter = innucstathypercenter;
-        nucstathyperinvconc = innucstathyperinvconc;
-    }
-
-    //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(const vector<double> &innucrelrate, const vector<double> &innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
-        CorruptMatrices();
-    }
-
-    //! copy nucleotide rates into vectors given as arguments (multi-gene
-    //! analyses)
-    void GetNucRates(vector<double> &innucrelrate, vector<double> &innucstat) const {
-        innucrelrate = nucrelrate;
-        innucstat = nucstat;
-    }
-
-    //! \brief set value of background fitness of low-fitness amino-acids
-    void SetMaskEpsilon(double in) { maskepsilon = in; }
-
-    //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc)
-    //! to specified values (used in multi-gene context)
-    void SetShiftProbHyperParameters(const vector<double> &inpi,
-        const vector<double> &inshiftprobhypermean, const vector<double> &inshiftprobhyperinvconc) {
-        pi = inpi;
-        shiftprobhypermean = inshiftprobhypermean;
-        shiftprobhyperinvconc = inshiftprobhyperinvconc;
-    }
-
-    //! const access to shift prob vector
-    const vector<double> &GetShiftProbVector() const { return shiftprob; }
-
-    //! get a copy of fitness array (for all sites and amino-acids) for condition
-    //! k
-    void GetFitnessArray(int k, double *array) const {
-        int j = 0;
-        for (int i = 0; i < GetNsite(); i++) {
-            for (int a = 0; a < Naa; a++) {
-                double tmp = sitemaskarray->GetVal(i)[a] * fitness->GetVal(k, i)[a];
-                if (k) { tmp *= toggle->GetVal(k - 1, i)[a]; }
-                array[j++] = tmp;
-            }
-        }
-    }
-
-    //! get a copy of toggle values (for all sites and amino-acids) for condition
-    //! k
-    void GetShiftToggleArray(int k, int *array) const {
-        int j = 0;
-        for (int i = 0; i < GetNsite(); i++) {
-            int m = 0;
-            for (int a = 0; a < Naa; a++) { m += sitemaskarray->GetVal(i)[a]; }
-            for (int a = 0; a < Naa; a++) {
-                if (m > 1) {
-                    array[j++] = sitemaskarray->GetVal(i)[a] * toggle->GetVal(k - 1, i)[a];
-                } else {
-                    array[j++] = 0;
-                }
-            }
-        }
-    }
-
-    //! const ref access to toggles for condition k=1..Ncond
-    const vector<vector<int>> &GetCondToggleArray(int k) const {
-        return toggle->GetSubArray(k - 1);
-    }
-
-    //! const ref access to masks across sites
-    const vector<vector<int>> &GetMaskArray() const { return sitemaskarray->GetArray(); }
-
-    //! const access to low-fitness background value (mask epsilon)
-    double GetMaskEpsilon() const { return maskepsilon; }
-
     void Update() {
         UpdateMask();
         fitness->SetShape(fitnessshape);
@@ -1321,40 +1210,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
     }
 
-    //! number of shifts in condition k
-    double GetNShift(int k) const {
-        int nshift = 0;
-        for (int i = 0; i < Nsite; i++) {
-            const vector<int> &m = sitemaskarray->GetVal(i);
-            int ns = 0;
-            int nm = 0;
-            for (int a = 0; a < Naa; a++) {
-                ns += m[a] * get_toggle(k, i, a);
-                nm += m[a];
-            }
-
-            // fitness shifts are counted (have an effect) only if there are at least
-            // 2 active amino-acids
-            if (nm > 1) { nshift += ns; }
-        }
-        return nshift;
-    }
-
-    //! number of amino acids allowed to undergo a shift
-    double GetNTarget() const {
-        int nmask = 0;
-        for (int i = 0; i < Nsite; i++) {
-            const vector<int> &m = sitemaskarray->GetVal(i);
-            int nm = 0;
-            for (int a = 0; a < Naa; a++) { nm += m[a]; }
-
-            // fitness shifts are counted (have an effect) only if there are at least
-            // 2 active amino-acids
-            if (nm > 1) { nmask += nm; }
-        }
-        return nmask;
-    }
-
     //! empirical fraction of allowed positions that undergo a shift
     double GetPropShift(int k) const {
         // nshift: number of amino-acids that are active in baseline and undergoing
@@ -1381,53 +1236,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
 
         return ((double)nshift) / nmask;
-    }
-
-    //! conditional posterior probability of the null hypothesis (null proportion
-    //! of shifts) in condition k
-    double GetProbNull(int k) const {
-        // pre-calculate parameters of the Beta distribution for non-zero case
-        double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
-        double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
-
-        // nshift: number of amino-acids that are active in baseline and undergoing
-        // a fitness shift in current condition nmask : number of amino-acids that
-        // are active in baseline both are summed across all sites: sufficient
-        // statistics for shiftprob
-        int nshift = 0;
-        int nmask = 0;
-        for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
-            const vector<int> &m = sitemaskarray->GetVal(i);
-            int ns = 0;
-            int nm = 0;
-            for (int a = 0; a < Naa; a++) {
-                ns += m[a] * t[a];
-                nm += m[a];
-            }
-
-            // fitness shifts are counted (have an effect) only if there are at least
-            // 2 active amino-acids
-            if (nm > 1) {
-                nshift += ns;
-                nmask += nm;
-            }
-        }
-
-        if (nshift || (pi[k - 1] == 1.0)) { return 0; }
-        double logp0 = log(1 - pi[k - 1]);
-        double logp1 = log(pi[k - 1]);
-        logp1 -= Random::logGamma(alpha) + Random::logGamma(beta) - Random::logGamma(alpha + beta);
-        logp1 += Random::logGamma(alpha + nshift) + Random::logGamma(beta + nmask - nshift) -
-                 Random::logGamma(alpha + beta + nmask);
-
-        double max = (logp0 > logp1) ? logp0 : logp1;
-        double p0 = exp(logp0 - max);
-        double p1 = exp(logp1 - max);
-        double tot = p0 + p1;
-        p0 /= tot;
-        p1 /= tot;
-        return p0;
     }
 
     //! MH move schedule on mask hyperparameter (maskprob)
@@ -1684,27 +1492,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return (CodonStateSpace *)codondata->GetStateSpace();
     }
 
-    //! return number of aligned sites
-    int GetNsite() const { return Nsite; }
-    //! return number of conditions
-    int GetNcond() const { return Ncond; }
-
     //-------------------
     // Traces and monitors
     // ------------------
 
     //! return mean width of masks across sites
     double GetMeanWidth() const { return sitemaskarray->GetMeanWidth(); }
-
-    double GetPredictedDNDS(int cond) const {
-        double mean = 0;
-        for (int i = 0; i < Nsite; i++) {
-            mean += (*condsubmatrixarray)(cond, i).GetPredictedDNDS();
-        }
-        mean /= Nsite;
-        return mean;
-    }
-
 
     //! write complete current parameter configuration to stream
     void ToStream(ostream &os) { os << *this; }
