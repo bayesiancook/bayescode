@@ -4,6 +4,8 @@
 #include <vector>
 #include "Random.hpp"
 using std::vector;
+using indicator_t = int;  // FIXME? any benefit to change to char?
+
 
 /*--------------------------------------------------------------------------------------------------
   Type aliases to make delcarations more informative */
@@ -41,13 +43,16 @@ void set_all_to(vector<vector<T>>& data, int count_x, int count_y, T value) {
 
 /*--------------------------------------------------------------------------------------------------
   Counting bools set to true in vectors */
-int count_indicators(vector<bool>& data) {
+int count_indicators(vector<indicator_t>& data) {
     int result = 0;
-    for (auto ind : data) { result += ind ? 1 : 0; }
+    for (auto ind : data) {
+        assert(ind == 0 or ind == 1);
+        result += ind > 0 ? 1 : 0;
+    }
     return result;
 }
 
-int count_indicators(vector<vector<bool>>& data) {
+int count_indicators(vector<vector<indicator_t>>& data) {
     int result = 0;
     for (auto&& subvector : data) { result += count_indicators(subvector); }
     return result;
@@ -55,48 +60,48 @@ int count_indicators(vector<vector<bool>>& data) {
 
 /*--------------------------------------------------------------------------------------------------
   Drawing vector of indicators from iid bernoullis */
-void draw_bernoulli_iid(vector<bool>& data, double prob) {
+void draw_bernoulli_iid(vector<indicator_t>& data, double prob) {
     assert(prob >= 0 and prob <= 1);
     std::bernoulli_distribution distrib(prob);
     for (auto&& elem : data) { elem = distrib(Random::global_gen); }
 }
 
-void draw_bernoulli_iid(vector<vector<bool>>& data, const vector<double>& probs) {
+void draw_bernoulli_iid(vector<vector<indicator_t>>& data, const vector<double>& probs) {
     assert(probs.size() == data.size());
     for (size_t i = 0; i < data.size(); i++) { draw_bernoulli_iid(data.at(i), probs.at(i)); }
 }
 
-void draw_bernoulli_iid(vector<vector<bool>>& data, double prob) {
+void draw_bernoulli_iid(vector<vector<indicator_t>>& data, double prob) {
     assert(prob >= 0 and prob <= 1);
     for (auto&& subvector : data) { draw_bernoulli_iid(subvector, prob); }
 }
 
-void draw_bernoulli_iid(vector<bool>& data, int count, double prob) {
+void draw_bernoulli_iid(vector<indicator_t>& data, int count, double prob) {
     assert(count >= 0);
     assert(prob >= 0 and prob <= 1);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
 
-    data = vector<bool>(count, false);
+    data = vector<indicator_t>(count, false);
     std::bernoulli_distribution distrib(prob);
     for (auto&& elem : data) { elem = distrib(Random::global_gen); }
 }
 
 void draw_bernoulli_iid(
-    vector<vector<bool>>& data, int count_x, int count_y, const vector<double>& probs) {
+    vector<vector<indicator_t>>& data, int count_x, int count_y, const vector<double>& probs) {
     /* -- */
     assert(count_x >= 0 and count_y >= 0);
     assert(probs.size() == data.size());
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
 
-    data = vector<vector<bool>>(count_x, vector<bool>(count_y, false));
+    data = vector<vector<indicator_t>>(count_x, vector<indicator_t>(count_y, false));
     for (size_t i = 0; i < data.size(); i++) { draw_bernoulli_iid(data.at(i), probs.at(i)); }
 }
 
-void draw_bernoulli_iid(vector<vector<bool>>& data, int count_x, int count_y, double prob) {
+void draw_bernoulli_iid(vector<vector<indicator_t>>& data, int count_x, int count_y, double prob) {
     assert(count_x >= 0 and count_y >= 0);
     assert(prob >= 0 and prob <= 1);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
 
-    data = vector<vector<bool>>(count_x, vector<bool>(count_y, false));
+    data = vector<vector<indicator_t>>(count_x, vector<indicator_t>(count_y, false));
     for (auto&& subvector : data) { draw_bernoulli_iid(subvector, prob); }
 }

@@ -155,7 +155,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // double sw_toggle_hypermean{0.0};
     // double sw_toggle_hyperinvshape{0.0};
     cond_vector<double> sw_toggle_prob;
-    cond_vector<site_vector<bool>> sw_toggles;
+    cond_vector<site_vector<indicator_t>> sw_toggles;
 
     // Branch lengths
     double blhypermean;
@@ -448,6 +448,40 @@ class DiffSelDoublySparseModel : public ChainComponent {
         suffstatarray = std::make_unique<PathSuffStatBidimArray>(Ncond, Nsite);
     }
 
+    // toggle accessors (should be removed ideally)
+    indicator_t &get_toggle(int condition, int site, int aa) {
+        assert(condition >= 0 and condition < Ncond);
+#ifndef NDEBUG
+        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
+#endif
+        return site_wise ? sw_toggles[condition][site] : (*toggle)(condition - 1, site)[aa];
+    }
+
+    const indicator_t &get_toggle(int condition, int site, int aa) const {
+        assert(condition >= 0 and condition < Ncond);
+#ifndef NDEBUG
+        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
+#endif
+        return site_wise ? sw_toggles[condition][site] : (*toggle)(condition - 1, site)[aa];
+    }
+
+    indicator_t &get_toggle(int condition, int site) {
+        assert(condition >= 0 and condition < Ncond);
+        assert(site_wise);
+#ifndef NDEBUG
+        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
+#endif
+        return sw_toggles[condition][site];
+    }
+
+    const indicator_t &get_toggle(int condition, int site) const {
+        assert(condition >= 0 and condition < Ncond);
+        assert(site_wise);
+#ifndef NDEBUG
+        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
+#endif
+        return sw_toggles[condition][site];
+    }
 
     //! \brief set estimation method for nuc rates
     //!
@@ -887,7 +921,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 // and conditions before the move
                 for (int k = 0; k < Ncond; k++) {
                     for (int a = 0; a < Naa; a++) {
-                        if ((mask[k]) && ((!k) || ((*toggle)(k - 1, i)[a]))) {
+                        if ((mask[k]) && ((!k) || (get_toggle(k, i, a)))) {
                             double alpha = fitnessshape * fitnesscenter[a];
                             deltalogprob -= -Random::logGamma(alpha) +
                                             (alpha - 1) * log((*fitness)(k, i)[a]) -
@@ -904,7 +938,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 int n = 0;
                 for (int k = 0; k < Ncond; k++) {
                     for (int a = 0; a < Naa; a++) {
-                        if ((mask[k]) && ((!k) || ((*toggle)(k - 1, i)[a]))) {
+                        if ((mask[k]) && ((!k) || (get_toggle(k, i, a)))) {
                             (*fitness)(k, i)[a] *= e;
                             n++;
                         }
@@ -917,7 +951,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 // and conditions after the move
                 for (int k = 0; k < Ncond; k++) {
                     for (int a = 0; a < Naa; a++) {
-                        if ((mask[k]) && ((!k) || ((*toggle)(k - 1, i)[a]))) {
+                        if ((mask[k]) && ((!k) || (get_toggle(k, i, a)))) {
                             double alpha = fitnessshape * fitnesscenter[a];
                             deltalogprob += -Random::logGamma(alpha) +
                                             (alpha - 1) * log((*fitness)(k, i)[a]) -
@@ -935,7 +969,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     // restore previous value for active fitness parameters
                     for (int k = 0; k < Ncond; k++) {
                         for (int a = 0; a < Naa; a++) {
-                            if ((mask[k]) && ((!k) || ((*toggle)(k - 1, i)[a]))) {
+                            if ((mask[k]) && ((!k) || (get_toggle(k, i, a)))) {
                                 (*fitness)(k, i)[a] /= e;
                             }
                         }
@@ -1053,7 +1087,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
                 vector<double> &x = (*fitness)(k, i);
-                const vector<int> &t = (*toggle)(k - 1, i);
                 const vector<int> &m = sitemaskarray->GetVal(i);
 
                 // compute condition-specific mask, which is the conjunction of baseline
@@ -1068,7 +1101,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 int nshift = 0;
                 int nmask = 0;
                 for (int a = 0; a < Naa; a++) {
-                    s[a] = t[a] * m[a];
+                    s[a] = get_toggle(k, i, a) * m[a];
                     nmask += m[a];
                     nshift += s[a];
                 }
@@ -1159,12 +1192,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
+            // const vector<int> &t = (*toggle)(k - 1, i);
             const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
-                ns += m[a] * t[a];
+                ns += m[a] * get_toggle(k, i, a);
                 nm += m[a];
             }
 
@@ -1206,12 +1239,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetNShift(int k) const {
         int nshift = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
             const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
-                ns += m[a] * t[a];
+                ns += m[a] * get_toggle(k, i, a);
                 nm += m[a];
             }
 
@@ -1246,12 +1278,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const vector<int> &t = (*toggle)(k - 1, i);
             const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
-                ns += m[a] * t[a];
+                ns += m[a] * get_toggle(k, i, a);
                 nm += m[a];
             }
 
@@ -1371,8 +1402,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
-                            (*toggle)(k - 1, i)[a] = (Random::Uniform() < shiftprob[k - 1]);
-                            if ((*toggle)(k - 1, i)[a]) {
+                            get_toggle(k, i, a) = (Random::Uniform() < shiftprob[k - 1]);
+                            if (get_toggle(k, i, a)) {
                                 (*fitness)(k, i)[a] =
                                     Random::sGamma(fitnessshape * fitnesscenter[a]);
                                 if (!(*fitness)(k, i)[a]) {
@@ -1410,8 +1441,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
-                            (*toggle)(k - 1, i)[b] = (Random::Uniform() < shiftprob[k - 1]);
-                            if ((*toggle)(k - 1, i)[b]) {
+                            get_toggle(k, i, b) = (Random::Uniform() < shiftprob[k - 1]);
+                            if (get_toggle(k, i, b)) {
                                 (*fitness)(k, i)[b] =
                                     Random::sGamma(fitnessshape * fitnesscenter[b]);
                                 if (!(*fitness)(k, i)[b]) {
@@ -1582,7 +1613,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     assert(site_mask[index] > 0);
 
                     int chosen_aa = index;
-                    int &chosen_toggle_ref = (*toggle)(k - 1, i)[chosen_aa];
+                    int &chosen_toggle_ref = get_toggle(k, i, chosen_aa);
                     double &chosen_aa_fitness_ref = (*fitness)(k, i)[chosen_aa];
 
                     double logprob_before =
