@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include "Eigen/Dense"
 //
 // c++11
@@ -8,7 +9,6 @@
 
 typedef Eigen::MatrixXd EMatrix;
 typedef Eigen::VectorXd EVector;
-
 
 #define MT_LEN 624  // (VL) required for magic
 #include <vector>
@@ -27,6 +27,10 @@ const double Pi = 3.1415926535897932384626;
 
 class Random {
   public:
+    // MODERN RANDOM DECLARATIONS
+    // to be used in refactored parts of the code
+    static std::mt19937 global_gen;
+
     static const double INFPROB;
 
     Random(int seed = -1);

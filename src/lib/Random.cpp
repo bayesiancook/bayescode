@@ -25,24 +25,21 @@ const double gammacoefs[] = {0.9999999999995183, 676.5203681218835, -1259.139216
     0.9934937113930748e-05, 0.1659470187408462e-06};
 // const double Logroot2pi = 0.918938533204673;
 
-// -------------------------------------------------
-// just a trick for random number initialisation
-// function to be called before entering main()
-class random_init {
-  public:
-    random_init() {
-        Random::InitRandom();
-        INFO("Random seed is {}", Random::GetSeed());
-    }
-};
-
-static random_init init;
-
+std::mt19937 Random::global_gen(0);
 int Random::Seed = 0;
 int Random::mt_index = 0;
 unsigned long long Random::mt_buffer[MT_LEN];
 
 const double Random::INFPROB = -250;
+
+// -------------------------------------------------
+// just a trick for random number initialisation
+// function to be called before entering main()
+class random_init {
+  public:
+    random_init() { Random::InitRandom(); }
+};
+static random_init init;
 
 // ---------------------------------------------------------------------------------
 //		Random()
@@ -54,7 +51,13 @@ void Random::InitRandom(int seed) {
         seed = tod.tv_usec;
     }
     Seed = seed;
+    std::mt19937 tmp_gen(seed);
+    auto std_seed = tmp_gen();
+    INFO("Old Random seed set to {}. Std seed set to {}.", seed, std_seed);
     srand(seed);
+    global_gen = std::mt19937(std_seed);
+    // global_gen.seed(19);  // just to avoid passing the exact same seed
+
     int i;
 
     if (RAND_MAX == 32767) {
