@@ -48,9 +48,15 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 #include "components/param_enums.hpp"
+#include "components/probnode_utils.hpp"
 #include "global/logging.hpp"
 #include "tree/implem.hpp"
 
+using std::istream;
+using std::ostream;
+using std::string;
+using std::unique_ptr;
+using std::vector;
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
  * DiffSelModel and DiffSelSparseModel)
@@ -98,8 +104,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // model selectors
     // -----
 
-    std::string datafile;
-    std::string treefile;
+    string datafile;
+    string treefile;
     int codonmodel;
     param_mode_t blmode;             // branch lengths fixed or sampled
     param_mode_t nucmode;            // mutation matrix parameters fixed or sampled
@@ -118,9 +124,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // external parameters
     // -----
 
-    std::unique_ptr<const Tree> tree;
-    std::unique_ptr<FileSequenceAlignment> data;
-    std::unique_ptr<CodonSequenceAlignment> codondata;
+    unique_ptr<const Tree> tree;
+    unique_ptr<FileSequenceAlignment> data;
+    unique_ptr<CodonSequenceAlignment> codondata;
 
     // number of sites
     int Nsite;
@@ -138,37 +144,44 @@ class DiffSelDoublySparseModel : public ChainComponent {
     int Nlevel;
 
     // which branch is under which condition
-    std::unique_ptr<SimpleBranchArray<int>> branchalloc;
+    unique_ptr<SimpleBranchArray<int>> branchalloc;
 
     // -----
     //  model structure
     // -----
 
+    // Site-wise nodes and toggles
+    bool site_wise{false};
+    // double sw_toggle_hypermean{0.0};
+    // double sw_toggle_hyperinvshape{0.0};
+    cond_vector<double> sw_toggle_prob;
+    cond_vector<site_vector<bool>> sw_toggles;
+
     // Branch lengths
     double blhypermean;
     double blhyperinvshape;
-    std::unique_ptr<SimpleBranchArray<double>> blhypermeanarray;
-    std::unique_ptr<GammaWhiteNoise> branchlength;
-    std::unique_ptr<PoissonSuffStatBranchArray> lengthpathsuffstatarray;
+    unique_ptr<SimpleBranchArray<double>> blhypermeanarray;
+    unique_ptr<GammaWhiteNoise> branchlength;
+    unique_ptr<PoissonSuffStatBranchArray> lengthpathsuffstatarray;
 
     // nucleotide exchange rates and equilibrium frequencies (stationary
     // probabilities) hyperparameters
-    std::vector<double> nucrelratehypercenter;
+    vector<double> nucrelratehypercenter;
     double nucrelratehyperinvconc;
-    std::vector<double> nucstathypercenter;
+    vector<double> nucstathypercenter;
     double nucstathyperinvconc;
     // parameters
-    std::vector<double> nucrelrate;
-    std::vector<double> nucstat;
-    std::unique_ptr<GTRSubMatrix> nucmatrix;
+    vector<double> nucrelrate;
+    vector<double> nucstat;
+    unique_ptr<GTRSubMatrix> nucmatrix;
 
     double fitnessshape;
-    std::vector<double> fitnesscenter;
-    std::unique_ptr<BidimIIDMultiGamma> fitness;
+    vector<double> fitnesscenter;
+    unique_ptr<BidimIIDMultiGamma> fitness;
 
     double maskprob;
     double maskepsilon;
-    std::unique_ptr<IIDProfileMask> sitemaskarray;
+    unique_ptr<IIDProfileMask> sitemaskarray;
 
     // shiftprob (across conditions):
     // either Beta(shiftprobhypermean,shiftprobhyperinvconc), estimated across
@@ -177,40 +190,40 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double pihypermean;
     double shiftprobmean;
     double shiftprobinvconc;
-    std::vector<double> pi;
-    std::vector<double> shiftprobhypermean;
-    std::vector<double> shiftprobhyperinvconc;
-    std::vector<double> shiftprob;
+    vector<double> pi;
+    vector<double> shiftprobhypermean;
+    vector<double> shiftprobhyperinvconc;
+    vector<double> shiftprob;
 
-    std::unique_ptr<BidimIIDMultiBernoulli> toggle;
+    unique_ptr<BidimIIDMultiBernoulli> toggle;
 
     // fitness profiles (combinations of baseline and delta)
     // across conditions and across sites
-    std::unique_ptr<DiffSelDoublySparseFitnessArray> fitnessprofile;
+    unique_ptr<DiffSelDoublySparseFitnessArray> fitnessprofile;
 
     // codon substitution matrices
     // across conditions and sites
-    std::unique_ptr<AADiffSelCodonMatrixBidimArray> condsubmatrixarray;
+    unique_ptr<AADiffSelCodonMatrixBidimArray> condsubmatrixarray;
 
     // branch- and site-substitution matrices (for phyloprocess)
-    std::unique_ptr<SubMatrixSelector> submatrixarray;
+    unique_ptr<SubMatrixSelector> submatrixarray;
     // and for root (condition 0)
-    std::unique_ptr<RootSubMatrixSelector> rootsubmatrixarray;
+    unique_ptr<RootSubMatrixSelector> rootsubmatrixarray;
 
     // phyloprocess
-    std::unique_ptr<PhyloProcess> phyloprocess;
+    unique_ptr<PhyloProcess> phyloprocess;
 
     // suff stats
 
     // path suff stats across conditions and sites
-    std::unique_ptr<PathSuffStatBidimArray> suffstatarray;
+    unique_ptr<PathSuffStatBidimArray> suffstatarray;
 
     MultiGammaSuffStat hyperfitnesssuffstat;
 
     int gammanullcount;
 
   public:
-    friend std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel &m);
+    friend ostream &operator<<(ostream &os, DiffSelDoublySparseModel &m);
 
     //! \brief constructor
     //!
@@ -233,10 +246,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
-    DiffSelDoublySparseModel(const std::string &datafile, const std::string &treefile, int inNcond,
+    DiffSelDoublySparseModel(const string &datafile, const string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
         double inshiftprobmean, double inshiftprobinvconc,
-        param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true)
+        param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true,
+        bool site_wise = true)
         : datafile(datafile),
           treefile(treefile),
           codonmodel(incodonmodel),
@@ -246,6 +260,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
           withtoggle(withtoggle),
           Ncond(inNcond),
           Nlevel(inNlevel),
+          site_wise(site_wise),
           pihypermean(inpihypermean),
           shiftprobmean(inshiftprobmean),
           shiftprobinvconc(inshiftprobinvconc),
@@ -300,7 +315,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! read files (and read out the distribution of conditions across branches,
     //! based on the tree read from treefile)
-    void ReadFiles(std::string datafile, std::string treefile) {
+    void ReadFiles(string datafile, string treefile) {
         INFO("Parsing nucleotide sequence alignment...");
         data = std::make_unique<FileSequenceAlignment>(datafile);
 
@@ -330,7 +345,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     return condition;
                 }
             });
-        // std::vector<int> iv(v.size(), 0);
+        // vector<int> iv(v.size(), 0);
         // for (size_t i = 0; i < v.size(); i++) {
         //     iv[i] = atoi(v[i].c_str());
         //     if (iv[i] >= Ncond) { iv[i] = Ncond - 1; }
@@ -343,8 +358,14 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // ----------
         // construction of the model
         // ----------
-
         // allocating data structures and sampling initial configuration
+
+        if (site_wise) {
+            set_all_to(sw_toggle_prob, Ncond, 0.02);
+            draw_bernoulli_iid(sw_toggles, Ncond, Nsite, sw_toggle_prob);
+            INFO("Site-wise nodes: {} toggles in condition 1 on out of {} sites",
+                count_indicators(sw_toggles.at(1)), Nsite);
+        }
 
         // Branch lengths
         blhypermean = 0.1;
@@ -361,9 +382,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         // nucleotide mutation matrix
         nucrelrate.assign(Nrr, 0);
-        Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        Random::DirichletSample(nucrelrate, vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
         nucstat.assign(Nnuc, 0);
-        Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        Random::DirichletSample(nucstat, vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
         nucmatrix = std::make_unique<GTRSubMatrix>(Nnuc, nucrelrate, nucstat, true);
 
         // fitness parameters: IID Gamma, across all conditions, sites, and
@@ -465,8 +486,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
-    void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
-        double innucrelratehyperinvconc, const std::vector<double> &innucstathypercenter,
+    void SetNucRatesHyperParameters(const vector<double> &innucrelratehypercenter,
+        double innucrelratehyperinvconc, const vector<double> &innucstathypercenter,
         double innucstathyperinvconc) {
         nucrelratehypercenter = innucrelratehypercenter;
         nucrelratehyperinvconc = innucrelratehyperinvconc;
@@ -475,8 +496,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! set nucleotide rates to a new value (multi-gene analyses)
-    void SetNucRates(
-        const std::vector<double> &innucrelrate, const std::vector<double> &innucstat) {
+    void SetNucRates(const vector<double> &innucrelrate, const vector<double> &innucstat) {
         nucrelrate = innucrelrate;
         nucstat = innucstat;
         CorruptMatrices();
@@ -484,7 +504,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! copy nucleotide rates into vectors given as arguments (multi-gene
     //! analyses)
-    void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
+    void GetNucRates(vector<double> &innucrelrate, vector<double> &innucstat) const {
         innucrelrate = nucrelrate;
         innucstat = nucstat;
     }
@@ -494,16 +514,15 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! set shift prob hyperparameters (pi, shiftprobhypermean and hyperinvconc)
     //! to specified values (used in multi-gene context)
-    void SetShiftProbHyperParameters(const std::vector<double> &inpi,
-        const std::vector<double> &inshiftprobhypermean,
-        const std::vector<double> &inshiftprobhyperinvconc) {
+    void SetShiftProbHyperParameters(const vector<double> &inpi,
+        const vector<double> &inshiftprobhypermean, const vector<double> &inshiftprobhyperinvconc) {
         pi = inpi;
         shiftprobhypermean = inshiftprobhypermean;
         shiftprobhyperinvconc = inshiftprobhyperinvconc;
     }
 
     //! const access to shift prob vector
-    const std::vector<double> &GetShiftProbVector() const { return shiftprob; }
+    const vector<double> &GetShiftProbVector() const { return shiftprob; }
 
     //! get a copy of fitness array (for all sites and amino-acids) for condition
     //! k
@@ -536,12 +555,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! const ref access to toggles for condition k=1..Ncond
-    const std::vector<std::vector<int>> &GetCondToggleArray(int k) const {
+    const vector<vector<int>> &GetCondToggleArray(int k) const {
         return toggle->GetSubArray(k - 1);
     }
 
     //! const ref access to masks across sites
-    const std::vector<std::vector<int>> &GetMaskArray() const { return sitemaskarray->GetArray(); }
+    const vector<vector<int>> &GetMaskArray() const { return sitemaskarray->GetArray(); }
 
     //! const access to low-fitness background value (mask epsilon)
     double GetMaskEpsilon() const { return maskepsilon; }
@@ -553,7 +572,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         ResampleSub(1.0);
     }
 
-    void PostPred(std::string name) {
+    void PostPred(string name) {
         UpdateMask();
         fitness->SetShape(fitnessshape);
         UpdateAll();
@@ -862,7 +881,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                const std::vector<int> &mask = (*sitemaskarray)[i];
+                const vector<int> &mask = (*sitemaskarray)[i];
 
                 double deltalogprob = 0;
 
@@ -952,11 +971,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double MoveAllBaselineFitness(double tuning, int n, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        std::vector<double> bk(Naa, 0);
+        vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                std::vector<double> &x = (*fitness)(0, i);
+                vector<double> &x = (*fitness)(0, i);
 
                 bk = x;
 
@@ -986,12 +1005,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double MoveBaselineFitness(double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        std::vector<double> bk(Naa, 0);
+        vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                std::vector<double> &fit = (*fitness)(0, i);
-                const std::vector<int> &mask = (*sitemaskarray)[i];
+                vector<double> &fit = (*fitness)(0, i);
+                const vector<int> &mask = (*sitemaskarray)[i];
 
                 bk = fit;
 
@@ -1031,19 +1050,19 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double MoveFitnessShifts(int k, double tuning, int nrep) {
         double nacc = 0;
         double ntot = 0;
-        std::vector<double> bk(Naa, 0);
+        vector<double> bk(Naa, 0);
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int i = 0; i < Nsite; i++) {
-                std::vector<double> &x = (*fitness)(k, i);
-                const std::vector<int> &t = (*toggle)(k - 1, i);
-                const std::vector<int> &m = sitemaskarray->GetVal(i);
+                vector<double> &x = (*fitness)(k, i);
+                const vector<int> &t = (*toggle)(k - 1, i);
+                const vector<int> &m = sitemaskarray->GetVal(i);
 
                 // compute condition-specific mask, which is the conjunction of baseline
                 // mask and condition-specific vector of toggles: s = m*t this mask
                 // specifies which amino-acids are both active (across the tree) and
                 // undergoing a fitness shift in current condition
-                std::vector<int> s(Naa, 0);
+                vector<int> s(Naa, 0);
 
                 // nshift: number of amino-acids that are active in baseline and
                 // undergoing a fitness shift in current condition nmask : number of
@@ -1142,8 +1161,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const std::vector<int> &t = (*toggle)(k - 1, i);
-            const std::vector<int> &m = sitemaskarray->GetVal(i);
+            const vector<int> &t = (*toggle)(k - 1, i);
+            const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1189,8 +1208,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetNShift(int k) const {
         int nshift = 0;
         for (int i = 0; i < Nsite; i++) {
-            const std::vector<int> &t = (*toggle)(k - 1, i);
-            const std::vector<int> &m = sitemaskarray->GetVal(i);
+            const vector<int> &t = (*toggle)(k - 1, i);
+            const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1209,7 +1228,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     double GetNTarget() const {
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const std::vector<int> &m = sitemaskarray->GetVal(i);
+            const vector<int> &m = sitemaskarray->GetVal(i);
             int nm = 0;
             for (int a = 0; a < Naa; a++) { nm += m[a]; }
 
@@ -1229,8 +1248,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const std::vector<int> &t = (*toggle)(k - 1, i);
-            const std::vector<int> &m = sitemaskarray->GetVal(i);
+            const vector<int> &t = (*toggle)(k - 1, i);
+            const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1263,8 +1282,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         int nshift = 0;
         int nmask = 0;
         for (int i = 0; i < Nsite; i++) {
-            const std::vector<int> &t = (*toggle)(k - 1, i);
-            const std::vector<int> &m = sitemaskarray->GetVal(i);
+            const vector<int> &t = (*toggle)(k - 1, i);
+            const vector<int> &m = sitemaskarray->GetVal(i);
             int ns = 0;
             int nm = 0;
             for (int a = 0; a < Naa; a++) {
@@ -1322,7 +1341,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         double ntot = 0;
 
         for (int i = 0; i < Nsite; i++) {
-            std::vector<int> &mask = (*sitemaskarray)[i];
+            vector<int> &mask = (*sitemaskarray)[i];
 
             // compute number of active entries
             int naa = 0;
@@ -1472,7 +1491,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             int nmask{0};
         };
 
-        std::vector<mask_counts_t> counts;
+        vector<mask_counts_t> counts;
         mask_counts_t totals;
 
         void add_shift(int site) {
@@ -1549,7 +1568,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             for (int i = 0; i < Nsite; i++) {         // for every site...
                 assert(mask_counts.check(*this, k));  // checking mask_count consistency (costly)
 
-                const std::vector<int> &site_mask = sitemaskarray->GetVal(i);
+                const vector<int> &site_mask = sitemaskarray->GetVal(i);
 
                 int nb_active = mask_counts.nb_active(i);
                 // do move only if there are at least 2 active amino-acids
@@ -1638,7 +1657,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
 
     //! write complete current parameter configuration to stream
-    void ToStream(std::ostream &os) { os << *this; }
+    void ToStream(ostream &os) { os << *this; }
 
     template <class Info>
     void declare_interface(Info info) {
@@ -1679,10 +1698,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 };
 
-std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseModel> &m) {
-    std::string model_name;
-    std::string datafile;
-    std::string treefile;
+istream &operator>>(istream &is, unique_ptr<DiffSelDoublySparseModel> &m) {
+    string model_name;
+    string datafile;
+    string treefile;
     int Ncond, Nlevel, codonmodel;
     int fitnessshapemode, fitnesscentermode;  // implicit cast of enum into int
     double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc;
@@ -1704,7 +1723,7 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DiffSelDoublySparseMo
     return is;
 }
 
-std::ostream &operator<<(std::ostream &os, DiffSelDoublySparseModel &m) {
+ostream &operator<<(ostream &os, DiffSelDoublySparseModel &m) {
     Tracer tracer{m};
     os << "DiffselDoublySparse" << '\t';
     os << m.datafile << '\t';
