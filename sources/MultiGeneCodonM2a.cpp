@@ -124,6 +124,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             cerr << "Error : cannot find file : " << name << ".param\n";
             exit(1);
         }
+
+
         is >> modeltype;
         is >> datapath >> datafile >> treefile;
         is >> writegenedata;
@@ -135,11 +137,17 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
         is >> poswhypermean >> poswhyperinvconc;
         is >> modalprior;
 
+        // bug: this was not in param file
+        purommode = 1;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "Error when reading model\n";
-            exit(1);
+            is >> purommode;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "Error when reading model\n";
+                exit(1);
+            }
         }
         is >> every >> until >> size;
 
@@ -194,6 +202,8 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             param_os << purwhypermean << '\t' << purwhyperinvconc << '\n';
             param_os << poswhypermean << '\t' << poswhyperinvconc << '\n';
             param_os << modalprior << '\n';
+            param_os << 1 << '\n';
+            param_os << purommode << '\n';
             param_os << 0 << '\n';
             param_os << every << '\t' << until << '\t' << size << '\n';
             GetModel()->MasterToStream(param_os);
