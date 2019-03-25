@@ -3,6 +3,7 @@
 #include "Array.hpp"
 #include "BidimArray.hpp"
 #include "Random.hpp"
+#include "components/probnode_utils.hpp"
 
 /**
  * \brief An array of site- and condition-specific fitness profiles -- sparse
@@ -119,13 +120,13 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
   public:
     //! constructor, parameterized by input fitness array, toggle array and Nlevel
     DiffSelDoublySparseFitnessArray(const BidimSelector<std::vector<double>> &infitness,
-        const Selector<std::vector<int>> &inmask, const BidimSelector<std::vector<int>> &intoggle,
-        int inNlevel, const double &inepsilon)
+        const Selector<std::vector<int>> &inmask,
+        std::function<indicator_t(int, int, int)> intoggle, int inNlevel, const double &inepsilon)
         : SimpleBidimArray<std::vector<double>>(infitness.GetNrow(), infitness.GetNcol(),
               std::vector<double>(infitness.GetVal(0, 0).size(), 0)),
           fitness(infitness),
           mask(inmask),
-          toggle(intoggle),
+          get_toggle(intoggle),
           epsilon(inepsilon),
           Nlevel(inNlevel) {
         Update();
@@ -154,10 +155,10 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
             if (mask.GetVal(j)[k]) {
                 int l = 0;
                 if (i > 0) {
-                    if (toggle.GetVal(i - 1, j)[k]) {
+                    if (get_toggle(i, j, k)) {
                         l = i;
                     } else {
-                        if ((Nlevel == 2) && (toggle.GetVal(0, j)[k])) { l = 1; }
+                        if ((Nlevel == 2) && (get_toggle(1, j, k))) { l = 1; }
                     }
                 }
                 x[k] = fitness.GetVal(l, j)[k];
@@ -172,7 +173,8 @@ class DiffSelDoublySparseFitnessArray : public SimpleBidimArray<std::vector<doub
   protected:
     const BidimSelector<std::vector<double>> &fitness;
     const Selector<std::vector<int>> &mask;
-    const BidimSelector<std::vector<int>> &toggle;
+    std::function<indicator_t(int, int, int)> get_toggle;
+    // const BidimSelector<std::vector<int>> &toggle;
     const double &epsilon;
     int Nlevel;
 };

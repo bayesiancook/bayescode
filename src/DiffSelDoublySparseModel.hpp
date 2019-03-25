@@ -494,8 +494,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // sitemaskarray[i][a] == 1 : fitnessprofile(k,i)[a] determined by the
         // system of fitness(0:Ncond,i)[a] and toggle(1:Ncond,i)[a] as in the simple
         // DiffSelSparseModel
-        fitnessprofile = std::make_unique<DiffSelDoublySparseFitnessArray>(
-            *fitness, *sitemaskarray, *toggle, Nlevel, maskepsilon);
+        fitnessprofile = std::make_unique<DiffSelDoublySparseFitnessArray>(*fitness, *sitemaskarray,
+            [this](int k, int i, int aa) { return get_toggle(k, i, aa); }, Nlevel, maskepsilon);
 
         // codon matrices
         // per condition and per site
@@ -1408,12 +1408,12 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // ----------------------------------------
 
     // toggle move for the site-wise case
-    double move_site_toggles(int k, int nrep) {
+    double move_sw_toggles(int cond, int nrep) {
         // TODO: change to ss format (separate class)
         int sw_nb_on = 0;  // counting sw toggles that are turned on
         for (int site = 0; site < Nsite; site++) {
-            assert(sw_toggles.at(k).at(site) == 0 or sw_toggles.at(k).at(site) == 1);
-            sw_nb_on += sw_toggles.at(k).at(site);
+            assert(sw_toggles.at(cond).at(site) == 0 or sw_toggles.at(cond).at(site) == 1);
+            sw_nb_on += sw_toggles.at(cond).at(site);
         }
 
         AcceptanceStats acceptance_stats;
@@ -1421,18 +1421,29 @@ class DiffSelDoublySparseModel : public ChainComponent {
         for (int rep = 0; rep < nrep; rep++) {
             for (int site = 0; site < Nsite; site++) {
                 double log_prob_before = SiteSuffStatLogProb(site) +
-                                         sw_nb_on * log(sw_toggle_prob.at(k)) +
-                                         (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(k));
+                                         sw_nb_on * log(sw_toggle_prob.at(cond)) +
+                                         (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
 
-                auto &togref = sw_toggles.at(k).at(site);
+                auto &togref = sw_toggles.at(cond).at(site);
                 assert(togref == 1 or togref == 0);
                 togref = 1 - togref;          // change value
                 sw_nb_on += togref ? 1 : -1;  // update toggle count
                 UpdateSite(site);             // update site logprobs
 
+                if (togref == 1) {  // if toggle turned on then redraw fitness for all aas
+                    for (int aa = 0; aa < Naa; aa++) {
+                        auto &tmp_fitness_ref = (*fitness)(cond, site).at(aa);
+                        tmp_fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
+                        if (tmp_fitness_ref == 0) {
+                            gammanullcount++;
+                            tmp_fitness_ref = 1e-8;
+                        }
+                    }
+                }
+
                 double log_prob_after = SiteSuffStatLogProb(site) +
-                                        sw_nb_on * log(sw_toggle_prob.at(k)) +
-                                        (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(k));
+                                        sw_nb_on * log(sw_toggle_prob.at(cond)) +
+                                        (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
 
                 double acceptance_prob = log_prob_after - log_prob_before;
                 if (decide(acceptance_prob)) {
