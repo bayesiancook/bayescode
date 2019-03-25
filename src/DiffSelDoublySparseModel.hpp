@@ -44,9 +44,9 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "PathSuffStat.hpp"
 #include "PhyloProcess.hpp"
 #include "SubMatrixSelector.hpp"
-#include "components/AcceptanceStats.hpp"
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
+#include "components/mh_utils.hpp"
 #include "components/param_enums.hpp"
 #include "components/probnode_utils.hpp"
 #include "global/logging.hpp"
@@ -1407,6 +1407,47 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // Toggle-related move and utilities
     // ----------------------------------------
 
+    // toggle move for the site-wise case
+    double move_site_toggles(int k, int nrep) {
+        // TODO: change to ss format (separate class)
+        int sw_nb_on = 0;  // counting sw toggles that are turned on
+        for (int site = 0; site < Nsite; site++) {
+            assert(sw_toggles.at(k).at(site) == 0 or sw_toggles.at(k).at(site) == 1);
+            sw_nb_on += sw_toggles.at(k).at(site);
+        }
+
+        AcceptanceStats acceptance_stats;
+
+        for (int rep = 0; rep < nrep; rep++) {
+            for (int site = 0; site < Nsite; site++) {
+                double log_prob_before = SiteSuffStatLogProb(site) +
+                                         sw_nb_on * log(sw_toggle_prob.at(k)) +
+                                         (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(k));
+
+                auto &togref = sw_toggles.at(k).at(site);
+                assert(togref == 1 or togref == 0);
+                togref = 1 - togref;          // change value
+                sw_nb_on += togref ? 1 : -1;  // update toggle count
+                UpdateSite(site);             // update site logprobs
+
+                double log_prob_after = SiteSuffStatLogProb(site) +
+                                        sw_nb_on * log(sw_toggle_prob.at(k)) +
+                                        (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(k));
+
+                double acceptance_prob = log_prob_after - log_prob_before;
+                if (decide(acceptance_prob)) {
+                    acceptance_stats.accept();
+                } else {
+                    acceptance_stats.reject();
+                    togref = 1 - togref;          // change value
+                    sw_nb_on += togref ? 1 : -1;  // update toggle count
+                    UpdateSite(site);             // update site logprobs
+                }
+            }
+        }
+        return acceptance_stats.ratio();
+    }
+
     //! elementary MH move on toggles
     double move_shift_toggles(int k, int nrep) {
         // to achieve better MCMC mixing, shiftprob[k-1] is integrated out during
@@ -1447,6 +1488,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     double logprob_before = ToggleMarginalLogPrior(get_mask_counts(k).nmask(),
                                                 get_mask_counts(k).nshift(), k) +
                                             SiteSuffStatLogProb(i);
+                    assert(chosen_toggle_ref == 0 or chosen_toggle_ref == 1);
                     chosen_toggle_ref = 1 - chosen_toggle_ref;  // 1->0 or 0->1
 
                     if (chosen_toggle_ref == 1) {  // if toggle turned on then redraw fitness
