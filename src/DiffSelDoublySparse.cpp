@@ -30,6 +30,7 @@ class DiffSelDoublySparseAppArgParse : public BaseArgParse {
         "Inverse concentration of the Beta probability of profile change (0 means very pointed "
         "probability)",
         false, 0.1, "double", cmd};
+    SwitchArg sitewise{"", "sw", "Use model with site-wise convergence toggles", cmd};
     //     ValueArg<int> burnin{"b", "burnin", "Burnin iterations that will be discarded", false, 0,
     //     "int", cmd}; No more burnin: if the model has difficulty starting, we'll think about it
     //     again.
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
             ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
             ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
             ddargs.shiftprobinvconc.getValue(), param_mode_t(ddargs.fitnesscentermode.getValue()),
-            true);
+            true, ddargs.sitewise.getValue());
         model->Update();
     }
 

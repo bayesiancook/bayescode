@@ -28,14 +28,14 @@ void set_all_to(vector<vector<T>>& data, T value) {
 }
 
 template <class T>
-void set_all_to(vector<T>& data, int count, T value) {
+void set_all_to(vector<T>& data, size_t count, T value) {
     assert(count >= 0);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
     data = vector<T>(count, value);
 }
 
 template <class T>
-void set_all_to(vector<vector<T>>& data, int count_x, int count_y, T value) {
+void set_all_to(vector<vector<T>>& data, size_t count_x, size_t count_y, T value) {
     assert(count_x >= 0 and count_y >= 0);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
     data = vector<vector<T>>(count_x, vector<T>(count_y, value));
@@ -43,7 +43,7 @@ void set_all_to(vector<vector<T>>& data, int count_x, int count_y, T value) {
 
 /*--------------------------------------------------------------------------------------------------
   Counting bools set to true in vectors */
-int count_indicators(vector<indicator_t>& data) {
+size_t count_indicators(vector<indicator_t>& data) {
     int result = 0;
     for (auto ind : data) {
         assert(ind == 0 or ind == 1);
@@ -52,7 +52,7 @@ int count_indicators(vector<indicator_t>& data) {
     return result;
 }
 
-int count_indicators(vector<vector<indicator_t>>& data) {
+size_t count_indicators(vector<vector<indicator_t>>& data) {
     int result = 0;
     for (auto&& subvector : data) { result += count_indicators(subvector); }
     return result;
@@ -76,7 +76,7 @@ void draw_bernoulli_iid(vector<vector<indicator_t>>& data, double prob) {
     for (auto&& subvector : data) { draw_bernoulli_iid(subvector, prob); }
 }
 
-void draw_bernoulli_iid(vector<indicator_t>& data, int count, double prob) {
+void draw_bernoulli_iid(vector<indicator_t>& data, size_t count, double prob) {
     assert(count >= 0);
     assert(prob >= 0 and prob <= 1);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
@@ -86,18 +86,19 @@ void draw_bernoulli_iid(vector<indicator_t>& data, int count, double prob) {
     for (auto&& elem : data) { elem = distrib(Random::global_gen); }
 }
 
-void draw_bernoulli_iid(
-    vector<vector<indicator_t>>& data, int count_x, int count_y, const vector<double>& probs) {
+void draw_bernoulli_iid(vector<vector<indicator_t>>& data, size_t count_x, size_t count_y,
+    const vector<double>& probs) {
     /* -- */
     assert(count_x >= 0 and count_y >= 0);
-    assert(probs.size() == data.size());
+    assert(count_x == probs.size());
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }
 
     data = vector<vector<indicator_t>>(count_x, vector<indicator_t>(count_y, false));
     for (size_t i = 0; i < data.size(); i++) { draw_bernoulli_iid(data.at(i), probs.at(i)); }
 }
 
-void draw_bernoulli_iid(vector<vector<indicator_t>>& data, int count_x, int count_y, double prob) {
+void draw_bernoulli_iid(
+    vector<vector<indicator_t>>& data, size_t count_x, size_t count_y, double prob) {
     assert(count_x >= 0 and count_y >= 0);
     assert(prob >= 0 and prob <= 1);
     if (data.size() > 0) { WARNING("Erasing non-empty vector"); }

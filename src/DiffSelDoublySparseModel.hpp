@@ -317,9 +317,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const string &datafile, const string &treefile, int inNcond,
         int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc,
-        param_mode_t fitnesscentermode = param_mode_t::fixed, bool withtoggle = true,
-        bool site_wise = false)
+        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode,
+        bool withtoggle, bool site_wise)
         : datafile(datafile),
           treefile(treefile),
           codonmodel(incodonmodel),
@@ -369,10 +368,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
             "{}\n\tpihypermean: {}\n\tshiftprobmean: {}\n\tshiftprobinvconc: "
             "{}\n\tcodonmodel: {}\n\tblmode: {}\n\tnucmode: {}\n\tfitnessshapemode: "
             "{}\n\tfitnessshape: {}\n\t"
-            "maskepsilon: {}\n\tmaskmode: {}\n\tmaskepsilonmode: {}\n\tNcond: {}\n\tNlevel: {}",
+            "maskepsilon: {}\n\tmaskmode: {}\n\tmaskepsilonmode: {}\n\tNcond: {}\n\tNlevel: "
+            "{}\n\tsite_wise: {}",
             datafile, treefile, fitnesscentermode, withtoggle, pihypermean, shiftprobmean,
             shiftprobinvconc, codonmodel, blmode, nucmode, fitnessshapemode, fitnessshape,
-            maskepsilon, maskmode, maskepsilonmode, Ncond, Nlevel);
+            maskepsilon, maskmode, maskepsilonmode, Ncond, Nlevel, site_wise);
 
         ReadFiles(datafile, treefile);
         Allocate();
@@ -824,7 +824,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 }  // FIXME: why move if fixed?
                 if (withtoggle) {
                     MoveFitnessShifts(weight);
-                    move_shift_toggles(weight);
+                    if (site_wise) {
+                        for (int cond = 1; cond < Ncond; cond++) { move_sw_toggles(cond, 10); }
+                    } else {
+                        move_shift_toggles(weight);
+                    }
                 }
                 if (resampled(fitnessshapemode) || resampled(fitnesscentermode)) {
                     MoveFitnessHyperParameters(10 * weight);
@@ -1613,7 +1617,8 @@ istream &operator>>(istream &is, unique_ptr<DiffSelDoublySparseModel> &m) {
         shiftprobmean >> shiftprobinvconc >> fitnesscentermode;
     m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel, codonmodel,
         maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
-        shiftprobinvconc, param_mode_t(fitnesscentermode));
+        shiftprobinvconc, param_mode_t(fitnesscentermode), true, false);  // FIXME site_wise bool!
+    assert("implemented" == "false");
     Tracer tracer{*m};
     tracer.read_line(is);
     return is;

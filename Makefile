@@ -93,6 +93,8 @@ run-app-tests: all
 	_build/readmutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
 	@make --no-print-directory diffseldsparse
+	@echo "\n\e[35m\e[1m== Diffsel double sparse (site-wise) ========================================\e[0m"
+	@make --no-print-directory diffseldsparse_sw
 
 # @make --no-print-directory run-multigeneglobom-test
 
@@ -135,3 +137,8 @@ mutselomega: _build
 diffseldsparse: all
 		@rm -f delme*.*
 		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx --ncond 2 -e 1 -u 3 tmp
+
+.PHONY: diffseldsparse_sw
+diffseldsparse_sw: all
+		@rm -f delme*.*
+		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx --sw --ncond 2 -e 1 -u 3 tmp
