@@ -526,35 +526,27 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // toggle accessors (should be removed ideally)
     indicator_t &get_toggle(int condition, int site, int aa) {
         assert(condition >= 0 and condition < Ncond);
-#ifndef NDEBUG
-        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
-#endif
+        assert_warn(condition != 0, "Querying toggle for condition 0");
         return site_wise ? sw_toggles[condition][site] : (*toggle)(condition - 1, site)[aa];
     }
 
     const indicator_t &get_toggle(int condition, int site, int aa) const {
         assert(condition >= 0 and condition < Ncond);
-#ifndef NDEBUG
-        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
-#endif
+        assert_warn(condition != 0, "Querying toggle for condition 0");
         return site_wise ? sw_toggles[condition][site] : (*toggle)(condition - 1, site)[aa];
     }
 
     indicator_t &get_toggle(int condition, int site) {
         assert(condition >= 0 and condition < Ncond);
         assert(site_wise);
-#ifndef NDEBUG
-        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
-#endif
+        assert_warn(condition != 0, "Querying toggle for condition 0");
         return sw_toggles[condition][site];
     }
 
     const indicator_t &get_toggle(int condition, int site) const {
         assert(condition >= 0 and condition < Ncond);
         assert(site_wise);
-#ifndef NDEBUG
-        if (condition == 0) { WARNING("Querying toggle for condition 0"); }
-#endif
+        assert_warn(condition != 0, "Querying toggle for condition 0");
         return sw_toggles[condition][site];
     }
 

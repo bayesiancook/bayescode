@@ -77,3 +77,9 @@ inline logger_t global_logger() {
         SPDLOG_CRITICAL(__VA_ARGS__); \
         exit(1);                      \
     }
+#ifndef NDEBUG
+#define assert_warn(condition, ...) \
+    if (not(condition)) { WARNING(__VA_ARGS__); }
+#else
+#define assert_warn(...)
+#endif
