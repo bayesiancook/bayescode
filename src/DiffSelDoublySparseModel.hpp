@@ -1414,11 +1414,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // toggle move for the site-wise case
     double move_sw_toggles(int cond, int nrep) {
         // TODO: change to ss format (separate class)
-        int sw_nb_on = 0;  // counting sw toggles that are turned on
-        for (int site = 0; site < Nsite; site++) {
-            assert(sw_toggles.at(cond).at(site) == 0 or sw_toggles.at(cond).at(site) == 1);
-            sw_nb_on += sw_toggles.at(cond).at(site);
-        }
+        int sw_nb_on =
+            count_indicators(sw_toggles.at(cond));  // counting sw toggles that are turned on
 
         update_mask_counts(cond);
         AcceptanceStats acceptance_stats;  // used for nmask only (and thus not updated here)
