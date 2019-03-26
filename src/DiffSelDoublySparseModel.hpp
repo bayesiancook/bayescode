@@ -1420,43 +1420,46 @@ class DiffSelDoublySparseModel : public ChainComponent {
             sw_nb_on += sw_toggles.at(cond).at(site);
         }
 
-        AcceptanceStats acceptance_stats;
+        update_mask_counts(cond);
+        AcceptanceStats acceptance_stats;  // used for nmask only (and thus not updated here)
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int site = 0; site < Nsite; site++) {
-                double log_prob_before = SiteSuffStatLogProb(site) +
-                                         sw_nb_on * log(sw_toggle_prob.at(cond)) +
-                                         (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
+                if (mask_counts.at(cond - 1).nb_active(site) < 2) {
+                    double log_prob_before = SiteSuffStatLogProb(site) +
+                                             sw_nb_on * log(sw_toggle_prob.at(cond)) +
+                                             (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
 
-                auto &togref = sw_toggles.at(cond).at(site);
-                assert(togref == 1 or togref == 0);
-                togref = 1 - togref;          // change value
-                sw_nb_on += togref ? 1 : -1;  // update toggle count
-                UpdateSite(site);             // update site logprobs
-
-                if (togref == 1) {  // if toggle turned on then redraw fitness for all aas
-                    for (int aa = 0; aa < Naa; aa++) {
-                        auto &tmp_fitness_ref = (*fitness)(cond, site).at(aa);
-                        tmp_fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
-                        if (tmp_fitness_ref == 0) {
-                            gammanullcount++;
-                            tmp_fitness_ref = 1e-8;
-                        }
-                    }
-                }
-
-                double log_prob_after = SiteSuffStatLogProb(site) +
-                                        sw_nb_on * log(sw_toggle_prob.at(cond)) +
-                                        (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
-
-                double acceptance_prob = log_prob_after - log_prob_before;
-                if (decide(acceptance_prob)) {
-                    acceptance_stats.accept();
-                } else {
-                    acceptance_stats.reject();
+                    auto &togref = sw_toggles.at(cond).at(site);
+                    assert(togref == 1 or togref == 0);
                     togref = 1 - togref;          // change value
                     sw_nb_on += togref ? 1 : -1;  // update toggle count
                     UpdateSite(site);             // update site logprobs
+
+                    if (togref == 1) {  // if toggle turned on then redraw fitness for all aas
+                        for (int aa = 0; aa < Naa; aa++) {
+                            auto &tmp_fitness_ref = (*fitness)(cond, site).at(aa);
+                            tmp_fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
+                            if (tmp_fitness_ref == 0) {
+                                gammanullcount++;
+                                tmp_fitness_ref = 1e-8;
+                            }
+                        }
+                    }
+
+                    double log_prob_after = SiteSuffStatLogProb(site) +
+                                            sw_nb_on * log(sw_toggle_prob.at(cond)) +
+                                            (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
+
+                    double acceptance_prob = log_prob_after - log_prob_before;
+                    if (decide(acceptance_prob)) {
+                        acceptance_stats.accept();
+                    } else {
+                        acceptance_stats.reject();
+                        togref = 1 - togref;          // change value
+                        sw_nb_on += togref ? 1 : -1;  // update toggle count
+                        UpdateSite(site);             // update site logprobs
+                    }
                 }
             }
         }
