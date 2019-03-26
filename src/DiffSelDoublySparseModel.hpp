@@ -571,6 +571,22 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return get_mask_counts(condition).check(*this, condition);
     }
 
+    // resample fitness
+    void resample_fitness(int cond, int site, int aa) {
+        auto &fitness_ref = (*fitness)(cond, site)[aa];
+        fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
+        if (fitness_ref == 0) {
+            gammanullcount++;
+            fitness_ref = 1e-8;
+        }
+    }
+
+    void resample_fitness(int cond, int site) {
+        for (int aa = 0; aa < Naa; aa++) {
+            if (sitemaskarray->GetVal(site).at(aa)) { resample_fitness(cond, site, aa); }
+        }
+    }
+
     // ------------------
     // Update system
     // ------------------
@@ -1296,36 +1312,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     // if move is from inactive to active
                     if (mask[a]) {
                         // resample baseline fitness
-                        (*fitness)(0, i)[a] = Random::sGamma(fitnessshape * fitnesscenter[a]);
-                        if (!(*fitness)(0, i)[a]) {
-                            gammanullcount++;
-                            (*fitness)(0, i)[a] = 1e-8;
-                        }
+                        resample_fitness(0, i, a);
+
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
                             if (site_wise) {
                                 get_toggle(k, i) = (Random::Uniform() < sw_toggle_prob[k - 1]);
-                                for (int aa = 0; aa < Naa; aa++) {
-                                    if (mask.at(aa) == 1) {
-                                        (*fitness)(k, i)[aa] =
-                                            Random::sGamma(fitnessshape * fitnesscenter[a]);
-                                        if (!(*fitness)(k, i)[aa]) {
-                                            gammanullcount++;
-                                            (*fitness)(k, i)[aa] = 1e-8;
-                                        }
-                                    }
-                                }
+                                resample_fitness(k, i);
                             } else {
                                 get_toggle(k, i, a) = (Random::Uniform() < shiftprob[k - 1]);
-                                if (get_toggle(k, i, a)) {
-                                    (*fitness)(k, i)[a] =
-                                        Random::sGamma(fitnessshape * fitnesscenter[a]);
-                                    if (!(*fitness)(k, i)[a]) {
-                                        gammanullcount++;
-                                        (*fitness)(k, i)[a] = 1e-8;
-                                    }
-                                }
+                                if (get_toggle(k, i, a)) { resample_fitness(k, i, a); }
                             }
                         }
                     }
@@ -1358,14 +1355,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
                             get_toggle(k, i, b) = (Random::Uniform() < shiftprob[k - 1]);
-                            if (get_toggle(k, i, b)) {
-                                (*fitness)(k, i)[b] =
-                                    Random::sGamma(fitnessshape * fitnesscenter[b]);
-                                if (!(*fitness)(k, i)[b]) {
-                                    gammanullcount++;
-                                    (*fitness)(k, i)[b] = 1e-8;
-                                }
-                            }
+                            if (get_toggle(k, i, b)) { resample_fitness(k, i, b); }
                         }
                     }
 
@@ -1449,14 +1439,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     UpdateSite(site);             // update site logprobs
 
                     if (togref == 1) {  // if toggle turned on then redraw fitness for all aas
-                        for (int aa = 0; aa < Naa; aa++) {
-                            auto &tmp_fitness_ref = (*fitness)(cond, site).at(aa);
-                            tmp_fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
-                            if (tmp_fitness_ref == 0) {
-                                gammanullcount++;
-                                tmp_fitness_ref = 1e-8;
-                            }
-                        }
+                        resample_fitness(cond, site);
                     }
 
                     double log_prob_after = SiteSuffStatLogProb(site) +
@@ -1512,7 +1495,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
                     int chosen_aa = index;
                     int &chosen_toggle_ref = get_toggle(k, i, chosen_aa);
-                    double &chosen_aa_fitness_ref = (*fitness)(k, i)[chosen_aa];
 
                     // core of the MH move (logprobs and value change)
                     double logprob_before = ToggleMarginalLogPrior(get_mask_counts(k).nmask(),
@@ -1522,12 +1504,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     chosen_toggle_ref = 1 - chosen_toggle_ref;  // 1->0 or 0->1
 
                     if (chosen_toggle_ref == 1) {  // if toggle turned on then redraw fitness
-                        chosen_aa_fitness_ref =
-                            Random::sGamma(fitnessshape * fitnesscenter[chosen_aa]);
-                        if (chosen_aa_fitness_ref == 0) {
-                            gammanullcount++;
-                            chosen_aa_fitness_ref = 1e-8;
-                        }
+                        resample_fitness(k, i, chosen_aa);
                     }
 
                     UpdateSite(i);
@@ -1599,8 +1576,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         model_stat(info, "logprior", [this]() { return GetLogPrior(); });
         model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
-        model_stat(info, "length",
-            [this]() { return 3 * branchlength->GetTotalLength(); });  // why 3 times?
+        model_stat(info, "length", [this]() { return 3 * branchlength->GetTotalLength(); });
         model_stat(info, "maskprob", maskprob);
         model_stat(info, "meanwidth", [this]() { return GetMeanWidth(); });
         model_stat(info, "maskepsilon", maskepsilon);
