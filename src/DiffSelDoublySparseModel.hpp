@@ -468,22 +468,24 @@ class DiffSelDoublySparseModel : public ChainComponent {
         maskprob = 0.1;
         sitemaskarray = std::make_unique<IIDProfileMask>(Nsite, Naa, maskprob);
 
-        // hyperparameters for the system of toggles
-        // shiftprob is a vector of Ncond-1 probabilities;
-        // for each non-baseline condition, k=1..Ncond:
-        //     - with probability 1-pi[k-1], shiftprob[k-1] = 0
-        //     - with probability pi[k-1]  , shiftprob[k-1] ~
-        //     Beta(shiftprobhypermean, shiftprobhyperinvconc)
-        pi.assign(Ncond - 1, pihypermean);
-        shiftprobhypermean.assign(Ncond - 1, shiftprobmean);
-        shiftprobhyperinvconc.assign(Ncond - 1, shiftprobinvconc);
-        shiftprob.assign(Ncond - 1, shiftprobmean);
+        if (not site_wise) {
+            // hyperparameters for the system of toggles
+            // shiftprob is a vector of Ncond-1 probabilities;
+            // for each non-baseline condition, k=1..Ncond:
+            //     - with probability 1-pi[k-1], shiftprob[k-1] = 0
+            //     - with probability pi[k-1]  , shiftprob[k-1] ~
+            //     Beta(shiftprobhypermean, shiftprobhyperinvconc)
+            pi.assign(Ncond - 1, pihypermean);
+            shiftprobhypermean.assign(Ncond - 1, shiftprobmean);
+            shiftprobhyperinvconc.assign(Ncond - 1, shiftprobinvconc);
+            shiftprob.assign(Ncond - 1, shiftprobmean);
 
-        // toggles specifying the sites and amino-acids displaying fitness
-        // modulations across conditions for each k=1..Ncond; all toggles across all
-        // sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
-        toggle = std::make_unique<BidimIIDMultiBernoulli>(Ncond - 1, Nsite, Naa, shiftprob);
-        if (!withtoggle) { toggle->Reset(); }
+            // toggles specifying the sites and amino-acids displaying fitness
+            // modulations across conditions for each k=1..Ncond; all toggles across all
+            // sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
+            toggle = std::make_unique<BidimIIDMultiBernoulli>(Ncond - 1, Nsite, Naa, shiftprob);
+            if (!withtoggle) { toggle->Reset(); }
+        }
 
         // final amino-acid fitness profiles across sites
         // (*fitnessprofile)(k,i)[a]: fitness of amino-acid a for site i under
@@ -708,23 +710,25 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! log prior over toggle array hyperparameters (shiftprob vector)
     double ToggleHyperLogPrior() const {
-        double total = 0;
-        for (int k = 1; k < Ncond; k++) {
-            if (shiftprobhyperinvconc[k - 1]) {
-                double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
-                double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
-                if (shiftprob[k - 1] != 0) {
-                    total += log(pi[k - 1]) + Random::logBetaDensity(shiftprob[k - 1], alpha, beta);
-                } else {
-                    if (pi[k - 1] == 1.0) {
-                        std::cerr << "error in ToggleHyperLogPrior: inf\n";
-                        exit(1);
+        if (not site_wise) {
+            double total = 0;
+            for (int k = 1; k < Ncond; k++) {
+                if (shiftprobhyperinvconc[k - 1]) {
+                    double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
+                    double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
+                    if (shiftprob[k - 1] != 0) {
+                        total +=
+                            log(pi[k - 1]) + Random::logBetaDensity(shiftprob[k - 1], alpha, beta);
+                    } else {
+                        assert(pi[k - 1] != 1);
+                        total += log(1 - pi[k - 1]);
                     }
-                    total += log(1 - pi[k - 1]);
                 }
             }
+            return total;
+        } else {
+            return 0;
         }
-        return total;
     }
 
     //! log prior over toggle array (IID bernoulli)
@@ -1300,13 +1304,27 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         // resample toggles and fitness shifts across all non-baseline
                         // conditions
                         for (int k = 1; k < Ncond; k++) {
-                            get_toggle(k, i, a) = (Random::Uniform() < shiftprob[k - 1]);
-                            if (get_toggle(k, i, a)) {
-                                (*fitness)(k, i)[a] =
-                                    Random::sGamma(fitnessshape * fitnesscenter[a]);
-                                if (!(*fitness)(k, i)[a]) {
-                                    gammanullcount++;
-                                    (*fitness)(k, i)[a] = 1e-8;
+                            if (site_wise) {
+                                get_toggle(k, i) = (Random::Uniform() < sw_toggle_prob[k - 1]);
+                                for (int aa = 0; aa < Naa; aa++) {
+                                    if (mask.at(aa) == 1) {
+                                        (*fitness)(k, i)[aa] =
+                                            Random::sGamma(fitnessshape * fitnesscenter[a]);
+                                        if (!(*fitness)(k, i)[aa]) {
+                                            gammanullcount++;
+                                            (*fitness)(k, i)[aa] = 1e-8;
+                                        }
+                                    }
+                                }
+                            } else {
+                                get_toggle(k, i, a) = (Random::Uniform() < shiftprob[k - 1]);
+                                if (get_toggle(k, i, a)) {
+                                    (*fitness)(k, i)[a] =
+                                        Random::sGamma(fitnessshape * fitnesscenter[a]);
+                                    if (!(*fitness)(k, i)[a]) {
+                                        gammanullcount++;
+                                        (*fitness)(k, i)[a] = 1e-8;
+                                    }
                                 }
                             }
                         }
@@ -1413,10 +1431,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     // toggle move for the site-wise case
     double move_sw_toggles(int cond, int nrep) {
-        // TODO: change to ss format (separate class)
-        int sw_nb_on =
-            count_indicators(sw_toggles.at(cond));  // counting sw toggles that are turned on
-
+        int sw_nb_on = count_indicators(sw_toggles.at(cond));
         update_mask_counts(cond);
         AcceptanceStats acceptance_stats;  // used for nmask only (and thus not updated here)
 
@@ -1573,8 +1588,13 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (maskmode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }
         if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
         if (Ncond > 1) {
-            model_node(info, "shiftprob", shiftprob);
-            model_node(info, "toggle", *toggle);
+            if (site_wise) {
+                model_node(info, "sw_toggles", sw_toggles);
+                model_node(info, "sw_toggle_prob", sw_toggle_prob);
+            } else {
+                model_node(info, "shiftprob", shiftprob);
+                model_node(info, "toggle", *toggle);
+            }
         }
 
         model_stat(info, "logprior", [this]() { return GetLogPrior(); });
@@ -1588,7 +1608,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         model_stat(
             info, "fitnesscenter_entropy", [&]() { return Random::GetEntropy(fitnesscenter); });
         for (int k = 1; k < Ncond; k++) {
-            model_stat(info, "shiftprob_" + std::to_string(k), shiftprob[k - 1]);
+            if (not site_wise) {
+                model_stat(info, "shiftprob_" + std::to_string(k), shiftprob.at(k - 1));
+            }
             model_stat(
                 info, "propshift_" + std::to_string(k), [k, this]() { return GetPropShift(k); });
         }
