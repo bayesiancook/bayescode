@@ -429,11 +429,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // ----------
         // allocating data structures and sampling initial configuration
 
-        if (site_wise) {
-            set_all_to(sw_toggle_prob, Ncond, 0.02);
-            draw_bernoulli_iid(sw_toggles, Ncond, Nsite, sw_toggle_prob);
-        }
-
         // Branch lengths
         blhypermean = 0.1;
         blhyperinvshape = 1.0;
@@ -468,7 +463,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
         maskprob = 0.1;
         sitemaskarray = std::make_unique<IIDProfileMask>(Nsite, Naa, maskprob);
 
-        if (not site_wise) {
+        if (site_wise) {
+            set_all_to(sw_toggle_prob, Ncond, 0.02);
+            draw_bernoulli_iid(sw_toggles, Ncond, Nsite, sw_toggle_prob);
+        } else {
             // hyperparameters for the system of toggles
             // shiftprob is a vector of Ncond-1 probabilities;
             // for each non-baseline condition, k=1..Ncond:
@@ -748,7 +746,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
     }
 
     //! log prior over toggle array (IID bernoulli)
-    double ToggleLogPrior() const { return toggle->GetLogProb(); }
+    double ToggleLogPrior() const {
+        assert(not site_wise);
+        return toggle->GetLogProb();
+    }
 
     //! return log likelihood
     double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
@@ -1180,6 +1181,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! Gibbs resampling of shifting probability under condition k
     void ResampleShiftProb(int k) {
+        assert(not site_wise);
         // pre-calculate parameters of the Beta distribution for non-zero case
         double alpha = shiftprobhypermean[k - 1] / shiftprobhyperinvconc[k - 1];
         double beta = (1 - shiftprobhypermean[k - 1]) / shiftprobhyperinvconc[k - 1];
@@ -1393,6 +1395,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! for a condition, given number of toggles in active state and given
     //! hyperparameters
     double ToggleMarginalLogPrior(int nmask, int nshift, int k) const {
+        assert(not site_wise);
         double ret = 0;
         if (shiftprobhyperinvconc[k - 1]) {
             // pre-calculate parameters of the Beta distribution for non-zero case
@@ -1421,6 +1424,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     // toggle move for the site-wise case
     double move_sw_toggles(int cond, int nrep) {
+        assert(site_wise);
         int sw_nb_on = count_indicators(sw_toggles.at(cond));
         update_mask_counts(cond);
         AcceptanceStats acceptance_stats;  // used for nmask only (and thus not updated here)
@@ -1463,6 +1467,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     //! elementary MH move on toggles
     double move_shift_toggles(int k, int nrep) {
+        assert(not site_wise);
         // to achieve better MCMC mixing, shiftprob[k-1] is integrated out during
         // this MH move on toggles (and Gibbs-resampled upon leaving this MH update)
         // nshift: number of amino-acids that are active in baseline and undergoing
