@@ -15,8 +15,8 @@ class Process {
   public:
     Process(int rank, int size)
         : color("\e[0m\e[" + std::to_string(color_codes[rank % color_codes.size()]) + "m"),
-          logger(stdout_logger(color + "process-" + std::to_string(rank) + "/" +
-                               std::to_string(size) + normal_code)),
+          logger(mpi_stdout_logger(color + "process-" + std::to_string(rank) + "/" +
+                                   std::to_string(size) + normal_code)),
           rank(rank),
           size(size) {}
 

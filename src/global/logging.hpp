@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NDEBUG
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
+#endif
+
 #include <iostream>
 #include "spdlog/fmt/ostr.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -13,16 +17,33 @@ using logger_t = std::shared_ptr<spdlog::logger>;
 // Global variables to simplify formatting
 const std::vector<int> color_codes{33, 34, 35, 36, 91, 92, 93, 94, 95, 96};
 const string dim_code{"\e[0m\e[2m"}, bold_code{"\e[0m\e[1m"}, normal_code{"\e[0m"};
-const string colored_pattern_prefix{"[" + dim_code + "%Y-%m-%d %H:%M:%S.%e" + normal_code + "] [" +
-                                    dim_code + "%P" + normal_code + "] [" + dim_code + "%n" +
-                                    normal_code + "] [" + dim_code + "%^%l%$" + normal_code + "] "};
+// const string colored_pattern_prefix{"[" + dim_code + "%Y-%m-%d %H:%M:%S.%e" + normal_code + "] ["
+// + dim_code + "%P" + normal_code + "] [" + dim_code + "%n" + normal_code + "] [" + dim_code +
+// "%^%l%$" + normal_code + "] "};
+const string long_timestamp = "[" + dim_code + "%Y-%m-%d %H:%M:%S.%e" + normal_code + "] ";
+const string short_timestamp = "[" + dim_code + "%m-%d %H:%M:%S" + normal_code + "] ";
+const string process_block = "[" + dim_code + "%P" + normal_code + "] ";
+const string source_block = "[" + dim_code + "%n" + normal_code + "] ";
+const string type_block = "[" + dim_code + "%^%l%$" + normal_code + "] ";
+const string fileline_block = "[" + dim_code + "%@" + normal_code + "] ";
+
+const string short_prefix = short_timestamp + type_block;
 
 // Factory functions to create loggers
 inline logger_t stdout_logger(string name) {
     auto result = spdlog::get(name);
     if (result.get() == nullptr) {
         result = spdlog::stdout_color_mt(name);
-        result->set_pattern(colored_pattern_prefix + "%v");
+        result->set_pattern(short_prefix + source_block + "%v");
+    }
+    return result;
+}
+
+inline logger_t mpi_stdout_logger(string name) {
+    auto result = spdlog::get(name);
+    if (result.get() == nullptr) {
+        result = spdlog::stdout_color_mt(name);
+        result->set_pattern(short_prefix + process_block + source_block + "%v");
     }
     return result;
 }
@@ -40,8 +61,7 @@ inline logger_t global_logger() {
     auto result = spdlog::get("global");
     if (result == nullptr) {
         result = spdlog::stdout_color_mt("global");
-        result->set_pattern(colored_pattern_prefix + "[" + dim_code + "%@" + normal_code + "] " +
-                            normal_code + "%v");
+        result->set_pattern(short_prefix + fileline_block + "%v");
     }
     return result;
 }
