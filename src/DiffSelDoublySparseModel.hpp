@@ -1337,31 +1337,25 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     // the other unmasked amino-acid should also redraw its toggles and
                     // fitness shifts (but not the baseline fitness)
                     if ((oldnaa == 1) && (naa == 2)) {
-                        // grep the index of the other active amino-acid
-                        int b = 0;
-                        while ((b < Naa) && ((!mask[b]) || (b == a))) { b++; }
-                        if (b == Naa) {
-                            std::cerr << "error in MoveMasks, when choosing other amino-acid\n";
-                            exit(1);
-                        }
-                        /*
-                        int b = -1;
-                        for (int c=0; c<Naa; c++)   {
-                            if (mask[c] && (c!=a))  {
-                                b = c;
+                        if (site_wise) {
+                            for (int k = 1; k < Ncond; k++) {
+                                get_toggle(k, i) =
+                                    indicator_t(Random::Uniform() < sw_toggle_prob.at(k));
+                                if (get_toggle(k, i)) { resample_fitness(k, i); }
                             }
-                        }
-                        if (b == -1)    {
-                            std::cerr << "error in Move masks\n";
-                            exit(1);
-                        }
-                        */
+                        } else {
+                            // grep the index of the other active amino-acid
+                            int b = 0;
+                            while ((b < Naa) && ((!mask[b]) || (b == a))) { b++; }
+                            assert(b != Naa);
 
-                        // resample toggles and fitness shifts across all non-baseline
-                        // conditions
-                        for (int k = 1; k < Ncond; k++) {
-                            get_toggle(k, i, b) = (Random::Uniform() < shiftprob[k - 1]);
-                            if (get_toggle(k, i, b)) { resample_fitness(k, i, b); }
+                            // resample toggles and fitness shifts across all non-baseline
+                            // conditions
+                            for (int k = 1; k < Ncond; k++) {
+                                get_toggle(k, i, b) =
+                                    indicator_t(Random::Uniform() < shiftprob.at(k - 1));
+                                if (get_toggle(k, i, b)) { resample_fitness(k, i, b); }
+                            }
                         }
                     }
 
