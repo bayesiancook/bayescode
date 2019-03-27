@@ -1435,7 +1435,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
         for (int rep = 0; rep < nrep; rep++) {
             for (int site = 0; site < Nsite; site++) {
-                if (mask_counts.at(cond - 1).nb_active(site) < 2) {
+                if (get_mask_counts(cond).nb_active(site) < 2) {
                     double log_prob_before = SiteSuffStatLogProb(site) +
                                              sw_nb_on * log(sw_toggle_prob.at(cond)) +
                                              (Nsite - sw_nb_on) * log(1 - sw_toggle_prob.at(cond));
@@ -1479,8 +1479,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
         // are active in baseline both are summed across all sites: sufficient
         // statistics for shiftprob
         update_mask_counts(k);
-        DEBUG("move_shift_toggles k={}; nmask={}; nshift={}", k, mask_counts.at(k - 1).nmask(),
-            mask_counts.at(k - 1).nshift());
+        DEBUG("move_shift_toggles k={}; nmask={}; nshift={}", k, get_mask_counts(k).nmask(),
+            get_mask_counts(k).nshift());
 
         AcceptanceStats acceptance_stats;
         for (int rep = 0; rep < nrep; rep++) {  // repeating move nrep times
