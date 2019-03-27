@@ -401,9 +401,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
         Nbranch = tree->nb_nodes() - 1;
 
         INFO("Building branch alloc...");
-        auto condition_array =
-            branch_container_from_parser<int>(parser, [this](int i, const AnnotatedTree &t) -> int {
+        per_cond<int> leaf_counts(Ncond, 0);
+        auto condition_array = branch_container_from_parser<int>(
+            parser, [this, &leaf_counts](int i, const AnnotatedTree &t) -> int {
                 auto condition = atoi(t.tag(i, "Condition").c_str());
+                if (t.children(i).size() == 0) { leaf_counts.at(condition)++; }
                 if (condition >= Ncond) {
                     WARNING(
                         "Found condition {} in tree although model has Ncond={}. Setting condition "
@@ -414,6 +416,10 @@ class DiffSelDoublySparseModel : public ChainComponent {
                     return condition;
                 }
             });
+        if (Ncond == 2) {
+            INFO("Ncond=2, found {} taxa in condition 0 and {} in condition 1", leaf_counts.at(0),
+                leaf_counts.at(1));
+        }
         // vector<int> iv(v.size(), 0);
         // for (size_t i = 0; i < v.size(); i++) {
         //     iv[i] = atoi(v[i].c_str());
@@ -464,7 +470,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         sitemaskarray = std::make_unique<IIDProfileMask>(Nsite, Naa, maskprob);
 
         if (site_wise) {
-            set_all_to(sw_toggle_prob, Ncond, 0.02);
+            set_all_to(sw_toggle_prob, Ncond, 0.2);
             draw_bernoulli_iid(sw_toggles, Ncond, Nsite, sw_toggle_prob);
         } else {
             // hyperparameters for the system of toggles

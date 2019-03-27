@@ -136,9 +136,9 @@ mutselomega: _build
 .PHONY: diffseldsparse
 diffseldsparse: all
 		@rm -f delme*.*
-		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx --ncond 2 -e 1 -u 3 tmp
+		_build/diffseldsparse -a data/toy_conv.phy -t data/toy_conv.nhx --ncond 2 -e 1 --pi 1 -u 3 tmp
 
 .PHONY: diffseldsparse_sw
 diffseldsparse_sw: all
 		@rm -f delme*.*
-		_build/diffseldsparse -a data/besnard/cyp_small.phy -t data/besnard/cyp_coding.Chrysithr_root.nhx --sw --ncond 2 -e 1 -u 3 tmp
+		_build/diffseldsparse -a data/toy_conv.phy -t data/toy_conv.nhx --sw --ncond 2 -e 1 -u 3 tmp
