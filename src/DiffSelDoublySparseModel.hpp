@@ -523,7 +523,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
     }
 
+    // --------------------------------------------------------
     // toggle accessors (should be removed ideally)
+    // --------------------------------------------------------
     indicator_t &get_toggle(int condition, int site, int aa) {
         assert(condition >= 0 and condition < Ncond);
         assert_warn(condition != 0, "Querying toggle for condition 0");
@@ -550,7 +552,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return sw_toggles[condition][site];
     }
 
+    // --------------------------------------------------------
     // mask count functions
+    // --------------------------------------------------------
     MaskCounts &get_mask_counts(int condition) { return mask_counts.at(condition - 1); }
 
     void update_mask_counts(int condition) {
@@ -561,7 +565,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         return get_mask_counts(condition).check(*this, condition);
     }
 
+    // --------------------------------------------------------
     // resample fitness
+    // --------------------------------------------------------
     void resample_fitness(int cond, int site, int aa) {
         auto &fitness_ref = (*fitness)(cond, site)[aa];
         fitness_ref = Random::sGamma(fitnessshape * fitnesscenter[aa]);
