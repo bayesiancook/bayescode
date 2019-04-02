@@ -60,7 +60,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // Constructors
     // ------------------
 
-    MultiGeneCodonM2aModel(string datapath, string datafile, string intreefile, double inpihypermean,
+    MultiGeneCodonM2aModel(string datapath, string indatafile, string intreefile, double inpihypermean,
                            double inpihyperinvconc, int inmyid, int innprocs);
     void Allocate();
 
@@ -407,7 +407,11 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
 
+    string datapath;
+    string datafile;
     string treefile;
+
+    std::vector<CodonSequenceAlignment*> alivector;
 
     int Ntaxa;
     int Nbranch;

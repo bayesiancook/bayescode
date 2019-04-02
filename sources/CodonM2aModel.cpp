@@ -3,6 +3,27 @@
 // constuction allocation
 //
 
+CodonM2aModel::CodonM2aModel(const CodonSequenceAlignment* incodondata, const Tree* intree, double inpi) {
+    blmode = 0;
+    nucmode = 0;
+    data = 0;
+    codondata = incodondata;
+    pi = inpi;
+
+    Nsite = codondata->GetNsite();  // # columns
+    Ntaxa = codondata->GetNtaxa();
+
+    taxonset = codondata->GetTaxonSet();
+
+    // get tree from file (newick format)
+    tree = intree;
+
+    // check whether tree and data fits together
+    // tree->RegisterWith(taxonset);
+    // tree->SetIndices();
+    Nbranch = tree->GetNbranch();
+}
+
 CodonM2aModel::CodonM2aModel(string datapath, string datafile, string treefile, double inpi) {
     blmode = 0;
     nucmode = 0;
@@ -21,12 +42,12 @@ CodonM2aModel::CodonM2aModel(string datapath, string datafile, string treefile, 
     taxonset = codondata->GetTaxonSet();
 
     // get tree from file (newick format)
-    tree = new Tree(datapath + treefile);
-
+    Tree* tmptree = new Tree(datapath + treefile);
     // check whether tree and data fits together
-    tree->RegisterWith(taxonset);
+    tmptree->RegisterWith(taxonset);
+    tmptree->SetIndices();
+    tree = tmptree;
 
-    tree->SetIndices();
     Nbranch = tree->GetNbranch();
 }
 
@@ -642,5 +663,7 @@ void CodonM2aModel::FromStreamCodeML(istream &is) {
     nucrelrate[3] = 1.0 / tot;
     nucrelrate[4] = kappa / tot;
     nucrelrate[5] = 1.0 / tot;
-    nucstat = data->GetEmpiricalFreq();
+    cerr << "in FromStreamCodeML\n";
+    exit(1);
+    // nucstat = data->GetEmpiricalFreq();
 }

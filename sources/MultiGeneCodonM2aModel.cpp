@@ -5,7 +5,7 @@
 // Constructing and setting the model
 // ------------------
 
-MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile, string intreefile,
+MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string indatapath, string indatafile, string intreefile,
                                                double inpihypermean, double inpihyperinvconc,
                                                int inmyid, int innprocs)
     :
@@ -23,6 +23,7 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile,
       pi(mixhyperparam[8]),
       nucrelratesuffstat(Nrr),
       nucstatsuffstat(Nnuc) {
+
     burnin = 0;
 
     // 0 : gathering branch lengths across genes and then using gamma suff stats to resample hyperparams
@@ -35,8 +36,10 @@ MultiGeneCodonM2aModel::MultiGeneCodonM2aModel(string datapath, string datafile,
     pihyperinvconc = inpihyperinvconc;
     pi = pihypermean;
 
-    AllocateAlignments(datafile, datapath);
+    datapath = indatapath;
+    datafile = indatafile;
     treefile = intreefile;
+    AllocateAlignments(datafile, datapath);
 
     // all datafiles have all taxa (with missing data if needed) in same order
     // makes it easier to register tree with data, etc.
@@ -127,8 +130,49 @@ void MultiGeneCodonM2aModel::Allocate() {
     } else {
         geneprocess.assign(GetLocalNgene(), (CodonM2aModel *)0);
 
+        ifstream is((datapath + datafile).c_str());
+        string tmp;
+        is >> tmp;
+        if (tmp == "ALI")   {
+            int ngene;
+            is >> ngene;
+            if (ngene != GetNgene())    {
+                cerr << "error when reading alignments from cat file: non matching number of genes\n";
+                exit(1);
+            }
+            alivector.assign(GetLocalNgene(), (CodonSequenceAlignment*) 0);
+            int index = 0;
+            for (int gene=0; gene<GetNgene(); gene++)   {
+                string name;
+                is >> name;
+                FileSequenceAlignment tmp(is);
+                if (GeneAlloc[gene] == myid)    {
+                    if (GetLocalGeneName(index) != name)    {
+                        cerr << "error: non matching gene name\n";
+                        exit(1);
+                    }
+                    if (alivector[index]) {
+                        cerr << "error: alignment already allocated\n";
+                        exit(1);
+                    }
+                    alivector[index] = new CodonSequenceAlignment(&tmp, true);
+                    index++;
+                }
+            }
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                if (! alivector[gene])  {
+                    cerr << "error: alignment not allocated\n";
+                    exit(1);
+                }
+                geneprocess[gene] = new CodonM2aModel(alivector[gene], tree, pi);
+            }
+        }
+        else    {
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene] = new CodonM2aModel(datapath, GetLocalGeneName(gene), treefile, pi);
+            }
+        }
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene] = new CodonM2aModel(datapath, GetLocalGeneName(gene), treefile, pi);
             geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
             geneprocess[gene]->Allocate();
         }

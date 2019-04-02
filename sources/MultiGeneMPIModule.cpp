@@ -1,10 +1,22 @@
-
 #include "MultiGeneMPIModule.hpp"
 // #include "Parallel.hpp"
 
 #include <fstream>
 
 void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) {
+    datapath = indatapath;
+    ifstream is((datapath + datafile).c_str());
+    string tmp;
+    is >> tmp;
+    if (tmp == "ALI")   {
+        AllocateFromCatFile(datafile, indatapath);
+    }
+    else    {
+        AllocateFromList(datafile, indatapath);
+    }
+}
+
+void MultiGeneMPIModule::AllocateFromList(string datafile, string indatapath) {
     datapath = indatapath;
     ifstream is((datapath + datafile).c_str());
     is >> Ngene;
@@ -28,6 +40,40 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) 
             delete tmpdata;
         }
     }
+    MakeGeneList(genename, genesize, geneweight, genealloc);
+}
+
+void MultiGeneMPIModule::AllocateFromCatFile(string datafile, string indatapath)    {
+
+    datapath = indatapath;
+    ifstream is((datapath + datafile).c_str());
+    string tmp;
+    is >> tmp;
+    is >> Ngene;
+    vector<string> genename(Ngene, "NoName");
+    vector<int> genesize(Ngene, 0);
+    vector<int> genealloc(Ngene, 0);
+    vector<int> geneweight(Ngene, 0);
+
+    for (int gene = 0; gene < Ngene; gene++) {
+        is >> genename[gene];
+        SequenceAlignment *tmpdata = new FileSequenceAlignment(is);
+
+        if (!gene) {
+            refdata = tmpdata;
+        }
+
+        genesize[gene] = tmpdata->GetNsite() / 3;
+        geneweight[gene] = tmpdata->GetNsite() * tmpdata->GetNtaxa();
+
+        if (gene) {
+            delete tmpdata;
+        }
+    }
+    MakeGeneList(genename, genesize, geneweight, genealloc);
+}
+
+void MultiGeneMPIModule::MakeGeneList(const vector<string>& genename, const vector<int>& genesize, const vector<int>& geneweight, vector<int>& genealloc)   {
 
     // sort alignments by decreasing size
     std::vector<int> permut(Ngene);
@@ -111,11 +157,12 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) 
         SlaveTotNsite[0] += genesize[gene];
     }
 
+    GeneAlloc = genealloc;
+
     if (!myid) {
         LocalNgene = Ngene;
         GeneName.assign(Ngene, "noname");
         GeneNsite.assign(Ngene, 0);
-        GeneAlloc.assign(Ngene, 0);
         int i = 0;
         cerr << '\n';
         cerr << "proc\tngene\ttotnsite\n";
@@ -123,8 +170,8 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) 
             cerr << proc << '\t' << SlaveNgene[proc] << '\t' << SlaveTotNsite[proc] << '\n';
             for (int gene = 0; gene < Ngene; gene++) {
                 if (genealloc[gene] == proc) {
-                    GeneAlloc[i] = proc;
                     GeneName[i] = genename[gene];
+                    GeneName2Index[genename[gene]] = i;
                     GeneNsite[i] = genesize[gene];
                     i++;
                 }
@@ -135,7 +182,6 @@ void MultiGeneMPIModule::AllocateAlignments(string datafile, string indatapath) 
             cerr << "error in mpimodule: non matching number of genes\n";
         }
     } else {
-        GeneAlloc.assign(0, 0);
         LocalNgene = SlaveNgene[myid];
         GeneName.assign(LocalNgene, "NoName");
         GeneNsite.assign(LocalNgene, 0);

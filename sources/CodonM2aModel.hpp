@@ -65,6 +65,7 @@ class CodonM2aModel : public ProbModel {
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
     CodonM2aModel(string datapath, string datafile, string treefile, double inpi);
+    CodonM2aModel(const CodonSequenceAlignment* incodondata, const Tree* intree, double inpi);
 
     //! model allocation
     void Allocate();
@@ -449,10 +450,10 @@ class CodonM2aModel : public ProbModel {
     // ------------------
 
   private:
-    Tree *tree;
-    FileSequenceAlignment *data;
+    const Tree *tree;
+    SequenceAlignment *data;
     const TaxonSet *taxonset;
-    CodonSequenceAlignment *codondata;
+    const CodonSequenceAlignment *codondata;
 
     int Nsite;
     int Ntaxa;

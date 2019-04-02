@@ -42,6 +42,9 @@ class MultiGeneMPIModule {
     int GetSlaveTotNsite(int proc) const { return SlaveTotNsite[proc]; }
 
     void AllocateAlignments(string datafile, string datapath = "./");
+    void AllocateFromCatFile(string datafile, string datapath = "./");
+    void AllocateFromList(string datafile, string datapath = "./");
+    void MakeGeneList(const vector<string>& genename, const vector<int>& genesize, const vector<int>& geneweight, vector<int>& genealloc);
 
     void PrintGeneList(ostream &os) const;
 
@@ -205,6 +208,7 @@ class MultiGeneMPIModule {
     std::vector<int> SlaveTotNsite;
     std::vector<int> GeneAlloc;
     std::vector<string> GeneName;
+    std::map<string,int> GeneName2Index;
     std::vector<int> GeneNsite;
 
     SequenceAlignment *refdata;
