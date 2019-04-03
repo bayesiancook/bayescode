@@ -146,7 +146,8 @@ void MultiGeneCodonM2aModel::Allocate() {
                 string name;
                 is >> name;
                 FileSequenceAlignment tmp(is);
-                if (GeneAlloc[gene] == myid)    {
+                // if (GeneAlloc[gene] == myid)    {
+                if (name == GeneName[index])    {
                     if (GetLocalGeneName(index) != name)    {
                         cerr << "error: non matching gene name\n";
                         exit(1);
@@ -1417,6 +1418,7 @@ void MultiGeneCodonM2aModel::MasterTraceSitesPostProb(ostream &os) {
         if (i != totnsite) {
             cerr << "error in MultiGeneCodonM2aModel::MasterTraceSitesPostProb: non "
                     "matching number of sites\n";
+            cerr << i << '\t' << totnsite << '\n';
             exit(1);
         }
         delete[] array;

@@ -157,12 +157,11 @@ void MultiGeneMPIModule::MakeGeneList(const vector<string>& genename, const vect
         SlaveTotNsite[0] += genesize[gene];
     }
 
-    GeneAlloc = genealloc;
-
     if (!myid) {
         LocalNgene = Ngene;
         GeneName.assign(Ngene, "noname");
         GeneNsite.assign(Ngene, 0);
+        GeneAlloc.assign(Ngene, 0);
         int i = 0;
         cerr << '\n';
         cerr << "proc\tngene\ttotnsite\n";
@@ -170,6 +169,7 @@ void MultiGeneMPIModule::MakeGeneList(const vector<string>& genename, const vect
             cerr << proc << '\t' << SlaveNgene[proc] << '\t' << SlaveTotNsite[proc] << '\n';
             for (int gene = 0; gene < Ngene; gene++) {
                 if (genealloc[gene] == proc) {
+                    GeneAlloc[i] = proc;
                     GeneName[i] = genename[gene];
                     GeneName2Index[genename[gene]] = i;
                     GeneNsite[i] = genesize[gene];
@@ -185,6 +185,7 @@ void MultiGeneMPIModule::MakeGeneList(const vector<string>& genename, const vect
         LocalNgene = SlaveNgene[myid];
         GeneName.assign(LocalNgene, "NoName");
         GeneNsite.assign(LocalNgene, 0);
+        GeneAlloc.assign(0,0);
         int i = 0;
         for (int gene = 0; gene < Ngene; gene++) {
             if (genealloc[gene] == myid) {
