@@ -2,11 +2,13 @@
 
 #include <ostream>
 
-//! - mode == 3: global == "fixed"
-//! - mode == 2: global but estimated == "shared"
-//! - mode == 1: gene specific, with hyperparameters estimated across genes == "shrunk"
-//! - mode == 0: gene-specific, with fixed hyperparameters == "independent"
+// global == "fixed"
+// global but estimated == "shared"
+// gene specific, with hyperparameters estimated across genes == "shrunk"
+// gene-specific, with fixed hyperparameters == "independent"
 enum param_mode_t { independent, shrunk, shared, fixed };
+
+bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
 
 std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
     if (c == independent) {
@@ -21,15 +23,35 @@ std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
     return os;
 }
 
-bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
+template <class ValueType, class HyperValueType>
+class MultiGeneParameter {
+    // invariant: ensures value and hyper_value are present iff needed
+    
+    param_mode_t _mode;
+    ValueType _value;             // assumes it's default-initializable
+    HyperValueType _hyper_value;  // assumes it's default-initializable
+  public:
+    MultiGeneParameter(param_mode_t mode) : _mode(mode) {
+        assert(mode == shared or mode == shrunk);
+    }
+    MultiGeneParameter(param_mode_t mode, ValueType value) : _mode(mode), _value(value) {
+        assert(mode == fixed);
+    }
+    MultiGeneParameter(param_mode_t mode, HyperValueType hyper_value)
+        : _mode(mode), _hyper_value(hyper_value) {
+        assert(mode == shrunk);
+    }
+    param_mode_t mode() const { return mode; }
+    ValueType value() const {
+        assert(mode == fixed);
+        return value;
+    }
+    HyperValueType hyper_value() const {
+        assert(mode == shrunk);
+        return hyper_value;
+    }
+};
 
-//! Used in a multigene context.
-//! - mode == 3: no mask "no_mask"
-//! - mode == 2: parameter (maskprob) shared across genes "shared_mask"
-//! - mode == 1: gene-specific parameter (maskprob), hyperparameters estimated
-//! across genes "gene_spec_mask_est_hyper"
-//! - mode == 0: gene-specific parameter (maskprob) with fixed hyperparameters
-//! "gene_spec_mask_fixed_hyper"
 enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };
 
 std::ostream &operator<<(std::ostream &os, const mask_mode_t &c) {
