@@ -31,9 +31,9 @@ class DiffSelDoublySparseAppArgParse : public BaseArgParse {
         "probability)",
         false, 0.1, "double", cmd};
     SwitchArg sitewise{"", "sw", "Use model with site-wise convergence toggles", cmd};
-    //     ValueArg<int> burnin{"b", "burnin", "Burnin iterations that will be discarded", false, 0,
-    //     "int", cmd}; No more burnin: if the model has difficulty starting, we'll think about it
-    //     again.
+    ValueArg<double> fixed_bl{"", "fixed-bl",
+        "Use fixed branch lengths taken from tree file and multiplied by provided value", false,
+        1.0, "double", cmd};
 };
 
 
@@ -79,9 +79,6 @@ int main(int argc, char *argv[]) {
     ChainDriver *chain_driver = nullptr;
     unique_ptr<DiffSelDoublySparseModel> model = nullptr;
 
-    // Default values, as in the original version:
-    int codonmodel = 1;
-
     if (cmd.resume_from_checkpoint()) {
         ifstream is = cmd.checkpoint_file();
         chain_driver = new ChainDriver(is);
@@ -94,7 +91,7 @@ int main(int argc, char *argv[]) {
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
         model = make_unique<DiffSelDoublySparseModel>(args.alignment.getValue(),
-            args.treefile.getValue(), ddargs.ncond.getValue(), ddargs.nlevel.getValue(), codonmodel,
+            args.treefile.getValue(), ddargs.ncond.getValue(), ddargs.nlevel.getValue(),
             ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
             ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
             ddargs.shiftprobinvconc.getValue(), param_mode_t(ddargs.fitnesscentermode.getValue()),

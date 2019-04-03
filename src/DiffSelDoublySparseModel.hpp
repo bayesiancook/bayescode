@@ -33,6 +33,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "AADiffSelCodonMatrixBidimArray.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "DiffSelSparseFitnessArray.hpp"
+#include "DiffselDoubleSparseConfig.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDGamma.hpp"
@@ -47,14 +48,9 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 #include "components/mh_utils.hpp"
-#include "components/param_enums.hpp"
 #include "components/probnode_utils.hpp"
-#include "global/logging.hpp"
 #include "tree/implem.hpp"
 
-using std::istream;
-using std::ostream;
-using std::string;
 using std::unique_ptr;
 using std::vector;
 /**
@@ -173,7 +169,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     string datafile;
     string treefile;
-    int codonmodel;
     param_mode_t blmode;             // branch lengths fixed or sampled
     param_mode_t nucmode;            // mutation matrix parameters fixed or sampled
     param_mode_t fitnessshapemode;   // estimation method for fitness hyperparameter (shape of
@@ -304,9 +299,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! - Nlevel: number of levels (if Nlevel == 1: each condition is defined
     //! w.r.t. condition 0; if Nlevel == 2, condition 1 is defined w.r.t.
     //! condition 0, and condition 2..K-1 all defined w.r.t. condition 1)
-    //! - codonmodel: type of codon substitution model (1: canonical
-    //! mutation-selection model, 0: square-root model, see Parto and Lartillot,
-    //! 2017)
     //! - inepsilon: background fitness for low-fitness amino-acids: if
     //! 0<inepsilon<1, then epsilon is fixed, if epsilon == 1, then this is the
     //! model without masks, if epsilon == -1, then epsilon is estimated from the
@@ -316,12 +308,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! shape parameter is estimated
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
     DiffSelDoublySparseModel(const string &datafile, const string &treefile, int inNcond,
-        int inNlevel, int incodonmodel, double inepsilon, double inshape, double inpihypermean,
+        int inNlevel, double inepsilon, double inshape, double inpihypermean,
         double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode,
         bool withtoggle, bool site_wise)
         : datafile(datafile),
           treefile(treefile),
-          codonmodel(incodonmodel),
           blmode(independent),
           nucmode(independent),
           fitnesscentermode(fitnesscentermode),
@@ -356,23 +347,11 @@ class DiffSelDoublySparseModel : public ChainComponent {
             maskepsilon = 0.01;
         }
 
-        if (Nlevel > 2 or Nlevel < 1) { FAIL("Nlevel should be set to 1 or 2"); }
+        assert(Nlevel == 1 or Nlevel == 2);
         if (Ncond <= 2 and Nlevel == 2) {
             WARNING("Nlevel set to 2 although there are no more than two conditions");
             Nlevel = 1;
         }
-
-        INFO(
-            "Model parameters are:\n\tdatafile: {}\n\ttreefile: {}\n\tfitnesscentermode: "
-            "{}\n\twithtoggle: "
-            "{}\n\tpihypermean: {}\n\tshiftprobmean: {}\n\tshiftprobinvconc: "
-            "{}\n\tcodonmodel: {}\n\tblmode: {}\n\tnucmode: {}\n\tfitnessshapemode: "
-            "{}\n\tfitnessshape: {}\n\t"
-            "maskepsilon: {}\n\tmaskmode: {}\n\tmaskepsilonmode: {}\n\tNcond: {}\n\tNlevel: "
-            "{}\n\tsite_wise: {}",
-            datafile, treefile, fitnesscentermode, withtoggle, pihypermean, shiftprobmean,
-            shiftprobinvconc, codonmodel, blmode, nucmode, fitnessshapemode, fitnessshape,
-            maskepsilon, maskmode, maskepsilonmode, Ncond, Nlevel, site_wise);
 
         ReadFiles(datafile, treefile);
         Allocate();
@@ -1603,7 +1582,7 @@ istream &operator>>(istream &is, unique_ptr<DiffSelDoublySparseModel> &m) {
     string model_name;
     string datafile;
     string treefile;
-    int Ncond, Nlevel, codonmodel;
+    int Ncond, Nlevel;
     int fitnessshapemode, fitnesscentermode;  // implicit cast of enum into int
     double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc;
 
@@ -1614,9 +1593,9 @@ istream &operator>>(istream &is, unique_ptr<DiffSelDoublySparseModel> &m) {
     }
     is >> datafile;
     is >> treefile;
-    is >> Ncond >> Nlevel >> codonmodel >> maskepsilonmode >> fitnessshapemode >> pihypermean >>
-        shiftprobmean >> shiftprobinvconc >> fitnesscentermode;
-    m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel, codonmodel,
+    is >> Ncond >> Nlevel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean >>
+        shiftprobinvconc >> fitnesscentermode;
+    m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel,
         maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
         shiftprobinvconc, param_mode_t(fitnesscentermode), true, false);  // FIXME site_wise bool!
     assert("implemented" == "false");
@@ -1632,7 +1611,6 @@ ostream &operator<<(ostream &os, DiffSelDoublySparseModel &m) {
     os << m.treefile << '\t';
     os << m.Ncond << '\t';
     os << m.Nlevel << '\t';
-    os << m.codonmodel << '\t';
     os << m.maskepsilonmode << '\t';
     os << m.fitnessshapemode << '\t';
     os << m.pihypermean << '\t';
