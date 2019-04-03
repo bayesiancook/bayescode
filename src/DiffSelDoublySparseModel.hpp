@@ -51,8 +51,6 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/probnode_utils.hpp"
 #include "tree/implem.hpp"
 
-using std::unique_ptr;
-using std::vector;
 /**
  * \brief A doubly-sparse version of the differential selection model (see also
  * DiffSelModel and DiffSelSparseModel)
@@ -167,20 +165,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     // model selectors
     // -----
 
-    string datafile;
-    string treefile;
-    param_mode_t blmode;             // branch lengths fixed or sampled
-    param_mode_t nucmode;            // mutation matrix parameters fixed or sampled
-    param_mode_t fitnessshapemode;   // estimation method for fitness hyperparameter (shape of
-                                     // multi-gamma distribution)
-    param_mode_t fitnesscentermode;  // estimation method for fitness hyperparameter (center of
-                                     // multi-gamma distribution)
-
-    mask_mode_t maskmode;  // estimation method for site profile masks. Used in a multigene context.
-    int maskepsilonmode;
-
-    bool withtoggle;  // do we use site and amino-acid and condition specific toggles for
-                      // differential effects?
+    const DiffselDoubleSparseConfig config;
 
     // -----
     // external parameters
@@ -195,15 +180,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     int Ntaxa;
     int Nbranch;
 
-    // number of diff sel categories
-    int Ncond;
-
-    // number of levels of the model
-    // with 2 levels, structure of the model is as follows:
-    // baseline (condition 0)
-    // baseline  || fitness1 (for condition 1)
-    // baseline || fitness1  || fitnessk  (for condition k=2..Ncond)
-    int Nlevel;
+    int Ncond, Nlevel;  // copies of config, to simplify things
 
     // which branch is under which condition
     unique_ptr<SimpleBranchArray<int>> branchalloc;
@@ -243,6 +220,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     vector<double> fitnesscenter;
     unique_ptr<BidimIIDMultiGamma> fitness;
 
+    int maskepsilonmode;
+    mask_mode_t mask_mode;
     double maskprob;
     double maskepsilon;
     unique_ptr<IIDProfileMask> sitemaskarray;
@@ -307,43 +286,33 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! parameters. If inshape>0, shape parameter is fixed, if inshape == -1,
     //! shape parameter is estimated
     //! - withtoggle: false toggles all fixed to 0, true : random toggles
-    DiffSelDoublySparseModel(const string &datafile, const string &treefile, int inNcond,
-        int inNlevel, double inepsilon, double inshape, double inpihypermean,
-        double inshiftprobmean, double inshiftprobinvconc, param_mode_t fitnesscentermode,
-        bool withtoggle, bool site_wise)
-        : datafile(datafile),
-          treefile(treefile),
-          blmode(independent),
-          nucmode(independent),
-          fitnesscentermode(fitnesscentermode),
-          withtoggle(withtoggle),
-          Ncond(inNcond),
-          Nlevel(inNlevel),
-          site_wise(site_wise),
-          pihypermean(inpihypermean),
-          shiftprobmean(inshiftprobmean),
-          shiftprobinvconc(inshiftprobinvconc),
-          hyperfitnesssuffstat(Naa) {
+    DiffSelDoublySparseModel(DiffselDoubleSparseConfig config)
+        : config(config), Ncond(config.Ncond), Nlevel(config.Nlevel), hyperfitnesssuffstat(Naa) {
         /* -- */
-        if (inshape > 0) {
-            fitnessshapemode = param_mode_t::fixed;
-            fitnessshape = inshape;
+
+        if (config.fitness_shape.mode() == param_mode_t::fixed) {
+            fitnessshape = config.fitness_shape.value();
         } else {
-            fitnessshapemode = independent;
             fitnessshape = 20.0;
+        }
+
+        if (config.epsilon >= 0) {
+            maskepsilon = config.epsilon;
+            maskepsilonmode = 3;
+            mask_mode = gene_spec_mask_fixed_hyper;
+        } else {
+            maskepsilonmode = 0;
+            mask_mode = gene_spec_mask_fixed_hyper;
+            maskepsilon = 0.01;
         }
 
         if (inepsilon == 1) {
             maskepsilon = 1;
-            maskmode = no_mask;
+            mask_mode = no_mask;
             maskepsilonmode = 3;
-        } else if (inepsilon >= 0) {
-            maskepsilon = inepsilon;
-            maskepsilonmode = 3;
-            maskmode = gene_spec_mask_fixed_hyper;
         } else {
             maskepsilonmode = 0;
-            maskmode = gene_spec_mask_fixed_hyper;
+            mask_mode = gene_spec_mask_fixed_hyper;
             maskepsilon = 0.01;
         }
 
@@ -353,7 +322,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             Nlevel = 1;
         }
 
-        ReadFiles(datafile, treefile);
+        ReadFiles(config.datafile, config.treefile);
         Allocate();
     }
 
@@ -467,7 +436,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
             // modulations across conditions for each k=1..Ncond; all toggles across all
             // sites and amino-acids are iid Bernoulli of parameter shiftprob[k-1]
             toggle = std::make_unique<BidimIIDMultiBernoulli>(Ncond - 1, Nsite, Naa, shiftprob);
-            if (!withtoggle) { toggle->Reset(); }
+            if (not config.withtoggle) { toggle->Reset(); }
         }
 
         // final amino-acid fitness profiles across sites
@@ -638,14 +607,14 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        if (blmode != shared) { total += BranchLengthsLogPrior(); }
-        if (nucmode != shared) { total += NucRatesLogPrior(); }
-        if (resampled(fitnessshapemode) || resampled(fitnesscentermode)) {
+        if (config.branch_lengths.mode() != shared) { total += BranchLengthsLogPrior(); }
+        if (config.nucmode != shared) { total += NucRatesLogPrior(); }
+        if (config.fitness_shape.resampled() or config.fitness_center.resampled()) {
             total += FitnessHyperLogPrior();
         }
         // not updated at all times
         // total += FitnessLogPrior();
-        if (gene_specific_mask_mode(maskmode)) {
+        if (gene_specific_mask_mode(config.mask_prob.mode)) {
             total += MaskHyperLogPrior();
             total += MaskLogPrior();
         }
@@ -674,8 +643,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
         double ret = 0;
-        if (resampled(fitnessshapemode)) { ret += FitnessShapeLogPrior(); }
-        if (resampled(fitnesscentermode)) { ret += FitnessCenterLogPrior(); }
+        if (config.fitness_shape.resampled()) { ret += FitnessShapeLogPrior(); }
+        if (config.fitness_center.resampled()) { ret += FitnessCenterLogPrior(); }
         return ret;
     }
 
@@ -812,7 +781,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep0, int nrep) {
         for (int rep0 = 0; rep0 < nrep0; rep0++) {
-            if (blmode != shared) { MoveBranchLengths(); }
+            if (config.branch_lengths.mode() != shared) { MoveBranchLengths(); }
 
             CollectPathSuffStat();
             UpdateAll();
@@ -826,7 +795,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 if (gene_specific_mask_mode(maskmode)) {
                     MoveMaskHyperParameters(10 * weight);
                 }  // FIXME: why move if fixed?
-                if (withtoggle) {
+                if (config.withtoggle) {
                     MoveFitnessShifts(weight);
                     if (site_wise) {
                         for (int cond = 1; cond < Ncond; cond++) { move_sw_toggles(cond, 10); }
@@ -834,13 +803,13 @@ class DiffSelDoublySparseModel : public ChainComponent {
                         move_shift_toggles(weight);
                     }
                 }
-                if (resampled(fitnessshapemode) || resampled(fitnesscentermode)) {
+                if (config.fitness_shape.resampled() or config.fitness_center.resampled()) {
                     MoveFitnessHyperParameters(10 * weight);
                 }
                 if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
             }
 
-            if (nucmode != shared) { MoveNucRates(weight); }
+            if (config.nucmode != shared) { MoveNucRates(weight); }
         }
 
         UpdateAll();
@@ -1130,7 +1099,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         hyperfitnesssuffstat.Clear();
         hyperfitnesssuffstat.AddSuffStat(*fitness, *sitemaskarray, *toggle);
 
-        if (resampled(fitnessshapemode)) {
+        if (config.fitness_shape.resampled()) {
             Move::Scaling(fitnessshape, 1.0, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
                 &DiffSelDoublySparseModel::NoUpdate, this);
             Move::Scaling(fitnessshape, 0.3, nrep, &DiffSelDoublySparseModel::FitnessHyperLogProb,
@@ -1140,7 +1109,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
         fitness->SetShape(fitnessshape);
 
-        if (resampled(fitnesscentermode)) {
+        if (config.fitness_center.resampled()) {
             Move::Profile(fitnesscenter, 0.3, 1, nrep,
                 &DiffSelDoublySparseModel::FitnessHyperLogProb, &DiffSelDoublySparseModel::NoUpdate,
                 this);
@@ -1535,13 +1504,15 @@ class DiffSelDoublySparseModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        if (blmode != shared) { model_node(info, "branchlength", *branchlength); }
-        if (nucmode != shared) {
+        if (config.branch_lengths.mode() != shared) {
+            model_node(info, "branchlength", *branchlength);
+        }
+        if (config.nucmode != shared) {
             model_node(info, "nucrelrate", nucrelrate);
             model_node(info, "nucstat", nucstat);
         }
-        if (resampled(fitnessshapemode)) { model_node(info, "fitnessshape", fitnessshape); }
-        if (resampled(fitnesscentermode)) { model_node(info, "fitnesscenter", fitnesscenter); }
+        if (config.fitness_shape.resampled()) { model_node(info, "fitnessshape", fitnessshape); }
+        if (config.fitness_center.resampled()) { model_node(info, "fitnesscenter", fitnesscenter); }
         model_node(info, "fitness", *fitness);
         if (gene_specific_mask_mode(maskmode)) { model_node(info, "maskprob", maskprob); }
         if (maskmode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }

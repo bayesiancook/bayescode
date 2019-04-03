@@ -1,19 +1,40 @@
 #pragma once
 
-#include <assert.h>
-#include <vector>
 #include "Random.hpp"
-using std::vector;
-using indicator_t = int;  // FIXME? any benefit to change to char?
-
+#include "global/defs.hpp"
 
 /*--------------------------------------------------------------------------------------------------
-  Type aliases to make delcarations more informative */
+  Type aliases to make declarations more informative */
+
+using indicator_t = int;  // FIXME? any benefit to change to char?
+
 template <class T>
 using per_cond = vector<T>;
 
 template <class T>
 using per_site = vector<T>;
+
+template <class T>
+using per_aa = vector<T>;
+
+/*--------------------------------------------------------------------------------------------------
+  Hyperparameter structs */
+
+struct hyper_mean_invconc {
+    double mean;
+    double invconc;
+};
+
+struct hyper_mean_invshape {  // FIXME? different from hyper_mean_invconc?
+    double mean;
+    double invshape;
+};
+
+struct hyper_rate {
+    double rate;
+};
+
+struct no_hyper {};
 
 /*--------------------------------------------------------------------------------------------------
   Functions to set vectors to specific values */

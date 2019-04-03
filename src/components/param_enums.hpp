@@ -1,14 +1,12 @@
 #pragma once
 
-#include <ostream>
+#include "probnode_utils.hpp"
 
 // global == "fixed"
 // global but estimated == "shared"
 // gene specific, with hyperparameters estimated across genes == "shrunk"
 // gene-specific, with fixed hyperparameters == "independent"
-enum param_mode_t { independent, shrunk, shared, fixed };
-
-bool resampled(param_mode_t p) { return p == independent || p == shrunk; }
+enum param_mode_t { independent, shrunk, shared, fixed, invalid };
 
 std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
     if (c == independent) {
@@ -19,6 +17,8 @@ std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
         os << "shared";
     } else if (c == param_mode_t::fixed) {
         os << "fixed";
+    } else if (c == invalid) {
+        os << "invalid";
     }
     return os;
 }
@@ -26,11 +26,12 @@ std::ostream &operator<<(std::ostream &os, const param_mode_t &c) {
 template <class ValueType, class HyperValueType>
 class MultiGeneParameter {
     // invariant: ensures value and hyper_value are present iff needed
-    
+
     param_mode_t _mode;
     ValueType _value;             // assumes it's default-initializable
     HyperValueType _hyper_value;  // assumes it's default-initializable
   public:
+    MultiGeneParameter() : _mode(invalid) {}
     MultiGeneParameter(param_mode_t mode) : _mode(mode) {
         assert(mode == shared or mode == shrunk);
     }
@@ -41,15 +42,19 @@ class MultiGeneParameter {
         : _mode(mode), _hyper_value(hyper_value) {
         assert(mode == shrunk);
     }
-    param_mode_t mode() const { return mode; }
+    param_mode_t mode() const {
+        assert(_mode != invalid);
+        return _mode;
+    }
     ValueType value() const {
         assert(mode == fixed);
-        return value;
+        return _value;
     }
-    HyperValueType hyper_value() const {
+    HyperValueType hyper() const {
         assert(mode == shrunk);
-        return hyper_value;
+        return _hyper_value;
     }
+    bool resampled() const { return _mode == independent or _mode == shrunk; }
 };
 
 enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };
