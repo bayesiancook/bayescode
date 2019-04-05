@@ -146,7 +146,6 @@ void MultiGeneCodonM2aModel::Allocate() {
                 string name;
                 is >> name;
                 FileSequenceAlignment tmp(is);
-                // if (GeneAlloc[gene] == myid)    {
                 if (name == GeneName[index])    {
                     if (GetLocalGeneName(index) != name)    {
                         cerr << "error: non matching gene name\n";

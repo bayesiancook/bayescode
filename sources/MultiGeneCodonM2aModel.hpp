@@ -406,12 +406,11 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
+    std::vector<CodonSequenceAlignment*> alivector;
 
     string datapath;
     string datafile;
     string treefile;
-
-    std::vector<CodonSequenceAlignment*> alivector;
 
     int Ntaxa;
     int Nbranch;

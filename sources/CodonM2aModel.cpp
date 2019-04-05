@@ -15,12 +15,7 @@ CodonM2aModel::CodonM2aModel(const CodonSequenceAlignment* incodondata, const Tr
 
     taxonset = codondata->GetTaxonSet();
 
-    // get tree from file (newick format)
     tree = intree;
-
-    // check whether tree and data fits together
-    // tree->RegisterWith(taxonset);
-    // tree->SetIndices();
     Nbranch = tree->GetNbranch();
 }
 
