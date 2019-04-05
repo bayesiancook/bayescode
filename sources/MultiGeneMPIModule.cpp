@@ -1,5 +1,4 @@
 #include "MultiGeneMPIModule.hpp"
-// #include "Parallel.hpp"
 
 #include <fstream>
 
@@ -171,7 +170,6 @@ void MultiGeneMPIModule::MakeGeneList(const vector<string>& genename, const vect
                 if (genealloc[gene] == proc) {
                     GeneAlloc[i] = proc;
                     GeneName[i] = genename[gene];
-                    GeneName2Index[genename[gene]] = i;
                     GeneNsite[i] = genesize[gene];
                     i++;
                 }

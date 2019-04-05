@@ -208,7 +208,6 @@ class MultiGeneMPIModule {
     std::vector<int> SlaveTotNsite;
     std::vector<int> GeneAlloc;
     std::vector<string> GeneName;
-    std::map<string,int> GeneName2Index;
     std::vector<int> GeneNsite;
 
     SequenceAlignment *refdata;
