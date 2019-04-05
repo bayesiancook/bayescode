@@ -66,10 +66,10 @@
  */
 
 class AAMutSelDSBDPOmegaModel : public ProbModel {
-    Tree *tree;
+    const Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
-    CodonSequenceAlignment *codondata;
+    const CodonSequenceAlignment *codondata;
 
     int Nsite;
     int Ntaxa;
@@ -193,6 +193,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
+
     AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inomegaprior,
                             int inNcat, int inbaseNcat) {
         blmode = 0;
@@ -234,12 +235,12 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
-
+        Tree* tmptree = new Tree(treefile);
         // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        tmptree->RegisterWith(taxonset);
+        tmptree->SetIndices();
+        tree = tmptree;
 
-        tree->SetIndices();
         Nbranch = tree->GetNbranch();
 
         acca1 = acca2 = acca3 = acca4 = 0;
@@ -250,6 +251,62 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // Allocate();
     }
 
+    AAMutSelDSBDPOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inomegamode, int inomegaprior,
+                            int inNcat, int inbaseNcat) {
+        blmode = 0;
+        nucmode = 0;
+        basemode = 0;
+        omegamode = inomegamode;
+        omegaprior = inomegaprior;
+
+        codondata = incodondata;
+
+        Nsite = codondata->GetNsite();  // # columns
+        Ntaxa = codondata->GetNtaxa();
+
+        Ncat = inNcat;
+        if (Ncat == -1) {
+            Ncat = Nsite;
+            if (Ncat > 100) {
+                Ncat = 100;
+            }
+        }
+
+        basemin = 0;
+        if (inbaseNcat < 0) {
+            basemin = 1;
+            baseNcat = -inbaseNcat;
+            if (baseNcat != 2) {
+                cerr << "error in basencat\n";
+                exit(1);
+            }
+        } else {
+            baseNcat = inbaseNcat;
+        }
+
+        std::cerr << "-- Number of sites: " << Nsite << std::endl;
+        cerr << "ncat : " << Ncat << '\n';
+        cerr << "basencat : " << baseNcat << '\n';
+
+        taxonset = codondata->GetTaxonSet();
+
+        tree = intree;
+        Nbranch = tree->GetNbranch();
+
+        acca1 = acca2 = acca3 = acca4 = 0;
+        tota1 = tota2 = tota3 = tota4 = 0;
+        accb1 = accb2 = accb3 = accb4 = 0;
+        totb1 = totb2 = totb3 = totb4 = 0;
+
+        // Allocate();
+    }
+
+    //! \brief set estimation method for branch lengths
+    //!
+    //! - mode == 2: shared and estimated across genes
+    //! - mode == 1: gene specific, with hyperparameters estimated across genes
+    //! (with shrinkage)
+    //! - mode == 0: gene-specific, with fixed hyperparameters (without shrinkage)
     //! \brief set estimation method for branch lengths
     //!
     //! - mode == 2: shared and estimated across genes
