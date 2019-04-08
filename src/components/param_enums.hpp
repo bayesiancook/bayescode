@@ -32,28 +32,35 @@ class MultiGeneParameter {
     HyperValueType _hyper_value;  // assumes it's default-initializable
   public:
     MultiGeneParameter() : _mode(invalid) {}
+
     MultiGeneParameter(param_mode_t mode) : _mode(mode) {
         assert(mode == shared or mode == shrunk);
     }
+
     MultiGeneParameter(param_mode_t mode, ValueType value) : _mode(mode), _value(value) {
         assert(mode == fixed);
     }
+
     MultiGeneParameter(param_mode_t mode, HyperValueType hyper_value)
         : _mode(mode), _hyper_value(hyper_value) {
         assert(mode == shrunk);
     }
+
     param_mode_t mode() const {
         assert(_mode != invalid);
         return _mode;
     }
+
     ValueType value() const {
         assert(mode == fixed);
         return _value;
     }
+
     HyperValueType hyper() const {
         assert(mode == shrunk);
         return _hyper_value;
     }
+
     bool resampled() const { return _mode == independent or _mode == shrunk; }
 };
 

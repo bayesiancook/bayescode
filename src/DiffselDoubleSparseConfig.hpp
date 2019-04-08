@@ -20,11 +20,9 @@ struct DiffselDoubleSparseConfig {
     MultiGeneParameter<double, hyper_rate> fitness_shape;  // fitness is a multi-gamma
     MultiGeneParameter<per_aa<double>, no_hyper> fitness_center;
     MultiGeneParameter<double, hyper_mean_invconc> mask_prob;
+    MultiGeneParameter<double, no_hyper> epsilon;  // epsilon is uniform
 
     param_mode_t nucmode;  // mutation matrix parameters fixed or sampled
-
-    // epsilon
-    double epsilon{0.};
 
     // sparse model variants
     bool withtoggle;
@@ -32,6 +30,12 @@ struct DiffselDoubleSparseConfig {
 
     // pi-related
     double pihypermean{0.};
+
+    bool check() const {
+        bool result = Ncond > 0;
+        result = result and Nlevel > 0;
+        return result;
+    }
 };
 
 ostream& operator<<(ostream& os, DiffselDoubleSparseConfig& config) {

@@ -220,7 +220,6 @@ class DiffSelDoublySparseModel : public ChainComponent {
     vector<double> fitnesscenter;
     unique_ptr<BidimIIDMultiGamma> fitness;
 
-    int maskepsilonmode;
     mask_mode_t mask_mode;
     double maskprob;
     double maskepsilon;
@@ -290,31 +289,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
         : config(config), Ncond(config.Ncond), Nlevel(config.Nlevel), hyperfitnesssuffstat(Naa) {
         /* -- */
 
+        assert(config.check());
+
         if (config.fitness_shape.mode() == param_mode_t::fixed) {
             fitnessshape = config.fitness_shape.value();
         } else {
             fitnessshape = 20.0;
         }
 
-        if (config.epsilon >= 0) {
-            maskepsilon = config.epsilon;
-            maskepsilonmode = 3;
-            mask_mode = gene_spec_mask_fixed_hyper;
-        } else {
-            maskepsilonmode = 0;
-            mask_mode = gene_spec_mask_fixed_hyper;
-            maskepsilon = 0.01;
-        }
-
-        if (inepsilon == 1) {
-            maskepsilon = 1;
-            mask_mode = no_mask;
-            maskepsilonmode = 3;
-        } else {
-            maskepsilonmode = 0;
-            mask_mode = gene_spec_mask_fixed_hyper;
-            maskepsilon = 0.01;
-        }
+        assert(config.epsilon.mode() == param_mode_t::fixed);
+        assert(config.epsilon.value < 1 and config.epsilon.value > 0);
+        mask_mode = gene_spec_mask_fixed_hyper;  // FIXME? not sure it is necessary
 
         assert(Nlevel == 1 or Nlevel == 2);
         if (Ncond <= 2 and Nlevel == 2) {
@@ -614,7 +599,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
         // not updated at all times
         // total += FitnessLogPrior();
-        if (gene_specific_mask_mode(config.mask_prob.mode)) {
+        if (gene_specific_mask_mode(mask_mode)) {
             total += MaskHyperLogPrior();
             total += MaskLogPrior();
         }
@@ -791,8 +776,8 @@ class DiffSelDoublySparseModel : public ChainComponent {
             for (int rep = 0; rep < nrep; rep++) {
                 MoveBaselineFitness(weight);
                 CompMoveFitness(weight);
-                if (maskmode != no_mask) { MoveMasks(weight); }
-                if (gene_specific_mask_mode(maskmode)) {
+                if (mask_mode != no_mask) { MoveMasks(weight); }
+                if (gene_specific_mask_mode(mask_mode)) {
                     MoveMaskHyperParameters(10 * weight);
                 }  // FIXME: why move if fixed?
                 if (config.withtoggle) {
@@ -806,7 +791,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
                 if (config.fitness_shape.resampled() or config.fitness_center.resampled()) {
                     MoveFitnessHyperParameters(10 * weight);
                 }
-                if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
+                // if (maskepsilonmode < 2) { MoveMaskEpsilon(weight); }
             }
 
             if (config.nucmode != shared) { MoveNucRates(weight); }
@@ -937,17 +922,17 @@ class DiffSelDoublySparseModel : public ChainComponent {
     void MoveBaselineFitness(int nrep) {
         // if masks are not activated (all entries equal to 1), move a random subset
         // of entries over the 20 amino-acids (2d parameter of call)
-        if (maskmode == no_mask) {
-            MoveAllBaselineFitness(1.0, 3, nrep);
-            MoveAllBaselineFitness(1.0, 10, nrep);
-            MoveAllBaselineFitness(1.0, 20, nrep);
-            MoveAllBaselineFitness(0.3, 20, nrep);
-        }
-        // if masks are activated, move all active entries
-        else {
-            MoveBaselineFitness(1.0, nrep);
-            MoveBaselineFitness(0.3, nrep);
-        }
+        // if (mask_mode == no_mask) {
+        //     MoveAllBaselineFitness(1.0, 3, nrep);
+        //     MoveAllBaselineFitness(1.0, 10, nrep);
+        //     MoveAllBaselineFitness(1.0, 20, nrep);
+        //     MoveAllBaselineFitness(0.3, 20, nrep);
+        // }
+        // // if masks are activated, move all active entries
+        // else {
+        MoveBaselineFitness(1.0, nrep);
+        MoveBaselineFitness(0.3, nrep);
+        // }
     }
 
     //! elementary MH move on baseline gamma fitness parameters (for condition
@@ -1514,9 +1499,9 @@ class DiffSelDoublySparseModel : public ChainComponent {
         if (config.fitness_shape.resampled()) { model_node(info, "fitnessshape", fitnessshape); }
         if (config.fitness_center.resampled()) { model_node(info, "fitnesscenter", fitnesscenter); }
         model_node(info, "fitness", *fitness);
-        if (gene_specific_mask_mode(maskmode)) { model_node(info, "maskprob", maskprob); }
-        if (maskmode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }
-        if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
+        if (gene_specific_mask_mode(mask_mode)) { model_node(info, "maskprob", maskprob); }
+        if (mask_mode != no_mask) { model_node(info, "sitemaskarray", *sitemaskarray); }
+        // if (maskepsilonmode < 2) { model_node(info, "maskepsilon", maskepsilon); }
         if (Ncond > 1) {
             if (site_wise) {
                 model_node(info, "sw_toggles", sw_toggles);
@@ -1550,44 +1535,48 @@ class DiffSelDoublySparseModel : public ChainComponent {
 };
 
 istream &operator>>(istream &is, unique_ptr<DiffSelDoublySparseModel> &m) {
-    string model_name;
-    string datafile;
-    string treefile;
-    int Ncond, Nlevel;
-    int fitnessshapemode, fitnesscentermode;  // implicit cast of enum into int
-    double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc;
+    FAIL("Not yet implemented");
+    // string model_name;
+    // string datafile;
+    // string treefile;
+    // int Ncond, Nlevel;
+    // int fitnessshapemode, fitnesscentermode;  // implicit cast of enum into int
+    // double maskepsilonmode, pihypermean, shiftprobmean, shiftprobinvconc;
 
-    is >> model_name;
-    if (model_name != "DiffselDoublySparse") {
-        std::cerr << "Expected DiffselDoublySparse for model name, got " << model_name << "\n";
-        exit(1);
-    }
-    is >> datafile;
-    is >> treefile;
-    is >> Ncond >> Nlevel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean >>
-        shiftprobinvconc >> fitnesscentermode;
-    m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel,
-        maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
-        shiftprobinvconc, param_mode_t(fitnesscentermode), true, false);  // FIXME site_wise bool!
-    assert("implemented" == "false");
-    Tracer tracer{*m};
-    tracer.read_line(is);
+    // is >> model_name;
+    // if (model_name != "DiffselDoublySparse") {
+    //     std::cerr << "Expected DiffselDoublySparse for model name, got " << model_name << "\n";
+    //     exit(1);
+    // }
+    // is >> datafile;
+    // is >> treefile;
+    // is >> Ncond >> Nlevel >> maskepsilonmode >> fitnessshapemode >> pihypermean >> shiftprobmean
+    // >>
+    //     shiftprobinvconc >> fitnesscentermode;
+    // m = std::make_unique<DiffSelDoublySparseModel>(datafile, treefile, Ncond, Nlevel,
+    //     maskepsilonmode, param_mode_t(fitnessshapemode), pihypermean, shiftprobmean,
+    //     shiftprobinvconc, param_mode_t(fitnesscentermode), true, false);  // FIXME site_wise
+    //     bool!
+    // assert("implemented" == "false");
+    // Tracer tracer{*m};
+    // tracer.read_line(is);
     return is;
 }
 
 ostream &operator<<(ostream &os, DiffSelDoublySparseModel &m) {
+    FAIL("Not yet implemented");
     Tracer tracer{m};
-    os << "DiffselDoublySparse" << '\t';
-    os << m.datafile << '\t';
-    os << m.treefile << '\t';
-    os << m.Ncond << '\t';
-    os << m.Nlevel << '\t';
-    os << m.maskepsilonmode << '\t';
-    os << m.fitnessshapemode << '\t';
-    os << m.pihypermean << '\t';
-    os << m.shiftprobmean << '\t';
-    os << m.shiftprobinvconc << '\t';
-    os << m.fitnesscentermode << '\t';
+    // os << "DiffselDoublySparse" << '\t';
+    // os << m.config.datafile << '\t';
+    // os << m.config.treefile << '\t';
+    // os << m.Ncond << '\t';
+    // os << m.Nlevel << '\t';
+    // os << m.maskepsilonmode << '\t';
+    // os << m.fitnessshapemode << '\t';
+    // os << m.pihypermean << '\t';
+    // os << m.shiftprobmean << '\t';
+    // os << m.shiftprobinvconc << '\t';
+    // os << m.fitnesscentermode << '\t';
     tracer.write_line(os);
     return os;
 }
