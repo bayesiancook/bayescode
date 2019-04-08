@@ -713,9 +713,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             MPIBuffer buffer(size);
             MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
                      &stat);
-            os << size << '\n';
+            os << size << '\t';
             buffer.ToStream(os);
         }
+
+        os << '\n';
     }
 
     void SlaveToStream() const override {

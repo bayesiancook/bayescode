@@ -65,7 +65,7 @@ class MPIBuffer {
         for (unsigned int i = 0; i < size; i++) {
             os << buffer[i] << '\t';
         }
-        os << '\n';
+        // os << '\n';
     }
 
     void FromStream(istream &is) {
