@@ -72,10 +72,10 @@ inline logger_t global_logger() {
 #define ERROR(...) SPDLOG_LOGGER_ERROR(global_logger(), __VA_ARGS__)
 #define DEBUG(...) SPDLOG_LOGGER_DEBUG(global_logger(), __VA_ARGS__)
 #define TRACE(...) SPDLOG_LOGGER_TRACE(global_logger(), __VA_ARGS__)
-#define FAIL(...)                     \
-    {                                 \
-        SPDLOG_CRITICAL(__VA_ARGS__); \
-        exit(1);                      \
+#define FAIL(...)                                             \
+    {                                                         \
+        SPDLOG_LOGGER_CRITICAL(global_logger(), __VA_ARGS__); \
+        exit(1);                                              \
     }
 #ifndef NDEBUG
 #define assert_warn(condition, ...) \
