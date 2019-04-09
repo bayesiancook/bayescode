@@ -90,12 +90,20 @@ int main(int argc, char *argv[]) {
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
-        model = make_unique<DiffSelDoublySparseModel>(args.alignment.getValue(),
-            args.treefile.getValue(), ddargs.ncond.getValue(), ddargs.nlevel.getValue(),
-            ddargs.epsilon.getValue(), ddargs.fitnessshape.getValue(),
-            ddargs.pihypermean.getValue(), ddargs.shiftprobmean.getValue(),
-            ddargs.shiftprobinvconc.getValue(), param_mode_t(ddargs.fitnesscentermode.getValue()),
-            true, ddargs.sitewise.getValue());
+
+        // diffsel params
+        DiffselDoubleSparseConfig config;
+        config.datafile = args.alignment.getValue();
+        config.treefile = args.treefile.getValue();
+        config.Ncond = ddargs.ncond.getValue();
+        config.Nlevel = ddargs.nlevel.getValue();
+        config.branch_lengths =
+            ddargs.fixed_bl.isSet()
+                ? MultiGeneParameter<double, hyper_mean_invshape>(
+                      param_mode_t::fixed, ddargs.fixed_bl.getValue())
+                : MultiGeneParameter<double, hyper_mean_invshape>(independent, {0.1, 1.0});
+
+        model = make_unique<DiffSelDoublySparseModel>(config);
         model->Update();
     }
 

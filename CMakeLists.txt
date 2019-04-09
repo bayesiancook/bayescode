@@ -105,7 +105,7 @@ target_link_libraries(diffseldsparse ${BASE_LIBS})
 
 # tests
 add_executable(all_tests "src/all_tests.cpp")
-target_link_libraries(all_tests ${MPI_LIBRARIES})
+target_link_libraries(all_tests ${BASE_LIBS} ${MPI_LIBRARIES})
 
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)

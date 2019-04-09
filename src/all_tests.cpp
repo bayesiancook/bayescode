@@ -6,4 +6,6 @@
 
 #include "tags/test.cpp"
 
+#include "model/test.cpp"
+
 #include "mpi_components/test/seq_test.cpp"

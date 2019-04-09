@@ -38,12 +38,12 @@ class MultiGeneParameter {
     }
 
     MultiGeneParameter(param_mode_t mode, ValueType value) : _mode(mode), _value(value) {
-        assert(mode == fixed);
+        assert(mode == param_mode_t::fixed);
     }
 
     MultiGeneParameter(param_mode_t mode, HyperValueType hyper_value)
         : _mode(mode), _hyper_value(hyper_value) {
-        assert(mode == shrunk);
+        assert(mode == independent);
     }
 
     param_mode_t mode() const {
@@ -52,16 +52,18 @@ class MultiGeneParameter {
     }
 
     ValueType value() const {
-        assert(mode == fixed);
+        assert(_mode == param_mode_t::fixed);
         return _value;
     }
 
     HyperValueType hyper() const {
-        assert(mode == shrunk);
+        assert(_mode == shrunk);
         return _hyper_value;
     }
 
     bool resampled() const { return _mode == independent or _mode == shrunk; }
+
+    bool check() const { return _mode != invalid; }
 };
 
 enum mask_mode_t { gene_spec_mask_fixed_hyper, gene_spec_mask_est_hyper, shared_mask, no_mask };

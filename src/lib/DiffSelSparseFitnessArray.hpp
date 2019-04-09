@@ -3,7 +3,7 @@
 #include "Array.hpp"
 #include "BidimArray.hpp"
 #include "Random.hpp"
-#include "components/probnode_utils.hpp"
+#include "model/probnode_utils.hpp"
 
 /**
  * \brief An array of site- and condition-specific fitness profiles -- doubly

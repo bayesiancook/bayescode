@@ -48,7 +48,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 #include "components/mh_utils.hpp"
-#include "components/probnode_utils.hpp"
+#include "model/probnode_utils.hpp"
 #include "tree/implem.hpp"
 
 /**
@@ -288,8 +288,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
     DiffSelDoublySparseModel(DiffselDoubleSparseConfig config)
         : config(config), Ncond(config.Ncond), Nlevel(config.Nlevel), hyperfitnesssuffstat(Naa) {
         /* -- */
-
-        assert(config.check());
+        config.check();
 
         if (config.fitness_shape.mode() == param_mode_t::fixed) {
             fitnessshape = config.fitness_shape.value();
@@ -298,7 +297,7 @@ class DiffSelDoublySparseModel : public ChainComponent {
         }
 
         assert(config.epsilon.mode() == param_mode_t::fixed);
-        assert(config.epsilon.value < 1 and config.epsilon.value > 0);
+        assert(config.epsilon.value() < 1 and config.epsilon.value() > 0);
         mask_mode = gene_spec_mask_fixed_hyper;  // FIXME? not sure it is necessary
 
         assert(Nlevel == 1 or Nlevel == 2);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "components/param_enums.hpp"
+#include "model/param_classes.hpp"
 
 struct DiffselDoubleSparseConfig {
     string datafile{""};
@@ -31,10 +31,14 @@ struct DiffselDoubleSparseConfig {
     // pi-related
     double pihypermean{0.};
 
-    bool check() const {
-        bool result = Ncond > 0;
-        result = result and Nlevel > 0;
-        return result;
+    void check() const {
+        assert(Ncond > 0);
+        assert(Nlevel > 0);
+        assert(branch_lengths.check());
+        assert(fitness_shape.check());
+        assert(fitness_center.check());
+        assert(mask_prob.check());
+        assert(epsilon.check());
     }
 };
 
