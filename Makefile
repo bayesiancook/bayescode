@@ -91,10 +91,10 @@ run-app-tests: all
 	_build/mutselomega _test/mutselomega_gal4
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega read ===============================================\e[0m"
 	_build/readmutselomega _test/mutselomega_gal4
-	@echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
-	@make --no-print-directory diffseldsparse
-	@echo "\n\e[35m\e[1m== Diffsel double sparse (site-wise) ========================================\e[0m"
-	@make --no-print-directory diffseldsparse_sw
+	# @echo "\n\e[35m\e[1m== Diffsel double sparse ====================================================\e[0m"
+	# @make --no-print-directory diffseldsparse
+	# @echo "\n\e[35m\e[1m== Diffsel double sparse (site-wise) ========================================\e[0m"
+	# @make --no-print-directory diffseldsparse_sw
 
 # @make --no-print-directory run-multigeneglobom-test
 
