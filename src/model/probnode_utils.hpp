@@ -25,16 +25,28 @@ struct hyper_mean_invconc {
     double invconc;
 };
 
+istream& operator>>(istream& is, hyper_mean_invconc& hyper) {
+    return is >> hyper.mean >> hyper.invconc;
+}
+
 struct hyper_mean_invshape {  // FIXME? different from hyper_mean_invconc?
     double mean;
     double invshape;
 };
 
+istream& operator>>(istream& is, hyper_mean_invshape& hyper) {
+    return is >> hyper.mean >> hyper.invshape;
+}
+
 struct hyper_rate {
     double rate;
 };
 
+istream& operator>>(istream& is, hyper_rate& hyper) { return is >> hyper.rate; }
+
 struct no_hyper {};
+
+istream& operator>>(istream& is, no_hyper& hyper) { return is; }
 
 /*--------------------------------------------------------------------------------------------------
   Functions to set vectors to specific values */

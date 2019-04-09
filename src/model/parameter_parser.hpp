@@ -4,49 +4,33 @@
 
 template <class ValueT, class HyperValueT>
 istream &operator>>(istream &is, param::Config<ValueT, HyperValueT> &c) {
-    auto split = [](string input, char sep) {
-        vector<string> output;
-        auto it_begin = input.begin();
-        auto it_end = std::find(input.begin(), input.end(), sep);
-        do {
-            output.emplace_back(it_begin, it_end);
-            it_begin = it_end + 1;
-            it_end = std::find(it_begin, input.end(), sep);
-        } while (it_begin < input.end());
-        return output;
+    auto contains = [](string input, char sep) {
+        return std::find(input.begin(), input.end(), sep) != input.end();
+    };
+
+    auto split_at = [](string input, char sep) {
+        auto split_point = std::find(input.begin(), input.end(), sep);
+        assert(split_point != input.end());
+        return make_pair(string(input.begin(), split_point), string(split_point + 1, input.end()));
     };
 
     string declaration;
     is >> declaration;
 
-    auto fail = [&declaration](string msg) {
-        FAIL("Parameter mode declaration '{}' invalid.\n\t{}", declaration, msg);
-    };
-
-    auto colon_split = split(declaration, ':');
-    if (colon_split.size() == 1) {  // case 'mode'
-        string mode_str = colon_split.at(0);
-        if (mode_str == "shared" or mode_str == "shrunk") {  // 'shared'
-            std::stringstream(mode_str) >> c.mode;
-        } else {
-            fail("Shared and shrunk are the only modes which can be used without parameters.");
-        }
-    } else if (colon_split.size() == 2) {  // case 'mode:things...'
-        string mode_str = colon_split.at(0);
-        auto slash_split = split(colon_split.at(1), '/');
-        if (slash_split.size() == 1) {  // case 'mode:value(s)'
-            string value_str = slash_split.at(0);
-            if (mode_str == "shared" or mode_str == "fixed") {
-                std::stringstream(mode_str) >> c.mode;
-                std::stringstream(value_str) >> c.value;
-            } else {
-                fail("Shared and fixed are the only modes which can have a parameter value.");
-            }
-        }
+    if (contains(declaration, ':')) {
+        assert(not contains(declaration, '/'));
+        auto colon_split = split_at(declaration, ':');
+        std::stringstream(colon_split.first) >> c.mode;
+        assert(c.mode == param::shared or c.mode == param::fixed);
+        std::stringstream(colon_split.second) >> c.value;
+    } else if (contains(declaration, '/')) {
+        auto slash_split = split_at(declaration, '/');
+        std::stringstream(slash_split.first) >> c.mode;
+        assert(c.mode == param::independent or c.mode == param::shrunk);
+        std::stringstream(slash_split.second) >> c.hyper;
     } else {
-        fail("Found two or more occurrences of ':' in declaration.");
+        std::stringstream(declaration) >> c.mode;
+        assert(c.mode == param::shared or c.mode == param::shrunk);
     }
-
-
     return is;
 }
