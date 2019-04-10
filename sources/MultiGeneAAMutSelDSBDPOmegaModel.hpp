@@ -822,6 +822,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         if (omegaprior == 0) {
             total -= omegahypermean;
             total -= omegahyperinvshape;
+            if (modalprior && (omegahyperinvshape > 1.0))  {
+                total += Random::INFPROB;
+            }
         } else if (omegaprior == 1) {
             double pialpha = dposompihypermean / dposompihyperinvconc;
             double pibeta = (1 - dposompihypermean) / dposompihyperinvconc;
@@ -1367,12 +1370,18 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             ScalingMove(omegahypermean, 0.3, 10,
                         &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
                         &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
-            ScalingMove(omegahyperinvshape, 1.0, 10,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
-            ScalingMove(omegahyperinvshape, 0.3, 10,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
-                        &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+            if (modalprior) {
+                SlidingMove(omegahyperinvshape,1.0,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+                SlidingMove(omegahyperinvshape,0.3,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+                SlidingMove(omegahyperinvshape,0.1,10,0,1.0,&MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,&MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate,this);
+            } else  {
+                ScalingMove(omegahyperinvshape, 1.0, 10,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+                ScalingMove(omegahyperinvshape, 0.3, 10,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
+            }
 
             double alpha = 1.0 / omegahyperinvshape;
             double beta = alpha / omegahypermean;
