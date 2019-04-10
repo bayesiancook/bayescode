@@ -1,6 +1,6 @@
 
 #include "IncompleteGamma.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {

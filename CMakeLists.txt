@@ -26,6 +26,7 @@ include_directories("utils")
 
 # Static libs
 add_library (tree_lib STATIC "src/tree/implem.cpp")
+add_library (global_lib STATIC "src/global/Random.cpp")
 
 set(BAYESCODE_LIB
     src/lib/AAMutSelOmegaCodonSubMatrix.cpp
@@ -37,7 +38,6 @@ set(BAYESCODE_LIB
     src/lib/CodonSubMatrix.cpp
     src/lib/GTRSubMatrix.cpp
     src/lib/PhyloProcess.cpp
-    src/lib/Random.cpp
     src/lib/RandomGeneSample.cpp
     src/lib/Sample.cpp
     src/lib/SequenceAlignment.cpp
@@ -53,6 +53,7 @@ add_library (bayescode_lib STATIC ${BAYESCODE_LIB})
 set(BASE_LIBS
     bayescode_lib
     tree_lib
+    global_lib
 )
 
 # Single omega (globom)

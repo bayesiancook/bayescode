@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 class Move {
   public:

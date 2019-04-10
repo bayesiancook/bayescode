@@ -7,7 +7,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 double PointNormal(double prob);
 

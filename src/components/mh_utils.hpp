@@ -1,7 +1,7 @@
 #pragma once
 
 #include <assert.h>
-#include "lib/Random.hpp"
+#include "global/Random.hpp"
 
 class AcceptanceStats {
     double ntot{0};

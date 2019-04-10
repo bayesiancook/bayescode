@@ -2,7 +2,7 @@
 
 #include "Array.hpp"
 #include "BidimArray.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 #include "model/probnode_utils.hpp"
 
 /**

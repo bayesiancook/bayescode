@@ -4,7 +4,7 @@
 #include "Array.hpp"
 #include "CodonSuffStat.hpp"
 #include "PoissonSuffStat.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief A sufficient statistic for a collection of beta variates, as a

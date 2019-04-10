@@ -3,8 +3,8 @@
 #include "Array.hpp"
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
-#include "Random.hpp"
 #include "components/traits.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief An array of IID gamma random variables

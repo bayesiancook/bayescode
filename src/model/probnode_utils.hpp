@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Random.hpp"
+#include "global/Random.hpp"
 #include "global/defs.hpp"
 
 /*--------------------------------------------------------------------------------------------------

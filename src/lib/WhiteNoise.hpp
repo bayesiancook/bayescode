@@ -2,7 +2,7 @@
 
 #include "BranchArray.hpp"
 #include "PoissonSuffStat.hpp"
-#include "Random.hpp"
+#include "global/Random.hpp"
 
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
