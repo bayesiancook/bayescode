@@ -154,6 +154,9 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
         MultiGeneChain::MakeFiles(force);
         if (writegenedata)  {
             ofstream os((name + ".geneom").c_str());
+            if (blmode != 2)    {    
+                ofstream os((name + ".geneds").c_str());
+            }
             if (writegenedata == 2) {
                 ofstream os((name + ".siteom").c_str());
             }
@@ -162,10 +165,14 @@ class MultiGeneSiteOmegaChain : public MultiGeneChain {
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata == 1)  {
+        if (writegenedata)  {
             if (!myid) {
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 GetModel()->TraceOmega(os);
+                if (blmode != 2)    {    
+                    ofstream sos((name + ".geneds").c_str(), ios_base::app);
+                    GetModel()->TracedS(sos);
+                }
             }
         }
         if (writegenedata == 2) {

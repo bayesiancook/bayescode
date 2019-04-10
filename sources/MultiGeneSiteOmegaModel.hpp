@@ -543,6 +543,14 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         os.flush();
     }
 
+    void TracedS(ostream &os) const {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << branchlengtharray->GetVal(gene).GetTotalLength() << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
     void MasterTraceSiteOmega(ostream &os) {
         for (int proc = 1; proc < GetNprocs(); proc++) {
             int totnsite = GetSlaveTotNsite(proc);
