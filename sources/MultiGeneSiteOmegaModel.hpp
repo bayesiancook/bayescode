@@ -31,7 +31,10 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
+    std::vector<CodonSequenceAlignment*> alivector;
 
+    string datapath;
+    string datafile;
     string treefile;
 
     int Ntaxa;
@@ -93,7 +96,7 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSiteOmegaModel(string datafile, string intreefile, int inmyid, int innprocs)
+    MultiGeneSiteOmegaModel(string indatafile, string intreefile, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
@@ -102,8 +105,9 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         nucmode = 1;
         omegamode = 1;
 
-        AllocateAlignments(datafile);
+        datafile = indatafile;
         treefile = intreefile;
+        AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -178,8 +182,50 @@ class MultiGeneSiteOmegaModel : public MultiGeneProbModel {
         } else {
             geneprocess.assign(GetLocalNgene(), (SiteOmegaModel *)0);
 
+            ifstream is(datafile.c_str());
+            string tmp;
+            is >> tmp;
+            if (tmp == "ALI")   {
+                int ngene;
+                is >> ngene;
+                if (ngene != GetNgene())    {
+                    cerr << "error when reading alignments from cat file: non matching number of genes\n";
+                    exit(1);
+                }
+                alivector.assign(GetLocalNgene(), (CodonSequenceAlignment*) 0);
+                int index = 0;
+                for (int gene=0; gene<GetNgene(); gene++)   {
+                    string name;
+                    is >> name;
+                    FileSequenceAlignment tmp(is);
+                    if (name == GeneName[index])    {
+                        if (GetLocalGeneName(index) != name)    {
+                            cerr << "error: non matching gene name\n";
+                            exit(1);
+                        }
+                        if (alivector[index]) {
+                            cerr << "error: alignment already allocated\n";
+                            exit(1);
+                        }
+                        alivector[index] = new CodonSequenceAlignment(&tmp, true);
+                        index++;
+                    }
+                }
+                for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                    if (! alivector[gene])  {
+                        cerr << "error: alignment not allocated\n";
+                        exit(1);
+                    }
+                    geneprocess[gene] = new SiteOmegaModel(alivector[gene], tree);
+                }
+            }
+            else    {
+                for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                    geneprocess[gene] = new SiteOmegaModel(GetLocalGeneName(gene), treefile);
+                }
+            }
+
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] = new SiteOmegaModel(GetLocalGeneName(gene), treefile);
                 geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
                 geneprocess[gene]->Allocate();
             }
