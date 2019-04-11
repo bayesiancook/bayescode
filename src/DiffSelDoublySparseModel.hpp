@@ -48,7 +48,7 @@ of the CeCILL-C license and that you accept its terms.*/
 #include "components/ChainComponent.hpp"
 #include "components/Tracer.hpp"
 #include "components/mh_utils.hpp"
-#include "model/probnode_utils.hpp"
+#include "model/distrib_draw.hpp"
 #include "tree/implem.hpp"
 
 /**
