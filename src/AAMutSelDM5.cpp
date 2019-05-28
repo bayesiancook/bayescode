@@ -10,9 +10,9 @@
 
 using namespace std;
 
-class AAMutselArgParse : public BaseArgParse {
+class AAMutselDM5ArgParse : public BaseArgParse {
   public:
-    AAMutselArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
+    AAMutselDM5ArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
 
     ValueArg<int> ncat{
         "", "ncat", "truncation of the first-level stick-breaking process", false, 100, "int", cmd};
@@ -27,6 +27,13 @@ class AAMutselArgParse : public BaseArgParse {
         "omega is allowed to vary with shrinkage (otherwise set to 1)", cmd, false};
     SwitchArg flatfitness{"", "flatfitness", "Fitness landscape are flattened", cmd, false};
 
+    ValueArg<double> omega_weight_p0{"", "p0",
+        "The initial value of the proportion of sites with delta_omega equal 0", false, 0.5,
+        "double", cmd};
+
+    SwitchArg omega_weight_fixed_p0{
+        "", "fixp0", "The proportion of sites with delta_omega is fixed", cmd, false};
+
     //! - omegamode: omega fixed (3), shared across genes (2) or estimated with
     //! shrinkage across genes (1) or without shrinkage (0)
     int omegamode() {
@@ -36,6 +43,9 @@ class AAMutselArgParse : public BaseArgParse {
             return 3;
         }
     }
+
+    //! Because we already have one category for the DeltaOmega=0
+    int omegaNcat() { return omegancat.getValue() + 1; }
 };
 
 int main(int argc, char *argv[]) {
@@ -51,14 +61,16 @@ int main(int argc, char *argv[]) {
         check_restart(*model, cmd.chain_name() + ".trace");
     } else {
         InferenceAppArgParse args(cmd);
-        AAMutselArgParse aamutsel_args(cmd);
+        AAMutselDM5ArgParse aamutseldm5_args(cmd);
         cmd.parse();
         chain_driver =
             new ChainDriver(cmd.chain_name(), args.every.getValue(), args.until.getValue());
         model = new AAMutSelDM5Model(args.alignment.getValue(), args.treefile.getValue(),
-            aamutsel_args.omegamode(), aamutsel_args.ncat.getValue(),
-            aamutsel_args.basencat.getValue(), aamutsel_args.omegancat.getValue(),
-            aamutsel_args.omegashift.getValue(), aamutsel_args.flatfitness.getValue());
+            aamutseldm5_args.omegamode(), aamutseldm5_args.ncat.getValue(),
+            aamutseldm5_args.basencat.getValue(), aamutseldm5_args.omegaNcat(),
+            aamutseldm5_args.omegashift.getValue(), aamutseldm5_args.flatfitness.getValue(),
+            aamutseldm5_args.omega_weight_p0.getValue(),
+            aamutseldm5_args.omega_weight_fixed_p0.getValue());
     }
 
     ConsoleLogger console_logger;

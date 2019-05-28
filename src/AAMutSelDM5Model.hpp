@@ -2,6 +2,7 @@
 #include "Chrono.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSuffStat.hpp"
+#include "DGamma.hpp"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDDirichlet.hpp"
@@ -104,16 +105,15 @@ class AAMutSelDM5Model : public ChainComponent {
     int omegaNcat;
     MultinomialAllocationVector *omega_alloc;
     double omega_weight_p0;
+    bool omega_weight_fixed_p0;
     double omega_weight_hypermean{0.1};
     double omega_weight_hyperinvconc{0.1};
     Weights *omega_weight;
 
     double omega_shift;
-    double delta_omegahypermean;
     double delta_omegahyperinvshape;
-    // delta_omega_array of mean delta_omegahypermean and inverse shape parameter
-    // delta_omegahyperinvshape
-    IIDGamma *delta_omega_array;
+    double delta_omegahypermean;
+    DGamma *delta_omega_array;
 
     OmegaPathSuffStatArray *siteomegapathsuffstatarray;
     OmegaPathSuffStatArray *componentomegapathsuffstatarray;
@@ -207,10 +207,13 @@ class AAMutSelDM5Model : public ChainComponent {
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
     AAMutSelDM5Model(std::string indatafile, std::string intreefile, int inomegamode, int inNcat,
-        int inbaseNcat, int inomegaNcat, double inomegashift, bool inflatfitness)
+        int inbaseNcat, int inomegaNcat, double inomegashift, bool inflatfitness, double inp0,
+        bool infixedp0)
         : datafile(indatafile),
           treefile(intreefile),
           omegaNcat(inomegaNcat),
+          omega_weight_p0(inp0),
+          omega_weight_fixed_p0(infixedp0),
           omega_shift(inomegashift),
           baseNcat(inbaseNcat),
           Ncat(inNcat),
@@ -291,7 +294,6 @@ class AAMutSelDM5Model : public ChainComponent {
         model_node(info, "weight", *weight);
         model_node(info, "componentaafitnessarray", *componentaafitnessarray);
         model_node(info, "profile_alloc", *profile_alloc);
-        model_node(info, "delta_omega_array", *delta_omega_array);
         model_node(info, "omega_alloc", *omega_alloc);
         model_node(info, "omega_weight_p0", omega_weight_p0);
         model_node(info, "omega_weight_hypermean", omega_weight_hypermean);
@@ -299,7 +301,7 @@ class AAMutSelDM5Model : public ChainComponent {
         model_node(info, "omega_weight", *omega_weight);
         model_node(info, "delta_omegahyperinvshape", delta_omegahyperinvshape);
         model_node(info, "delta_omegahypermean", delta_omegahypermean);
-
+        model_node(info, "delta_omega_array", *delta_omega_array);
 
         model_stat(info, "logprior", [this]() { return GetLogPrior(); });
         model_stat(info, "lnL", [this]() { return GetLogLikelihood(); });
@@ -310,8 +312,11 @@ class AAMutSelDM5Model : public ChainComponent {
         model_stat(info, "omega", [this]() { return GetMeanOmega(); });
 
         model_stat(info, "omegaweightp0", omega_weight_p0);
-        model_stat(info, "omegaweightent",
-            [this]() { return Random::GetEntropy(omega_weight->GetArray()); });
+        model_stat(
+            info, "deltaomegahyperalpha", [this]() { return 1.0 / delta_omegahyperinvshape; });
+        model_stat(info, "deltaomegahyperbeta",
+            [this]() { return 1.0 / (delta_omegahyperinvshape * delta_omegahypermean); });
+
         model_stat(info, "ncluster", [this]() { return GetNcluster(); });
         model_stat(info, "kappa", kappa);
         if (baseNcat > 1) {
@@ -398,12 +403,11 @@ class AAMutSelDM5Model : public ChainComponent {
         omega_occupancy = new OccupancySuffStat(omegaNcat);
 
         // omega (fixed to 1 by default)
-        delta_omegahypermean = 1.0;
         delta_omegahyperinvshape = 1.0;
-        delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
+        delta_omegahypermean = 1.0;
+        delta_omega_array = new DGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
 
         // will be a constant
-        omega_weight_p0 = 0.5;
         omega_weight = new Weights(omegaNcat, omega_weight_p0);
         omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
 
@@ -470,12 +474,6 @@ class AAMutSelDM5Model : public ChainComponent {
         componentcodonmatrixbidimarray->CorruptRowCodonMatrices(k);
     }
 
-    //! \brief tell codon matrices (of omega component k) that its parameters have changed and
-    //! that it should be updated
-    void CorruptOmegaCodonMatrix(int k) {
-        componentcodonmatrixbidimarray->CorruptRowCodonMatrices(k);
-    }
-
     //! \brief tell the nucleotide and the codon matrices that their parameters
     //! have changed and that it should be updated
     void UpdateMatrices() {
@@ -525,7 +523,7 @@ class AAMutSelDM5Model : public ChainComponent {
         total += StickBreakingHyperLogPrior();
         total += StickBreakingLogPrior();
         total += AALogPrior();
-        if (omegamode < 2) { total += DeltaOmegaLogProb(); }
+        total += DeltaOmegaLogPrior();
         return total;
     }
 
@@ -541,19 +539,10 @@ class AAMutSelDM5Model : public ChainComponent {
         return ret;
     }
 
-    //! \brief log prior over delta_omega (for all components) + HyperLogPrior
-    double DeltaOmegaLogProb() const { return DeltaOmegaLogPrior() + DeltaOmegaHyperLogPrior(); }
-
-    //! \brief log prior over delta_omega (for all components)
-    double DeltaOmegaLogPrior() const { return delta_omega_array->GetLogProb(); }
-
-    //! \brief log prior over delta_omega (for component i)
-    double DeltaOmegaLogPrior(int i) const { return delta_omega_array->GetLogProb(i); }
-
     //! \brief log prior over hyperparameter of prior over omega (here,
-    //! delta_omegahyperinvshape ~ exponential of rate 10)
-    //! delta_omegahypermean ~ exponential of rate 10)
-    double DeltaOmegaHyperLogPrior() const {
+    //! delta_omegahyperalpha ~ exponential of rate 10)
+    //! delta_omegahyperbeta ~ exponential of rate 10)
+    double DeltaOmegaLogPrior() const {
         return -(delta_omegahyperinvshape + delta_omegahypermean) / 10;
     }
 
@@ -641,6 +630,18 @@ class AAMutSelDM5Model : public ChainComponent {
         return componentomegapathsuffstatarray->GetVal(k).GetLogProb(GetComponentOmega(k));
     }
 
+    //! return log prob of the substitution mappings over sites allocated to omega
+    //! component k of the omega mixture
+    double PathSuffStatOmegaLogProb() const {
+        double logprob = 0;
+        for (int omegacat = 0; omegacat < omegaNcat; omegacat++) {
+            if (omega_occupancy->GetVal(omegacat)) {
+                logprob += PathSuffStatOmegaLogProb(omegacat);
+            }
+        }
+        return logprob;
+    }
+
     //! return log prob of first-level mixture components (i.e. all amino-acid
     //! profiles drawn from component k of the base distribution), as a function
     //! of the center and concentration parameters of this component
@@ -656,6 +657,10 @@ class AAMutSelDM5Model : public ChainComponent {
     //! log prob factor to be recomputed when moving nucleotide mutation rate
     //! parameters (nucrelrate and nucstat)
     double NucRatesLogProb() const { return NucRatesLogPrior() + PathSuffStatLogProb(); }
+
+    //! log prob factor to be recomputed when moving alpha or beta of the discretized gamma
+    //! distribution
+    double OmegaLogProb() const { return PathSuffStatOmegaLogProb() + DeltaOmegaLogPrior(); }
 
     //! log prob factor to be recomputed when moving aa hyper params (center and
     //! concentration) for component k of base distribution
@@ -1139,45 +1144,24 @@ class AAMutSelDM5Model : public ChainComponent {
             ResampleOmegaAlloc();
             UpdateOmegaOccupancies();
             CollectComponentOmegaPathSuffStat();
-            MoveOmegaValues(1.0, 3);
-            MoveOmegaValues(0.1, 3);
-            ResampleEmptyOmegaComponents();
-            ResampleOmegaWeights();
             MoveOmegaHyper();
+            if (!omega_weight_fixed_p0) { ResampleOmegaWeights(); }
         }
         CorruptCodonMatrices();
     }
 
-    //! MH move on omega (per component): scaling move
-    double MoveOmegaValues(double tuning, int nrep) {
-        double bk{0}, nacc{0}, ntot{0};
-        for (int i = 0; i < omegaNcat; i++) {
-            if (omega_occupancy->GetVal(i)) {
-                for (int rep = 0; rep < nrep; rep++) {
-                    bk = delta_omega_array->GetVal(i);
-
-                    double deltalogprob = -(PathSuffStatOmegaLogProb(i) + DeltaOmegaLogPrior(i));
-                    double loghastings = tuning * (Random::Uniform() - 0.5);
-                    double hastings = exp(loghastings);
-
-                    (*delta_omega_array)[i] *= hastings;
-
-                    deltalogprob += loghastings;
-                    deltalogprob += PathSuffStatOmegaLogProb(i) + DeltaOmegaLogPrior(i);
-                    int accepted = (log(Random::Uniform()) < deltalogprob);
-                    if (accepted) {
-                        nacc++;
-                    } else {
-                        (*delta_omega_array)[i] = bk;
-                    }
-                    ntot++;
-                }
-            }
-        }
-        return nacc / ntot;
+    void MoveOmegaHyper() {
+        Move::Scaling(delta_omegahyperinvshape, 1.0, 3, &AAMutSelDM5Model::OmegaLogProb,
+            &AAMutSelDM5Model::UpdateDeltaOmega, this);
+        Move::Scaling(delta_omegahyperinvshape, 0.1, 3, &AAMutSelDM5Model::OmegaLogProb,
+            &AAMutSelDM5Model::UpdateDeltaOmega, this);
+        Move::Scaling(delta_omegahypermean, 1.0, 3, &AAMutSelDM5Model::OmegaLogProb,
+            &AAMutSelDM5Model::UpdateDeltaOmega, this);
+        Move::Scaling(delta_omegahypermean, 0.1, 3, &AAMutSelDM5Model::OmegaLogProb,
+            &AAMutSelDM5Model::UpdateDeltaOmega, this);
     }
 
-    void ResampleEmptyOmegaComponents() { delta_omega_array->PriorResample(*omega_occupancy); };
+    void UpdateDeltaOmega() { delta_omega_array->Update(); }
 
     //! update mixture omega occupancy suff stats (for resampling mixture weights)
     void UpdateOmegaOccupancies() {
@@ -1198,7 +1182,7 @@ class AAMutSelDM5Model : public ChainComponent {
     double GetOmegaAllocPostProb(int site, std::vector<double> &postprob) {
         double max = 0;
 
-        const std::vector<double> &w = omega_weight->GetArray();
+        const std::vector<double> &weights = omega_weight->GetArray();
         const OmegaPathSuffStat &suffstat = siteomegapathsuffstatarray->GetVal(site);
 
         for (int i = 0; i < omegaNcat; i++) {
@@ -1209,7 +1193,7 @@ class AAMutSelDM5Model : public ChainComponent {
 
         double total = 0;
         for (int i = 0; i < omegaNcat; i++) {
-            postprob[i] = w[i] * exp(postprob[i] - max);
+            postprob[i] = weights[i] * exp(postprob[i] - max);
             total += postprob[i];
         }
 
@@ -1222,21 +1206,6 @@ class AAMutSelDM5Model : public ChainComponent {
     void ResampleOmegaWeights() {
         omega_weight->GibbsResample(
             *omega_occupancy, omega_weight_hypermean, omega_weight_hyperinvconc);
-    }
-
-
-    //! Scaling moves on omega hyperparameters
-    void MoveOmegaHyper() {
-        if (omegaNcat > 1) {
-            Move::Scaling(delta_omegahypermean, 1.0, 10, &AAMutSelDM5Model::DeltaOmegaLogProb,
-                &AAMutSelDM5Model::NoUpdate, this);
-            Move::Scaling(delta_omegahypermean, 0.3, 10, &AAMutSelDM5Model::DeltaOmegaLogProb,
-                &AAMutSelDM5Model::NoUpdate, this);
-            Move::Scaling(delta_omegahyperinvshape, 1.0, 10, &AAMutSelDM5Model::DeltaOmegaLogProb,
-                &AAMutSelDM5Model::NoUpdate, this);
-            Move::Scaling(delta_omegahyperinvshape, 0.3, 10, &AAMutSelDM5Model::DeltaOmegaLogProb,
-                &AAMutSelDM5Model::NoUpdate, this);
-        }
     }
 
     //-------------------

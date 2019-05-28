@@ -267,7 +267,13 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         }
     }
 
-    double GetLogProb(double omega) const { return count * log(omega) - beta * omega; }
+    double GetLogProb(double omega) const {
+        if (count == 0 && omega == 0.0){
+            return -std::numeric_limits<double>::infinity();
+        } else {
+            return count * log(omega) - beta * omega;
+        }
+    }
 };
 
 /**

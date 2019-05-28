@@ -136,10 +136,12 @@ DM5: _build
 	@cd _build ; make --no-print-directory -j8 mutseldm5 readmutseldm5
 	@rm -rf _mutseldm5
 	@mkdir _mutseldm5
-	_build/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 1 -u 100 --flatfitness _mutseldm5/bglobin
-	_build/mutseldm5 _mutseldm5/bglobin
+	_build/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 0.0 --freeomega --omegancat 10 --flatfitness --fixp0 --p0 0.0 -u 100 _mutseldm5/flat_bglobin
+	_build/mutseldm5 _mutseldm5/flat_bglobin
+	_build/readmutseldm5 _mutseldm5/flat_bglobin
+	_build/readmutseldm5 --ss _mutseldm5/flat_bglobin
+	_build/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 1.0 --freeomega --omegancat 10 --ncat 30 -u 100 _mutseldm5/bglobin
 	_build/readmutseldm5 _mutseldm5/bglobin
-	_build/readmutseldm5 --ss _mutseldm5/bglobin
 
 .PHONY: diffseldsparse
 diffseldsparse: all

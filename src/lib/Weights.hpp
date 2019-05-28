@@ -12,7 +12,7 @@ class Weights : public SimpleArray<double> {
   public:
     //! constructor, parameterized by array size (truncation upper limit) and
     //! concentration parameter kappa
-    Weights(int inncat, double &inp0) : SimpleArray<double>(inncat), p0(inp0) {}
+    Weights(int inncat, double &inp0) : SimpleArray<double>(inncat), p0(inp0) { Update(); }
 
     ~Weights() override = default;
 
@@ -20,7 +20,7 @@ class Weights : public SimpleArray<double> {
         if (cat == 0) {
             return p0;
         } else {
-            return (1 - p0) / this->GetSize();
+            return (1 - p0) / (this->GetSize() - 1);
         }
     }
 

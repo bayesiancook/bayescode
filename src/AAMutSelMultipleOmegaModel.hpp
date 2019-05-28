@@ -463,12 +463,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         componentcodonmatrixbidimarray->CorruptRowCodonMatrices(k);
     }
 
-    //! \brief tell codon matrices (of omega component k) that its parameters have changed and
-    //! that it should be updated
-    void CorruptOmegaCodonMatrix(int k) {
-        componentcodonmatrixbidimarray->CorruptRowCodonMatrices(k);
-    }
-
     //! \brief tell the nucleotide and the codon matrices that their parameters
     //! have changed and that it should be updated
     void UpdateMatrices() {
