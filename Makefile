@@ -126,10 +126,20 @@ mutselomega: _build
 	@cd _build ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
-	_build/mutselomega -a data/samhd1/samhd1.ali -t data/samhd1/samhd1.tree --omegashift 0.0 --freeomega --omegancat 1 -u 20 _mutselomega/samhd1
-	_build/mutselomega _mutselomega/samhd1
-	_build/readmutselomega _mutselomega/samhd1
-	_build/readmutselomega --ss _mutselomega/samhd1
+	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 -u 200 --flatfitness _mutselomega/bglobin
+	_build/mutselomega _mutselomega/bglobin
+	_build/readmutselomega -b 10 _mutselomega/bglobin
+	_build/readmutselomega -b 10 --ss _mutselomega/bglobin
+
+.PHONY: DM5
+DM5: _build
+	@cd _build ; make --no-print-directory -j8 mutseldm5 readmutseldm5
+	@rm -rf _mutseldm5
+	@mkdir _mutseldm5
+	_build/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 1 -u 100 --flatfitness _mutseldm5/bglobin
+	_build/mutseldm5 _mutseldm5/bglobin
+	_build/readmutseldm5 _mutseldm5/bglobin
+	_build/readmutseldm5 --ss _mutseldm5/bglobin
 
 .PHONY: diffseldsparse
 diffseldsparse: all

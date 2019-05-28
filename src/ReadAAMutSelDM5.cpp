@@ -1,6 +1,6 @@
 #include <cmath>
 #include <fstream>
-#include "AAMutSelMultipleOmegaModel.hpp"
+#include "AAMutSelDM5Model.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ChainReader.hpp"
 #include "components/ReadArgParse.hpp"
@@ -19,7 +19,7 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
 };
 
 int main(int argc, char *argv[]) {
-    CmdLine cmd{"AAMutSelMultipleOmega", ' ', "0.1"};
+    CmdLine cmd{"AAMutSelDM5", ' ', "0.1"};
     ReadAAMutSelDSBDPOmegaArgParse read_args(cmd);
     cmd.parse(argc, argv);
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
     std::ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
-    AAMutSelMultipleOmegaModel model(is);
+    AAMutSelDM5Model model(is);
     ChainReader cr{model, chain_name + ".chain"};
 
     cr.skip(burnin);
@@ -88,6 +88,5 @@ int main(int argc, char *argv[]) {
             os << i + 1 << '\t' << omegappgto[i] / size << '\n';
         }
         cerr << "Posterior prob of omega greater than 1.0 in " << chain_name << ".omegappgto\n";
-        cerr << '\n';
-    }
+        cerr << '\n';    }
 }
