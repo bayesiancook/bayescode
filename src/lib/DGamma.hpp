@@ -5,8 +5,10 @@
 
 class DGamma : public SimpleArray<double> {
   public:
-    DGamma(int Ncat, double const& mean, double const& invshape)
+    DGamma(int Ncat, double const& mean, double const& invshape, double delta_shift)
         : SimpleArray<double>(Ncat), mean(mean), invshape(invshape) {
+        // The first category is user defined (and not updated)
+        (*this)[0] = delta_shift;
         Update();
     }
 
@@ -35,7 +37,6 @@ class DGamma : public SimpleArray<double> {
 
     void Update() {
         auto x = GetDiscreteArray(this->GetSize() - 1);
-        (*this)[0] = 0.0;
         for (int i = 1; i < this->GetSize(); i++) { (*this)[i] = x[i - 1]; }
     }
 

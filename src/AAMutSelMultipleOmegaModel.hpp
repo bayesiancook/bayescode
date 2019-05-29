@@ -1315,9 +1315,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelMultipleOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
+        os << omegaNcat << '\t';
+        os << omega_shift << '\t';
+        os << baseNcat << '\t';
+        os << Ncat << '\t';
         os << omegamode << '\t';
-        os << Ncat << '\t' << baseNcat << '\t';
-        os << omegaNcat << '\t' << omega_shift << '\t';
+        os << flatfitness << '\t';
         tracer->write_line(os);
     }
 
@@ -1330,9 +1333,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             exit(1);
         }
         is >> datafile >> treefile;
+        is >> omegaNcat;
+        is >> omega_shift;
+        is >> baseNcat;
+        is >> Ncat;
         is >> omegamode;
-        is >> Ncat >> baseNcat >> omegaNcat >> omega_shift;
-
+        is >> flatfitness;
         init();
         tracer->read_line(is);
         Update();

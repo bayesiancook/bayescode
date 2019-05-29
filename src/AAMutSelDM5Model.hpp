@@ -111,8 +111,11 @@ class AAMutSelDM5Model : public ChainComponent {
     Weights *omega_weight;
 
     double omega_shift;
+    double omega_p0;
     double delta_omegahyperinvshape;
     double delta_omegahypermean;
+    double delta_omegahyperinvshape_threshold;
+    double delta_omegahypermean_threshold;
     DGamma *delta_omega_array;
 
     OmegaPathSuffStatArray *siteomegapathsuffstatarray;
@@ -208,13 +211,17 @@ class AAMutSelDM5Model : public ChainComponent {
     //! default: 1)
     AAMutSelDM5Model(std::string indatafile, std::string intreefile, int inomegamode, int inNcat,
         int inbaseNcat, int inomegaNcat, double inomegashift, bool inflatfitness, double inp0,
-        bool infixedp0)
+        bool infixedp0, double inomegap0, double hyperinvshape_threshold,
+        double hypermean_threshold)
         : datafile(indatafile),
           treefile(intreefile),
           omegaNcat(inomegaNcat),
           omega_weight_p0(inp0),
           omega_weight_fixed_p0(infixedp0),
           omega_shift(inomegashift),
+          omega_p0(inomegap0),
+          delta_omegahyperinvshape_threshold(hyperinvshape_threshold),
+          delta_omegahypermean_threshold(hypermean_threshold),
           baseNcat(inbaseNcat),
           Ncat(inNcat),
           omegamode(inomegamode),
@@ -260,6 +267,7 @@ class AAMutSelDM5Model : public ChainComponent {
         std::cerr << "baseNcat : " << baseNcat << '\n';
         std::cerr << "omegaNcat : " << omegaNcat << '\n';
         std::cerr << "OmegaShift : " << omega_shift << '\n';
+        std::cerr << "Omega for the first category : " << omega_p0 << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -403,9 +411,10 @@ class AAMutSelDM5Model : public ChainComponent {
         omega_occupancy = new OccupancySuffStat(omegaNcat);
 
         // omega (fixed to 1 by default)
-        delta_omegahyperinvshape = 1.0;
-        delta_omegahypermean = 1.0;
-        delta_omega_array = new DGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
+        delta_omegahyperinvshape = delta_omegahyperinvshape_threshold / 2;
+        delta_omegahypermean = delta_omegahypermean_threshold + 1.0;
+        delta_omega_array = new DGamma(
+            omegaNcat, delta_omegahypermean, delta_omegahyperinvshape, omega_p0 - omega_shift);
 
         // will be a constant
         omega_weight = new Weights(omegaNcat, omega_weight_p0);
@@ -543,7 +552,13 @@ class AAMutSelDM5Model : public ChainComponent {
     //! delta_omegahyperalpha ~ exponential of rate 10)
     //! delta_omegahyperbeta ~ exponential of rate 10)
     double DeltaOmegaLogPrior() const {
-        return -(delta_omegahyperinvshape + delta_omegahypermean) / 10;
+        if (delta_omegahyperinvshape > delta_omegahyperinvshape_threshold) {
+            return -std::numeric_limits<double>::infinity();
+        }
+        if (delta_omegahypermean < delta_omegahypermean_threshold) {
+            return -std::numeric_limits<double>::infinity();
+        }
+        return -delta_omegahyperinvshape / 0.1 - delta_omegahypermean / 10;
     }
 
     //! log prior over nuc rates rho and pi (uniform)
@@ -1294,9 +1309,18 @@ class AAMutSelDM5Model : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelDM5" << '\t';
         os << datafile << '\t' << treefile << '\t';
+        os << omegaNcat << '\t';
+        os << omega_weight_p0 << '\t';
+        os << omega_weight_fixed_p0 << '\t';
+        os << omega_shift << '\t';
+        os << omega_p0 << '\t';
+        os << delta_omegahyperinvshape_threshold << '\t';
+        os << delta_omegahypermean_threshold << '\t';
+        os << baseNcat << '\t';
+        os << Ncat << '\t';
         os << omegamode << '\t';
-        os << Ncat << '\t' << baseNcat << '\t';
-        os << omegaNcat << '\t' << omega_shift << '\t';
+        os << flatfitness << '\t';
+
         tracer->write_line(os);
     }
 
@@ -1308,8 +1332,17 @@ class AAMutSelDM5Model : public ChainComponent {
             exit(1);
         }
         is >> datafile >> treefile;
+        is >> omegaNcat;
+        is >> omega_weight_p0;
+        is >> omega_weight_fixed_p0;
+        is >> omega_shift;
+        is >> omega_p0;
+        is >> delta_omegahyperinvshape_threshold;
+        is >> delta_omegahypermean_threshold;
+        is >> baseNcat;
+        is >> Ncat;
         is >> omegamode;
-        is >> Ncat >> baseNcat >> omegaNcat >> omega_shift;
+        is >> flatfitness;
 
         init();
         tracer->read_line(is);

@@ -16,6 +16,8 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
 
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
+    ValueArg<double> omega_pp{
+        "", "omega_threshold", "the threshold for omega", false, 1.0, "double", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -73,21 +75,27 @@ int main(int argc, char *argv[]) {
         cerr << '\n';
     } else {
         std::vector<double> omegappgto(model.GetNsite(), 0);
+        std::vector<double> omega(model.GetNsite(), 0);
 
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             for (int site = 0; site < model.GetNsite(); site++) {
-                if (model.GetSiteOmega(site) > 1.0) { omegappgto[site]++; }
+                omega[site] += model.GetSiteOmega(site);
+                if (model.GetSiteOmega(site) > read_args.omega_pp.getValue()) {
+                    omegappgto[site]++;
+                }
             }
         }
         cerr << '\n';
 
-        ofstream os((chain_name + ".omegappgto").c_str());
+        string filename{chain_name + ".omegappgt" + to_string(read_args.omega_pp.getValue())};
+        ofstream os(filename.c_str());
         for (int i = 0; i < model.GetNsite(); i++) {
-            os << i + 1 << '\t' << omegappgto[i] / size << '\n';
+            os << i + 1 << '\t' << omegappgto[i] / size << '\t' << omega[i] / size << '\n';
         }
-        cerr << "Posterior prob of omega greater than 1.0 in " << chain_name << ".omegappgto\n";
+        cerr << "Posterior prob of omega greater than " << read_args.omega_pp.getValue() << " in "
+             << filename << "\n";
         cerr << '\n';
     }
 }

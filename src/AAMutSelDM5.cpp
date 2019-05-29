@@ -30,9 +30,16 @@ class AAMutselDM5ArgParse : public BaseArgParse {
     ValueArg<double> omega_weight_p0{"", "p0",
         "The initial value of the proportion of sites with delta_omega equal 0", false, 0.5,
         "double", cmd};
-
     SwitchArg omega_weight_fixed_p0{
         "", "fixp0", "The proportion of sites with delta_omega is fixed", cmd, false};
+    ValueArg<double> omega_p0{
+        "", "omega_p0", "the omega applied to the first category", false, 1.0, "double", cmd};
+
+    ValueArg<double> hypermean_threshold{"", "hypermean_threshold",
+        "The lower threshold for the mean of the Gamma distribution", false, 0.1, "double", cmd};
+    ValueArg<double> hyperinvshape_threshold{"", "hyperinvshape_threshold",
+        "The upper threshold for the inverse shape of the Gamma distribution", false, 1.0, "double",
+        cmd};
 
     //! - omegamode: omega fixed (3), shared across genes (2) or estimated with
     //! shrinkage across genes (1) or without shrinkage (0)
@@ -70,7 +77,9 @@ int main(int argc, char *argv[]) {
             aamutseldm5_args.basencat.getValue(), aamutseldm5_args.omegaNcat(),
             aamutseldm5_args.omegashift.getValue(), aamutseldm5_args.flatfitness.getValue(),
             aamutseldm5_args.omega_weight_p0.getValue(),
-            aamutseldm5_args.omega_weight_fixed_p0.getValue());
+            aamutseldm5_args.omega_weight_fixed_p0.getValue(), aamutseldm5_args.omega_p0.getValue(),
+            aamutseldm5_args.hyperinvshape_threshold.getValue(),
+            aamutseldm5_args.hypermean_threshold.getValue());
     }
 
     ConsoleLogger console_logger;
