@@ -27,9 +27,8 @@
  * (assumed homogeneous across sites and lineages)
  * - an array of site-specific amino-acid fitness profiles F_ia, for site i and
  * amino-acid a
- * - an omega multiplier, capturing deviations of the non-syn rate from the
- * model (see Rodrigue and Lartillot, 2107); this parameter is fixed to 1 by
- * default.
+ * - an array of site-specific omega multiplier, capturing deviations of the non-syn rate from the
+ * model; this parameter is fixed to 1 by default.
  *
  * Site-specific amino-acid fitness profiles are drawn from a Dirichlet process,
  * implemented using a truncated stick-breaking process, of concentration
@@ -60,12 +59,23 @@
  * - center of base distribution: uniform Dirichlet
  * - concentration of base distribution: exponential of mean 20.
  *
- * In a multi-gene context, shrinkage across genes can be applied to branch
- * lengths, omega, nucleotide rate parameters (rho and pi), and to the
- * parameters of the base distribution (center and concentration) -- see
- * MultiGeneAAMutSelDSBDPModel.
- *
  */
+
+
+//! Open a file
+std::vector<double> open_delta_omega_array(std::string const &file_name) {
+    std::vector<double> delta_omega_array{};
+    std::ifstream input_stream(file_name);
+    if (!input_stream) {
+        std::cerr << "Delta-omega array file " << file_name << " doesn't exist" << std::endl;
+    }
+
+    std::string line;
+    while (getline(input_stream, line)) {
+        if (!line.empty()) { delta_omega_array.push_back(stod(line)); }
+    }
+    return delta_omega_array;
+}
 
 class AAMutSelMultipleOmegaModel : public ChainComponent {
     std::string datafile, treefile;
@@ -101,11 +111,13 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     std::vector<double> nucrelrate;
     GTRSubMatrix *nucmatrix;
 
+    bool clamp_delta_omega_array{false};
+    std::string delta_omega_array_file = "Null";
     int omegaNcat;
     MultinomialAllocationVector *omega_alloc;
+
     double omega_weight_kappa;
     Dirichlet *omega_weight;
-
     double omega_shift;
     double delta_omegahypermean;
     double delta_omegahyperinvshape;
@@ -204,10 +216,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
-    AAMutSelMultipleOmegaModel(std::string indatafile, std::string intreefile, int inomegamode,
-        int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift, bool inflatfitness)
+    AAMutSelMultipleOmegaModel(std::string const &indatafile, std::string const &intreefile,
+        int inomegamode, int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift,
+        bool inflatfitness, std::string const &indelta_omega_array_file)
         : datafile(indatafile),
           treefile(intreefile),
+          delta_omega_array_file(indelta_omega_array_file),
           omegaNcat(inomegaNcat),
           omega_shift(inomegashift),
           baseNcat(inbaseNcat),
@@ -218,7 +232,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         Update();
     }
 
-    virtual ~AAMutSelMultipleOmegaModel() = default;
+    ~AAMutSelMultipleOmegaModel() override = default;
 
     void init() {
         blmode = 0;
@@ -249,7 +263,12 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             baseNcat = 1;
             Ncat = 1;
         }
-
+        std::vector<double> opened_delta_omega_array;
+        if (!delta_omega_array_file.empty() and delta_omega_array_file != "Null") {
+            opened_delta_omega_array = open_delta_omega_array(delta_omega_array_file);
+            clamp_delta_omega_array = true;
+            omegaNcat = opened_delta_omega_array.size();
+        }
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
         std::cerr << "Ncat : " << Ncat << '\n';
         std::cerr << "baseNcat : " << baseNcat << '\n';
@@ -265,7 +284,111 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
         Nbranch = tree->nb_nodes() - 1;
 
-        Allocate();
+        // Branch lengths
+        blhypermean = 0.1;
+        blhyperinvshape = 1.0;
+        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
+        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
+        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+
+        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
+        nucrelratehyperinvconc = 1.0 / Nrr;
+
+        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
+        nucstathyperinvconc = 1.0 / Nnuc;
+
+        // nucleotide mutation matrix
+        nucrelrate.assign(Nrr, 0);
+        Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
+        nucstat.assign(Nnuc, 0);
+        Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
+        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
+
+        // base distribution (can be skipped)
+        basekappa = 1.0;
+        baseweight = new StickBreakingProcess(baseNcat, basekappa);
+        baseprofile_occupancy = new OccupancySuffStat(baseNcat);
+
+        basecenterhypercenter.assign(Naa, 1.0 / Naa);
+        basecenterhyperinvconc = 1.0 / Naa;
+
+        basecenterarray = new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
+        basecenterarray->SetUniform();
+
+        baseconchypermean = Naa;
+        baseconchyperinvshape = 1.0;
+        baseconcentrationarray = new IIDGamma(baseNcat, baseconchypermean, baseconchyperinvshape);
+        for (int k = 0; k < baseNcat; k++) { (*baseconcentrationarray)[k] = 20.0; }
+        if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
+        // suff stats for component aa fitness arrays
+        basesuffstatarray = new DirichletSuffStatArray(baseNcat, Naa);
+        componentalloc = new MultinomialAllocationVector(Ncat, baseweight->GetArray());
+        componentcenterarray =
+                new MixtureSelector<std::vector<double>>(basecenterarray, componentalloc);
+        componentconcentrationarray =
+                new MixtureSelector<double>(baseconcentrationarray, componentalloc);
+
+        //
+        // (truncated) Dirichlet mixture of aa fitness profiles
+        //
+
+        // Ncat fitness profiles iid from the base distribution
+        componentaafitnessarray =
+                new MultiDirichlet(componentcenterarray, componentconcentrationarray);
+        if (flatfitness) { componentaafitnessarray->Flatten(); }
+
+        // mixture weights (truncated stick breaking process)
+        kappa = 1.0;
+        weight = new StickBreakingProcess(Ncat, kappa);
+
+        // site allocations to the mixture (multinomial allocation)
+        profile_alloc = new MultinomialAllocationVector(Nsite, weight->GetArray());
+
+        // occupancy suff stats of site allocations for resampling weights (for both profile and
+        // omega)
+        profile_occupancy = new OccupancySuffStat(Ncat);
+        omega_occupancy = new OccupancySuffStat(omegaNcat);
+
+        // omega (fixed to 1 by default)
+        delta_omegahypermean = 1.0;
+        delta_omegahyperinvshape = 1.0;
+        delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
+        if (clamp_delta_omega_array) {
+            for (int omegacat = 0; omegacat < omegaNcat; omegacat++){
+                (*delta_omega_array)[omegacat] = opened_delta_omega_array[omegacat];
+            }
+        }
+        // will be a constant
+        omega_weight_kappa = 1.0;
+        omega_weight = new Dirichlet(omegaNcat, omega_weight_kappa);
+        omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
+
+        // Ncat*omegaNcat mut sel codon matrices (based on the Ncat fitness profiles of the mixture,
+        // and the omegaNcat finite mixture for omega)
+        componentcodonmatrixbidimarray = new AAMutSelCodonMatrixBidimArray(GetCodonStateSpace(),
+                                                                           nucmatrix, componentaafitnessarray, delta_omega_array, omega_shift);
+
+        // Bidimselector, specifying which codon matrix should be used for each site
+        sitesubmatrixarray = new DoubleMixtureSelector<SubMatrix>(
+                componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
+
+        // Bidimselector, specifying which codon matrix should be used for each site (needed to
+        // collect omegapathsuffstatarray)
+        sitecodonsubmatrixarray = new DoubleMixtureSelector<AAMutSelOmegaCodonSubMatrix>(
+                componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
+
+        // selector, specifying which aa fitness array should be used for each site
+        siteaafitnessarray =
+                new MixtureSelector<std::vector<double>>(componentaafitnessarray, profile_alloc);
+
+        phyloprocess =
+                new PhyloProcess(tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray);
+        phyloprocess->Unfold();
+
+        sitepathsuffstatarray = new PathSuffStatArray(Nsite);
+
+        siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
+        componentomegapathsuffstatarray = new OmegaPathSuffStatArray(omegaNcat);
         tracer = std::unique_ptr<Tracer>(new Tracer(*this));
     }
 
@@ -322,112 +445,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         model_stat(info, "statent", [this]() { return GetNucRREntropy(); });
         model_stat(info, "rrent", [this]() { return GetNucStatEntropy(); });
     }
-
-    //! allocate the model (data structures)
-    void Allocate() {
-        // Branch lengths
-        blhypermean = 0.1;
-        blhyperinvshape = 1.0;
-        blhypermeanarray = new SimpleBranchArray<double>(*tree, blhypermean);
-        branchlength = new GammaWhiteNoise(*tree, *blhypermeanarray, blhyperinvshape);
-        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
-
-        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
-        nucrelratehyperinvconc = 1.0 / Nrr;
-
-        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
-        nucstathyperinvconc = 1.0 / Nnuc;
-
-        // nucleotide mutation matrix
-        nucrelrate.assign(Nrr, 0);
-        Random::DirichletSample(nucrelrate, std::vector<double>(Nrr, 1.0 / Nrr), ((double)Nrr));
-        nucstat.assign(Nnuc, 0);
-        Random::DirichletSample(nucstat, std::vector<double>(Nnuc, 1.0 / Nnuc), ((double)Nnuc));
-        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
-
-        // base distribution (can be skipped)
-        basekappa = 1.0;
-        baseweight = new StickBreakingProcess(baseNcat, basekappa);
-        baseprofile_occupancy = new OccupancySuffStat(baseNcat);
-
-        basecenterhypercenter.assign(Naa, 1.0 / Naa);
-        basecenterhyperinvconc = 1.0 / Naa;
-
-        basecenterarray = new IIDDirichlet(baseNcat, basecenterhypercenter, basecenterhyperinvconc);
-        basecenterarray->SetUniform();
-
-        baseconchypermean = Naa;
-        baseconchyperinvshape = 1.0;
-        baseconcentrationarray = new IIDGamma(baseNcat, baseconchypermean, baseconchyperinvshape);
-        for (int k = 0; k < baseNcat; k++) { (*baseconcentrationarray)[k] = 20.0; }
-        if (basemin == 1) { (*baseconcentrationarray)[0] = 1.0; }
-        // suff stats for component aa fitness arrays
-        basesuffstatarray = new DirichletSuffStatArray(baseNcat, Naa);
-        componentalloc = new MultinomialAllocationVector(Ncat, baseweight->GetArray());
-        componentcenterarray =
-            new MixtureSelector<std::vector<double>>(basecenterarray, componentalloc);
-        componentconcentrationarray =
-            new MixtureSelector<double>(baseconcentrationarray, componentalloc);
-
-        //
-        // (truncated) Dirichlet mixture of aa fitness profiles
-        //
-
-        // Ncat fitness profiles iid from the base distribution
-        componentaafitnessarray =
-            new MultiDirichlet(componentcenterarray, componentconcentrationarray);
-        if (flatfitness) { componentaafitnessarray->Flatten(); }
-
-        // mixture weights (truncated stick breaking process)
-        kappa = 1.0;
-        weight = new StickBreakingProcess(Ncat, kappa);
-
-        // site allocations to the mixture (multinomial allocation)
-        profile_alloc = new MultinomialAllocationVector(Nsite, weight->GetArray());
-
-        // occupancy suff stats of site allocations for resampling weights (for both profile and
-        // omega)
-        profile_occupancy = new OccupancySuffStat(Ncat);
-        omega_occupancy = new OccupancySuffStat(omegaNcat);
-
-        // omega (fixed to 1 by default)
-        delta_omegahypermean = 1.0;
-        delta_omegahyperinvshape = 1.0;
-        delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
-
-        // will be a constant
-        omega_weight_kappa = 1.0;
-        omega_weight = new Dirichlet(omegaNcat, omega_weight_kappa);
-        omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
-
-        // Ncat*omegaNcat mut sel codon matrices (based on the Ncat fitness profiles of the mixture,
-        // and the omegaNcat finite mixture for omega)
-        componentcodonmatrixbidimarray = new AAMutSelCodonMatrixBidimArray(GetCodonStateSpace(),
-            nucmatrix, componentaafitnessarray, delta_omega_array, omega_shift);
-
-        // Bidimselector, specifying which codon matrix should be used for each site
-        sitesubmatrixarray = new DoubleMixtureSelector<SubMatrix>(
-            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
-
-        // Bidimselector, specifying which codon matrix should be used for each site (needed to
-        // collect omegapathsuffstatarray)
-        sitecodonsubmatrixarray = new DoubleMixtureSelector<AAMutSelOmegaCodonSubMatrix>(
-            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
-
-        // selector, specifying which aa fitness array should be used for each site
-        siteaafitnessarray =
-            new MixtureSelector<std::vector<double>>(componentaafitnessarray, profile_alloc);
-
-        phyloprocess =
-            new PhyloProcess(tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray);
-        phyloprocess->Unfold();
-
-        sitepathsuffstatarray = new PathSuffStatArray(Nsite);
-
-        siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
-        componentomegapathsuffstatarray = new OmegaPathSuffStatArray(omegaNcat);
-    }
-
     //-------------------
     // Accessors
     // ------------------
@@ -1127,12 +1144,14 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         for (int rep = 0; rep < nrep; rep++) {
             ResampleOmegaAlloc();
             UpdateOmegaOccupancies();
-            CollectComponentOmegaPathSuffStat();
-            MoveOmegaValues(1.0, 3);
-            MoveOmegaValues(0.1, 3);
-            ResampleEmptyOmegaComponents();
+            if (!clamp_delta_omega_array) {
+                CollectComponentOmegaPathSuffStat();
+                MoveOmegaValues(1.0, 3);
+                MoveOmegaValues(0.1, 3);
+                ResampleEmptyOmegaComponents();
+                MoveOmegaHyper();
+            }
             ResampleOmegaWeights();
-            MoveOmegaHyper();
         }
         CorruptCodonMatrices();
     }
@@ -1315,6 +1334,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) const {
         os << "AAMutSelMultipleOmega" << '\t';
         os << datafile << '\t' << treefile << '\t';
+        os << delta_omega_array_file << '\t';
         os << omegaNcat << '\t';
         os << omega_shift << '\t';
         os << baseNcat << '\t';
@@ -1333,6 +1353,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             exit(1);
         }
         is >> datafile >> treefile;
+        is >> delta_omega_array_file;
         is >> omegaNcat;
         is >> omega_shift;
         is >> baseNcat;

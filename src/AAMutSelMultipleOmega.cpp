@@ -21,6 +21,8 @@ class AAMutselArgParse : public BaseArgParse {
     ValueArg<double> omegashift{"", "omegashift",
         "the shift applied to omega (typically 1 for detecting adaptation, 0 for general case)",
         false, 1.0, "double", cmd};
+    ValueArg<std::string> deltaomegaarray{
+            "", "deltaomegaarray", "Delta-omega array file (to clamp)", false, "Null", "string", cmd};
     ValueArg<int> omegancat{
         "", "omegancat", "number of components of omega finite mixture", false, 1, "int", cmd};
     SwitchArg freeomega{"", "freeomega",
@@ -58,7 +60,8 @@ int main(int argc, char *argv[]) {
         model = new AAMutSelMultipleOmegaModel(args.alignment.getValue(), args.treefile.getValue(),
             aamutsel_args.omegamode(), aamutsel_args.ncat.getValue(),
             aamutsel_args.basencat.getValue(), aamutsel_args.omegancat.getValue(),
-            aamutsel_args.omegashift.getValue(), aamutsel_args.flatfitness.getValue());
+            aamutsel_args.omegashift.getValue(), aamutsel_args.flatfitness.getValue(),
+            aamutsel_args.deltaomegaarray.getValue());
     }
 
     ConsoleLogger console_logger;
