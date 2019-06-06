@@ -39,6 +39,7 @@ clean:
 	@rm -rf _aamutsel
 	@rm -rf _mutseldm5
 	@rm -rf _mutselomega
+	@rm -rf _dated
 
 # ==============================================================================================================
 #  CODE QUALITY
