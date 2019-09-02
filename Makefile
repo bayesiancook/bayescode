@@ -142,3 +142,7 @@ diffseldsparse: all
 diffseldsparse_sw: all
 		@rm -f delme*.*
 		_build/diffseldsparse -a data/toy_conv.phy -t data/toy_conv.nhx --sw --ncond 2 -e 1 -u 3 tmp
+
+.PHONY: globom
+globom: all
+	@_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4

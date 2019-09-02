@@ -64,8 +64,8 @@ add_executable(globom "src/SingleOmega.cpp")
 target_link_libraries(globom ${BASE_LIBS})
 
 # Read single omega (readglobom)
-add_executable(readglobom "src/ReadSingleOmega.cpp")
-target_link_libraries(readglobom ${BASE_LIBS})
+# add_executable(readglobom "src/ReadSingleOmega.cpp")
+# target_link_libraries(readglobom ${BASE_LIBS})
 
 # Codon M2a
 add_executable(codonm2a "src/CodonM2a.cpp" "src/CodonM2aModel.cpp")
