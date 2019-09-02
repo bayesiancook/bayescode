@@ -65,8 +65,8 @@ run-app-tests: all
 	@mkdir _test
 	@echo "\n\e[35m\e[1m== Globom run ===============================================================\e[0m"
 	@_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4
-	@echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
-	_build/globom _test/globom_gal4
+	# @echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
+	# _build/globom _test/globom_gal4
 	@echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
 	_build/readglobom _test/globom_gal4	
 	@echo "\n\e[35m\e[1m== CodonM2a run =============================================================\e[0m"

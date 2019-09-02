@@ -1,0 +1,3 @@
+[submodule "utils/bayes_toolbox"]
+	path = utils/bayes_toolbox
+	url = https://github.com/vlanore/bayes_toolbox.git
