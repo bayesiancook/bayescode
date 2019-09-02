@@ -67,8 +67,8 @@ run-app-tests: all
 	@_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4
 	# @echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
 	# _build/globom _test/globom_gal4
-	@echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
-	_build/readglobom _test/globom_gal4	
+	# @echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
+	# _build/readglobom _test/globom_gal4	
 	@echo "\n\e[35m\e[1m== CodonM2a run =============================================================\e[0m"
 	_build/codonm2a -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a restart =========================================================\e[0m"
@@ -145,4 +145,4 @@ diffseldsparse_sw: all
 
 .PHONY: globom
 globom: all
-	@_build/globom -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/globom_gal4
+	@_build/globom -a data/toy_bl.ali -t data/toy_bl.nhx -u 3 tmp
