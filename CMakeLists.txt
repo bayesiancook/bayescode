@@ -23,6 +23,9 @@ endif(COVERAGE_MODE)
 include_directories("src")
 include_directories("src/lib")
 include_directories("utils")
+include_directories("utils/bayes_toolbox/src")
+include_directories("utils/bayes_toolbox/utils")
+include_directories("utils/bayes_toolbox/utils/tagged_tuple/utils")
 
 # Static libs
 add_library (tree_lib STATIC "src/tree/implem.cpp")

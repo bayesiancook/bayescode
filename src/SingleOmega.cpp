@@ -1,6 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include "SingleOmegaModel.hpp"
+#include "SingleOmegaNewModel.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
