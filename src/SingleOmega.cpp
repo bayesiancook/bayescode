@@ -3,6 +3,7 @@
 #include "SingleOmegaModel.hpp"
 #include "bayes_toolbox/src/operations/logprob.hpp"
 #include "bayes_toolbox/src/structure/ValueView.hpp"
+#include "branch_array.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
@@ -10,7 +11,6 @@
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
 #include "global_omega.hpp"
-#include "branch_array.hpp"
 
 using namespace std;
 

@@ -8,8 +8,8 @@
 #include "bayes_toolbox/src/structure/model.hpp"
 #include "bayes_toolbox/src/structure/node.hpp"
 #include "bayes_toolbox/utils/tagged_tuple/src/fancy_syntax.hpp"
-#include "tree/implem.hpp"
 #include "logging.hpp"
+#include "tree/implem.hpp"
 
 TOKEN(bl_array)
 
