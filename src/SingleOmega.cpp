@@ -14,6 +14,21 @@
 
 using namespace std;
 
+template <class F>
+class MoveScheduler : public ChainComponent {
+    F f;
+
+  public:
+    MoveScheduler(F f) : f(f) {}
+    void move(int) override { f(); }
+};
+
+template <class F>
+auto make_move_scheduler(F&& f) {
+    return MoveScheduler<F>(std::forward<F>(f));
+}
+
+
 int main(int argc, char* argv[]) {
     // parsing command-line arguments
     ChainCmdLine cmd{argc, argv, "SingleOmega", ' ', "0.1"};
@@ -29,11 +44,15 @@ int main(int argc, char* argv[]) {
     auto gen = make_generator();
 
     // model
-    auto global_omega = make_fixed_globom(1.0, 1.0, gen);
+    auto global_omega = globom::make_fixed(1.0, 1.0, gen);
     auto branch_lengths = make_branchlength_array(parser, 0.1, 1.0);
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
+    auto scheduler = make_move_scheduler([&gen, &global_omega]() {  //
+        globom::move(global_omega, []() { return 0.; }, gen);
+    });
+
     // auto model =
     //     make_singleomega_model(globom, args.alignment.getValue(), args.treefile.getValue());
     // model->Update();
@@ -43,6 +62,7 @@ int main(int argc, char* argv[]) {
 
     // registering components to chain driver
     // chain_driver->add(*model);
+    chain_driver.add(scheduler);
     chain_driver.add(console_logger);
     // chain_driver->add(chain_checkpoint);
     // chain_driver->add(trace);
