@@ -10,6 +10,7 @@
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
 #include "global_omega.hpp"
+#include "branch_array.hpp"
 
 using namespace std;
 
