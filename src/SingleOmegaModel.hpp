@@ -521,33 +521,33 @@ class SingleOmegaModel : public ChainComponent {
     void ToStream(std::ostream &os) { os << *this; }
 };
 
-std::istream &operator>>(std::istream &is, std::unique_ptr<SingleOmegaModel> &m) {
-    std::string model_name;
-    std::string datafile;
-    std::string treefile;
-    int blmode, nucmode;
+// std::istream &operator>>(std::istream &is, std::unique_ptr<SingleOmegaModel> &m) {
+//     std::string model_name;
+//     std::string datafile;
+//     std::string treefile;
+//     int blmode, nucmode;
 
-    is >> model_name;
-    if (model_name != "SingleOmega") {
-        std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
-        exit(1);
-    }
-    is >> datafile;
-    is >> treefile;
-    is >> blmode >> nucmode;
-    m = std::make_unique<SingleOmegaModel>(datafile, treefile);
-    Tracer tracer{*m};
-    tracer.read_line(is);
-    return is;
-}
+//     is >> model_name;
+//     if (model_name != "SingleOmega") {
+//         std::cerr << "Expected SingleOmega for model name, got " << model_name << "\n";
+//         exit(1);
+//     }
+//     is >> datafile;
+//     is >> treefile;
+//     is >> blmode >> nucmode;
+//     m = std::make_unique<SingleOmegaModel>(datafile, treefile);
+//     Tracer tracer{*m};
+//     tracer.read_line(is);
+//     return is;
+// }
 
-std::ostream &operator<<(std::ostream &os, SingleOmegaModel &m) {
-    Tracer tracer{m};
-    os << "SingleOmega" << '\t';
-    os << m.datafile << '\t';
-    os << m.treefile << '\t';
-    os << m.blmode << '\t';
-    os << m.nucmode << '\t';
-    tracer.write_line(os);
-    return os;
-}
+// std::ostream &operator<<(std::ostream &os, SingleOmegaModel &m) {
+//     Tracer tracer{m};
+//     os << "SingleOmega" << '\t';
+//     os << m.datafile << '\t';
+//     os << m.treefile << '\t';
+//     os << m.blmode << '\t';
+//     os << m.nucmode << '\t';
+//     tracer.write_line(os);
+//     return os;
+// }

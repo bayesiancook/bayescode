@@ -1,33 +1,16 @@
 #include <cmath>
 #include <fstream>
-#include "SingleOmegaModel.hpp"
-#include "bayes_toolbox/src/operations/logprob.hpp"
-#include "bayes_toolbox/src/structure/ValueView.hpp"
-#include "branch_array.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
 #include "components/InferenceAppArgParse.hpp"
+#include "components/MoveScheduler.hpp"
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
-#include "global_omega.hpp"
+#include "submodels/branch_array.hpp"
+#include "submodels/global_omega.hpp"
 
 using namespace std;
-
-template <class F>
-class MoveScheduler : public ChainComponent {
-    F f;
-
-  public:
-    MoveScheduler(F f) : f(f) {}
-    void move(int) override { f(); }
-};
-
-template <class F>
-auto make_move_scheduler(F&& f) {
-    return MoveScheduler<F>(std::forward<F>(f));
-}
-
 
 int main(int argc, char* argv[]) {
     // parsing command-line arguments

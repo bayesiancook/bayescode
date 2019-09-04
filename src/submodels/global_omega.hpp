@@ -4,6 +4,7 @@
 #include "bayes_toolbox/src/distributions/exponential.hpp"
 #include "bayes_toolbox/src/distributions/gamma.hpp"
 #include "bayes_toolbox/src/operations/draw.hpp"
+#include "bayes_toolbox/src/operations/logprob.hpp"
 #include "bayes_toolbox/src/structure/array_utils.hpp"
 #include "bayes_toolbox/src/structure/model.hpp"
 #include "bayes_toolbox/src/structure/node.hpp"
