@@ -22,20 +22,12 @@ template <class Gen>
 auto make_nuc_rates(const std::vector<double>& nucrelratehypercenter, double nucrelratehyperinvconc,
     const std::vector<double>& nucstathypercenter, double nucstathyperinvconc, Gen& gen) {
     /* -- */
-    std::vector<double> exchangeability_concentrations(6, 0);
-    for (size_t i = 0; i < 6; i++) {
-        exchangeability_concentrations[i] = nucrelratehypercenter[i] / nucrelratehyperinvconc;
-    }
-    auto exchangeability_rates =
-        make_vector_node<dirichlet>(6, std::move(exchangeability_concentrations));
+    auto exchangeability_rates = make_vector_node<dirichlet_cic>(
+        6, std::move(nucrelratehypercenter), std::move(nucrelratehyperinvconc));
     draw(exchangeability_rates, gen);
 
-    std::vector<double> equilibrium_concentrations(4, 0);
-    for (size_t i = 0; i < 4; i++) {
-        equilibrium_concentrations[i] = nucstathypercenter[i] / nucstathyperinvconc;
-    }
-    auto equilibrium_frequencies =
-        make_vector_node<dirichlet>(4, std::move(equilibrium_concentrations));
+    auto equilibrium_frequencies = make_vector_node<dirichlet_cic>(
+        4, std::move(nucstathypercenter), std::move(nucstathyperinvconc));
     draw(equilibrium_frequencies, gen);
 
     auto nuc_matrix = std::make_unique<GTRSubMatrix>(
