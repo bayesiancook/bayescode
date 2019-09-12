@@ -8,6 +8,7 @@
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
 #include "lib/CodonSequenceAlignment.hpp"
+#include "lib/CodonSubMatrix.hpp"
 #include "lib/PoissonSuffStat.hpp"
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
@@ -50,7 +51,10 @@ int main(int argc, char* argv[]) {
     auto branch_lengths = make_branchlength_array(parser, 0.1, 1.0);
     PoissonSuffStatBranchArray bl_suffstats{*tree};
     auto nuc_rates = make_nuc_rates({1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6}, 1. / 6,
-        {1. / 4, 1. / 4, 1. / 4, 1. / 4}, 1. / 4);
+        {1. / 4, 1. / 4, 1. / 4, 1. / 4}, 1. / 4, gen);
+    MGOmegaCodonSubMatrix codon_sub_matrix(
+        dynamic_cast<const CodonStateSpace*>(alignment.GetStateSpace()),
+        &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
