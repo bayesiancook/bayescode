@@ -8,10 +8,12 @@
 #include "components/restart_check.hpp"
 #include "data_preparation.hpp"
 #include "lib/CodonSubMatrix.hpp"
+#include "lib/CodonSuffStat.hpp"
 #include "lib/PoissonSuffStat.hpp"
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
 #include "submodels/nuc_rates.hpp"
+
 
 using namespace std;
 
@@ -44,7 +46,6 @@ int main(int argc, char* argv[]) {
     // model
     auto global_omega = globom::make_fixed(1.0, 1.0, gen);
     auto branch_lengths = make_branchlength_array(data.parser, 0.1, 1.0);
-    PoissonSuffStatBranchArray bl_suffstats{*data.tree};
     auto nuc_rates = make_nucleotide_rate(
         normalize({1, 1, 1, 1, 1, 1}), 1. / 6, normalize({1, 1, 1, 1}), 1. / 4, gen);
     MGOmegaCodonSubMatrix codon_sub_matrix(
@@ -55,6 +56,10 @@ int main(int argc, char* argv[]) {
         data.tree.get(), &data.alignment, &branch_adapter, 0, &codon_sub_matrix);
     phyloprocess.Unfold();
 
+    // suff stats
+    PoissonSuffStatBranchArray bl_suffstats{*data.tree};
+    PathSuffStat path_suffstats;
+
     // move schedule
     auto touch_matrices = [&global_omega, &codon_sub_matrix, &nuc_rates]() {
         get<nuc_matrix>(nuc_rates).CopyStationary(get<eq_freq, value>(nuc_rates));
@@ -63,14 +68,39 @@ int main(int argc, char* argv[]) {
         codon_sub_matrix.CorruptMatrix();
     };
 
-    auto scheduler =
-        make_move_scheduler([&gen, &global_omega, &phyloprocess, &touch_matrices]() {  //
+    auto scheduler = make_move_scheduler(
+        [&gen, &global_omega, &phyloprocess, &touch_matrices, &path_suffstats]() {  //
             // move phyloprocess
             touch_matrices();
             phyloprocess.Move(1.0);
 
             // move omega
-            globom::move(global_omega, []() { return 0.; }, gen);
+            for (int rep = 0; rep < 10; rep++) {
+                // move omega
+                path_suffstats.Clear();
+                path_suffstats.AddSuffStat(phyloprocess);
+                globom::move(global_omega, []() { return 0.; }, gen);  //@fixme with real logprob
+
+                // move nuc rates
+                touch_matrices();
+                // CollectNucPathSuffStat();
+
+                // Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                //     &SingleOmegaModel::TouchNucMatrix, this);
+                // Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+                //     &SingleOmegaModel::TouchNucMatrix, this);
+                // Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
+                //     &SingleOmegaModel::TouchNucMatrix, this);
+
+                // Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                //     &SingleOmegaModel::TouchNucMatrix, this);
+                // Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
+                //     &SingleOmegaModel::TouchNucMatrix, this);
+
+                touch_matrices();
+            }
+
+
         });
 
     // initializing components
