@@ -1,6 +1,5 @@
 #include <cmath>
 #include <fstream>
-#include "CodonSequenceAlignment.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
@@ -8,6 +7,8 @@
 #include "components/MoveScheduler.hpp"
 #include "components/StandardTracer.hpp"
 #include "components/restart_check.hpp"
+#include "lib/CodonSequenceAlignment.hpp"
+#include "lib/PoissonSuffStat.hpp"
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
 
@@ -35,7 +36,7 @@ int main(int argc, char* argv[]) {
     CodonSequenceAlignment alignment(&nuc_align);
     assert(alignment.GetNtaxa() > 0 && alignment.GetNsite() > 0);
     DEBUG("Converted alignment to codons (new length: {}).", alignment.GetNsite());
-    
+
     const TaxonSet taxon_set = *alignment.GetTaxonSet();
     DEBUG("Got a taxon set of length {}. Example taxon name: {}.", taxon_set.GetNtaxa(),
         taxon_set.GetTaxon(0));
@@ -46,6 +47,7 @@ int main(int argc, char* argv[]) {
     // model
     auto global_omega = globom::make_fixed(1.0, 1.0, gen);
     auto branch_lengths = make_branchlength_array(parser, 0.1, 1.0);
+    PoissonSuffStatBranchArray bl_suffstats{*tree};
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
