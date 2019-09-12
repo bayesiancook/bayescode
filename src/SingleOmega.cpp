@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
     auto global_omega = globom::make_fixed(1.0, 1.0, gen);
     auto branch_lengths = make_branchlength_array(data.parser, 0.1, 1.0);
     PoissonSuffStatBranchArray bl_suffstats{*data.tree};
-    auto nuc_rates = make_nuc_rates({1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6}, 1. / 6,
-        {1. / 4, 1. / 4, 1. / 4, 1. / 4}, 1. / 4, gen);
+    auto nuc_rates = make_nucleotide_rate(
+        normalize({1, 1, 1, 1, 1, 1}), 1. / 6, normalize({1, 1, 1, 1}), 1. / 4, gen);
     MGOmegaCodonSubMatrix codon_sub_matrix(
         dynamic_cast<const CodonStateSpace*>(data.alignment.GetStateSpace()),
         &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));

@@ -18,19 +18,31 @@ TOKEN(eq_freq)
 TOKEN(exch_rates)
 TOKEN(nuc_matrix)
 
+// @todo: move elsewhere
+std::vector<double> normalize(const std::vector<double>& vec) {
+    double sum = 0;
+    for (auto e : vec) { sum += e; }
+    std::vector<double> result(vec.size());
+    for (size_t i = 0; i < vec.size(); i++) { result[i] = vec[i] / sum; }
+    return result;
+}
+
+
 template <class Gen>
-auto make_nuc_rates(const std::vector<double>& nucrelratehypercenter, double nucrelratehyperinvconc,
-    const std::vector<double>& nucstathypercenter, double nucstathyperinvconc, Gen& gen) {
+auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nucrelrateinvconc,
+    const std::vector<double>& nucstatcenter, double nucstatinvconc, Gen& gen) {
     /* -- */
     auto exchangeability_rates = make_vector_node<dirichlet_cic>(
-        6, std::move(nucrelratehypercenter), std::move(nucrelratehyperinvconc));
+        6, std::move(nucrelratecenter), std::move(nucrelrateinvconc));
     draw(exchangeability_rates, gen);
-    DEBUG("exchangeability_rates is {}.", vector_to_string(get<value>(exchangeability_rates)));
+    DEBUG("GTR model: exchangeability rates are {}.",
+        vector_to_string(get<value>(exchangeability_rates)));
 
-    auto equilibrium_frequencies = make_vector_node<dirichlet_cic>(
-        4, std::move(nucstathypercenter), std::move(nucstathyperinvconc));
+    auto equilibrium_frequencies =
+        make_vector_node<dirichlet_cic>(4, std::move(nucstatcenter), std::move(nucstatinvconc));
     draw(equilibrium_frequencies, gen);
-    DEBUG("equilibrium_frequencies is {}.", vector_to_string(get<value>(equilibrium_frequencies)));
+    DEBUG("GTR model: equilibrium frequencies are {}.",
+        vector_to_string(get<value>(equilibrium_frequencies)));
 
     auto nuc_matrix = std::make_unique<GTRSubMatrix>(
         4, get<value>(exchangeability_rates), get<value>(equilibrium_frequencies), true);
