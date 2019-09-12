@@ -27,10 +27,18 @@ int main(int argc, char* argv[]) {
     DEBUG("Parsed tree with {} nodes.", tree->nb_nodes());
 
     // sequence alignment
-    FileSequenceAlignment alignment(args.alignment.getValue());
-    assert(alignment.GetNtaxa() > 0 && alignment.GetNsite() > 0);
+    FileSequenceAlignment nuc_align(args.alignment.getValue());
+    assert(nuc_align.GetNtaxa() > 0 && nuc_align.GetNsite() > 0);
     DEBUG("Parsed alignment with {} sequences of length {}. Example taxon name: {}.",
-        alignment.GetNtaxa(), alignment.GetNsite(), alignment.GetTaxonSet()->GetTaxon(0));
+        nuc_align.GetNtaxa(), nuc_align.GetNsite(), nuc_align.GetTaxonSet()->GetTaxon(0));
+
+    CodonSequenceAlignment alignment(&nuc_align);
+    assert(alignment.GetNtaxa() > 0 && alignment.GetNsite() > 0);
+    DEBUG("Converted alignment to codons (new length: {}).", alignment.GetNsite());
+    
+    const TaxonSet taxon_set = *alignment.GetTaxonSet();
+    DEBUG("Got a taxon set of length {}. Example taxon name: {}.", taxon_set.GetNtaxa(),
+        taxon_set.GetTaxon(0));
 
     // random generator
     auto gen = make_generator();
