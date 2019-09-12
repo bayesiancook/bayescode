@@ -25,10 +25,12 @@ auto make_nuc_rates(const std::vector<double>& nucrelratehypercenter, double nuc
     auto exchangeability_rates = make_vector_node<dirichlet_cic>(
         6, std::move(nucrelratehypercenter), std::move(nucrelratehyperinvconc));
     draw(exchangeability_rates, gen);
+    DEBUG("exchangeability_rates is {}.", vector_to_string(get<value>(exchangeability_rates)));
 
     auto equilibrium_frequencies = make_vector_node<dirichlet_cic>(
         4, std::move(nucstathypercenter), std::move(nucstathyperinvconc));
     draw(equilibrium_frequencies, gen);
+    DEBUG("equilibrium_frequencies is {}.", vector_to_string(get<value>(equilibrium_frequencies)));
 
     auto nuc_matrix = std::make_unique<GTRSubMatrix>(
         4, get<value>(exchangeability_rates), get<value>(equilibrium_frequencies), true);

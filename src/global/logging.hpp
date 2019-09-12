@@ -83,3 +83,16 @@ inline logger_t global_logger() {
 #else
 #define assert_warn(...)
 #endif
+
+// utility functions for debug
+template <class T>
+string vector_to_string(std::vector<T>& vec) {
+    if (vec.size() == 0) {
+        return "{}";
+    } else {
+        string result = "{";
+        for (size_t i = 0; i < vec.size() - 1; i++) { result += std::to_string(vec[i]) + ", "; }
+        result += std::to_string(vec.back());
+        return result + "}";
+    }
+}
