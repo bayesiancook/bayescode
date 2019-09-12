@@ -55,15 +55,27 @@ int main(int argc, char* argv[]) {
         data.tree.get(), &data.alignment, &branch_adapter, 0, &codon_sub_matrix);
     phyloprocess.Unfold();
 
+    // move schedule
+    auto touch_matrices = [&global_omega, &codon_sub_matrix, &nuc_rates]() {
+        get<nuc_matrix>(nuc_rates).CopyStationary(get<eq_freq, value>(nuc_rates));
+        get<nuc_matrix>(nuc_rates).CorruptMatrix();
+        codon_sub_matrix.SetOmega(get<omega, value>(global_omega));
+        codon_sub_matrix.CorruptMatrix();
+    };
+
+    auto scheduler =
+        make_move_scheduler([&gen, &global_omega, &phyloprocess, &touch_matrices]() {  //
+            // move phyloprocess
+            touch_matrices();
+            phyloprocess.Move(1.0);
+
+            // move omega
+            globom::move(global_omega, []() { return 0.; }, gen);
+        });
+
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
-    auto scheduler = make_move_scheduler([&gen, &global_omega]() {  //
-        globom::move(global_omega, []() { return 0.; }, gen);
-    });
 
-    // auto model =
-    //     make_singleomega_model(globom, args.alignment.getValue(), args.treefile.getValue());
-    // model->Update();
     ConsoleLogger console_logger;
     // ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
     // StandardTracer trace(*model, cmd.chain_name());
