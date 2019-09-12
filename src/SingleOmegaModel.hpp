@@ -82,7 +82,6 @@ class SingleOmegaModel : public ChainComponent {
     MGOmegaCodonSubMatrix *codonmatrix;
 
     // PhyloProcess
-
     PhyloProcess *phyloprocess;
 
     // suff stats for substitution paths

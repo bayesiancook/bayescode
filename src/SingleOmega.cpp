@@ -1,5 +1,6 @@
 #include <cmath>
 #include <fstream>
+#include "CodonSequenceAlignment.hpp"
 #include "components/ChainCheckpoint.hpp"
 #include "components/ChainDriver.hpp"
 #include "components/ConsoleLogger.hpp"
@@ -22,6 +23,14 @@ int main(int argc, char* argv[]) {
     std::ifstream tree_stream{args.treefile.getValue()};
     NHXParser parser{tree_stream};
     auto tree = make_from_parser(parser);
+    assert(tree->nb_nodes() > 0);
+    DEBUG("Parsed tree with {} nodes.", tree->nb_nodes());
+
+    // sequence alignment
+    FileSequenceAlignment alignment(args.alignment.getValue());
+    assert(alignment.GetNtaxa() > 0 && alignment.GetNsite() > 0);
+    DEBUG("Parsed alignment with {} sequences of length {}. Example taxon name: {}.",
+        alignment.GetNtaxa(), alignment.GetNsite(), alignment.GetTaxonSet()->GetTaxon(0));
 
     // random generator
     auto gen = make_generator();
