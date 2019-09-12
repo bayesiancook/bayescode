@@ -15,6 +15,20 @@
 
 using namespace std;
 
+
+class LegacyArrayProxy : public BranchSelector<double> {
+    std::vector<double>& data_ref;
+    const Tree& tree_ref;
+
+  public:
+    LegacyArrayProxy(std::vector<double>& data_ref, const Tree& tree_ref)
+        : data_ref(data_ref), tree_ref(tree_ref) {}
+
+    virtual const Tree& GetTree() const override { return tree_ref; }
+    virtual const double& GetVal(int index) const override { return data_ref[index]; }
+};
+
+
 int main(int argc, char* argv[]) {
     // parsing command-line arguments
     ChainCmdLine cmd{argc, argv, "SingleOmega", ' ', "0.1"};
@@ -36,6 +50,10 @@ int main(int argc, char* argv[]) {
     MGOmegaCodonSubMatrix codon_sub_matrix(
         dynamic_cast<const CodonStateSpace*>(data.alignment.GetStateSpace()),
         &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));
+    LegacyArrayProxy branch_adapter(get<bl_array, value>(branch_lengths), *data.tree);
+    PhyloProcess phyloprocess(
+        data.tree.get(), &data.alignment, &branch_adapter, 0, &codon_sub_matrix);
+    phyloprocess.Unfold();
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
