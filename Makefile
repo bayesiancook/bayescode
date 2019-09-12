@@ -146,3 +146,7 @@ diffseldsparse_sw: all
 .PHONY: globom
 globom: all
 	@_build/globom -a data/toy_bl.ali -t data/toy_bl.nhx -u 3 tmp
+
+.PHONY: globom_dbg
+globom_dbg: all
+	@gdb --args _build/globom -a data/toy_bl.ali -t data/toy_bl.nhx -u 3 tmp

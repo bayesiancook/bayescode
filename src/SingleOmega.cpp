@@ -11,6 +11,7 @@
 #include "lib/PoissonSuffStat.hpp"
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
+#include "submodels/nuc_rates.hpp"
 
 using namespace std;
 
@@ -48,6 +49,8 @@ int main(int argc, char* argv[]) {
     auto global_omega = globom::make_fixed(1.0, 1.0, gen);
     auto branch_lengths = make_branchlength_array(parser, 0.1, 1.0);
     PoissonSuffStatBranchArray bl_suffstats{*tree};
+    auto nuc_rates = make_nuc_rates({1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6, 1. / 6}, 1. / 6,
+        {1. / 4, 1. / 4, 1. / 4, 1. / 4}, 1. / 4);
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};

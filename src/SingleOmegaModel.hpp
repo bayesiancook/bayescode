@@ -130,7 +130,6 @@ class SingleOmegaModel : public ChainComponent {
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
 
         // Nucleotide rates
-
         nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
         nucrelratehyperinvconc = 1.0 / Nrr;
 
