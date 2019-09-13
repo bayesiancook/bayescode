@@ -33,13 +33,13 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
     const std::vector<double>& nucstatcenter, double nucstatinvconc, Gen& gen) {
     /* -- */
     auto exchangeability_rates = make_vector_node<dirichlet_cic>(
-        6, std::move(nucrelratecenter), std::move(nucrelrateinvconc));
+        6, [v = nucrelratecenter]() { return v; }, [v = nucrelrateinvconc]() { return v; });
     draw(exchangeability_rates, gen);
     DEBUG("GTR model: exchangeability rates are {}.",
         vector_to_string(get<value>(exchangeability_rates)));
 
-    auto equilibrium_frequencies =
-        make_vector_node<dirichlet_cic>(4, std::move(nucstatcenter), std::move(nucstatinvconc));
+    auto equilibrium_frequencies = make_vector_node<dirichlet_cic>(
+        4, [v = nucstatcenter]() { return v; }, [v = nucstatinvconc]() { return v; });
     draw(equilibrium_frequencies, gen);
     DEBUG("GTR model: equilibrium frequencies are {}.",
         vector_to_string(get<value>(equilibrium_frequencies)));
@@ -51,4 +51,17 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
         exch_rates_ = std::move(exchangeability_rates),  //
         eq_freq_ = std::move(equilibrium_frequencies),   //
         nuc_matrix_ = std::move(nuc_matrix));
+}
+
+template <class SubModel, class LogProb, class Gen>
+auto move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, Gen& gen) {
+    auto& target = exch_rates_(model);
+    static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
+
+    auto bkp = backup(target);
+    double logprob_before = logprob_children() + logprob(target);
+    double log_hastings = profile_move(get<value>(target), tuning, gen);
+    double logprob_after = logprob_children() + logprob(target);
+    bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
+    if (!accept) { restore(target, bkp); }
 }

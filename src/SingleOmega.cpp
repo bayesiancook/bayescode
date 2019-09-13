@@ -48,9 +48,9 @@ int main(int argc, char* argv[]) {
     auto branch_lengths = make_branchlength_array(data.parser, 0.1, 1.0);
     auto nuc_rates = make_nucleotide_rate(
         normalize({1, 1, 1, 1, 1, 1}), 1. / 6, normalize({1, 1, 1, 1}), 1. / 4, gen);
+    auto codon_statespace = dynamic_cast<const CodonStateSpace*>(data.alignment.GetStateSpace());
     MGOmegaCodonSubMatrix codon_sub_matrix(
-        dynamic_cast<const CodonStateSpace*>(data.alignment.GetStateSpace()),
-        &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));
+        codon_statespace, &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));
     LegacyArrayProxy branch_adapter(get<bl_array, value>(branch_lengths), *data.tree);
     PhyloProcess phyloprocess(
         data.tree.get(), &data.alignment, &branch_adapter, 0, &codon_sub_matrix);
@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
     // suff stats
     PoissonSuffStatBranchArray bl_suffstats{*data.tree};
     PathSuffStat path_suffstats;
+    NucPathSuffStat nucpathsuffstat;
 
     // move schedule
     auto touch_matrices = [&global_omega, &codon_sub_matrix, &nuc_rates]() {
@@ -68,40 +69,36 @@ int main(int argc, char* argv[]) {
         codon_sub_matrix.CorruptMatrix();
     };
 
-    auto scheduler = make_move_scheduler(
-        [&gen, &global_omega, &phyloprocess, &touch_matrices, &path_suffstats]() {  //
-            // move phyloprocess
-            touch_matrices();
-            phyloprocess.Move(1.0);
+    auto scheduler = make_move_scheduler([&gen, &global_omega, &phyloprocess, &touch_matrices,
+                                             &path_suffstats, &nuc_rates, &nucpathsuffstat,
+                                             &codon_statespace]() {
+        // move phyloprocess
+        touch_matrices();
+        phyloprocess.Move(1.0);
 
+        // move omega
+        for (int rep = 0; rep < 10; rep++) {
             // move omega
-            for (int rep = 0; rep < 10; rep++) {
-                // move omega
-                path_suffstats.Clear();
-                path_suffstats.AddSuffStat(phyloprocess);
-                globom::move(global_omega, []() { return 0.; }, gen);  //@fixme with real logprob
+            path_suffstats.Clear();
+            path_suffstats.AddSuffStat(phyloprocess);
+            globom::move(global_omega, []() { return 0.; }, gen);  //@fixme with real logprob
 
-                // move nuc rates
-                touch_matrices();
-                // CollectNucPathSuffStat();
+            // move nuc rates
+            touch_matrices();
+            // CollectNucPathSuffStat();
 
-                // Move::Profile(nucrelrate, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                //     &SingleOmegaModel::TouchNucMatrix, this);
-                // Move::Profile(nucrelrate, 0.03, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                //     &SingleOmegaModel::TouchNucMatrix, this);
-                // Move::Profile(nucrelrate, 0.01, 3, 3, &SingleOmegaModel::NucRatesLogProb,
-                //     &SingleOmegaModel::TouchNucMatrix, this);
+            auto nucrates_logprob = [&nucpathsuffstat, &nuc_rates, &codon_statespace]() {
+                return nucpathsuffstat.GetLogProb(get<nuc_matrix>(nuc_rates), *codon_statespace);
+            };
+            move_exch_rates(nuc_rates, 0.1, nucrates_logprob, gen);
+            move_exch_rates(nuc_rates, 0.03, nucrates_logprob, gen);
+            move_exch_rates(nuc_rates, 0.01, nucrates_logprob, gen);
 
-                // Move::Profile(nucstat, 0.1, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                //     &SingleOmegaModel::TouchNucMatrix, this);
-                // Move::Profile(nucstat, 0.01, 1, 3, &SingleOmegaModel::NucRatesLogProb,
-                //     &SingleOmegaModel::TouchNucMatrix, this);
+            // add moves on eq freqs
 
-                touch_matrices();
-            }
-
-
-        });
+            touch_matrices();
+        }
+    });
 
     // initializing components
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
@@ -111,7 +108,6 @@ int main(int argc, char* argv[]) {
     // StandardTracer trace(*model, cmd.chain_name());
 
     // registering components to chain driver
-    // chain_driver->add(*model);
     chain_driver.add(scheduler);
     chain_driver.add(console_logger);
     // chain_driver->add(chain_checkpoint);
