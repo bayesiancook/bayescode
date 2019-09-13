@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 
     auto scheduler = make_move_scheduler([&gen, &global_omega, &phyloprocess, &touch_matrices,
                                              &path_suffstats, &nuc_rates, &nucpathsuffstat,
-                                             &codon_statespace]() {
+                                             &codon_statespace, &codon_sub_matrix]() {
         // move phyloprocess
         touch_matrices();
         phyloprocess.Move(1.0);
@@ -81,11 +81,15 @@ int main(int argc, char* argv[]) {
             // move omega
             path_suffstats.Clear();
             path_suffstats.AddSuffStat(phyloprocess);
-            globom::move(global_omega, []() { return 0.; }, gen);  //@fixme with real logprob
+            auto globom_logprob = [&path_suffstats, &codon_sub_matrix]() {
+                return path_suffstats.GetLogProb(codon_sub_matrix);
+            };
+            globom::move(global_omega, globom_logprob, gen);
 
             // move nuc rates
             touch_matrices();
-            // CollectNucPathSuffStat();
+            nucpathsuffstat.Clear();
+            nucpathsuffstat.AddSuffStat(codon_sub_matrix, path_suffstats);
 
             auto nucrates_logprob = [&nucpathsuffstat, &nuc_rates, &codon_statespace]() {
                 return nucpathsuffstat.GetLogProb(get<nuc_matrix>(nuc_rates), *codon_statespace);
@@ -93,9 +97,8 @@ int main(int argc, char* argv[]) {
             move_exch_rates(nuc_rates, 0.1, nucrates_logprob, gen);
             move_exch_rates(nuc_rates, 0.03, nucrates_logprob, gen);
             move_exch_rates(nuc_rates, 0.01, nucrates_logprob, gen);
-
-            // add moves on eq freqs
-
+            move_eq_freqs(nuc_rates, 0.1, nucrates_logprob, gen);
+            move_eq_freqs(nuc_rates, 0.03, nucrates_logprob, gen);
             touch_matrices();
         }
     });
