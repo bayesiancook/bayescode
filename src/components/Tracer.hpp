@@ -33,7 +33,7 @@ class Tracer {
         }
     }
 
-    size_t nbr_header_fields() const { return static_cast<size_t>(header_to_stream.size()); }
+    size_t nbr_header_fields() const { return header_to_stream.size(); }
 
     std::vector<double> line_values() const {
         std::stringstream ss_line;
