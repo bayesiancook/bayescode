@@ -124,6 +124,8 @@ class PhyloProcess {
         const BranchSelector<SubMatrix> *insubmatrixbrancharray, const SubMatrix *inrootsubmatrix,
         PolyProcess *inpolyprocess = nullptr);
 
+    PhyloProcess(const PhyloProcess &) = delete;
+
     ~PhyloProcess();
 
     //! return log likelihood (computed using the pruning algorithm, Felsenstein
