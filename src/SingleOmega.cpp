@@ -16,6 +16,40 @@
 
 using namespace std;
 
+
+template <class MetaData, class... Fields>
+struct external_interface<tagged_tuple<MetaData, Fields...>> {
+    using TTuple = tagged_tuple<MetaData, Fields...>;
+    // using ThisClass = external_interface<tagged_tuple<MetaData, Fields...>>;
+
+    template <class Info, class Field, class Key>
+    static void declare_field(node_tag, Info info, Field& field, Key) {
+        DEBUG("Adding node {}.", typeid(Key).name());
+        model_node(info, typeid(Key).name(), get<value>(field));
+    }
+
+    template <class Info, class Field, class Key>
+    static void declare_field(model_tag, Info info, Field& field, Key) {
+        DEBUG("Adding model {}.", typeid(Key).name());
+        model_node(info, typeid(Key).name(), field);
+    }
+
+    template <class Info, class Field, class Key>
+    static void declare_field(unknown_tag, Info info, Field& field, Key) {}
+
+    template <class Info, class... Keys>
+    static void declare_interface_helper(Info info, TTuple& target, tuple<Keys...>) {
+        std::vector<int> ignore = {
+            (declare_field(type_tag(get<Keys>(target)), info, get<Keys>(target), Keys{}), 0)...};
+    }
+
+    template <class Info>
+    static void declare_interface(Info info, TTuple& target) {
+        DEBUG("Declaring interface of ttuple {}.", typeid(TTuple).name());
+        declare_interface_helper(info, target, map_key_list_t<field_map_t<TTuple>>{});
+    }
+};
+
 class LegacyArrayProxy : public BranchSelector<double> {
     std::vector<double>& data_ref;
     const Tree& tree_ref;
@@ -140,13 +174,13 @@ int main(int argc, char* argv[]) {
 
     ConsoleLogger console_logger;
     // ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
-    // StandardTracer trace(*model, cmd.chain_name());
+    StandardTracer trace(model, cmd.chain_name());
 
     // registering components to chain driver
     chain_driver.add(scheduler);
     chain_driver.add(console_logger);
     // chain_driver->add(chain_checkpoint);
-    // chain_driver->add(trace);
+    chain_driver.add(trace);
 
     // launching chain!
     chain_driver.go();
