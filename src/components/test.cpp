@@ -50,7 +50,7 @@ TEST_CASE("Tracer writing test") {
     t.write_line(ss);
 
     CHECK(ss.str() ==
-          "a\tv[0]\tv[1]\tv[2]\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
+          "a\tv_0\tv_1\tv_2\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
 }
 
 struct MyTracerData {
@@ -82,7 +82,7 @@ TEST_CASE("Tracer unrolling test") {
     t.write_header(ss);
     t.write_line(ss);
     CHECK(ss.str() ==
-          "a\tb[0]\tb[1]\tb[2]\tb[3]\tc_0_x\tc_0_y\tc_1_x\tc_1_y\n17\t2\t3\t4\t5\t1\t2\t2\t3");
+          "a\tb_0\tb_1\tb_2\tb_3\tc_0_x\tc_0_y\tc_1_x\tc_1_y\n17\t2\t3\t4\t5\t1\t2\t2\t3");
 }
 
 struct MyArgs : public BaseArgParse {
