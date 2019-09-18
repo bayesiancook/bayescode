@@ -24,14 +24,14 @@ struct external_interface<tagged_tuple<MetaData, Fields...>> {
 
     template <class Info, class Field, class Key>
     static void declare_field(node_tag, Info info, Field& field, Key) {
-        DEBUG("Adding node {}.", typeid(Key).name());
-        model_node(info, typeid(Key).name(), get<value>(field));
+        DEBUG("Adding node {}.", Key::to_string());
+        model_node(info, Key::to_string(), get<value>(field));
     }
 
     template <class Info, class Field, class Key>
     static void declare_field(model_tag, Info info, Field& field, Key) {
-        DEBUG("Adding model {}.", typeid(Key).name());
-        model_node(info, typeid(Key).name(), field);
+        DEBUG("Adding model {}.", Key::to_string());
+        model_node(info, Key::to_string(), field);
     }
 
     template <class Info, class Field, class Key>
@@ -61,7 +61,6 @@ class LegacyArrayProxy : public BranchSelector<double> {
     virtual const Tree& GetTree() const override { return tree_ref; }
     virtual const double& GetVal(int index) const override { return data_ref[index]; }
 };
-
 
 TOKEN(global_omega)
 TOKEN(branch_lengths)
