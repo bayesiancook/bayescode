@@ -393,7 +393,12 @@ struct MyStruct2 {
     }
 };
 
-TEST_CASE("") {
+TEST_CASE("has_external_interface and co") {
+    CHECK(has_external_interface<MyData>::value);
+    CHECK(!has_external_interface<MyStruct2>::value);
+}
+
+TEST_CASE("Unrolling with external interface") {
     UserFullName u;
     MyStruct2 p;
 

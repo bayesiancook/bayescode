@@ -147,7 +147,7 @@ namespace processing {  // namespace to hide helpers
         static void dispatch(std::true_type, std::true_type, PrInfo prinfo, DeclInfo declinfo,
             Target& target, Args&&...) {
             /* -- */
-            DEBUG("Declaration {} must be unrolled. Context is {}", declinfo.name, prinfo.name);
+            DEBUG("Declaration {} must be unrolled. Context is `{}`", declinfo.name, prinfo.name);
             auto new_prinfo = make_processing_info<Unroll<TraitMapper, Forwarding, recursive>>(
                 prinfo.user, prinfo.name + declinfo.name + "_");
             call_interface(new_prinfo, target);

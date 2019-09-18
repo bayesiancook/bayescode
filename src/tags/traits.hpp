@@ -10,7 +10,7 @@ struct Ignore;
 /*--------------------------------------------------------------------------------------------------
   Trait to check that a type has an interface */
 template <class T>
-class has_interface_helper {
+class has_interface_helper {  // @todo: rewrite this trait properly!
     template <class T2>
     static constexpr
         typename std::is_same<void, decltype(std::declval<T2>().declare_interface(
@@ -33,3 +33,16 @@ using has_interface = typename has_interface_helper<T>::constant;
 
 template <class T>
 struct external_interface;
+
+template <class... T>
+using my_void_t = void;
+
+template <class T, class = void>
+struct has_external_interface : std::false_type {};
+
+template <class T>
+struct has_external_interface<T, my_void_t<decltype(external_interface<T>{})>> : std::true_type {};
+
+template <class T>
+struct has_either_interface
+    : std::integral_constant<bool, has_interface<T>::value || has_external_interface<T>::value> {};
