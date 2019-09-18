@@ -49,8 +49,7 @@ TEST_CASE("Tracer writing test") {
     CHECK(m.v[2] == 5.51);
     t.write_line(ss);
 
-    CHECK(ss.str() ==
-          "a\tv_0\tv_1\tv_2\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
+    CHECK(ss.str() == "a\tv_0\tv_1\tv_2\tb\n1.1\t3.3\t4.4\t5.5\t2.2\n1.11\t3.31\t4.41\t5.51\t2.21");
 }
 
 struct MyTracerData {
