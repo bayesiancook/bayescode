@@ -6,6 +6,22 @@
 #include "tags/decl_utils.hpp"
 #include "traits.hpp"
 
+// template <class T, class... Args>
+// void call_interface_helper(std::true_type, T& target, Args&&... args) {
+//     target.declare_interface(std::forward<Args>(args)...);
+// }
+
+// template <class T, class... Args>
+// void call_interface_helper(std::false_type, T& target, Args&&... args) {
+//     external_interface<T>::declare_interface(target, std::forward<Args>(args)...);
+// }
+
+// template <class T, class... Args>
+// void call_interface(T& target, Args&&... args) {
+//     call_interface_helper(has_interface<T>{}, target, std::forward<Args>(args)...);
+// }
+
+
 class Tracer {
     std::vector<std::function<void(std::ostream&)>> header_to_stream;
     std::vector<std::function<void(std::ostream&)>> data_to_stream;
@@ -15,11 +31,12 @@ class Tracer {
     template <class Provider, class Test = processing::HasTag<ModelNode>>
     Tracer(Provider& p, Test test = processing::HasTag<ModelNode>()) {
         using namespace processing;
-        using must_be_unrolled = Or<HasTrait<has_interface>, HasTrait<is_nontrivial_vector>>;
+        using must_be_unrolled = Or<HasTrait<has_either_interface>, HasTrait<is_nontrivial_vector>>;
         using recursive_processing = RecursiveUnroll<must_be_unrolled, FullNameEnd>;
         using toplevel_filter = Filter<Test, recursive_processing>;
         auto prinfo = make_processing_info<toplevel_filter>(*this);
-        p.declare_interface(prinfo);
+        call_interface(prinfo, p);
+        // p.declare_interface(prinfo);
     }
 
     void write_header(std::ostream& os) const {
