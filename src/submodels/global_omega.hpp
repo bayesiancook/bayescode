@@ -32,4 +32,12 @@ struct globom {
         scaling_move(omega, full_logprob, gen);
         DEBUG("Omega = {}", raw_value(omega));
     }
+
+    template <class GlobomModel, class Gen>
+    static void gibbs_resample(GlobomModel& model, OmegaPathSuffStat& ss, Gen& gen) {
+        double alpha = get<omega, params, shape>(model)();
+        double beta = 1. / get<omega, params, struct scale>(model)();
+        get<omega, value>(model) = gamma_sr::draw(alpha + ss.GetCount(), beta + ss.GetBeta(), gen);
+        DEBUG("Omega = {}", get<omega, value>(model));
+    }
 };

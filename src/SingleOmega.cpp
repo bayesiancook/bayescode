@@ -39,6 +39,7 @@ TOKEN(phyloprocess)
 TOKEN(bl_suffstats)
 TOKEN(path_suffstats)
 TOKEN(nucpath_suffstats)
+TOKEN(omegapath_suffstats)
 
 template <class Gen>
 auto make_globom(PreparedData& data, Gen& gen) {
@@ -64,6 +65,7 @@ auto make_globom(PreparedData& data, Gen& gen) {
     PoissonSuffStatBranchArray bl_suffstats{*data.tree};
     PathSuffStat path_suffstats;
     NucPathSuffStat nucpath_suffstats;
+    OmegaPathSuffStat omegapathsuffstat;
 
     return make_model(                              //
         global_omega_ = move(global_omega),         //
@@ -75,7 +77,8 @@ auto make_globom(PreparedData& data, Gen& gen) {
         phyloprocess_ = move(phyloprocess),         //
         bl_suffstats_ = bl_suffstats,               //
         path_suffstats_ = path_suffstats,           //
-        nucpath_suffstats_ = nucpath_suffstats);
+        nucpath_suffstats_ = nucpath_suffstats,     //
+        omegapath_suffstats_ = omegapathsuffstat);
 }
 
 int main(int argc, char* argv[]) {
@@ -112,10 +115,10 @@ int main(int argc, char* argv[]) {
             // move omega
             path_suffstats_(model).Clear();
             path_suffstats_(model).AddSuffStat(phyloprocess_(model));
-            auto globom_logprob = [&model]() {
-                return path_suffstats_(model).GetLogProb(codon_submatrix_(model));
-            };
-            globom::move(global_omega_(model), globom_logprob, gen);
+            omegapath_suffstats_(model).Clear();
+            omegapath_suffstats_(model).AddSuffStat(
+                codon_submatrix_(model), path_suffstats_(model));
+            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
 
             // move nuc rates
             touch_matrices();
@@ -139,13 +142,13 @@ int main(int argc, char* argv[]) {
     ChainDriver chain_driver{cmd.chain_name(), args.every.getValue(), args.until.getValue()};
 
     ConsoleLogger console_logger;
-    // ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", *chain_driver, *model);
+    // ChainCheckpoint chain_checkpoint(cmd.chain_name() + ".param", chain_driver, model);
     StandardTracer trace(model, cmd.chain_name());
 
     // registering components to chain driver
     chain_driver.add(scheduler);
     chain_driver.add(console_logger);
-    // chain_driver->add(chain_checkpoint);
+    // chain_driver.add(chain_checkpoint);
     chain_driver.add(trace);
 
     // launching chain!
