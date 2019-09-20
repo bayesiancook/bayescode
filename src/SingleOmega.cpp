@@ -45,7 +45,7 @@ template <class Gen>
 auto make_globom(PreparedData& data, Gen& gen) {
     auto global_omega = globom::make_fixed(1.0, 1.0, gen);
 
-    auto branch_lengths = make_branchlength_array(data.parser, 0.1, 1.0);
+    auto branch_lengths = branchlengths_submodel::make(data.parser, *data.tree, 0.1, 1.0);
 
     auto nuc_rates = make_nucleotide_rate(
         normalize({1, 1, 1, 1, 1, 1}), 1. / 6, normalize({1, 1, 1, 1}), 1. / 4, gen);
@@ -119,6 +119,11 @@ int main(int argc, char* argv[]) {
             omegapath_suffstats_(model).AddSuffStat(
                 codon_submatrix_(model), path_suffstats_(model));
             globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
+
+            // move branch lengths
+            get<branch_lengths, suffstats>(model).Clear();
+            get<branch_lengths, suffstats>(model).AddLengthPathSuffStat(get<phyloprocess>(model));
+            branchlengths_submodel::gibbs_resample(branch_lengths_(model), gen);
 
             // move nuc rates
             touch_matrices();
