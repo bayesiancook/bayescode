@@ -43,10 +43,11 @@ struct branchlengths_submodel {
         for (size_t i = 0; i < raw_vec.size(); i++) {
             auto& local_ss = ss.GetVal(i);
 
-            raw_vec[i] = gamma_sr::draw(                                                  //
-                get<bl_array, params, shape>(model)(i) + local_ss.GetCount(),             //
-                1. / get<bl_array, params, struct scale>(model)(i) + local_ss.GetBeta(),  //
-                gen);
+            auto alpha = get<bl_array, params, shape>(model)(i);
+            auto beta = 1. / get<bl_array, params, struct scale>(model)(i);
+
+            raw_vec[i] =
+                gamma_sr::draw(alpha + local_ss.GetCount(), beta + local_ss.GetBeta(), gen);
             assert(raw_vec[i] >= 0);
 
             DEBUG("New value of branch length {} is {}.", i, raw_vec[i]);

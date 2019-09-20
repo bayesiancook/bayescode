@@ -113,17 +113,17 @@ int main(int argc, char* argv[]) {
         // move omega
         for (int rep = 0; rep < 10; rep++) {
             // move omega
+            // move branch lengths
+            get<branch_lengths, suffstats>(model).Clear();
+            get<branch_lengths, suffstats>(model).AddLengthPathSuffStat(get<phyloprocess>(model));
+            branchlengths_submodel::gibbs_resample(branch_lengths_(model), gen);
+
             path_suffstats_(model).Clear();
             path_suffstats_(model).AddSuffStat(phyloprocess_(model));
             omegapath_suffstats_(model).Clear();
             omegapath_suffstats_(model).AddSuffStat(
                 codon_submatrix_(model), path_suffstats_(model));
             globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
-
-            // move branch lengths
-            get<branch_lengths, suffstats>(model).Clear();
-            get<branch_lengths, suffstats>(model).AddLengthPathSuffStat(get<phyloprocess>(model));
-            branchlengths_submodel::gibbs_resample(branch_lengths_(model), gen);
 
             // move nuc rates
             touch_matrices();
