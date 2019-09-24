@@ -13,6 +13,7 @@
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
 #include "submodels/nuc_rates.hpp"
+#include "submodels/path_wrapper.hpp"
 #include "submodels/submodel_external_interface.hpp"
 
 using namespace std;
@@ -43,7 +44,7 @@ TOKEN(omegapath_suffstats)
 
 template <class Gen>
 auto make_globom(PreparedData& data, Gen& gen) {
-    auto global_omega = globom::make_fixed(1.0, 1.0, gen);
+    auto global_omega = globom::make(1.0, 1.0, gen);
 
     auto branch_lengths = branchlengths_submodel::make(data.parser, *data.tree, 0.1, 1.0);
 
@@ -63,9 +64,9 @@ auto make_globom(PreparedData& data, Gen& gen) {
 
     // suff stats
     PoissonSuffStatBranchArray bl_suffstats{*data.tree};
-    PathSuffStat path_suffstats;
+    auto path_suffstats = std::make_unique<PathSuffStat>();
     NucPathSuffStat nucpath_suffstats;
-    OmegaPathSuffStat omegapathsuffstat;
+    OmegaSSW omega_ssw(*codon_sub_matrix, *path_suffstats);
 
     return make_model(                              //
         global_omega_ = move(global_omega),         //
@@ -76,9 +77,9 @@ auto make_globom(PreparedData& data, Gen& gen) {
         branch_adapter_ = move(branch_adapter),     //
         phyloprocess_ = move(phyloprocess),         //
         bl_suffstats_ = bl_suffstats,               //
-        path_suffstats_ = path_suffstats,           //
+        path_suffstats_ = move(path_suffstats),     //
         nucpath_suffstats_ = nucpath_suffstats,     //
-        omegapath_suffstats_ = omegapathsuffstat);
+        omegapath_suffstats_ = omega_ssw);
 }
 
 int main(int argc, char* argv[]) {
@@ -120,10 +121,9 @@ int main(int argc, char* argv[]) {
 
             path_suffstats_(model).Clear();
             path_suffstats_(model).AddSuffStat(phyloprocess_(model));
-            omegapath_suffstats_(model).Clear();
-            omegapath_suffstats_(model).AddSuffStat(
-                codon_submatrix_(model), path_suffstats_(model));
-            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
+            omegapath_suffstats_(model).gather();
+            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model).count_ssw(),
+                omegapath_suffstats_(model).beta_ssw(), gen);
 
             // move nuc rates
             touch_matrices();
