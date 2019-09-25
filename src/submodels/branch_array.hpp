@@ -19,9 +19,11 @@ Initialized with branch length from input tree. */
 struct branchlengths_submodel {
     static auto make(TreeParser& parser, const Tree& tree, double mean, double invshape) {
         DEBUG("Getting branch lengths from tree");
-        const size_t nb_branches = parser.get_tree().nb_nodes();
+        const size_t nb_branches = parser.get_tree().nb_nodes() - 1;
         auto initial_bl = branch_container_from_parser<double>(
             parser, [](int i, const auto& tree) { return stod(tree.tag(i, "length")); });
+        initial_bl.erase(initial_bl.begin());
+        DEBUG("Branch lengths are {}", vector_to_string(initial_bl));
 
         DEBUG("Creating branch length array of gamma nodes (length {})", nb_branches);
         auto bl_array = make_node_array<gamma_ss>(
