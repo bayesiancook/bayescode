@@ -143,6 +143,11 @@ class PathSuffStat : public SuffStat {
     //! structure)
     const std::map<int, double> &GetWaitingTimeMap() const { return waitingtime; }
 
+    bool operator==(const PathSuffStat &other) const {
+        return rootcount == other.rootcount && paircount == other.paircount &&
+               waitingtime == other.waitingtime;
+    }
+
   private:
     std::map<int, int> rootcount;
     std::map<std::pair<int, int>, int> paircount;

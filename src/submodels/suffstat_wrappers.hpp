@@ -6,7 +6,12 @@ template <class T>
 class SuffstatInterface {
     virtual T _get() = 0;
 
+  protected:
+    ~SuffstatInterface() = default;
+
   public:
+    // protected non-virtual destructor, as this interface is not
+    // meant to be sued with owning pointers
     virtual void gather() = 0;
 
     T get() {
@@ -17,7 +22,21 @@ class SuffstatInterface {
 #endif
         return _get();
     }
-    // no virtual destructor because not meant to be used for owning pointers
+};
+
+class PathSSW final : public SuffstatInterface<PathSuffStat&> {
+    PathSuffStat _ss;
+    PhyloProcess& _phyloprocess;
+
+    PathSuffStat& _get() final { return _ss; }
+
+  public:
+    PathSSW(PhyloProcess& phyloprocess) : _phyloprocess(phyloprocess) {}
+
+    void gather() final {
+        _ss.Clear();
+        _ss.AddSuffStat(_phyloprocess);
+    }
 };
 
 struct omega_suffstat_t {
@@ -28,19 +47,20 @@ struct omega_suffstat_t {
     }
 };
 
-class OmegaSSW : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
+class OmegaSSW final : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
     const OmegaCodonSubMatrix& _codon_submatrix;
-    const PathSuffStat& _path_suffstat;
+    SuffstatInterface<PathSuffStat&>& _path_suffstat;
     OmegaPathSuffStat _ss;
 
     omega_suffstat_t _get() final { return {_ss.GetCount(), _ss.GetBeta()}; }
 
   public:
-    OmegaSSW(const OmegaCodonSubMatrix& codon_submatrix, const PathSuffStat& pathsuffstat)
+    OmegaSSW(
+        const OmegaCodonSubMatrix& codon_submatrix, SuffstatInterface<PathSuffStat&>& pathsuffstat)
         : _codon_submatrix(codon_submatrix), _path_suffstat(pathsuffstat) {}
 
     void gather() final {
         _ss.Clear();
-        _ss.AddSuffStat(_codon_submatrix, _path_suffstat);
+        _ss.AddSuffStat(_codon_submatrix, _path_suffstat.get());
     }
 };

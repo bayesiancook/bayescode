@@ -13,6 +13,7 @@ Here is the gist of it:
 * The suffstat object must inherit from `SuffstatInterface<T>` where T is the summary value struct (or just the value type if there is a single value).
   * member functions `T _get()` and `void gather()` must be provided;
   * both should have the `final` keyword;
+  * the suffstat object itself should be final;
   * `T _get()` should be private.
 
 Here is an example for an omega suffstat wrapping legacy bayescode objects:
@@ -28,7 +29,7 @@ struct omega_suffstat_t {
     }
 };
 
-class OmegaSSW : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
+class OmegaSSW final : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
     const OmegaCodonSubMatrix& _codon_submatrix;
     const PathSuffStat& _path_suffstat;
     OmegaPathSuffStat _ss;

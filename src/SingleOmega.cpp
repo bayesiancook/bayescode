@@ -64,7 +64,7 @@ auto make_globom(PreparedData& data, Gen& gen) {
 
     // suff stats
     PoissonSuffStatBranchArray bl_suffstats{*data.tree};
-    auto path_suffstats = std::make_unique<PathSuffStat>();
+    auto path_suffstats = std::make_unique<PathSSW>(*phyloprocess);
     NucPathSuffStat nucpath_suffstats;
     OmegaSSW omega_ssw(*codon_sub_matrix, *path_suffstats);
 
@@ -119,15 +119,15 @@ int main(int argc, char* argv[]) {
             get<branch_lengths, suffstats>(model).AddLengthPathSuffStat(get<phyloprocess>(model));
             branchlengths_submodel::gibbs_resample(branch_lengths_(model), gen);
 
-            path_suffstats_(model).Clear();
-            path_suffstats_(model).AddSuffStat(phyloprocess_(model));
+            path_suffstats_(model).gather();
             omegapath_suffstats_(model).gather();
             globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
 
             // move nuc rates
             touch_matrices();
             nucpath_suffstats_(model).Clear();
-            nucpath_suffstats_(model).AddSuffStat(codon_submatrix_(model), path_suffstats_(model));
+            nucpath_suffstats_(model).AddSuffStat(
+                codon_submatrix_(model), path_suffstats_(model).get());
 
             auto nucrates_logprob = [&model]() {
                 return nucpath_suffstats_(model).GetLogProb(
