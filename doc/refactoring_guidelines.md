@@ -3,7 +3,7 @@
 Compared to legacy bayescode, there is a new way to package suffstats.
 
 Advantages of this new style are:
-* in debug mode, there is a runtime check that the value is the same before and after gathering;
+* **(important)** in debug mode, there is a runtime check that the value is the same before and after gathering;
 * homogeneous interface for all suffstats.
 
 Here is the gist of it:
@@ -44,4 +44,18 @@ class OmegaSSW : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff sta
         _ss.AddSuffStat(_codon_submatrix, _path_suffstat);
     }
 };
-``
+```
+
+Functions which need the suffstat value(s) should work with a `SuffstatInterface<T>&`. Here is an example use of a suffstat:
+
+```cpp
+template <class GlobomModel, class Gen>
+static void gibbs_resample( // using suffstat interface reference
+    GlobomModel& model, SuffstatInterface<omega_suffstat_t>& ss, Gen& gen) {
+    double alpha = get<omega, params, shape>(model)();
+    double beta = 1. / get<omega, params, struct scale>(model)();
+    auto ss_value = ss.get(); // get sufftat value (local copy)
+    get<omega, value>(model) = // access ss value fields
+        gamma_sr::draw(alpha + ss_value.count, beta + ss_value.beta, gen);
+}
+```
