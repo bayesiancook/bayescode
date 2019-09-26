@@ -13,7 +13,7 @@
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
 #include "submodels/nuc_rates.hpp"
-#include "submodels/path_wrapper.hpp"
+#include "submodels/suffstat_wrappers.hpp"
 #include "submodels/submodel_external_interface.hpp"
 
 using namespace std;
