@@ -35,13 +35,14 @@ struct globom {
     }
 
     template <class GlobomModel, class Gen>
-    static void gibbs_resample(GlobomModel& model, SuffstatWrapper<int>& count_ss,
-        SuffstatWrapper<double>& beta_ss, Gen& gen) {
+    static void gibbs_resample(
+        GlobomModel& model, SuffstatInterface<omega_suffstat_t>& ss, Gen& gen) {
         /* -- */
         double alpha = get<omega, params, shape>(model)();
         double beta = 1. / get<omega, params, struct scale>(model)();
+        auto ss_value = ss.get();
         get<omega, value>(model) =
-            gamma_sr::draw(alpha + count_ss.get_value(), beta + beta_ss.get_value(), gen);
+            gamma_sr::draw(alpha + ss_value.count, beta + ss_value.beta, gen);
         DEBUG("Omega = {}", get<omega, value>(model));
     }
 };

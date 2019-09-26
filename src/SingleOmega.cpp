@@ -13,8 +13,8 @@
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
 #include "submodels/nuc_rates.hpp"
-#include "submodels/suffstat_wrappers.hpp"
 #include "submodels/submodel_external_interface.hpp"
+#include "submodels/suffstat_wrappers.hpp"
 
 using namespace std;
 
@@ -122,8 +122,7 @@ int main(int argc, char* argv[]) {
             path_suffstats_(model).Clear();
             path_suffstats_(model).AddSuffStat(phyloprocess_(model));
             omegapath_suffstats_(model).gather();
-            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model).count_ssw(),
-                omegapath_suffstats_(model).beta_ssw(), gen);
+            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
 
             // move nuc rates
             touch_matrices();

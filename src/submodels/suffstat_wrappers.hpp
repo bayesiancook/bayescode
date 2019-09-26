@@ -2,55 +2,45 @@
 
 #include "lib/CodonSuffStat.hpp"
 
-template <class T = double>
-class SuffstatWrapper {
-    std::function<void()> _gather;
-    std::function<T()> _get_value;
+template <class T>
+class SuffstatInterface {
+    virtual T _get() = 0;
 
   public:
-    template <class Gather, class GetValue>
-    SuffstatWrapper(Gather gather, GetValue get_value) : _gather(gather), _get_value(get_value) {}
+    virtual void gather() = 0;
 
-    double get_value() {
+    T get() {
 #ifndef NDEBUG
-        double tmp = _get_value();
-        _gather();
-        assert(_get_value() == tmp);
+        auto tmp = _get();
+        gather();
+        assert(_get() == tmp);
 #endif
-        return _get_value();
+        return _get();
     }
-
-    void gather() { _gather(); }
+    // no virtual destructor because not meant to be used for owning pointers
 };
 
+struct omega_suffstat_t {
+    int count;
+    double beta;
+    bool operator==(const omega_suffstat_t& other) const {
+        return count == other.count && beta == other.beta;
+    }
+};
 
-class OmegaSSW {  // SSW = suff stat wrapper
+class OmegaSSW : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
     const OmegaCodonSubMatrix& _codon_submatrix;
     const PathSuffStat& _path_suffstat;
-
     OmegaPathSuffStat _ss;
-    SuffstatWrapper<int> _ss_count;
-    SuffstatWrapper<double> _ss_beta;
+
+    omega_suffstat_t _get() final { return {_ss.GetCount(), _ss.GetBeta()}; }
 
   public:
-    void gather() {
+    OmegaSSW(const OmegaCodonSubMatrix& codon_submatrix, const PathSuffStat& pathsuffstat)
+        : _codon_submatrix(codon_submatrix), _path_suffstat(pathsuffstat) {}
+
+    void gather() final {
         _ss.Clear();
         _ss.AddSuffStat(_codon_submatrix, _path_suffstat);
     }
-
-    OmegaSSW(const OmegaCodonSubMatrix& codon_submatrix, const PathSuffStat& pathsuffstat)
-        : _codon_submatrix(codon_submatrix),
-          _path_suffstat(pathsuffstat),
-          _ss_count([this]() { gather(); }, [this]() { return _ss.GetCount(); }),
-          _ss_beta([this]() { gather(); }, [this]() { return _ss.GetBeta(); }) {}
-
-    OmegaSSW(const OmegaSSW& other)
-        : _codon_submatrix(other._codon_submatrix),
-          _path_suffstat(other._path_suffstat),
-          _ss(other._ss),
-          _ss_count([this]() { gather(); }, [this]() { return _ss.GetCount(); }),
-          _ss_beta([this]() { gather(); }, [this]() { return _ss.GetBeta(); }) {}
-
-    auto& count_ssw() { return _ss_count; }
-    auto& beta_ssw() { return _ss_beta; }
 };
