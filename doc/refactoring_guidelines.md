@@ -10,7 +10,7 @@ Here is the gist of it:
 * If a suffstat provides several summary values (e.g. `count` and `beta` for omega path suffstats) they should declare a struct with all summary values.
   * this struct should provide an equality operator (i.e. `operator==`);
   * this struct is meant to be copied; if summary values are expensive to copy then the struct should hold references to the values instead.
-* The suffstat object must inherit from `SuffstatInterface<T>` where T is the summary value struct (or just the value type if there is a single value).
+* The suffstat object must inherit from `Proxy<T>` where T is the summary value struct (or just the value type if there is a single value).
   * member functions `T _get()` and `void gather()` must be provided;
   * both should have the `final` keyword;
   * the suffstat object itself should be final;
@@ -29,7 +29,7 @@ struct omega_suffstat_t {
     }
 };
 
-class OmegaSSW final : public SuffstatInterface<omega_suffstat_t> {  // SSW = suff stat wrapper
+class OmegaSSW final : public Proxy<omega_suffstat_t> {  // SSW = suff stat wrapper
     const OmegaCodonSubMatrix& _codon_submatrix;
     const PathSuffStat& _path_suffstat;
     OmegaPathSuffStat _ss;
@@ -47,12 +47,12 @@ class OmegaSSW final : public SuffstatInterface<omega_suffstat_t> {  // SSW = su
 };
 ```
 
-Functions which need the suffstat value(s) should work with a `SuffstatInterface<T>&`. Here is an example use of a suffstat:
+Functions which need the suffstat value(s) should work with a `Proxy<T>&`. Here is an example use of a suffstat:
 
 ```cpp
 template <class GlobomModel, class Gen>
 static void gibbs_resample( // using suffstat interface reference
-    GlobomModel& model, SuffstatInterface<omega_suffstat_t>& ss, Gen& gen) {
+    GlobomModel& model, Proxy<omega_suffstat_t>& ss, Gen& gen) {
     double alpha = get<omega, params, shape>(model)();
     double beta = 1. / get<omega, params, struct scale>(model)();
     auto ss_value = ss.get(); // get sufftat value (local copy)

@@ -35,8 +35,7 @@ struct globom {
     }
 
     template <class GlobomModel, class Gen>
-    static void gibbs_resample(
-        GlobomModel& model, SuffstatInterface<omega_suffstat_t>& ss, Gen& gen) {
+    static void gibbs_resample(GlobomModel& model, Proxy<omega_suffstat_t>& ss, Gen& gen) {
         /* -- */
         double alpha = get<omega, params, shape>(model)();
         double beta = 1. / get<omega, params, struct scale>(model)();
