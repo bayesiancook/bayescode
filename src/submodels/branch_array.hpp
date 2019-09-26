@@ -9,6 +9,7 @@
 #include "bayes_toolbox/src/structure/node.hpp"
 #include "bayes_toolbox/utils/tagged_tuple/src/fancy_syntax.hpp"
 #include "global/logging.hpp"
+#include "suffstat_wrappers.hpp"
 #include "tree/implem.hpp"
 
 TOKEN(bl_array)
@@ -30,26 +31,23 @@ struct branchlengths_submodel {
             nb_branches, n_to_constant(1. / invshape), n_to_constant(mean * invshape));
         set_value(bl_array, initial_bl);
 
-        // suffstats
-        PoissonSuffStatBranchArray suffstats{tree};
-
         // return model
-        return make_model(bl_array_ = std::move(bl_array), suffstats_ = suffstats);
+        return make_model(bl_array_ = std::move(bl_array));
     }
 
     template <class BLModel, class Gen>
-    static auto gibbs_resample(BLModel& model, Gen& gen) {
+    static auto gibbs_resample(
+        BLModel& model, Proxy<brancharray_poisson_suffstat_t, int>& ss, Gen& gen) {
+        /* -- */
         auto& raw_vec = get<bl_array, value>(model);
-        auto& ss = get<suffstats>(model);
 
         for (size_t i = 0; i < raw_vec.size(); i++) {
-            auto& local_ss = ss.GetVal(i);
+            auto local_ss = ss.get(i);
 
             auto alpha = get<bl_array, params, shape>(model)(i);
             auto beta = 1. / get<bl_array, params, struct scale>(model)(i);
 
-            raw_vec[i] =
-                gamma_sr::draw(alpha + local_ss.GetCount(), beta + local_ss.GetBeta(), gen);
+            raw_vec[i] = gamma_sr::draw(alpha + local_ss.count, beta + local_ss.beta, gen);
             assert(raw_vec[i] >= 0);
         }
         DEBUG("New branch lengths are {}", vector_to_string(raw_vec));

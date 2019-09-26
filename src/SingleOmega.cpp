@@ -63,7 +63,7 @@ auto make_globom(PreparedData& data, Gen& gen) {
     phyloprocess->Unfold();
 
     // suff stats
-    PoissonSuffStatBranchArray bl_suffstats{*data.tree};
+    BranchArrayPoissonSSW bl_suffstats{*data.tree, *phyloprocess};
     auto path_suffstats = std::make_unique<PathSSW>(*phyloprocess);
     NucPathSuffStat nucpath_suffstats;
     OmegaSSW omega_ssw(*codon_sub_matrix, *path_suffstats);
@@ -115,9 +115,9 @@ int main(int argc, char* argv[]) {
         for (int rep = 0; rep < 10; rep++) {
             // move omega
             // move branch lengths
-            get<branch_lengths, suffstats>(model).Clear();
-            get<branch_lengths, suffstats>(model).AddLengthPathSuffStat(get<phyloprocess>(model));
-            branchlengths_submodel::gibbs_resample(branch_lengths_(model), gen);
+            bl_suffstats_(model).gather();
+            branchlengths_submodel::gibbs_resample(
+                branch_lengths_(model), bl_suffstats_(model), gen);
 
             path_suffstats_(model).gather();
             omegapath_suffstats_(model).gather();

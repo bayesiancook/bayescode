@@ -3,6 +3,7 @@
 #include "Proxy.hpp"
 #include "lib/CodonSuffStat.hpp"
 
+// =================================================================================================
 class PathSSW final : public Proxy<PathSuffStat&> {
     PathSuffStat _ss;
     PhyloProcess& _phyloprocess;
@@ -18,6 +19,7 @@ class PathSSW final : public Proxy<PathSuffStat&> {
     }
 };
 
+// =================================================================================================
 struct omega_suffstat_t {
     int count;
     double beta;
@@ -40,5 +42,33 @@ class OmegaSSW final : public Proxy<omega_suffstat_t> {  // SSW = suff stat wrap
     void gather() final {
         _ss.Clear();
         _ss.AddSuffStat(_codon_submatrix, _path_suffstat.get());
+    }
+};
+
+// =================================================================================================
+struct brancharray_poisson_suffstat_t {
+    int count;
+    double beta;
+    bool operator==(const brancharray_poisson_suffstat_t& other) const {
+        return count == other.count && beta == other.beta;
+    }
+};
+
+class BranchArrayPoissonSSW final : public Proxy<brancharray_poisson_suffstat_t, int> {
+    PoissonSuffStatBranchArray _ss;
+    PhyloProcess& _phyloprocess;
+
+    brancharray_poisson_suffstat_t _get(int i) final {
+        auto& local_ss = _ss.GetVal(i);
+        return {local_ss.GetCount(), local_ss.GetBeta()};
+    }
+
+  public:
+    BranchArrayPoissonSSW(const Tree& tree, PhyloProcess& phyloprocess)
+        : _ss(tree), _phyloprocess(phyloprocess) {}
+
+    void gather() final {
+        _ss.Clear();
+        _ss.AddLengthPathSuffStat(_phyloprocess);
     }
 };
