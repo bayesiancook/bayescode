@@ -51,8 +51,7 @@ struct branchlengths_submodel {
             raw_vec[i] =
                 gamma_sr::draw(alpha + local_ss.GetCount(), beta + local_ss.GetBeta(), gen);
             assert(raw_vec[i] >= 0);
-
-            DEBUG("New value of branch length {} is {}.", i, raw_vec[i]);
         }
+        DEBUG("New branch lengths are {}", vector_to_string(raw_vec));
     }
 };

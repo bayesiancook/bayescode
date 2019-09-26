@@ -9,7 +9,7 @@ class MoveScheduler : public ChainComponent {
 
   public:
     MoveScheduler(F f) : f(f) {}
-    void move(int) override { f(); }
+    void move(int) final { f(); }
 };
 
 template <class F>
