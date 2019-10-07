@@ -86,7 +86,7 @@ inline logger_t global_logger() {
 
 // utility functions for debug
 template <class T>
-string vector_to_string(std::vector<T>& vec) {
+string vector_to_string(const std::vector<T>& vec) {
     if (vec.size() == 0) {
         return "{}";
     } else {
