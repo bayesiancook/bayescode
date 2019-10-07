@@ -59,11 +59,20 @@ auto move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, G
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
     auto bkp = backup(target);
+    DEBUG(
+        "=====================================================\nMove exch rate: "
+        "logprob_children={}, logprob={}\n\ttarget={}",
+        logprob_children(), logprob(target), vector_to_string(get<value>(target)));
     double logprob_before = logprob_children() + logprob(target);
     double log_hastings = profile_move(get<value>(target), tuning, gen);
     double logprob_after = logprob_children() + logprob(target);
     bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
     if (!accept) { restore(target, bkp); }
+    DEBUG(
+        "Move exch rate(after): logprob_children={}, logprob={}\n\ttarget={}, "
+        "accept={}\n=====================================================\n",
+        logprob_children(), logprob(target), vector_to_string(get<value>(target)), accept);
+    return static_cast<double>(accept);
 }
 
 template <class SubModel, class LogProb, class Gen>
@@ -77,4 +86,5 @@ auto move_eq_freqs(SubModel& model, double tuning, LogProb logprob_children, Gen
     double logprob_after = logprob_children() + logprob(target);
     bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
     if (!accept) { restore(target, bkp); }
+    return static_cast<double>(accept);
 }

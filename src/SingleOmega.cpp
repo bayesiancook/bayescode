@@ -30,6 +30,29 @@ class LegacyArrayProxy : public BranchSelector<double> {
     virtual const double& GetVal(int index) const override { return data_ref[index]; }
 };
 
+class MoveSuccessDebugprinter final : public ChainComponent {
+    double sum{0.};
+    size_t n{0};
+    std::string name;
+
+  public:
+    MoveSuccessDebugprinter(std::string name) : name(name) {}
+
+    void savepoint(int i) final {
+#ifndef NDEBUG
+        if (i % 1 == 0) {
+            DEBUG("{}, {}", sum, n);
+            DEBUG("Move {} has a success rate of {}\% so far", name, 100. * sum / (double)(n));
+        }
+#endif
+    }
+
+    void collect(double&& result) {
+        sum += result;
+        n++;
+    }
+};
+
 TOKEN(global_omega)
 TOKEN(branch_lengths)
 TOKEN(nuc_rates)
@@ -97,6 +120,9 @@ int main(int argc, char* argv[]) {
     // model
     auto model = make_globom(data, gen);
 
+    // debug of move successes
+    MoveSuccessDebugprinter dbg_movesuccess{"nucrates"};
+
     // move schedule
     auto touch_matrices = [&model]() {
         auto& nuc_matrix = get<nuc_rates, struct nuc_matrix>(model);
@@ -106,13 +132,13 @@ int main(int argc, char* argv[]) {
         codon_submatrix_(model).CorruptMatrix();
     };
 
-    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model]() {
+    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &dbg_movesuccess]() {
         // move phyloprocess
         touch_matrices();
         phyloprocess_(model).Move(1.0);
 
         // move omega
-        for (int rep = 0; rep < 10; rep++) {
+        for (int rep = 0; rep < 30; rep++) {
             // move omega
             // move branch lengths
             bl_suffstats_(model).gather();
@@ -133,9 +159,11 @@ int main(int argc, char* argv[]) {
                 return nucpath_suffstats_(model).GetLogProb(
                     get<nuc_rates, nuc_matrix>(model), codon_statespace_(model));
             };
-            move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, gen);
-            move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, gen);
-            move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, gen);
+            dbg_movesuccess.collect(move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, gen));
+            dbg_movesuccess.collect(
+                move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, gen));
+            dbg_movesuccess.collect(
+                move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, gen));
             move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, gen);
             move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, gen);
             touch_matrices();
@@ -154,6 +182,7 @@ int main(int argc, char* argv[]) {
     chain_driver.add(console_logger);
     // chain_driver.add(chain_checkpoint);
     chain_driver.add(trace);
+    chain_driver.add(dbg_movesuccess);
 
     // launching chain!
     chain_driver.go();
