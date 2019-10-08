@@ -73,4 +73,33 @@ struct globom {
             nucpath_suffstats_ = nucpath_suffstats,     //
             omegapath_suffstats_ = omega_ssw);
     }
+
+    template <class Model>
+    static void touch_matrices(Model& model) {
+        auto& nuc_matrix_proxy = get<nuc_rates, matrix_proxy>(model);
+        nuc_matrix_proxy.gather();
+        codon_submatrix_(model).SetOmega(get<global_omega, omega, value>(model));
+        codon_submatrix_(model).CorruptMatrix();
+    }
+
+    template <class Model, class Gen>
+    static void move_nucrates(Model& model, Gen& gen, MoveStatsRegistry& ms) {
+        nucpath_suffstats_(model).Clear();
+        nucpath_suffstats_(model).AddSuffStat(
+            codon_submatrix_(model), path_suffstats_(model).get());
+
+        auto nucrates_logprob = [&model]() {
+            return nucpath_suffstats_(model).GetLogProb(
+                get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
+        };
+
+        auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
+
+        nucrates_sm::move_exch_rates(nuc_rates_(model), {0.1, 0.03, 0.01}, nucrates_logprob,
+            touch_nucmatrix, gen, ms("exch_rates"));
+        nucrates_sm::move_eq_freqs(
+            nuc_rates_(model), {0.1, 0.03}, nucrates_logprob, touch_nucmatrix, gen, ms("eq_freqs"));
+
+        globom::touch_matrices(model);
+    }
 };

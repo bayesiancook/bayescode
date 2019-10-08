@@ -19,16 +19,9 @@ int main(int argc, char* argv[]) {
     MoveStatsRegistry ms;
 
     // move schedule
-    auto touch_matrices = [&model]() {
-        auto& nuc_matrix_proxy = get<nuc_rates, matrix_proxy>(model);
-        nuc_matrix_proxy.gather();
-        codon_submatrix_(model).SetOmega(get<global_omega, omega, value>(model));
-        codon_submatrix_(model).CorruptMatrix();
-    };
-
-    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &ms]() {
+    auto scheduler = make_move_scheduler([&gen, &model, &ms]() {
         // move phyloprocess
-        touch_matrices();
+        globom::touch_matrices(model);
         phyloprocess_(model).Move(1.0);
 
         // move omega
@@ -43,20 +36,7 @@ int main(int argc, char* argv[]) {
             omega_sm::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
 
             // move nuc rates
-            touch_matrices();
-            nucpath_suffstats_(model).Clear();
-            nucpath_suffstats_(model).AddSuffStat(
-                codon_submatrix_(model), path_suffstats_(model).get());
-            auto nucrates_logprob = [&model]() {
-                return nucpath_suffstats_(model).GetLogProb(
-                    get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
-            };
-            auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
-            nucrates_sm::move_exch_rates(nuc_rates_(model), {0.1, 0.03, 0.01}, nucrates_logprob,
-                touch_nucmatrix, gen, ms("exch_rates"));
-            nucrates_sm::move_eq_freqs(nuc_rates_(model), {0.1, 0.03}, nucrates_logprob,
-                touch_nucmatrix, gen, ms("eq_freqs"));
-            touch_matrices();
+            globom::move_nucrates(model, gen, ms);
         }
     });
 
