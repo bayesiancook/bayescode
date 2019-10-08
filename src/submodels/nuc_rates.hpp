@@ -53,8 +53,9 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
         nuc_matrix_ = std::move(nuc_matrix));
 }
 
-template <class SubModel, class LogProb, class Gen>
-auto move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, Gen& gen) {
+template <class SubModel, class LogProb, class Update, class Gen>
+auto move_exch_rates(
+    SubModel& model, double tuning, LogProb logprob_children, Update update, Gen& gen) {
     auto& target = exch_rates_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
@@ -65,9 +66,13 @@ auto move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, G
     //     logprob_children(), logprob(target), vector_to_string(get<value>(target)));
     double logprob_before = logprob_children() + logprob(target);
     double log_hastings = profile_move(get<value>(target), tuning, gen);
+    update();
     double logprob_after = logprob_children() + logprob(target);
     bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
-    if (!accept) { restore(target, bkp); }
+    if (!accept) {
+        restore(target, bkp);
+        update();
+    }
 
     // DEBUG("Logprob diff = {}, (before:{}, after:{})\n\t(children_after:{})",
     //     logprob_after - logprob_before, logprob_before, logprob_after, logprob_children());
@@ -79,16 +84,21 @@ auto move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, G
     return static_cast<double>(accept);
 }
 
-template <class SubModel, class LogProb, class Gen>
-auto move_eq_freqs(SubModel& model, double tuning, LogProb logprob_children, Gen& gen) {
+template <class SubModel, class LogProb, class Update, class Gen>
+auto move_eq_freqs(
+    SubModel& model, double tuning, LogProb logprob_children, Update update, Gen& gen) {
     auto& target = eq_freq_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
     auto bkp = backup(target);
     double logprob_before = logprob_children() + logprob(target);
     double log_hastings = profile_move(get<value>(target), tuning, gen);
+    update();
     double logprob_after = logprob_children() + logprob(target);
     bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
-    if (!accept) { restore(target, bkp); }
+    if (!accept) {
+        restore(target, bkp);
+        update();
+    }
     return static_cast<double>(accept);
 }

@@ -155,18 +155,23 @@ int main(int argc, char* argv[]) {
             nucpath_suffstats_(model).AddSuffStat(
                 codon_submatrix_(model), path_suffstats_(model).get());
 
-            auto nucrates_logprob = [&model, &touch_matrices]() {
-                touch_matrices();
+            auto nucrates_logprob = [&model]() {
                 return nucpath_suffstats_(model).GetLogProb(
                     get<nuc_rates, nuc_matrix>(model), codon_statespace_(model));
             };
-            dbg_movesuccess.collect(move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, gen));
+            auto touch_nucmatrix = [&model]() {
+                auto& nuc_matrix = get<nuc_rates, struct nuc_matrix>(model);
+                nuc_matrix.CopyStationary(get<nuc_rates, eq_freq, value>(model));
+                nuc_matrix.CorruptMatrix();
+            };
             dbg_movesuccess.collect(
-                move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, gen));
+                move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen));
             dbg_movesuccess.collect(
-                move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, gen));
-            move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, gen);
-            move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, gen);
+                move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen));
+            dbg_movesuccess.collect(
+                move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, touch_nucmatrix, gen));
+            move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen);
+            move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen);
             touch_matrices();
         }
     });
