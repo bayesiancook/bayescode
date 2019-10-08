@@ -12,6 +12,7 @@
 #include "lib/PoissonSuffStat.hpp"
 #include "submodels/branch_array.hpp"
 #include "submodels/global_omega.hpp"
+#include "submodels/move_reporter.hpp"
 #include "submodels/nuc_rates.hpp"
 #include "submodels/submodel_external_interface.hpp"
 #include "submodels/suffstat_wrappers.hpp"
@@ -28,29 +29,6 @@ class LegacyArrayProxy : public BranchSelector<double> {
 
     virtual const Tree& GetTree() const override { return tree_ref; }
     virtual const double& GetVal(int index) const override { return data_ref[index]; }
-};
-
-class MoveSuccessDebugprinter final : public ChainComponent {
-    double sum{0.};
-    size_t n{0};
-    std::string name;
-
-  public:
-    MoveSuccessDebugprinter(std::string name) : name(name) {}
-
-    void savepoint(int i) final {
-#ifndef NDEBUG
-        if (i % 1 == 0) {
-            DEBUG("{}, {}", sum, n);
-            DEBUG("Move {} has a success rate of {}\% so far", name, 100. * sum / (double)(n));
-        }
-#endif
-    }
-
-    void collect(double&& result) {
-        sum += result;
-        n++;
-    }
 };
 
 TOKEN(global_omega)
@@ -120,8 +98,8 @@ int main(int argc, char* argv[]) {
     // model
     auto model = make_globom(data, gen);
 
-    // debug of move successes
-    MoveSuccessDebugprinter dbg_movesuccess{"nucrates"};
+    // move success stats
+    MoveStatsRegistry movestats;
 
     // move schedule
     auto touch_matrices = [&model]() {
@@ -131,7 +109,7 @@ int main(int argc, char* argv[]) {
         codon_submatrix_(model).CorruptMatrix();
     };
 
-    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &dbg_movesuccess]() {
+    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &movestats]() {
         // move phyloprocess
         touch_matrices();
         phyloprocess_(model).Move(1.0);
@@ -159,14 +137,13 @@ int main(int argc, char* argv[]) {
                     get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
             };
             auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
-            dbg_movesuccess.collect(
-                move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen));
-            dbg_movesuccess.collect(
-                move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen));
-            dbg_movesuccess.collect(
-                move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, touch_nucmatrix, gen));
-            move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen);
-            move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen);
+            MoveReporter rp("exch_rates", movestats);
+            move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen, rp);
+            move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen, rp);
+            move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, touch_nucmatrix, gen, rp);
+            MoveReporter rp2("eq_freqs", movestats);
+            move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen, rp2);
+            move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen, rp2);
             touch_matrices();
         }
     });
@@ -183,7 +160,7 @@ int main(int argc, char* argv[]) {
     chain_driver.add(console_logger);
     // chain_driver.add(chain_checkpoint);
     chain_driver.add(trace);
-    chain_driver.add(dbg_movesuccess);
+    chain_driver.add(movestats);
 
     // launching chain!
     chain_driver.go();

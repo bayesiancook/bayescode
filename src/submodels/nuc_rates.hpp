@@ -57,17 +57,14 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
         matrix_proxy_ = matrix_proxy);
 }
 
-template <class SubModel, class LogProb, class Update, class Gen>
-auto move_exch_rates(
-    SubModel& model, double tuning, LogProb logprob_children, Update update, Gen& gen) {
+template <class SubModel, class LogProb, class Update, class Gen, class Reporter = NoReport>
+void move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, Update update,
+    Gen& gen, Reporter reporter = {}) {
+    /* -- */
     auto& target = exch_rates_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
     auto bkp = backup(target);
-    // DEBUG(
-    //     "=====================================================\nMove exch rate: "
-    //     "logprob_children={}, logprob={}\n\ttarget={}",
-    //     logprob_children(), logprob(target), vector_to_string(get<value>(target)));
     double logprob_before = logprob_children() + logprob(target);
     double log_hastings = profile_move(get<value>(target), tuning, gen);
     update();
@@ -77,20 +74,13 @@ auto move_exch_rates(
         restore(target, bkp);
         update();
     }
-
-    // DEBUG("Logprob diff = {}, (before:{}, after:{})\n\t(children_after:{})",
-    //     logprob_after - logprob_before, logprob_before, logprob_after, logprob_children());
-
-    // DEBUG(
-    //     "Move exch rate(after): logprob_children={}, logprob={}\n\ttarget={}, "
-    //     "accept={}\n=====================================================\n",
-    //     logprob_children(), logprob(target), vector_to_string(get<value>(target)), accept);
-    return static_cast<double>(accept);
+    reporter.report(accept);
 }
 
-template <class SubModel, class LogProb, class Update, class Gen>
-auto move_eq_freqs(
-    SubModel& model, double tuning, LogProb logprob_children, Update update, Gen& gen) {
+template <class SubModel, class LogProb, class Update, class Gen, class Reporter = NoReport>
+void move_eq_freqs(SubModel& model, double tuning, LogProb logprob_children, Update update,
+    Gen& gen, Reporter reporter = {}) {
+    /* -- */
     auto& target = eq_freq_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
@@ -104,5 +94,5 @@ auto move_eq_freqs(
         restore(target, bkp);
         update();
     }
-    return static_cast<double>(accept);
+    reporter.report(accept);
 }
