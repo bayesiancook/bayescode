@@ -2,6 +2,7 @@
 
 #include "Proxy.hpp"
 #include "lib/CodonSuffStat.hpp"
+#include "lib/GTRSubMatrix.hpp"
 
 // =================================================================================================
 class PathSSW final : public Proxy<PathSuffStat&> {
@@ -16,6 +17,23 @@ class PathSSW final : public Proxy<PathSuffStat&> {
     void gather() final {
         _ss.Clear();
         _ss.AddSuffStat(_phyloprocess);
+    }
+};
+
+// =================================================================================================
+class NucMatrixProxy : public Proxy<GTRSubMatrix&> {
+    GTRSubMatrix& _mat;
+    const std::vector<double>& _eq_freqs;
+
+    GTRSubMatrix& _get() final { return _mat; }
+
+  public:
+    NucMatrixProxy(GTRSubMatrix& mat, const std::vector<double>& eq_freqs)
+        : _mat(mat), _eq_freqs(eq_freqs) {}
+
+    void gather() final {
+        _mat.CopyStationary(_eq_freqs);
+        _mat.CorruptMatrix();
     }
 };
 

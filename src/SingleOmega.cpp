@@ -125,9 +125,8 @@ int main(int argc, char* argv[]) {
 
     // move schedule
     auto touch_matrices = [&model]() {
-        auto& nuc_matrix = get<nuc_rates, struct nuc_matrix>(model);
-        nuc_matrix.CopyStationary(get<nuc_rates, eq_freq, value>(model));
-        nuc_matrix.CorruptMatrix();
+        auto& nuc_matrix_proxy = get<nuc_rates, matrix_proxy>(model);
+        nuc_matrix_proxy.gather();
         codon_submatrix_(model).SetOmega(get<global_omega, omega, value>(model));
         codon_submatrix_(model).CorruptMatrix();
     };
@@ -157,13 +156,9 @@ int main(int argc, char* argv[]) {
 
             auto nucrates_logprob = [&model]() {
                 return nucpath_suffstats_(model).GetLogProb(
-                    get<nuc_rates, nuc_matrix>(model), codon_statespace_(model));
+                    get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
             };
-            auto touch_nucmatrix = [&model]() {
-                auto& nuc_matrix = get<nuc_rates, struct nuc_matrix>(model);
-                nuc_matrix.CopyStationary(get<nuc_rates, eq_freq, value>(model));
-                nuc_matrix.CorruptMatrix();
-            };
+            auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
             dbg_movesuccess.collect(
                 move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen));
             dbg_movesuccess.collect(

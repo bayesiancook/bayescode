@@ -17,6 +17,7 @@ class GTRSubMatrix : public virtual SubMatrix {
     GTRSubMatrix(int inNstate, const std::vector<double> &rr, const std::vector<double> &stat,
         bool innormalise = false);
     ~GTRSubMatrix() override = default;
+    GTRSubMatrix(const GTRSubMatrix &);
 
     //! return number of relative rates
     int GetNRelativeRate() const { return Nrr; }
@@ -27,6 +28,10 @@ class GTRSubMatrix : public virtual SubMatrix {
     //! make a copy of the entries of the equilibrium frequency vector; should be
     //! done each time this vector has been modified
     void CopyStationary(const std::vector<double> &instat);
+
+    bool operator==(const GTRSubMatrix &other) const {
+        return mRelativeRate == other.mRelativeRate && mStationary == other.mStationary;
+    }
 
   protected:
     void ComputeArray(int i) const override;

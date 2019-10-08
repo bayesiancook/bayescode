@@ -17,6 +17,7 @@
 TOKEN(eq_freq)
 TOKEN(exch_rates)
 TOKEN(nuc_matrix)
+TOKEN(matrix_proxy)
 
 // @todo: move elsewhere
 std::vector<double> normalize(const std::vector<double>& vec) {
@@ -47,10 +48,13 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
     auto nuc_matrix = std::make_unique<GTRSubMatrix>(
         4, get<value>(exchangeability_rates), get<value>(equilibrium_frequencies), true);
 
+    auto matrix_proxy = NucMatrixProxy(*nuc_matrix, get<value>(equilibrium_frequencies));
+
     return make_model(                                   //
         exch_rates_ = std::move(exchangeability_rates),  //
         eq_freq_ = std::move(equilibrium_frequencies),   //
-        nuc_matrix_ = std::move(nuc_matrix));
+        nuc_matrix_ = std::move(nuc_matrix),             //
+        matrix_proxy_ = matrix_proxy);
 }
 
 template <class SubModel, class LogProb, class Update, class Gen>
