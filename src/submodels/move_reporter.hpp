@@ -16,6 +16,8 @@ class OnlineMean {
     double mean() const { return sum / double(n); }
 };
 
+class MoveReporter;
+
 class MoveStatsRegistry : public ChainComponent {
     std::unordered_map<std::string, OnlineMean> map;
 
@@ -30,6 +32,8 @@ class MoveStatsRegistry : public ChainComponent {
             DEBUG("Move success: {:>15} -> {:.2f}\%", e.first, 100. * e.second.mean());
         }
     }
+
+    MoveReporter operator()(std::string);
 };
 
 class MoveReporter {
@@ -41,6 +45,8 @@ class MoveReporter {
 
     void report(double x) { registry.add(name, x); }
 };
+
+MoveReporter MoveStatsRegistry::operator()(std::string name) { return {name, *this}; }
 
 class NoReport {
   public:

@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
     auto model = make_globom(data, gen);
 
     // move success stats
-    MoveStatsRegistry movestats;
+    MoveStatsRegistry ms;
 
     // move schedule
     auto touch_matrices = [&model]() {
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
         codon_submatrix_(model).CorruptMatrix();
     };
 
-    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &movestats]() {
+    auto scheduler = make_move_scheduler([&gen, &touch_matrices, &model, &ms]() {
         // move phyloprocess
         touch_matrices();
         phyloprocess_(model).Move(1.0);
@@ -137,13 +137,10 @@ int main(int argc, char* argv[]) {
                     get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
             };
             auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
-            MoveReporter rp("exch_rates", movestats);
-            move_exch_rates(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen, rp);
-            move_exch_rates(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen, rp);
-            move_exch_rates(nuc_rates_(model), 0.01, nucrates_logprob, touch_nucmatrix, gen, rp);
-            MoveReporter rp2("eq_freqs", movestats);
-            move_eq_freqs(nuc_rates_(model), 0.1, nucrates_logprob, touch_nucmatrix, gen, rp2);
-            move_eq_freqs(nuc_rates_(model), 0.03, nucrates_logprob, touch_nucmatrix, gen, rp2);
+            move_exch_rates(nuc_rates_(model), {0.1, 0.03, 0.01}, nucrates_logprob, touch_nucmatrix,
+                gen, ms("exch_rates"));
+            move_eq_freqs(nuc_rates_(model), {0.1, 0.03}, nucrates_logprob, touch_nucmatrix, gen,
+                ms("eq_freqs"));
             touch_matrices();
         }
     });
@@ -160,7 +157,7 @@ int main(int argc, char* argv[]) {
     chain_driver.add(console_logger);
     // chain_driver.add(chain_checkpoint);
     chain_driver.add(trace);
-    chain_driver.add(movestats);
+    chain_driver.add(ms);
 
     // launching chain!
     chain_driver.go();

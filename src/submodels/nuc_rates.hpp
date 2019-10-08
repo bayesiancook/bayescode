@@ -58,41 +58,45 @@ auto make_nucleotide_rate(const std::vector<double>& nucrelratecenter, double nu
 }
 
 template <class SubModel, class LogProb, class Update, class Gen, class Reporter = NoReport>
-void move_exch_rates(SubModel& model, double tuning, LogProb logprob_children, Update update,
-    Gen& gen, Reporter reporter = {}) {
+void move_exch_rates(SubModel& model, std::vector<double> tunings, LogProb logprob_children,
+    Update update, Gen& gen, Reporter reporter = {}) {
     /* -- */
     auto& target = exch_rates_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
-    auto bkp = backup(target);
-    double logprob_before = logprob_children() + logprob(target);
-    double log_hastings = profile_move(get<value>(target), tuning, gen);
-    update();
-    double logprob_after = logprob_children() + logprob(target);
-    bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
-    if (!accept) {
-        restore(target, bkp);
+    for (auto tuning : tunings) {
+        auto bkp = backup(target);
+        double logprob_before = logprob_children() + logprob(target);
+        double log_hastings = profile_move(get<value>(target), tuning, gen);
         update();
+        double logprob_after = logprob_children() + logprob(target);
+        bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
+        if (!accept) {
+            restore(target, bkp);
+            update();
+        }
+        reporter.report(accept);
     }
-    reporter.report(accept);
 }
 
 template <class SubModel, class LogProb, class Update, class Gen, class Reporter = NoReport>
-void move_eq_freqs(SubModel& model, double tuning, LogProb logprob_children, Update update,
-    Gen& gen, Reporter reporter = {}) {
+void move_eq_freqs(SubModel& model, std::vector<double> tunings, LogProb logprob_children,
+    Update update, Gen& gen, Reporter reporter = {}) {
     /* -- */
     auto& target = eq_freq_(model);
     static_assert(is_node_array<std::decay_t<decltype(target)>>::value, "");
 
-    auto bkp = backup(target);
-    double logprob_before = logprob_children() + logprob(target);
-    double log_hastings = profile_move(get<value>(target), tuning, gen);
-    update();
-    double logprob_after = logprob_children() + logprob(target);
-    bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
-    if (!accept) {
-        restore(target, bkp);
+    for (auto tuning : tunings) {
+        auto bkp = backup(target);
+        double logprob_before = logprob_children() + logprob(target);
+        double log_hastings = profile_move(get<value>(target), tuning, gen);
         update();
+        double logprob_after = logprob_children() + logprob(target);
+        bool accept = decide(logprob_after - logprob_before + log_hastings, gen);
+        if (!accept) {
+            restore(target, bkp);
+            update();
+        }
+        reporter.report(accept);
     }
-    reporter.report(accept);
 }
