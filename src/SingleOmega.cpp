@@ -155,7 +155,8 @@ int main(int argc, char* argv[]) {
             nucpath_suffstats_(model).AddSuffStat(
                 codon_submatrix_(model), path_suffstats_(model).get());
 
-            auto nucrates_logprob = [&model]() {
+            auto nucrates_logprob = [&model, &touch_matrices]() {
+                touch_matrices();
                 return nucpath_suffstats_(model).GetLogProb(
                     get<nuc_rates, nuc_matrix>(model), codon_statespace_(model));
             };
