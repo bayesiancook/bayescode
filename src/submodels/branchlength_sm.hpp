@@ -17,7 +17,7 @@ TOKEN(suffstats)
 
 /* Array of branch lengths, gamma iid with fixed mean and invshape.
 Initialized with branch length from input tree. */
-struct branchlengths_submodel {
+struct branchlengths_sm {
     static auto make(TreeParser& parser, const Tree& tree, double mean, double invshape) {
         DEBUG("Getting branch lengths from tree");
         const size_t nb_branches = parser.get_tree().nb_nodes() - 1;

@@ -1,87 +1,4 @@
-#include <cmath>
-#include "components/ChainCheckpoint.hpp"
-#include "components/ChainDriver.hpp"
-#include "components/ConsoleLogger.hpp"
-#include "components/InferenceAppArgParse.hpp"
-#include "components/MoveScheduler.hpp"
-#include "components/StandardTracer.hpp"
-#include "components/restart_check.hpp"
-#include "data_preparation.hpp"
-#include "lib/CodonSubMatrix.hpp"
-#include "lib/CodonSuffStat.hpp"
-#include "lib/PoissonSuffStat.hpp"
-#include "submodels/branch_array.hpp"
-#include "submodels/global_omega.hpp"
-#include "submodels/move_reporter.hpp"
-#include "submodels/nuc_rates.hpp"
-#include "submodels/submodel_external_interface.hpp"
-#include "submodels/suffstat_wrappers.hpp"
-
-using namespace std;
-
-class LegacyArrayProxy : public BranchSelector<double> {
-    std::vector<double>& data_ref;
-    const Tree& tree_ref;
-
-  public:
-    LegacyArrayProxy(std::vector<double>& data_ref, const Tree& tree_ref)
-        : data_ref(data_ref), tree_ref(tree_ref) {}
-
-    virtual const Tree& GetTree() const override { return tree_ref; }
-    virtual const double& GetVal(int index) const override { return data_ref[index]; }
-};
-
-TOKEN(global_omega)
-TOKEN(branch_lengths)
-TOKEN(nuc_rates)
-TOKEN(codon_statespace)
-TOKEN(codon_submatrix)
-TOKEN(branch_adapter)
-TOKEN(phyloprocess)
-TOKEN(bl_suffstats)
-TOKEN(path_suffstats)
-TOKEN(nucpath_suffstats)
-TOKEN(omegapath_suffstats)
-
-template <class Gen>
-auto make_globom(PreparedData& data, Gen& gen) {
-    auto global_omega = globom::make(1.0, 1.0, gen);
-
-    auto branch_lengths = branchlengths_submodel::make(data.parser, *data.tree, 0.1, 1.0);
-
-    auto nuc_rates = make_nucleotide_rate(
-        normalize({1, 1, 1, 1, 1, 1}), 1. / 6, normalize({1, 1, 1, 1}), 1. / 4, gen);
-
-    auto codon_statespace = dynamic_cast<const CodonStateSpace*>(data.alignment.GetStateSpace());
-
-    auto codon_sub_matrix = std::make_unique<MGOmegaCodonSubMatrix>(
-        codon_statespace, &get<nuc_matrix>(nuc_rates), get<omega, value>(global_omega));
-
-    auto branch_adapter =
-        std::make_unique<LegacyArrayProxy>(get<bl_array, value>(branch_lengths), *data.tree);
-    auto phyloprocess = std::make_unique<PhyloProcess>(
-        data.tree.get(), &data.alignment, branch_adapter.get(), nullptr, codon_sub_matrix.get());
-    phyloprocess->Unfold();
-
-    // suff stats
-    BranchArrayPoissonSSW bl_suffstats{*data.tree, *phyloprocess};
-    auto path_suffstats = std::make_unique<PathSSW>(*phyloprocess);
-    NucPathSuffStat nucpath_suffstats;
-    OmegaSSW omega_ssw(*codon_sub_matrix, *path_suffstats);
-
-    return make_model(                              //
-        global_omega_ = move(global_omega),         //
-        branch_lengths_ = move(branch_lengths),     //
-        nuc_rates_ = move(nuc_rates),               //
-        codon_statespace_ = codon_statespace,       //
-        codon_submatrix_ = move(codon_sub_matrix),  //
-        branch_adapter_ = move(branch_adapter),     //
-        phyloprocess_ = move(phyloprocess),         //
-        bl_suffstats_ = bl_suffstats,               //
-        path_suffstats_ = move(path_suffstats),     //
-        nucpath_suffstats_ = nucpath_suffstats,     //
-        omegapath_suffstats_ = omega_ssw);
-}
+#include "submodels/globom_model.hpp"
 
 int main(int argc, char* argv[]) {
     // parsing command-line arguments
@@ -96,7 +13,7 @@ int main(int argc, char* argv[]) {
     auto gen = make_generator();
 
     // model
-    auto model = make_globom(data, gen);
+    auto model = globom::make(data, gen);
 
     // move success stats
     MoveStatsRegistry ms;
@@ -116,31 +33,29 @@ int main(int argc, char* argv[]) {
 
         // move omega
         for (int rep = 0; rep < 30; rep++) {
-            // move omega
             // move branch lengths
             bl_suffstats_(model).gather();
-            branchlengths_submodel::gibbs_resample(
-                branch_lengths_(model), bl_suffstats_(model), gen);
+            branchlengths_sm::gibbs_resample(branch_lengths_(model), bl_suffstats_(model), gen);
 
+            // move omega
             path_suffstats_(model).gather();
             omegapath_suffstats_(model).gather();
-            globom::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
+            omega_sm::gibbs_resample(global_omega_(model), omegapath_suffstats_(model), gen);
 
             // move nuc rates
             touch_matrices();
             nucpath_suffstats_(model).Clear();
             nucpath_suffstats_(model).AddSuffStat(
                 codon_submatrix_(model), path_suffstats_(model).get());
-
             auto nucrates_logprob = [&model]() {
                 return nucpath_suffstats_(model).GetLogProb(
                     get<nuc_rates, matrix_proxy>(model).get(), codon_statespace_(model));
             };
             auto touch_nucmatrix = [&model]() { get<nuc_rates, matrix_proxy>(model).gather(); };
-            move_exch_rates(nuc_rates_(model), {0.1, 0.03, 0.01}, nucrates_logprob, touch_nucmatrix,
-                gen, ms("exch_rates"));
-            move_eq_freqs(nuc_rates_(model), {0.1, 0.03}, nucrates_logprob, touch_nucmatrix, gen,
-                ms("eq_freqs"));
+            nucrates_sm::move_exch_rates(nuc_rates_(model), {0.1, 0.03, 0.01}, nucrates_logprob,
+                touch_nucmatrix, gen, ms("exch_rates"));
+            nucrates_sm::move_eq_freqs(nuc_rates_(model), {0.1, 0.03}, nucrates_logprob,
+                touch_nucmatrix, gen, ms("eq_freqs"));
             touch_matrices();
         }
     });

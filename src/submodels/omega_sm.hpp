@@ -15,17 +15,17 @@
 
 TOKEN(omega)
 
-struct globom {
+struct omega_sm {
     template <class Gen>
     static auto make(double mean, double invshape, Gen& gen) {
-        DEBUG("Making global omega with fixed parameters mean={} and invshape={}", mean, invshape);
+        DEBUG("Making omega with fixed parameters mean={} and invshape={}", mean, invshape);
         auto omega = make_node<gamma_ss>(1. / invshape, mean * invshape);
         draw(omega, gen);
         return make_model(omega_ = std::move(omega));
     }
 
-    template <class GlobomModel, class Lambda, class Gen>
-    static void move(GlobomModel& model, Lambda children_logprob, Gen& gen) {
+    template <class OmegaModel, class Lambda, class Gen>
+    static void move(OmegaModel& model, Lambda children_logprob, Gen& gen) {
         auto& omega = omega_(model);
         auto full_logprob = [&omega, &children_logprob]() {
             return logprob(omega) + children_logprob();
@@ -34,8 +34,8 @@ struct globom {
         DEBUG("Omega = {}", raw_value(omega));
     }
 
-    template <class GlobomModel, class Gen>
-    static void gibbs_resample(GlobomModel& model, Proxy<omega_suffstat_t>& ss, Gen& gen) {
+    template <class OmegaModel, class Gen>
+    static void gibbs_resample(OmegaModel& model, Proxy<omega_suffstat_t>& ss, Gen& gen) {
         /* -- */
         double alpha = get<omega, params, shape>(model)();
         double beta = 1. / get<omega, params, struct scale>(model)();
