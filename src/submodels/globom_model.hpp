@@ -33,6 +33,7 @@ TOKEN(nucpath_suffstats)
 TOKEN(omegapath_suffstats)
 
 struct globom {
+    // =============================================================================================
     template <class Gen>
     static auto make(PreparedData& data, Gen& gen) {
         auto global_omega = omega_sm::make(1.0, 1.0, gen);
@@ -74,6 +75,7 @@ struct globom {
             omegapath_suffstats_ = omega_ssw);
     }
 
+    // =============================================================================================
     template <class Model>
     static void touch_matrices(Model& model) {
         auto& nuc_matrix_proxy = get<nuc_rates, matrix_proxy>(model);
@@ -82,6 +84,7 @@ struct globom {
         codon_submatrix_(model).CorruptMatrix();
     }
 
+    // =============================================================================================
     template <class Model, class Gen>
     static void move_nucrates(Model& model, Gen& gen, MoveStatsRegistry& ms) {
         nucpath_suffstats_(model).Clear();
