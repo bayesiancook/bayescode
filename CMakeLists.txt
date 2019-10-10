@@ -63,6 +63,12 @@ set(BASE_LIBS
 add_executable(globom "src/SingleOmega.cpp")
 target_link_libraries(globom ${BASE_LIBS})
 
+
+# simulate and infer
+add_executable(sim_and_infer "src/simu_and_infer_example.cpp")
+target_link_libraries(sim_and_infer ${BASE_LIBS})
+
+
 # Read single omega (readglobom)
 # add_executable(readglobom "src/ReadSingleOmega.cpp")
 # target_link_libraries(readglobom ${BASE_LIBS})

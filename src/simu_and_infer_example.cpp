@@ -29,6 +29,7 @@ license and that you accept its terms.*/
 #include "distributions/exponential.hpp"
 #include "distributions/gamma.hpp"
 #include "distributions/poisson.hpp"
+#include "global/logging.hpp"
 #include "mcmc_utils.hpp"
 #include "operations/backup.hpp"
 #include "operations/logprob.hpp"
@@ -73,20 +74,21 @@ void scaling_move(Node& node, MB blanket, Gen& gen, IndexArgs... args) {
 int main() {
     auto gen = make_generator();
 
-    constexpr size_t nb_it{100'000}, len_lambda{5}, len_K{3};
+    constexpr size_t nb_it{100'000}, len_lambda{5}, len_K{6};
     auto m = poisson_gamma(len_lambda, len_K);
 
     auto v = make_view<alpha, mu, lambda, K>(m);
     draw(v, gen);
     // display node value in stdout
-    std::cout << "Alpha: " << get<alpha, value>(m) << "\n";
-    std::cout <<"Mu: "<< get<mu, value>(m) << "\n";
-    std::cout <<"Lambda: "<< get<lambda, value>(m) << "\n";
-    std::cout <<"K: "<< get<K, value>(m) << "\n";
+    INFO("Alpha = {}", get<alpha, value>(m));
+    INFO("Mu = {}", get<mu, value>(m));
+    INFO("Lambda = {}", vector_to_string(get<lambda, value>(m)));
+    // INFO("K = {}", get<K, value>(m));
 
 //    set_value(K_(m), {{1, 2, 1}, {1, 2, 2}, {1, 2, 1}, {2, 1, 2}, {2, 1, 3}});
 
-    double alpha_sum{0}, mu_sum{0}, lambda_sum{0};
+    double alpha_sum{0}, mu_sum{0};
+    vector<double> lambda_sum (len_lambda, 0.0);
 
     for (size_t it = 0; it < nb_it; it++) {
         scaling_move(alpha_(m), make_view<alpha, lambda>(m), gen);
@@ -94,14 +96,21 @@ int main() {
         alpha_sum += raw_value(alpha_(m));
         mu_sum += raw_value(mu_(m));
 
-        for (size_t i = 0; i < 5; i++) {
+        for (size_t i = 0; i < len_lambda; i++) {
             auto lambda_mb = make_view(make_ref<K>(m, i), make_ref<lambda>(m, i));
             scaling_move(lambda_(m), lambda_mb, gen, i);
-            lambda_sum += raw_value(lambda_(m), i);
+            lambda_sum[i] += raw_value(lambda_(m), i);
         }
     }
+    INFO("RESULTS OF THE MCMC: ");
+    INFO("Alpha = {}", alpha_sum / float(nb_it));
+    INFO("Mu = {}", mu_sum / float(nb_it));
 
-    std::cout << "Mean alpha = " << alpha_sum / float(nb_it) << ", mu = " << mu_sum / float(nb_it)
-              << std::endl;
-    std::cout << "lambda = " << lambda_sum / (float(nb_it) * len_lambda) << std::endl;
+    for (size_t i = 0; i < len_lambda; i++) {
+      lambda_sum[i] = lambda_sum[i]/float(nb_it) ;
+    }
+
+    //std::cout << "Mean lambda = " << lambda_sum / (float(nb_it) * len_lambda) << std::endl;
+    INFO("Lambda = {}", vector_to_string(lambda_sum));
+
 }
