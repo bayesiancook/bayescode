@@ -39,6 +39,14 @@ license and that you accept its terms.*/
 #include "structure/array_utils.hpp"
 #include "suffstat_utils.hpp"
 #include "tagged_tuple/src/fancy_syntax.hpp"
+
+#include "components/ChainCheckpoint.hpp"
+#include "components/ChainDriver.hpp"
+#include "components/ConsoleLogger.hpp"
+#include "components/InferenceAppArgParse.hpp"
+#include "components/StandardTracer.hpp"
+#include "components/restart_check.hpp"
+
 using namespace std;
 
 TOKEN(alpha)
@@ -74,7 +82,7 @@ void scaling_move(Node& node, MB blanket, Gen& gen, IndexArgs... args) {
 int main() {
     auto gen = make_generator();
 
-    constexpr size_t nb_it{100'000}, len_lambda{5}, len_K{6};
+    constexpr size_t nb_it{100'000}, len_lambda{20}, len_K{200};
     auto m = poisson_gamma(len_lambda, len_K);
 
     auto v = make_view<alpha, mu, lambda, K>(m);
@@ -91,6 +99,7 @@ int main() {
     vector<double> lambda_sum (len_lambda, 0.0);
 
     for (size_t it = 0; it < nb_it; it++) {
+        //INFO("Alpha = {}\n", raw_value(alpha_(m)));
         scaling_move(alpha_(m), make_view<alpha, lambda>(m), gen);
         scaling_move(mu_(m), make_view<mu, lambda>(m), gen);
         alpha_sum += raw_value(alpha_(m));
