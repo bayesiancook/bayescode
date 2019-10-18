@@ -10,6 +10,9 @@ _build: CMakeLists.txt # default mode is release
 	@mkdir _build
 	@cd _build ; cmake ..
 
+modules:
+	git submodule update --init --recursive
+
 .PHONY: coverage
 coverage:
 	@rm -rf _build
@@ -68,7 +71,7 @@ run-app-tests: all
 	# @echo "\n\e[35m\e[1m== Globom restart ===========================================================\e[0m"
 	# _build/globom _test/globom_gal4
 	# @echo "\n\e[35m\e[1m== Globom read ==============================================================\e[0m"
-	# _build/readglobom _test/globom_gal4	
+	# _build/readglobom _test/globom_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a run =============================================================\e[0m"
 	_build/codonm2a -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a restart =========================================================\e[0m"
