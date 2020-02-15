@@ -18,22 +18,17 @@
 class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
                                        public BidimArray<AAMutSelOmegaCodonSubMatrix> {
   public:
-    // two possible ways to do it:
-    // AAMutSelNeCodonMatrixBidimArray(const Selector<vector<double> >&
-    // infitnessarray, const Selector<double>& inNe, const CodonStateSpace&
-    // incodonstatespace, const SubMatrix& innucmatrix);
-    // AAMutSelNeCodonMatrixBidimArray(const Selector<vector<double> >&
-    // infitnessarray, const vector<double>& inNe, const CodonStateSpace&
-    // incodonstatespace, const SubMatrix& innucmatrix);
 
     //! constructor parameterized by a bidim array of fitness profiles, a codon
     //! state space and a single nucleotide matrix.
     AADiffSelCodonMatrixBidimArray(const BidimSelector<vector<double>> &infitnessarray,
                                    const CodonStateSpace &incodonstatespace,
-                                   const SubMatrix &innucmatrix)
+                                   const SubMatrix &innucmatrix,
+                                   double inomega = 1.0)
         : fitnessarray(infitnessarray),
           codonstatespace(incodonstatespace),
           nucmatrix(innucmatrix),
+          omega(inomega),
           matrixarray(infitnessarray.GetNrow(),
                       vector<AAMutSelOmegaCodonSubMatrix *>(infitnessarray.GetNcol(),
                                                             (AAMutSelOmegaCodonSubMatrix *)0)) {
@@ -60,7 +55,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
                 matrixarray[i][j] = new AAMutSelOmegaCodonSubMatrix(
-                    &codonstatespace, &nucmatrix, fitnessarray.GetVal(i, j), 1.0, 1.0);
+                    &codonstatespace, &nucmatrix, fitnessarray.GetVal(i, j), omega, 1.0);
             }
         }
     }
@@ -74,10 +69,15 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
         }
     }
 
+    void SetOmega(double inomega)   {
+        omega = inomega;
+    }
+
     //! signal corruption of the parameters (matrices should recompute themselves)
     void Corrupt() {
         for (int i = 0; i < GetNrow(); i++) {
             for (int j = 0; j < GetNcol(); j++) {
+                matrixarray[i][j]->SetOmega(omega);
                 matrixarray[i][j]->CorruptMatrix();
             }
         }
@@ -86,6 +86,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     //! signal corruption for column (site) j
     void CorruptColumn(int j) {
         for (int i = 0; i < GetNrow(); i++) {
+            matrixarray[i][j]->SetOmega(omega);
             matrixarray[i][j]->CorruptMatrix();
         }
     }
@@ -95,6 +96,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     void CorruptColumn(int j, const vector<int> &flag) {
         for (int i = 0; i < GetNrow(); i++) {
             if (flag[i]) {
+                matrixarray[i][j]->SetOmega(omega);
                 matrixarray[i][j]->CorruptMatrix();
             }
         }
@@ -104,6 +106,7 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
     const BidimSelector<vector<double>> &fitnessarray;
     const CodonStateSpace &codonstatespace;
     const SubMatrix &nucmatrix;
+    double omega;
     vector<vector<AAMutSelOmegaCodonSubMatrix *>> matrixarray;
 };
 

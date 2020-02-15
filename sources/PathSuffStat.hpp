@@ -272,6 +272,15 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
         process.AddPathSuffStat(*this, branchalloc);
     }
 
+    //! reduce path suffstats based on bidim allocations
+    void Add(const PathSuffStatArray& suffstatarray, const Selector<int>& rowalloc, const Selector<int>& colalloc)   {
+        for (int i = 0; i < this->GetNrow(); i++) {
+            for (int j = 0; j < this->GetNcol(); j++) {
+                (*this)(rowalloc.GetVal(i), colalloc.GetVal(j)) += suffstatarray.GetVal(i);
+            }
+        }
+    }
+
     //! return total log prob (summed over all items), given a bi-dimensional
     //! array of rate matrices
     double GetLogProb(const BidimSelector<SubMatrix> &matrixarray) const {

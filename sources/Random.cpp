@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <cmath>
 #include <iostream>
+#include "IncompleteGamma.hpp"
 
 /* =======================================================
    (VL) Magical constants, to be used only in this file.
@@ -686,3 +687,22 @@ double Random::logDirichletDensity(const vector<double> &x, const vector<double>
     tot += logGamma(concentration * totcenter);
     return tot;
 }
+
+void Random::DiscGamma(vector<double>& v, double alpha)	{
+    int ncat = v.size();
+	vector<double> x(ncat,0);
+	vector<double> y(ncat,0);
+	double lg = logGamma(alpha+1.0);
+	for (int i=0; i<ncat; i++)  {
+		x[i] = PointGamma((i+1.0)/ncat,alpha,alpha);
+	}
+	for (int i=0; i<ncat-1; i++)	{
+		y[i] = IncompleteGamma(alpha*x[i],alpha+1,lg);
+	}
+	y[ncat-1] = 1.0;
+	v[0] = ncat * y[0];
+	for (int i=1; i<ncat; i++)	{
+		v[i] = ncat * (y[i] - y[i-1]);
+	}
+}
+

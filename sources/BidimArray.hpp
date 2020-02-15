@@ -145,6 +145,30 @@ class BidimHomogeneousSelector : public BidimSelector<T> {
 };
 
 /**
+ * \brief A Selector that distributes the components of a mixture over an array
+ * of items, through a vector of allocations
+ */
+
+template <class T>
+class DoubleMixtureSelector : public Selector<T> {
+  public:
+    DoubleMixtureSelector(const BidimSelector<T>* incomponents, const Selector<int>* inrowalloc, const Selector<int>* incolalloc) :
+        components(incomponents), rowalloc(inrowalloc), colalloc(incolalloc) {
+	}
+    ~DoubleMixtureSelector() {}
+
+    int GetSize() const override { return rowalloc->GetSize(); }
+
+    //! return a reference to the same value (i.e. value) for any pair of indices
+    const T &GetVal(int i) const override { return components->GetVal(rowalloc->GetVal(i), colalloc->GetVal(i)); }
+
+  private:
+    const BidimSelector<T>* components;
+    const Selector<int>* rowalloc;
+    const Selector<int>* colalloc;
+};
+
+/**
  * \brief The 'standard' implementation of a BidimArray<T>, simply as a
  * vector<vector<T> >
  *

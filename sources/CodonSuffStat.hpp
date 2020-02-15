@@ -327,6 +327,16 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         }
     }
 
+    void AddSuffStat(const BidimSelector<AAMutSelOmegaCodonSubMatrix>& codonsubmatrixbidimarray,
+                     const BidimSelector<PathSuffStat>& pathsuffstatbidimarray)  {
+
+        for (int i=0; i<codonsubmatrixbidimarray.GetNrow(); i++)   {
+            for (int j=0; j<codonsubmatrixbidimarray.GetNcol(); j++)   {
+                AddSuffStat(codonsubmatrixbidimarray.GetVal(i,j), pathsuffstatbidimarray.GetVal(i,j));
+            }
+        }
+    }
+
     double GetLogProb(double omega) const { return count * log(omega) - beta * omega; }
 };
 

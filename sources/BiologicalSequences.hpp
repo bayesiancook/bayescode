@@ -44,6 +44,7 @@ const int Dayhoff4Table[] = {3, -1, 2, 2, 0, 3, 1, 0, 1, 0, 0, 2, 3, 2, 1, 3, 3,
 const int unknown = -1;
 
 const int Naa = 20;
+const int Naarr = Naa * (Naa-1) / 2;
 const int Nnuc = 4;
 const int Nrr = Nnuc * (Nnuc - 1) / 2;
 const int Ncodon = 64;

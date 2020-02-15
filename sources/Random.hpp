@@ -48,6 +48,8 @@ class Random {
     static double sGamma(double);
     static double sGammanew(double);
 
+    static void DiscGamma(vector<double>& v, double alpha);
+
     static int Choose(int);
     static int FiniteDiscrete(int n, const double *probarray);
     static void DrawFromUrn(int *, int n, int N);
