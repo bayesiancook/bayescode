@@ -83,6 +83,14 @@ class AADiffSelCodonMatrixBidimArray : public BidimArray<SubMatrix>,
         }
     }
 
+    //! signal corruption for row i
+    void CorruptRow(int i) {
+        for (int j = 0; j < GetNcol(); j++) {
+            matrixarray[i][j]->SetOmega(omega);
+            matrixarray[i][j]->CorruptMatrix();
+        }
+    }
+
     //! signal corruption for column (site) j
     void CorruptColumn(int j) {
         for (int i = 0; i < GetNrow(); i++) {

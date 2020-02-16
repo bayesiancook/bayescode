@@ -1528,7 +1528,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double GetNucStatEntropy() const { return Random::GetEntropy(nucrelrate); }
 
     double GetPredictedDNDS() const  {
-
         double mean = 0;
         for (int i=0; i<Ncat; i++) {
             if (occupancy->GetVal(i))   {
@@ -1542,6 +1541,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "omega\t";
+        os << "dnds\t";
         os << "ncluster\t";
         os << "kappa\t";
         if (baseNcat > 1) {
@@ -1566,6 +1566,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // 3x: per coding site (and not per nucleotide site)
         os << 3 * branchlength->GetTotalLength() << '\t';
         os << omega << '\t';
+        os << GetPredictedDNDS() << '\t';
         os << GetNcluster() << '\t';
         os << kappa << '\t';
         if (baseNcat > 1) {

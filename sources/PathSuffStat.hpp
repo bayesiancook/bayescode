@@ -274,10 +274,8 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
 
     //! reduce path suffstats based on bidim allocations
     void Add(const PathSuffStatArray& suffstatarray, const Selector<int>& rowalloc, const Selector<int>& colalloc)   {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) {
-                (*this)(rowalloc.GetVal(i), colalloc.GetVal(j)) += suffstatarray.GetVal(i);
-            }
+        for (int i = 0; i < suffstatarray.GetSize(); i++)   {
+            (*this)(rowalloc.GetVal(i), colalloc.GetVal(i)) += suffstatarray.GetVal(i);
         }
     }
 
@@ -287,6 +285,14 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
         double total = 0;
         for (int j = 0; j < this->GetNcol(); j++) {
             total += GetLogProb(j, matrixarray);
+        }
+        return total;
+    }
+
+    double GetRowLogProb(int i, const BidimSelector<SubMatrix> &matrixarray) const {
+        double total = 0;
+        for (int j = 0; j < this->GetNcol(); j++) {
+            total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
         }
         return total;
     }
