@@ -289,6 +289,16 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
         return total;
     }
 
+    void GetRowLogProbs(vector<double>& logprobvector, const BidimSelector<SubMatrix> &matrixarray) const {
+        for (int i = 0; i < this->GetNrow(); i++) {
+            double total = 0;
+            for (int j = 0; j < this->GetNcol(); j++) {
+                total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
+            }
+            logprobvector[i] = total;
+        }
+    }
+
     double GetRowLogProb(int i, const BidimSelector<SubMatrix> &matrixarray) const {
         double total = 0;
         for (int j = 0; j < this->GetNcol(); j++) {

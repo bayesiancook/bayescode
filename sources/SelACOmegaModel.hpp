@@ -82,13 +82,14 @@ class SelACOmegaModel : public ProbModel {
     double wvol;
     // distance matrix between amino acids 
     vector<double> aadist;
-
     // number of categories of the discretized gamma
     int Gcat;
     double Ginvshape;
     vector<double> G;
 
     // stringency (level of expression)
+    double psihypermean;
+    double psihyperinvshape;
     double psi;
 
     SelACProfileBidimArray* selacprofiles;
@@ -120,10 +121,11 @@ class SelACOmegaModel : public ProbModel {
     int nucmode;
     // currently: fixed or free with shrinkage
     int omegamode;
+    int aadistmode;
 
     // 0: grantham
     // 1: general distance
-    int aadistmode;
+    int aadistmodel;
 
     double dposompi;
     double dposomhypermean;
@@ -160,10 +162,11 @@ class SelACOmegaModel : public ProbModel {
     //! shrinkage across genes (1) or without shrinkage (0)
     //! - Gcat: number of bins of discretized gamma for G's across sites
 
-    SelACOmegaModel(string datafile, string treefile, int inaadistmode, int inomegamode, int inomegaprior,
+    SelACOmegaModel(string datafile, string treefile, int inaadistmodel, int inaadistmode, int inomegamode, int inomegaprior,
                             int inGcat) {
         blmode = 0;
         nucmode = 0;
+        aadistmodel = inaadistmodel;
         aadistmode = inaadistmode;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
@@ -190,10 +193,11 @@ class SelACOmegaModel : public ProbModel {
         // Allocate();
     }
 
-    SelACOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inaadistmode, int inomegamode, int inomegaprior,
+    SelACOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inaadistmodel, int inaadistmode, int inomegamode, int inomegaprior,
                             int inGcat) {
         blmode = 0;
         nucmode = 0;
+        aadistmodel = inaadistmodel;
         aadistmode = inaadistmode;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
@@ -251,8 +255,6 @@ class SelACOmegaModel : public ProbModel {
     //! mode is 3.
     void SetOmegaMode(int mode) { omegamode = mode; }
 
-    void SetAADistMode(int mode) { aadistmode = mode; }
-
     //! \brief set prior for omega
     //
     //! 0: simple gamma prior
@@ -262,7 +264,6 @@ class SelACOmegaModel : public ProbModel {
 
     //! allocate the model (data structures)
     void Allocate() {
-
 
         aadist_acc.assign(3,0);
         aadist_tot.assign(3,0.1);
@@ -305,16 +306,16 @@ class SelACOmegaModel : public ProbModel {
         wvol = grantham_wvol;
 
         aadist.assign(Naarr, 1.0);
-        if (!aadistmode)    {
+        if (!aadistmodel)    {
             UpdateGrantham();
         }
-
-        // aadist.assign(Naarr, 1.0/Naarr);
 
         Ginvshape = 1.0;
         G.assign(Gcat, 1.0);
         UpdateG();
         psi = 0.5;
+        psihypermean = 0;
+        psihyperinvshape = 0;
 
         selacprofiles = new SelACProfileBidimArray(aadist,G,psi);
 
@@ -396,6 +397,26 @@ class SelACOmegaModel : public ProbModel {
         dposomhyperinvshape = ininvshape;
     }
 
+    void SetAADist(const vector<double>& inaadist)  {
+        aadist = inaadist;
+        UpdateSelAC();
+    }
+
+    void SetGInvShape(double inGinvshape)   {
+        Ginvshape = inGinvshape;
+        UpdateSelAC();
+    }
+
+    void SetPsi(double inpsi)   {
+        psi = inpsi;
+        UpdateSelAC();
+    }
+
+    void SetPsiHyperParameters(double inpsihypermean, double inpsihyperinvshape) {
+        psihypermean = inpsihypermean;
+        psihyperinvshape = inpsihyperinvshape;
+    }
+
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
     void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
                                     double innucrelratehyperinvconc,
@@ -455,7 +476,7 @@ class SelACOmegaModel : public ProbModel {
 
     void UpdateSelAC()  {
         UpdateG();
-        if (! aadistmode)   {
+        if (! aadistmodel)   {
             UpdateGrantham();
         }
         selacprofiles->SetPsi(psi);
@@ -527,11 +548,13 @@ class SelACOmegaModel : public ProbModel {
             total += NucRatesLogPrior();
         }
 
-        // psi, G, aadist
-        total += AALogPrior();
-
-        // allocation of sites to aa
-        // total += alloc->GetLogProb();
+        if (aadistmode < 2) {
+            // psi, G, aadist
+            total += PsiHyperLogPrior();
+            total += AALogPrior();
+            // allocation of sites to aa
+            // total += alloc->GetLogProb();
+        }
 
         // omega
         if (omegamode < 2) {
@@ -541,11 +564,20 @@ class SelACOmegaModel : public ProbModel {
         return total;
     }
 
+    double PsiHyperLogPrior() const {
+        if (psihypermean == 0)  {
+            return -log(psi);
+        }
+        double alpha = 1.0 / psihyperinvshape;
+        double beta = alpha / psihypermean;
+        return alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(psi) - beta * psi;
+    }
+
     double AALogPrior() const {
         double total = 0;
         total -= Ginvshape;
-        total -= log(psi);
-        if (! aadistmode)   {
+        total += PsiHyperLogPrior();
+        if (! aadistmodel)   {
             total -= log(wcom) + log(wpol);
         }
         else    {
@@ -630,6 +662,10 @@ class SelACOmegaModel : public ProbModel {
         return componentpathsuffstatbidimarray->GetRowLogProb(aa,*codonmatrices);
     }
 
+    void GetAAPathSuffStatLogProbs(vector<double>& logprobvector) const    {
+        return componentpathsuffstatbidimarray->GetRowLogProbs(logprobvector,*codonmatrices);
+    }
+
     //! return log prob of current branch lengths, as a function of branch lengths
     //! hyperparameter lambda
     double LambdaHyperSuffStatLogProb() const {
@@ -712,27 +748,27 @@ class SelACOmegaModel : public ProbModel {
                 MoveOmega();
             }
 
-            aachrono.Start();
+            if (aadistmode < 2) {
+                aachrono.Start();
+                if (! aadistmodel)   {
+                    MoveGranthamWeights();
+                }
+                else    {
+                    MoveAADist();
+                    AAPsiCompMove(1.0, 10);
+                }
+                if (Gcat > 1)   {
+                    MoveGinvshape();
+                }
+                MovePsi();
 
-            if (! aadistmode)   {
-                MoveGranthamWeights();
+                ResampleAlloc();
+                ResampleGAlloc();
+                CollectComponentPathSuffStat();
+                ResampleWeights();
+                aachrono.Stop();
             }
-            else    {
-                MoveAADist();
-                AAPsiCompMove(1.0, 10);
-            }
-            if (Gcat > 1)   {
-                MoveGinvshape();
-            }
-            MovePsi();
 
-            ResampleAlloc();
-            ResampleGAlloc();
-            CollectComponentPathSuffStat();
-
-            ResampleWeights();
-
-            aachrono.Stop();
             totchrono.Stop();
         }
     }
@@ -1189,7 +1225,7 @@ class SelACOmegaModel : public ProbModel {
             os << "omega\t";
         }
         os << "dnds\t";
-        if (! aadistmode)   {
+        if (! aadistmodel)   {
             os << "w_comp\t";
             os << "w_pol\t";
         }
@@ -1212,7 +1248,7 @@ class SelACOmegaModel : public ProbModel {
             os << omega << '\t';
         }
         os << GetPredictedDNDS() << '\t';
-        if (! aadistmode)   {
+        if (! aadistmodel)   {
             os << wcom << '\t';
             os << wpol << '\t';
         }
@@ -1245,22 +1281,25 @@ class SelACOmegaModel : public ProbModel {
             is >> lambda;
             is >> *branchlength;
         }
+
         if (nucmode < 2) {
             is >> nucrelrate;
             is >> nucstat;
         }
 
-        is >> psi;
-        is >> Ginvshape;
-        if (! aadistmode)   {
-            is >> wcom >> wpol;
+        if (aadistmode < 2) {
+            is >> psi;
+            is >> Ginvshape;
+            if (! aadistmodel)   {
+                is >> wcom >> wpol;
+            }
+            else    {
+                is >> aadist;
+            }
+            is >> aaweight;
+            is >> *alloc;
+            is >> *Galloc;
         }
-        else    {
-            is >> aadist;
-        }
-        is >> aaweight;
-        is >> *alloc;
-        is >> *Galloc;
 
         if (omegamode < 2) {
             is >> omega;
@@ -1278,17 +1317,19 @@ class SelACOmegaModel : public ProbModel {
             os << nucstat << '\t';
         }
 
-        os << psi << '\t';
-        os << Ginvshape << '\t';
-        if (! aadistmode)   {
-            os << wcom << '\t' << wpol << '\t';
+        if (aadistmode < 2) {
+            os << psi << '\t';
+            os << Ginvshape << '\t';
+            if (! aadistmodel)   {
+                os << wcom << '\t' << wpol << '\t';
+            }
+            else    {
+                os << aadist << '\t';
+            }
+            os << aaweight << '\t';
+            os << *alloc << '\t';
+            os << *Galloc << '\t';
         }
-        else    {
-            os << aadist << '\t';
-        }
-        os << aaweight << '\t';
-        os << *alloc << '\t';
-        os << *Galloc << '\t';
 
         if (omegamode < 2) {
             os << omega << '\t';
@@ -1307,18 +1348,19 @@ class SelACOmegaModel : public ProbModel {
             size += nucrelrate.size();
             size += nucstat.size();
         }
-        size++;
-        size++;
-        if (! aadistmode)   {
-            size += 2;
+        if (aadistmode < 2) {
+            size++;
+            size++;
+            if (! aadistmodel)   {
+                size += 2;
+            }
+            else    {
+                size += aadist.size();
+            }
+            size += aaweight.size();
+            size += alloc->GetMPISize();
+            size += Galloc->GetMPISize();
         }
-        else    {
-            size += aadist.size();
-        }
-        size += aaweight.size();
-        size += alloc->GetMPISize();
-        size += Galloc->GetMPISize();
-
         if (omegamode < 2) {
             size++;
         }
@@ -1336,17 +1378,19 @@ class SelACOmegaModel : public ProbModel {
             is >> nucstat;
         }
 
-        is >> psi;
-        is >> Ginvshape;
-        if (! aadistmode)   {
-            is >> wcom >> wpol;
+        if (aadistmode < 2) {
+            is >> psi;
+            is >> Ginvshape;
+            if (! aadistmodel)   {
+                is >> wcom >> wpol;
+            }
+            else    {
+                is >> aadist;
+            }
+            is >> aaweight;
+            is >> *alloc;
+            is >> *Galloc;
         }
-        else    {
-            is >> aadist;
-        }
-        is >> aaweight;
-        is >> *alloc;
-        is >> *Galloc;
 
         if (omegamode < 2) {
             is >> omega;
@@ -1364,17 +1408,19 @@ class SelACOmegaModel : public ProbModel {
             os << nucstat;
         }
 
-        os << psi;
-        os << Ginvshape;
-        if (! aadistmode)   {
-            os << wcom << wpol;
+        if (aadistmode < 2) {
+            os << psi;
+            os << Ginvshape;
+            if (! aadistmodel)   {
+                os << wcom << wpol;
+            }
+            else    {
+                os << aadist;
+            }
+            os << aaweight;
+            os << *alloc;
+            os << *Galloc;
         }
-        else    {
-            os << aadist;
-        }
-        os << aaweight;
-        os << *alloc;
-        os << *Galloc;
 
         if (omegamode < 2) {
             os << omega;
