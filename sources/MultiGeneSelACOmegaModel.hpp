@@ -60,16 +60,20 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     int Gcat;
     double Ginvshape;
 
-    double psihypermean;
-    double psihyperinvshape;
-    IIDGamma* psiarray;
-
     // sharing the aadist parameters
     double wcom;
     double wpol;
     double wvol;
     // distance matrix between amino acids 
     vector<double> aadist;
+    // prior probs for optimal amino acids
+    vector<double> aaweight;
+    OccupancySuffStat* aaoccupancy;
+
+    double psihypermean;
+    double psihyperinvshape;
+    IIDGamma* psiarray;
+    GammaSuffStat psihypersuffstat;
 
     std::vector<SelACOmegaModel *> geneprocess;
 
@@ -89,6 +93,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     Chrono blchrono;
     Chrono aachrono;
 
+    vector<double> aadistacc, aadisttot, gacc, gtot;
     int burnin;
 
   public:
@@ -200,6 +205,26 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             exit(1);
         }
 
+        wcom = grantham_wcom;
+        wpol = grantham_wpol;
+        wvol = grantham_wvol;
+
+        aadist.assign(Naarr, 1.0);
+        if (!aadistmodel)    {
+            UpdateGrantham();
+        }
+
+        Ginvshape = 1.0;
+
+        aaweight.assign(Naa, 1.0/Naa);
+        aaoccupancy = new OccupancySuffStat(Naa);
+
+        psihypermean = 10.0;
+        psihyperinvshape = 0.5;
+        double alpha = 1.0 / psihyperinvshape;
+        double beta = alpha / psihypermean;
+        psiarray = new IIDGamma(GetLocalNgene(), alpha, beta);
+
         genednds = new SimpleArray<double>(GetLocalNgene());
 
         lnL = 0;
@@ -264,6 +289,46 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 geneprocess[gene]->Allocate();
             }
         }
+
+        aadistacc.assign(3,0);
+        aadisttot.assign(3,0);
+        gacc.assign(3,0);
+        gtot.assign(3,0);
+    }
+
+    int rrindex(int i, int j) const {
+        return (i < j) ? (2 * Naa - i - 1) * i / 2 + j - i - 1
+                       : (2 * Naa - j - 1) * j / 2 + i - j - 1;
+    }
+
+    void UpdateGrantham()   {
+        double tot = 0;
+        for (int a=0; a<Naa; a++)   {
+            for (int b=a+1; b<Naa; b++)   {
+                double tcom = grantham_com[b] - grantham_com[a];
+                double tpol = grantham_pol[b] - grantham_pol[a];
+                double tvol = grantham_vol[b] - grantham_vol[a];
+                double d = sqrt(wcom*tcom*tcom + wpol*tpol*tpol + wvol*tvol*tvol);
+                aadist[rrindex(a,b)] = d;
+                tot += d;
+            }
+        }
+        tot /= Naarr;
+        for (int a=0; a<Naa; a++)   {
+            for (int b=a+1; b<Naa; b++)   {
+                aadist[rrindex(a,b)] /= tot;
+            }
+        }
+    }
+
+    void UpdateSelAC()  {
+        if (! aadistmodel)   {
+            UpdateGrantham();
+        }
+        double alpha = 1.0 / psihyperinvshape;
+        double beta = alpha / psihypermean;
+        psiarray->SetShape(alpha);
+        psiarray->SetScale(beta);
     }
 
     void FastUpdate() {
@@ -288,7 +353,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             dposomarray->SetScale(beta);
         }
 
-        // aadist
+        UpdateSelAC();
     }
 
     void MasterUpdate() override {
@@ -310,7 +375,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 MasterSendOmega();
             }
 
-            // send aadist
+            MasterSendPsiHyperParameters();
+            MasterSendPsi();
+            MasterSendSelAC();
 
             MasterReceiveLogProbs();
         }
@@ -332,9 +399,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveReceiveOmega();
         }
 
-        // receive aadist
+        SlaveReceivePsiHyperParameters();
+        SlaveReceivePsi();
+        SlaveReceiveSelAC();
 
         GeneUpdate();
+
         SlaveSendLogProbs();
     }
 
@@ -363,9 +433,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 MasterSendOmega();
             }
 
-            // send aadist
-
-            // MasterReceiveLogProbs();
+            MasterSendPsiHyperParameters();
+            MasterSendPsi();
+            MasterSendSelAC();
         }
     }
 
@@ -385,10 +455,11 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveReceiveOmega();
         }
 
-        // receive aadist
+        SlaveReceivePsiHyperParameters();
+        SlaveReceivePsi();
+        SlaveReceiveSelAC();
 
         GenePostPred(name);
-        // SlaveSendLogProbs();
     }
 
     void GenePostPred(string name) {
@@ -443,14 +514,18 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 os << "npos\tposmean\tdposom_pi\tmeandposom\tinvshape\t";
             }
         }
-        // aadist
-        /*
-        os << "psi\t";
-        if (Gcat > 1) {
-            os << "Ginvshape\t";
+
+        if (Gcat > 1)   {
+            os << "ginvshape\t";
         }
-        */
-        os << "aastatent\t";
+        os << "meanpsi\tinvshape\t";
+        if (! aadistmodel)   {
+            os << "w_comp\t";
+            os << "w_pol\t";
+        }
+        os << "distvar\t";
+        os << "weightent\t";
+
         os << "nucrr\tinvconc\t";
         os << "nucstat\tinvconc\n";
     }
@@ -487,13 +562,43 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             }
         }
 
-        // aadist 
+        if (Gcat > 1)   {
+            os << Ginvshape << '\t';
+        }
+        os << psihypermean << '\t' << psihyperinvshape << '\t';
+        if (! aadistmodel)   {
+            os << wcom << '\t';
+            os << wpol << '\t';
+        }
+        os << GetVarAADist() << '\t';
+        os << Random::GetEntropy(aaweight) << '\t';
 
-        os << MeanStatEnt << '\t';
         os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
         os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
         os.flush();
     }
+
+    double GetMeanAADist() const    {
+        double m1 = 0;
+        for (int i=0; i<Naarr; i++) {
+            m1 += aadist[i];
+        }
+        return m1 / Naarr;
+    }
+
+    double GetVarAADist() const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i=0; i<Naarr; i++) {
+            m1 += aadist[i];
+            m2 += aadist[i]*aadist[i];
+        }
+        m1 /= Naarr;
+        m2 /= Naarr;
+        m2 -= m1*m1;
+        return m2;
+    }
+
 
     void TraceOmega(ostream &os) const {
         if (omegaprior == 0) {
@@ -509,6 +614,40 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os.flush();
     }
 
+    void TracePsi(ostream &os) const {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << psiarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
+    void TraceAADistHeader(ostream& os) const {
+        for (int a=0; a<Naa; a++)   {
+            os << AminoAcids[a] << '\t';
+        }
+        for (int a=0; a<Naa; a++)   {
+            for (int b=0; b<Naa; b++)   {
+                os << AminoAcids[a] << AminoAcids[b] << '\t';
+            }
+        }
+        os << '\n';
+        os.flush();
+    }
+
+    void TraceAADist(ostream& os) const {
+        for (int a=0; a<Naa; a++)   {
+            os << aaweight[a] << '\t';
+        }
+        for (int a=0; a<Naa; a++)   {
+            for (int b=0; b<Naa; b++)   {
+                os << aadist[rrindex(a,b)] << '\t';
+            }
+        }
+        os << '\n';
+        os.flush();
+    }
+
     void Monitor(ostream &os) const override {
         os << totchrono.GetTime() << '\t' << paramchrono.GetTime() 
            << '\t' << blchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
@@ -517,6 +656,18 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
            << '\n';
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime()
            << '\n';
+
+        os << "g  : ";
+       for (size_t i=0; i<gacc.size(); i++)    {
+          os << gacc[i] / gtot[i] << '\t';
+       }
+       os << '\n';
+
+        os << "aa : ";
+       for (size_t i=0; i<aadistacc.size(); i++)    {
+          os << aadistacc[i] / aadisttot[i] << '\t';
+       }
+       os << '\n';
     }
 
     void MasterFromStream(istream &is) override {
@@ -550,7 +701,16 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             }
         }
 
-        // aadist
+        is >> psihypermean >> psihyperinvshape;
+        is >> *psiarray;
+        is >> Ginvshape;
+        if (! aadistmodel)   {
+            is >> wcom >> wpol;
+        }
+        else    {
+            is >> aadist;
+        }
+        is >> aaweight;
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             int size;
@@ -612,7 +772,18 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 os << *dposomarray << '\t';
             }
         }
-        // aadist
+
+        os << psihypermean << '\t' << psihyperinvshape << '\t';
+        os << *psiarray << '\t';
+
+        os << Ginvshape << '\t';
+        if (! aadistmodel)   {
+            os << wcom << '\t' << wpol << '\t';
+        }
+        else    {
+            os << aadist << '\t';
+        }
+        os << aaweight << '\t';
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             MPI_Status stat;
@@ -669,7 +840,36 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             total += OmegaLogPrior();
         }
 
+        total += AALogPrior();
+
         // aadist
+        return total;
+    }
+
+    double PsiHyperLogPrior() const {
+        double total = 0;
+        total -= 0.1 * psihypermean;
+        total -= psihyperinvshape;
+        return total;
+    }
+
+    double PsiLogPrior() const  {
+        return psiarray->GetLogProb();
+    }
+
+    double AALogPrior() const   {
+        double total = 0;
+        total -= Ginvshape;
+        total += PsiHyperLogPrior();
+        total += PsiLogPrior();
+        if (! aadistmodel)   {
+            total -= log(wcom) + log(wpol);
+        }
+        else    {
+            for (int i=0; i<Naarr; i++) {
+                total -= aadist[i];
+            }
+        }
         return total;
     }
 
@@ -768,6 +968,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return ret;
     }
 
+    double PsiHyperSuffStatLogProb() const  {
+        double ret = 0;
+        double alpha = 1.0 / psihyperinvshape;
+        double beta = alpha / psihypermean;
+        ret = psihypersuffstat.GetLogProb(alpha, beta);
+        return ret;
+    }
+
     //-------------------
     // Log Probs for MH moves
     //-------------------
@@ -790,6 +998,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     // log prob for moving omega hyperparameters
     double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
 
+    // log prob for moving psi hyperparameters
+    double PsiHyperLogProb() const { return PsiHyperLogPrior() + PsiHyperSuffStatLogProb(); }
+
     //-------------------
     // Moves
     //-------------------
@@ -802,7 +1013,13 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             paramchrono.Start();
 
             aachrono.Start();
-            // aadist
+
+            MasterMoveSelAC();
+
+            MasterReceivePsi();
+            MovePsiHyperParameters();
+            MasterSendPsiHyperParameters();
+
             aachrono.Stop();
 
             if ((burnin > 10) && (omegamode != 3)) {
@@ -872,7 +1089,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             // gene aadist
             movechrono.Stop();
 
-            // aadist
+            SlaveMoveSelAC();
+            MoveGeneSelAC();
+            SlaveSendPsi();
+            SlaveReceivePsiHyperParameters();
 
             if ((burnin > 10) && (omegamode != 3)) {
                 movechrono.Start();
@@ -940,10 +1160,285 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void MoveGeneAADist() {
+    void MoveGeneSelAC() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            // geneprocess[gene]->MoveAADist(3);
+            geneprocess[gene]->MoveSelAC();
+            (*psiarray)[gene] = geneprocess[gene]->GetPsi();
         }
+    }
+
+    void ResampleAAWeight() {
+        double total = 0;
+        for (int i=0; i<Naa; i++)   {
+            aaweight[i] = Random::sGamma(1 + aaoccupancy->GetVal(i));
+            total += aaweight[i];
+        }
+        for (int i=0; i<Naa; i++)   {
+            aaweight[i] /= total;
+        }
+    }
+
+    void SlaveSendAAWeightSuffStat()    {
+        aaoccupancy->Clear();
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->UpdateOccupancies();
+            aaoccupancy->Add(*geneprocess[gene]->GetOccupancies());
+        }
+        SlaveSendAdditive(*aaoccupancy);
+    }
+
+    void MasterReceiveAAWeightSuffStat()    {
+        aaoccupancy->Clear();
+        MasterReceiveAdditive(*aaoccupancy);
+    }
+
+    void MovePsiHyperParameters()   {
+
+        psihypersuffstat.Clear();
+        psihypersuffstat.AddSuffStat(*psiarray);
+
+        ScalingMove(psihypermean, 1.0, 10,
+                &MultiGeneSelACOmegaModel::PsiHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(psihypermean, 0.3, 10,
+                &MultiGeneSelACOmegaModel::PsiHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(psihyperinvshape, 1.0, 10,
+                &MultiGeneSelACOmegaModel::PsiHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(psihyperinvshape, 0.3, 10,
+                &MultiGeneSelACOmegaModel::PsiHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+
+        double alpha = 1.0 / psihyperinvshape;
+        double beta = alpha / psihypermean;
+        psiarray->SetShape(alpha);
+        psiarray->SetScale(beta);
+    }
+
+    void MasterMoveSelAC() {
+        if (Gcat > 1)   {
+            gacc[0] += MasterMoveG(3,1);
+            gtot[0] ++;
+            gacc[1] += MasterMoveG(3,0.1);
+            gtot[1] ++;
+            gacc[2] += MasterMoveG(3,0.01);
+            gtot[2] ++;
+        }
+        if (! aadistmodel)  {
+            aadistacc[0] += MasterMoveGranthamWeight(wcom,3,1);
+            aadisttot[0] ++;
+            aadistacc[1] += MasterMoveGranthamWeight(wcom,3,0.1);
+            aadisttot[1] ++;
+            aadistacc[0] += MasterMoveGranthamWeight(wpol,3,1);
+            aadisttot[0] ++;
+            aadistacc[1] += MasterMoveGranthamWeight(wpol,3,0.1);
+            aadisttot[1] ++;
+        }
+        else    {
+            aadistacc[0] += MasterMoveAADist(3,1);
+            aadisttot[0] ++;
+            aadistacc[1] += MasterMoveAADist(3,0.1);
+            aadisttot[1] ++;
+            aadistacc[2] += MasterMoveAADist(3,0.01);
+            aadisttot[2] ++;
+        }
+        MasterReceiveAAWeightSuffStat();
+        ResampleAAWeight();
+        MasterSendAAWeight();
+    }
+
+    void SlaveMoveSelAC()  {
+        if (Gcat > 1)   {
+            SlaveMoveG(3);
+            SlaveMoveG(3);
+            SlaveMoveG(3);
+        }
+        if (! aadistmodel)  {
+            SlaveMoveGranthamWeight(3);
+            SlaveMoveGranthamWeight(3);
+            SlaveMoveGranthamWeight(3);
+            SlaveMoveGranthamWeight(3);
+        }
+        else    {
+            SlaveMoveAADist(3);
+            SlaveMoveAADist(3);
+            SlaveMoveAADist(3);
+        }
+        SlaveSendAAWeightSuffStat();
+        SlaveReceiveAAWeight();
+    }
+
+    double MasterMoveG(int nrep, double tuning)   {
+
+        double acc = 0;
+        double tot = 0;
+
+        double logprob1 = MasterReceiveAALogProb();
+
+        for (int rep=0; rep<nrep; rep++)    {
+
+            // propose move
+            double delta = - AALogPrior();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            Ginvshape *= e;
+            delta += AALogPrior();
+
+            // send new value
+            MasterSendG();
+
+            // receive log probs
+            double logprob2 = MasterReceiveAALogProb();
+
+            // decide
+            delta += logprob2 - logprob1;
+            delta += m;
+            int accept = (log(Random::Uniform()) < delta);
+
+            // accept or restore
+            if (accept) {
+                acc++;
+                logprob1 = logprob2;
+            }
+            else    {
+                Ginvshape /= e;
+            }
+            tot++;
+        }
+        MasterSendG();
+        return acc / tot;
+    }
+
+    void SlaveMoveG(int nrep)   {
+        SlaveSendAALogProb();
+        for (int rep=0; rep<nrep; rep++)    {
+            SlaveReceiveG();
+            SlaveSendAALogProb();
+        }
+        SlaveReceiveG();
+    }
+
+    double MasterMoveAADist(int nrep, double tuning) {
+
+        double acc = 0;
+        double tot = 0;
+
+        int Npair = Naa/2;
+
+        vector<double> logprob1(Naa,0);
+        vector<double> logprob2(Naa,0);
+        vector<double> deltalogprob(Npair,0);
+        vector<double> bk(Npair,0);
+        int aa[Naa];
+
+        // MasterSendAADist();
+        MasterReceiveAALogProbs(logprob1);
+
+        for (int rep=0; rep<nrep; rep++)    {
+
+            // propose move
+            Random::DrawFromUrn(aa,Naa,Naa);
+
+            for (int i=0; i<Npair; i++) {
+                double& d = aadist[rrindex(aa[2*i], aa[2*i+1])];
+                bk[i] = d;
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                deltalogprob[i] = m;
+                deltalogprob[i] += d;
+                deltalogprob[i] -= logprob1[aa[2*i]] + logprob1[aa[2*i+1]];
+                d *= e;
+            }
+
+            // send proposed moves
+            MasterSendAADist();
+            // receive new logprobs
+            MasterReceiveAALogProbs(logprob2);
+
+            // make decisions
+            for (int i=0; i<Npair; i++) {
+                double& d = aadist[rrindex(aa[2*i], aa[2*i+1])];
+                deltalogprob[i] -= d;
+                deltalogprob[i] += logprob2[aa[2*i]] + logprob2[aa[2*i+1]];
+
+                int accept = (log(Random::Uniform()) < deltalogprob[i]);
+                if (accept) {
+                    acc++;
+                    logprob1[aa[2*i]] = logprob2[aa[2*i]];
+                    logprob1[aa[2*i+1]] = logprob2[aa[2*i+1]];
+                }
+                else    {
+                    aadist[rrindex(aa[2*i], aa[2*i+1])] = bk[i];
+                }
+                tot++;
+            }
+        }
+
+        MasterSendAADist();
+        return acc / tot;
+    }
+
+    void SlaveMoveAADist(int nrep)  {
+        // SlaveReceiveAADist();
+        SlaveSendAALogProbs();
+        for (int rep=0; rep<nrep; rep++)    {
+            SlaveReceiveAADist();
+            SlaveSendAALogProbs();
+
+            /*
+            SlaveReceiveAADist();
+            SlaveSendAALogProbs();
+            */
+        }
+        SlaveReceiveAADist();
+    }
+
+    double MasterMoveGranthamWeight(double& w, int nrep, double tuning) {
+        double acc = 0;
+        double tot = 0;
+        for (int rep=0; rep<nrep; rep++)    {
+        }
+        return acc/tot;
+    }
+
+    void SlaveMoveGranthamWeight(int nrep)    {
+        SlaveSendAALogProb();
+        for (int rep=0; rep<nrep; rep++)    {
+            SlaveReceiveAADist();
+            SlaveSendAALogProb();
+        }
+        SlaveReceiveAADist();
+    }
+
+
+    double MasterReceiveAALogProb() {
+        double ret = 0;
+        MasterReceiveAdditive(ret);
+        return ret;
+    }
+
+    void SlaveSendAALogProb()   {
+        double ret = 0;
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            ret += geneprocess[gene]->PathSuffStatLogProb();
+        }
+        SlaveSendAdditive(ret);
+    }
+
+    void MasterReceiveAALogProbs(vector<double>& logprobs)  {
+        for (int a=0; a<Naa; a++)   {
+            logprobs[a] = 0;
+        }
+        MasterReceiveAdditive(logprobs);
+    }
+
+    void SlaveSendAALogProbs()  {
+        vector<double> logprobs(Naa,0);
+        vector<double> tmp(Naa,0);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AAPathSuffStatLogProbs(tmp);
+            for (int a=0; a<Naa; a++)   {
+                logprobs[a] += tmp[a];
+            }
+        }
+        SlaveSendAdditive(logprobs);
     }
 
     void MoveGeneNucRates() {
@@ -1285,7 +1780,125 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    // aadist 
+    void MasterSendPsi()    {
+        MasterSendGeneArray(*psiarray);
+    }
+
+    void SlaveReceivePsi()  {
+        SlaveReceiveGeneArray(*psiarray);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetPsi((*psiarray)[gene]);
+        }
+    }
+
+    void MasterReceivePsi() {
+        MasterReceiveGeneArray(*psiarray);
+    }
+
+    void SlaveSendPsi() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            (*psiarray)[gene] = geneprocess[gene]->GetPsi();
+        }
+        SlaveSendGeneArray(*psiarray);
+    }
+
+    void MasterSendPsiHyperParameters() {
+        MasterSendGlobal(psihypermean, psihyperinvshape);
+    }
+
+    void SlaveReceivePsiHyperParameters()   {
+        SlaveReceiveGlobal(psihypermean, psihyperinvshape);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetPsiHyperParameters(psihypermean, psihyperinvshape);
+        }
+    }
+
+    void MasterSendG()  {
+        MasterSendGlobal(Ginvshape);
+    }
+
+    void SlaveReceiveG()    {
+        SlaveReceiveGlobal(Ginvshape);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetG(Ginvshape);
+        }
+    }
+
+    void MasterSendW()  {
+        MasterSendGlobal(wcom,wpol);
+    }
+
+    void SlaveReceiveW()    {
+        SlaveReceiveGlobal(wcom,wpol);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetW(wcom, wpol);
+        }
+    }
+
+    void MasterSendAAWeight()  {
+        MasterSendGlobal(aaweight);
+    }
+
+    void SlaveReceiveAAWeight()    {
+        SlaveReceiveGlobal(aaweight);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetAAWeight(aaweight);
+        }
+    }
+
+    void MasterSendAADist() {
+        if (! aadistmodel)  {
+            MasterSendGlobal(wcom, wpol);
+        }
+        else    {
+            MasterSendGlobal(aadist);
+        }
+    }
+
+    void SlaveReceiveAADist()   {
+        if (! aadistmodel)  {
+            SlaveReceiveGlobal(wcom, wpol);
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene]->SetW(wcom, wpol);
+            }
+        }
+        else    {
+            SlaveReceiveGlobal(aadist);
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene]->SetAADist(aadist);
+            }
+        }
+    }
+
+    void MasterSendSelAC() {
+        MasterSendGlobal(Ginvshape, aaweight);
+        if (! aadistmodel)  {
+            MasterSendGlobal(wcom, wpol);
+        }
+        else    {
+            MasterSendGlobal(aadist);
+        }
+    }
+
+    void SlaveReceiveSelAC()  {
+        SlaveReceiveGlobal(Ginvshape, aaweight);
+        if (! aadistmodel)  {
+            SlaveReceiveGlobal(wcom, wpol);
+        }
+        else    {
+            SlaveReceiveGlobal(aadist);
+        }
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetG(Ginvshape);
+            geneprocess[gene]->SetAAWeight(aaweight);
+            if (! aadistmodel)  {
+                geneprocess[gene]->SetW(wcom, wpol);
+            }
+            else    {
+                geneprocess[gene]->SetAADist(aadist);
+            }
+        }
+    }
 
     // branch length suff stat
     void SlaveSendBranchLengthsSuffStat() {

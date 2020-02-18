@@ -142,12 +142,19 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
         }
         MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
+        ofstream psios((name + ".genepsi").c_str());
+        ofstream aaos((name + ".aadist").c_str());
+        GetModel()->TraceAADistHeader(aaos);
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
-        if (writegenedata) {
-            if (!myid) {
+        if (! myid) {
+            ofstream os((name + ".aadist").c_str(), ios_base::app);
+            GetModel()->TraceAADist(os);
+            if (writegenedata) {
+                ofstream psios((name + ".genepsi").c_str(), ios_base::app);
+                GetModel()->TracePsi(psios);
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 if (omegamode == 3) {
                     GetModel()->TracePredictedDNDS(os);

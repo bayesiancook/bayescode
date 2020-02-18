@@ -18,6 +18,12 @@ class MPIBuffer {
 
     unsigned int GetSize() { return size; }
 
+    void reset() {
+        for (unsigned int i=0; i<size; i++)  {
+            buffer[i] = 0;
+        }
+    }
+
     template <class T>
     void Put(const T &t) {
         t.MPIPut(*this);

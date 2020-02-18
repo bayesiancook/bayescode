@@ -78,6 +78,27 @@ class MultiGeneMPIModule {
 
     template <class T>
     void SlaveSendAdditive(const T &t) const {
+        MPIBuffer buffer_snd(MPISize(t));
+        MPIBuffer buffer_rcv(MPISize(t));
+        buffer_snd.reset();
+        buffer_rcv.reset();
+        buffer_snd << t;
+        MPI_Reduce(buffer_snd.GetBuffer(), buffer_rcv.GetBuffer(), buffer_snd.GetSize(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+
+    template <class T>
+    void MasterReceiveAdditive(T &t) {
+        MPIBuffer buffer_snd(MPISize(t));
+        MPIBuffer buffer_rcv(MPISize(t));
+        buffer_snd.reset();
+        buffer_rcv.reset();
+        MPI_Reduce(buffer_snd.GetBuffer(), buffer_rcv.GetBuffer(), buffer_rcv.GetSize(), MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        t += buffer_rcv;
+    }
+
+    /*
+    template <class T>
+    void SlaveSendAdditive(const T &t) const {
         MPIBuffer buffer(MPISize(t));
         buffer << t;
         MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
@@ -93,6 +114,7 @@ class MultiGeneMPIModule {
             t += buffer;
         }
     }
+    */
 
     template <class T>
     void MasterSendGeneArray(const Selector<T> &array) const {

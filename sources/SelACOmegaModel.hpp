@@ -397,12 +397,23 @@ class SelACOmegaModel : public ProbModel {
         dposomhyperinvshape = ininvshape;
     }
 
+    void SetW(double inwcom, double inwpol) {
+        wcom = inwcom;
+        wpol = inwpol;
+        UpdateSelAC();
+    }
+
     void SetAADist(const vector<double>& inaadist)  {
         aadist = inaadist;
         UpdateSelAC();
     }
 
-    void SetGInvShape(double inGinvshape)   {
+    void SetAAWeight(const vector<double>& inaaweight)  {
+        aaweight = inaaweight;
+        UpdateSelAC();
+    }
+
+    void SetG(double inGinvshape)   {
         Ginvshape = inGinvshape;
         UpdateSelAC();
     }
@@ -415,6 +426,12 @@ class SelACOmegaModel : public ProbModel {
     void SetPsiHyperParameters(double inpsihypermean, double inpsihyperinvshape) {
         psihypermean = inpsihypermean;
         psihyperinvshape = inpsihyperinvshape;
+    }
+
+    const OccupancySuffStat *GetOccupancies() const { return aaoccupancy; }
+
+    double GetPsi() const {
+        return psi;
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -662,7 +679,7 @@ class SelACOmegaModel : public ProbModel {
         return componentpathsuffstatbidimarray->GetRowLogProb(aa,*codonmatrices);
     }
 
-    void GetAAPathSuffStatLogProbs(vector<double>& logprobvector) const    {
+    void AAPathSuffStatLogProbs(vector<double>& logprobvector) const    {
         return componentpathsuffstatbidimarray->GetRowLogProbs(logprobvector,*codonmatrices);
     }
 
@@ -748,28 +765,38 @@ class SelACOmegaModel : public ProbModel {
                 MoveOmega();
             }
 
-            if (aadistmode < 2) {
-                aachrono.Start();
-                if (! aadistmodel)   {
-                    MoveGranthamWeights();
-                }
-                else    {
-                    MoveAADist();
-                    AAPsiCompMove(1.0, 10);
-                }
-                if (Gcat > 1)   {
-                    MoveGinvshape();
-                }
-                MovePsi();
-
-                ResampleAlloc();
-                ResampleGAlloc();
-                CollectComponentPathSuffStat();
-                ResampleWeights();
-                aachrono.Stop();
-            }
+            aachrono.Start();
+            MoveSelAC();
+            aachrono.Stop();
 
             totchrono.Stop();
+        }
+    }
+
+
+    void MoveSelAC()    {
+
+        if (aadistmode < 2) {
+            if (! aadistmodel)   {
+                MoveGranthamWeights();
+            }
+            else    {
+                MoveAADist();
+                AAPsiCompMove(1.0, 10);
+            }
+            if (Gcat > 1)   {
+                MoveGinvshape();
+            }
+        }
+
+        MovePsi();
+
+        ResampleAlloc();
+        ResampleGAlloc();
+
+        if (aadistmode < 2) {
+            CollectComponentPathSuffStat();
+            ResampleWeights();
         }
     }
 
@@ -1255,6 +1282,7 @@ class SelACOmegaModel : public ProbModel {
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweight) << '\t';
         os << GetMeanAAEntropy() << '\t';
+
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
