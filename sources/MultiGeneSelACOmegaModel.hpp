@@ -623,6 +623,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void TraceAADistHeader(ostream& os) const {
+        os << "#";
         for (int a=0; a<Naa; a++)   {
             os << AminoAcids[a] << '\t';
         }
