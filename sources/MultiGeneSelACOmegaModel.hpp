@@ -628,7 +628,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             os << AminoAcids[a] << '\t';
         }
         for (int a=0; a<Naa; a++)   {
-            for (int b=0; b<Naa; b++)   {
+            for (int b=a+1; b<Naa; b++)   {
                 os << AminoAcids[a] << AminoAcids[b] << '\t';
             }
         }
@@ -641,7 +641,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             os << aaweight[a] << '\t';
         }
         for (int a=0; a<Naa; a++)   {
-            for (int b=0; b<Naa; b++)   {
+            for (int b=a+1; b<Naa; b++)   {
                 os << aadist[rrindex(a,b)] << '\t';
             }
         }
