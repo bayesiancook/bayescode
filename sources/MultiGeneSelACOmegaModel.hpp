@@ -615,8 +615,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void TracePsi(ostream &os) const {
+        double m = GetMeanAADist();
         for (int gene = 0; gene < Ngene; gene++) {
-            os << psiarray->GetVal(gene) << '\t';
+            os << psiarray->GetVal(gene) * m << '\t';
         }
         os << '\n';
         os.flush();
@@ -640,9 +641,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         for (int a=0; a<Naa; a++)   {
             os << aaweight[a] << '\t';
         }
+        double m = GetMeanAADist();
         for (int a=0; a<Naa; a++)   {
             for (int b=a+1; b<Naa; b++)   {
-                os << aadist[rrindex(a,b)] << '\t';
+                os << aadist[rrindex(a,b)] / m << '\t';
             }
         }
         os << '\n';
