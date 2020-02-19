@@ -843,7 +843,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         total += AALogPrior();
 
-        // aadist
         return total;
     }
 
@@ -858,11 +857,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return psiarray->GetLogProb();
     }
 
-    double AALogPrior() const   {
+    double GLogPrior() const    {
+        return -Ginvshape;
+    }
+
+    double AADistLogPrior() const   {
         double total = 0;
-        total -= Ginvshape;
-        total += PsiHyperLogPrior();
-        total += PsiLogPrior();
         if (! aadistmodel)   {
             total -= log(wcom) + log(wpol);
         }
@@ -871,6 +871,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 total -= aadist[i];
             }
         }
+        return total;
+    }
+
+    double AALogPrior() const   {
+        double total = 0;
+        total += GLogPrior();
+        total += PsiHyperLogPrior();
+        total += PsiLogPrior();
+        total += AADistLogPrior();
         return total;
     }
 
@@ -1240,6 +1249,11 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             aadistacc[2] += MasterMoveAADist(3,0.01);
             aadisttot[2] ++;
         }
+
+        AAPsiCompMove(1.0, 10);
+        MasterSendAADist();
+        MasterSendPsi();
+
         MasterReceiveAAWeightSuffStat();
         ResampleAAWeight();
         MasterSendAAWeight();
@@ -1262,8 +1276,49 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveMoveAADist(3);
             SlaveMoveAADist(3);
         }
+
+        SlaveReceiveAADist();
+        SlaveReceivePsi();
+
         SlaveSendAAWeightSuffStat();
         SlaveReceiveAAWeight();
+    }
+
+    double AAPsiCompMove(double tuning, int nrep)    {
+
+        double nacc = 0;
+        double ntot = 0;
+
+        for (int rep=0; rep<nrep; rep++)    {
+            double delta = - AALogPrior();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            for (int i=0; i<GetNgene(); i++)    {
+                (*psiarray)[i] /= e;
+            }
+            for (int i=0; i<Naarr; i++) {
+                aadist[i] *= e;
+            }
+            delta += AALogPrior();
+            delta += (Naarr-GetNgene())*m;
+
+            int accepted = (log(Random::Uniform()) < delta);
+            if (accepted) {
+                nacc++;
+            } else {
+                for (int i=0; i<GetNgene(); i++)    {
+                    (*psiarray)[i] *= e;
+                }
+                for (int i=0; i<Naarr; i++) {
+                    aadist[i] /= e;
+                }
+            }
+            ntot++;
+        }
+
+        UpdateSelAC();
+
+        return nacc / ntot;
     }
 
     double MasterMoveG(int nrep, double tuning)   {
@@ -1276,11 +1331,11 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         for (int rep=0; rep<nrep; rep++)    {
 
             // propose move
-            double delta = - AALogPrior();
+            double delta = -GLogPrior();
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
             Ginvshape *= e;
-            delta += AALogPrior();
+            delta += GLogPrior();
 
             // send new value
             MasterSendG();
