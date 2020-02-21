@@ -220,7 +220,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         aaoccupancy = new OccupancySuffStat(Naa);
 
         psihypermean = 10.0;
-        psihyperinvshape = 0.5;
+        psihyperinvshape = 1.0;
         double alpha = 1.0 / psihyperinvshape;
         double beta = alpha / psihypermean;
         psiarray = new IIDGamma(GetLocalNgene(), alpha, beta);
@@ -523,6 +523,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             os << "w_comp\t";
             os << "w_pol\t";
         }
+        os << "distmean\t";
         os << "distvar\t";
         os << "weightent\t";
 
@@ -546,10 +547,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         if (blmode == 2) {
-            os << GetMeanTotalLength() << '\t';
+            os << 3 * GetMeanTotalLength() << '\t';
         } else {
-            os << GetMeanLength() << '\t';
-            os << sqrt(GetVarLength()) << '\t';
+            os << 3 * GetMeanLength() << '\t';
+            os << 3 * sqrt(GetVarLength()) << '\t';
         }
         if (omegamode != 3) {
             if (omegaprior == 0) {
@@ -565,11 +566,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         if (Gcat > 1)   {
             os << Ginvshape << '\t';
         }
-        os << psihypermean << '\t' << psihyperinvshape << '\t';
+        double m = psiarray->GetMean();
+        double v = psiarray->GetVar();
+        os << m << '\t' << v / m / m << '\t';
+        // os << psihypermean << '\t' << psihyperinvshape << '\t';
         if (! aadistmodel)   {
             os << wcom << '\t';
             os << wpol << '\t';
         }
+        os << GetMeanAADist() << '\t';
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweight) << '\t';
 
@@ -1032,6 +1037,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MovePsiHyperParameters();
             MasterSendPsiHyperParameters();
 
+            AAPsiCompMove(1.0, 10);
+            MasterSendAADist();
+            MasterSendPsi();
+
             aachrono.Stop();
 
             if ((burnin > 10) && (omegamode != 3)) {
@@ -1105,6 +1114,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MoveGeneSelAC();
             SlaveSendPsi();
             SlaveReceivePsiHyperParameters();
+
+            SlaveReceiveAADist();
+            SlaveReceivePsi();
 
             if ((burnin > 10) && (omegamode != 3)) {
                 movechrono.Start();
@@ -1252,10 +1264,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             aadisttot[2] ++;
         }
 
-        AAPsiCompMove(1.0, 10);
-        MasterSendAADist();
-        MasterSendPsi();
-
         MasterReceiveAAWeightSuffStat();
         ResampleAAWeight();
         MasterSendAAWeight();
@@ -1278,9 +1286,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveMoveAADist(3);
             SlaveMoveAADist(3);
         }
-
-        SlaveReceiveAADist();
-        SlaveReceivePsi();
 
         SlaveSendAAWeightSuffStat();
         SlaveReceiveAAWeight();

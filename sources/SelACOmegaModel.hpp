@@ -314,8 +314,8 @@ class SelACOmegaModel : public ProbModel {
         G.assign(Gcat, 1.0);
         UpdateG();
         psi = 0.5;
-        psihypermean = 0;
-        psihyperinvshape = 0;
+        psihypermean = 10.0;
+        psihyperinvshape = 1;
 
         selacprofiles = new SelACProfileBidimArray(aadist,G,psi);
 
@@ -1256,6 +1256,7 @@ class SelACOmegaModel : public ProbModel {
             os << "w_comp\t";
             os << "w_pol\t";
         }
+        os << "distmean\t";
         os << "distvar\t";
         os << "weightent\t";
         os << "aaent\t";
@@ -1279,6 +1280,7 @@ class SelACOmegaModel : public ProbModel {
             os << wcom << '\t';
             os << wpol << '\t';
         }
+        os << GetMeanAADist() << '\t';
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweight) << '\t';
         os << GetMeanAAEntropy() << '\t';
