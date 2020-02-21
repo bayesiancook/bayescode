@@ -93,7 +93,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     Chrono blchrono;
     Chrono aachrono;
 
-    vector<double> aadistacc, aadisttot, gacc, gtot;
+    vector<double> aadistacc, aadisttot, gacc, gtot, compacc, comptot;
     int burnin;
 
   public:
@@ -294,6 +294,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         aadisttot.assign(3,0);
         gacc.assign(3,0);
         gtot.assign(3,0);
+        compacc.assign(2,0);
+        comptot.assign(2,0);
     }
 
     int rrindex(int i, int j) const {
@@ -676,6 +678,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
           os << aadistacc[i] / aadisttot[i] << '\t';
        }
        os << '\n';
+
+       os << "comp : ";
+       for (size_t i=0; i<compacc.size(); i++)    {
+          os << compacc[i] / comptot[i] << '\t';
+       }
+       os << '\n';
     }
 
     void MasterFromStream(istream &is) override {
@@ -1037,7 +1045,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MovePsiHyperParameters();
             MasterSendPsiHyperParameters();
 
-            AAPsiCompMove(1.0, 10);
+            compacc[0] += AAPsiCompMove(1.0, 10);
+            comptot[0]++;
+            compacc[1] += AAPsiCompMove(0.1, 10);
+            comptot[1]++;
+
+
             MasterSendAADist();
             MasterSendPsi();
 
