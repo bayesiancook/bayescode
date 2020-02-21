@@ -11,7 +11,7 @@ MPI_Datatype Propagate_arg;
 class MultiGeneSelACOmegaChain : public MultiGeneChain {
   private:
     // Chain parameters
-    string modeltype, datafile, treefile;
+    string modeltype, datafile, treefile, initfile;
     int writegenedata;
     int Gcat;
     int aadistmodel;
@@ -25,7 +25,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
 
     string GetModelType() override { return modeltype; }
 
-    MultiGeneSelACOmegaChain(string indatafile, string intreefile, int inGcat, int inaadistmodel,
+    MultiGeneSelACOmegaChain(string indatafile, string intreefile, string ininitfile, int inGcat, int inaadistmodel,
                                      int inblmode, int innucmode, int inaadistmode,
                                      int inomegamode, int inomegaprior, int inmodalprior, double inpihypermean,
                                      double inpihyperinvconc, int inevery, int inuntil,
@@ -35,6 +35,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
           modeltype("MULTIGENEAAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
           treefile(intreefile),
+          initfile(ininitfile),
           Gcat(inGcat),
           aadistmodel(inaadistmodel),
           blmode(inblmode),
@@ -60,7 +61,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
     }
 
     void New(int force) override {
-        model = new MultiGeneSelACOmegaModel(datafile, treefile, Gcat, aadistmodel, blmode,
+        model = new MultiGeneSelACOmegaModel(datafile, treefile, initfile, Gcat, aadistmodel, blmode,
                                                      nucmode, aadistmode, omegamode, omegaprior, modalprior,
                                                      pihypermean, pihyperinvconc, myid, nprocs);
         if (!myid) {
@@ -84,7 +85,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> treefile;
+        is >> datafile >> treefile >> initfile;
         is >> writegenedata;
         is >> Gcat >> aadistmodel;
         is >> blmode >> nucmode >> aadistmode >> omegamode >> omegaprior >> modalprior;
@@ -98,7 +99,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
         is >> every >> until >> size;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
-            model = new MultiGeneSelACOmegaModel(datafile, treefile, Gcat, aadistmodel, blmode,
+            model = new MultiGeneSelACOmegaModel(datafile, treefile, initfile, Gcat, aadistmodel, blmode,
                                                          nucmode, aadistmode, omegamode, omegaprior, modalprior,
                                                          pihypermean, pihyperinvconc, myid, nprocs);
         } else {
@@ -121,7 +122,7 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
         if (!myid) {
             ofstream param_os((name + ".param").c_str());
             param_os << GetModelType() << '\n';
-            param_os << datafile << '\t' << treefile << '\n';
+            param_os << datafile << '\t' << treefile << '\t' << initfile << '\n';
             param_os << writegenedata << '\n';
             param_os << Gcat << '\t' << aadistmodel << '\n';
             param_os << blmode << '\t' << nucmode << '\t' << aadistmode << '\t' << omegamode << '\t'
@@ -191,6 +192,7 @@ int main(int argc, char *argv[]) {
     else {
         string datafile = "";
         string treefile = "";
+        string initfile = "None";
         int Gcat = 4;
         int force = 1;
         int every = 1;
@@ -226,6 +228,9 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "-i")   {
+                    i++;
+                    initfile = argv[i];
                 } else if (s == "-g") {
                     writegenedata = 0;
                 } else if (s == "+g") {
@@ -268,6 +273,8 @@ int main(int argc, char *argv[]) {
                     aadistmodel = 0;
                 } else if (s == "-uncons")  {
                     aadistmodel = 1;
+                } else if (s == "-fixaadist")   {
+                    aadistmode = 3;
                 } else if (s == "-fixomega") {
                     omegamode = 3;
                 } else if (s == "-freeomega") {
@@ -306,7 +313,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new MultiGeneSelACOmegaChain(
-            datafile, treefile, Gcat, aadistmodel, blmode, nucmode, aadistmode, omegamode, omegaprior, modalprior,
+            datafile, treefile, initfile, Gcat, aadistmodel, blmode, nucmode, aadistmode, omegamode, omegaprior, modalprior,
             pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid, nprocs);
     }
 

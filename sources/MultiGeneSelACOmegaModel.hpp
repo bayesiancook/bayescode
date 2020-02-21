@@ -15,6 +15,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     string datapath;
     string datafile;
     string treefile;
+    string initfile;
 
     int Ntaxa;
     int Nbranch;
@@ -101,7 +102,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSelACOmegaModel(string indatafile, string intreefile, int inGcat, int inaadistmodel,
+    MultiGeneSelACOmegaModel(string indatafile, string intreefile, string ininitfile, int inGcat, int inaadistmodel,
                                      int inblmode, int innucmode, int inaadistmode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
                                      double indposompihyperinvconc, int inmyid, int innprocs)
@@ -109,6 +110,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         datafile = indatafile;
         treefile = intreefile;
+        initfile = ininitfile;
         AllocateAlignments(datafile);
 
         Gcat = inGcat;
@@ -218,6 +220,18 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         aaweight.assign(Naa, 1.0/Naa);
         aaoccupancy = new OccupancySuffStat(Naa);
+
+        if (! GetMyid())    {
+            if (initfile != "None") {
+                ifstream is(initfile.c_str());
+                for (int a=0; a<Naa; a++)   {
+                    is >> aaweight[a];
+                }
+                for (int i=0; i<Naarr; i++) {
+                    is >> aadist[i];
+                }
+            }
+        }
 
         psihypermean = 10.0;
         psihyperinvshape = 1.0;
