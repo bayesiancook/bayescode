@@ -102,7 +102,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSelACOmegaModel(string indatafile, string intreefile, string ininitfile, int inGcat, int inaadistmodel,
+    MultiGeneSelACOmegaModel(string indatafile, string intreefile, string ininitfile, int inGcat, double inGinvshape, int inaadistmodel,
                                      int inblmode, int innucmode, int inaadistmode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
                                      double indposompihyperinvconc, int inmyid, int innprocs)
@@ -114,6 +114,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         AllocateAlignments(datafile);
 
         Gcat = inGcat;
+        Ginvshape = inGinvshape;
         aadistmodel = inaadistmodel;
 
         burnin = 0;
@@ -216,7 +217,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             UpdateGrantham();
         }
 
-        Ginvshape = 1.0;
+        // Ginvshape = initGinvshape;
 
         aaweight.assign(Naa, 1.0/Naa);
         aaoccupancy = new OccupancySuffStat(Naa);
@@ -1059,11 +1060,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MovePsiHyperParameters();
             MasterSendPsiHyperParameters();
 
-            compacc[0] += AAPsiCompMove(1.0, 10);
-            comptot[0]++;
-            compacc[1] += AAPsiCompMove(0.1, 10);
-            comptot[1]++;
-
+            if (aadistmode != 3) {
+                compacc[0] += AAPsiCompMove(1.0, 10);
+                comptot[0]++;
+                compacc[1] += AAPsiCompMove(0.1, 10);
+                comptot[1]++;
+            }
 
             MasterSendAADist();
             MasterSendPsi();
@@ -1269,26 +1271,25 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             gtot[0] ++;
             gacc[1] += MasterMoveG(3,0.1);
             gtot[1] ++;
-            gacc[2] += MasterMoveG(3,0.01);
-            gtot[2] ++;
         }
-        if (! aadistmodel)  {
-            aadistacc[0] += MasterMoveGranthamWeight(wcom,3,1);
-            aadisttot[0] ++;
-            aadistacc[1] += MasterMoveGranthamWeight(wcom,3,0.1);
-            aadisttot[1] ++;
-            aadistacc[0] += MasterMoveGranthamWeight(wpol,3,1);
-            aadisttot[0] ++;
-            aadistacc[1] += MasterMoveGranthamWeight(wpol,3,0.1);
-            aadisttot[1] ++;
-        }
-        else    {
-            aadistacc[0] += MasterMoveAADist(3,1);
-            aadisttot[0] ++;
-            aadistacc[1] += MasterMoveAADist(3,0.1);
-            aadisttot[1] ++;
-            aadistacc[2] += MasterMoveAADist(3,0.01);
-            aadisttot[2] ++;
+
+        if (aadistmode != 3) {
+            if (! aadistmodel)  {
+                aadistacc[0] += MasterMoveGranthamWeight(wcom,3,1);
+                aadisttot[0] ++;
+                aadistacc[1] += MasterMoveGranthamWeight(wcom,3,0.1);
+                aadisttot[1] ++;
+                aadistacc[0] += MasterMoveGranthamWeight(wpol,3,1);
+                aadisttot[0] ++;
+                aadistacc[1] += MasterMoveGranthamWeight(wpol,3,0.1);
+                aadisttot[1] ++;
+            }
+            else    {
+                aadistacc[0] += MasterMoveAADist(3,1);
+                aadisttot[0] ++;
+                aadistacc[1] += MasterMoveAADist(3,0.1);
+                aadisttot[1] ++;
+            }
         }
 
         MasterReceiveAAWeightSuffStat();
@@ -1300,18 +1301,19 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         if (Gcat > 1)   {
             SlaveMoveG(3);
             SlaveMoveG(3);
-            SlaveMoveG(3);
         }
-        if (! aadistmodel)  {
-            SlaveMoveGranthamWeight(3);
-            SlaveMoveGranthamWeight(3);
-            SlaveMoveGranthamWeight(3);
-            SlaveMoveGranthamWeight(3);
-        }
-        else    {
-            SlaveMoveAADist(3);
-            SlaveMoveAADist(3);
-            SlaveMoveAADist(3);
+
+        if (aadistmode != 3) {
+            if (! aadistmodel)  {
+                SlaveMoveGranthamWeight(3);
+                SlaveMoveGranthamWeight(3);
+                SlaveMoveGranthamWeight(3);
+                SlaveMoveGranthamWeight(3);
+            }
+            else    {
+                SlaveMoveAADist(3);
+                SlaveMoveAADist(3);
+            }
         }
 
         SlaveSendAAWeightSuffStat();
