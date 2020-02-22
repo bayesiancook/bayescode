@@ -16,11 +16,12 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
         }
         Nsite = from->GetNsite() / 3;
         Ntaxa = from->GetNtaxa();
-        auto tempstatespace = new CodonStateSpace(type);
-        statespace = tempstatespace;
 
-        taxset = DNAsource->GetTaxonSet();
-        owntaxset = false;
+        statespace = new CodonStateSpace(type);
+        ownstatespace = true;
+
+        taxset = new TaxonSet(*DNAsource->GetTaxonSet());
+        owntaxset = true;
 
         // make my own arrays
         // make translation

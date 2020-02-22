@@ -49,6 +49,7 @@ void MultiGeneMPIModule::AllocateFromCatFile(string datafile, string indatapath)
     string tmp;
     is >> tmp;
     is >> Ngene;
+    cerr << Ngene << '\n';
     vector<string> genename(Ngene, "NoName");
     vector<int> genesize(Ngene, 0);
     vector<int> genealloc(Ngene, 0);
