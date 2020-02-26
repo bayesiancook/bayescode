@@ -68,6 +68,18 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
         }
     }
 
+    double GetLogProb(const vector<double>& weight) const { 
+        if (weight.size() != GetSize()) {
+            cerr << "error in occ suffstat get log prob: non matching vector sizes\n";
+            exit(1);
+        }
+        double tot = 0;
+        for (int i=0; i<GetSize(); i++) {
+            tot += GetVal(i) * log(weight[i]);
+        }
+        return tot;
+    }
+
     //! return size when put into an MPI buffer
     unsigned int GetMPISize() const { return GetSize(); }
 

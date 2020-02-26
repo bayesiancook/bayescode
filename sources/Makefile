@@ -7,7 +7,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= discselac multigenediscselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -85,6 +85,10 @@ aamutselddp$(EXEEXT): $(PROGSDIR)/aamutselddp$(EXEEXT)
 $(PROGSDIR)/aamutselddp$(EXEEXT): AAMutSelDSBDPOmega.o $(OBJS)
 	$(CC) AAMutSelDSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
+discselac$(EXEEXT): $(PROGSDIR)/discselac$(EXEEXT)
+$(PROGSDIR)/discselac$(EXEEXT): DiscSelAC.o $(OBJS)
+	$(CC) DiscSelAC.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
 selac$(EXEEXT): $(PROGSDIR)/selac$(EXEEXT)
 $(PROGSDIR)/selac$(EXEEXT): SelACOmega.o $(OBJS)
 	$(CC) SelACOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
@@ -96,6 +100,10 @@ $(PROGSDIR)/readaamutselddp$(EXEEXT): ReadAAMutSelDSBDPOmega.o $(OBJS)
 multigeneaamutselddp$(EXEEXT): $(PROGSDIR)/multigeneaamutselddp$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselddp$(EXEEXT): MultiGeneAAMutSelDSBDPOmega.o $(OBJS)
 	$(CC) MultiGeneAAMutSelDSBDPOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigenediscselac$(EXEEXT): $(PROGSDIR)/multigenediscselac$(EXEEXT)
+$(PROGSDIR)/multigenediscselac$(EXEEXT): MultiGeneDiscSelAC.o $(OBJS)
+	$(CC) MultiGeneDiscSelAC.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneselac$(EXEEXT): $(PROGSDIR)/multigeneselac$(EXEEXT)
 $(PROGSDIR)/multigeneselac$(EXEEXT): MultiGeneSelACOmega.o $(OBJS)

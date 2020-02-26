@@ -48,7 +48,7 @@
 
 class PathSuffStat : public SuffStat {
   public:
-    PathSuffStat() {}
+    PathSuffStat(int inNstate = 0) : Nstate(inNstate) {}
     ~PathSuffStat() {}
 
     //! set suff stats to 0
@@ -146,7 +146,71 @@ class PathSuffStat : public SuffStat {
     //! structure)
     const std::map<int, double> &GetWaitingTimeMap() const { return waitingtime; }
 
+    //! return size of object, when put into an MPI buffer
+    unsigned int GetMPISize() const {
+        if (! Nstate)   {
+            cerr << "error in PathSuffStat::GetMPISize: Nstate not initialized\n";
+            exit(1);
+        }
+        return 2*Nstate + Nstate*(Nstate-1);
+    }
+
+    //! put object into MPI buffer
+    void MPIPut(MPIBuffer &buffer) const {
+        for (int i=0; i<Nstate; i++)    {
+            buffer << GetRootCount(i);
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    buffer << GetPairCount(i,j);
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            buffer << GetWaitingTime(i);
+
+        }
+    }
+
+    //! get object from MPI buffer
+    void MPIGet(const MPIBuffer &buffer) {
+        Clear();
+        Add(buffer);
+    }
+
+    //! get a nucpath suffstat from MPI buffer and add it to this
+    void Add(const MPIBuffer &buffer) {
+        for (int i=0; i<Nstate; i++)    {
+            int tmp;
+            buffer >> tmp;
+            if (tmp)    {
+                AddRootCount(i,tmp);
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    int tmp;
+                    buffer >> tmp;
+                    if (tmp)    {
+                        AddPairCount(i,j,tmp);
+                    }
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            buffer >> tmp;
+            if (tmp)    {
+                AddWaitingTime(i,tmp);
+            }
+        }
+    }
+
+
   private:
+    int Nstate;
     std::map<int, int> rootcount;
     std::map<pair<int, int>, int> paircount;
     std::map<int, double> waitingtime;
@@ -195,6 +259,13 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
             (*this)[alloc.GetVal(i)] += suffstatarray.GetVal(i);
         }
     }
+
+    //! get array from MPI buffer and add it to this array (member-wise addition)
+    void Add(const MPIBuffer &buffer) {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i] += buffer;
+        }
+    }
 };
 
 /**
@@ -241,6 +312,13 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
         }
         return total;
     }
+
+    //! get array from MPI buffer and add it to this array (member-wise addition)
+    void Add(const MPIBuffer &buffer) {
+        for (int i = 0; i < GetNnode(); i++) {
+            (*this)[i] += buffer;
+        }
+    }
 };
 
 /**
@@ -253,8 +331,8 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
 
 class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
   public:
-    PathSuffStatBidimArray(int inncol, int innrow)
-        : SimpleBidimArray<PathSuffStat>(inncol, innrow, PathSuffStat()) {}
+    PathSuffStatBidimArray(int inncol, int innrow, int Nstate = 0)
+        : SimpleBidimArray<PathSuffStat>(inncol, innrow, PathSuffStat(Nstate)) {}
     ~PathSuffStatBidimArray() {}
 
     //! set all suff stats to 0
@@ -270,6 +348,15 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
     //! condition-heterogeneous case)
     void AddSuffStat(const PhyloProcess &process, const BranchAllocationSystem &branchalloc) {
         process.AddPathSuffStat(*this, branchalloc);
+    }
+
+    //! reduce path suffstats based on bidim allocations
+    void Add(const PathSuffStatBidimArray& suffstatarray)	{
+        for (int i = 0; i < this->GetNrow(); i++) {
+            for (int j = 0; j < this->GetNcol(); j++) {
+                (*this)(i,j) += suffstatarray.GetVal(i,j);
+            }
+        }
     }
 
     //! reduce path suffstats based on bidim allocations
@@ -328,6 +415,16 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
         }
         return total;
     }
+    //
+    //! get array from MPI buffer and add it to this array (member-wise addition)
+    void Add(const MPIBuffer &buffer) {
+        for (int i = 0; i < this->GetNrow(); i++) {
+            for (int j = 0; j < this->GetNcol(); j++) {
+                (*this)(i,j) += buffer;
+            }
+        }
+    }
+
 };
 
 #endif
