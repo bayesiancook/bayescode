@@ -303,6 +303,31 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
                        : (2 * Naa - j - 1) * j / 2 + i - j - 1;
     }
 
+    void getaapair(int index, int& a, int& b)   {
+        int range = Naa-1;
+        int k = 0;
+        a = 0;
+        while (index >= k + range)   {
+            k += range;
+            range--;
+            a++;
+        }
+        b = index - k + a + 1;
+        if (rrindex(a,b) != index)  {
+            cerr << "error in getaapair\n";
+            exit(1);
+        }
+        if ((b < 1) || (b > 19) || (a > 18))  {
+            cerr << "aa out of range : " << a << '\t' << b << '\n';
+            exit(1);
+        }
+        /*
+        cerr << index << '\t' << a << '\t' << b << '\n';
+        cerr << rrindex(a,b) << '\n';
+        cerr << '\n';
+        */
+    }
+
     void UpdateGrantham()   {
         double tot = 0;
         for (int a=0; a<Naa; a++)   {
@@ -886,6 +911,16 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         return componentpathsuffstatbidimarray->GetLogProb(*codonmatrices);
     }
 
+    double PathSuffStatLogProb(const vector<int>& mask) const  {
+        double tot = 0;
+        for (int a=0; a<Naa; a++)   {
+            if (mask[a])   {
+                tot += componentpathsuffstatbidimarray->GetRowLogProb(a,*codonmatrices);
+            }
+        }
+        return tot;
+    }
+
     //-------------------
     // Log Probs for MH moves
     //-------------------
@@ -938,6 +973,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
             aachrono.Start();
 
             MasterReceivePathSuffStat();
+            // MoveAADistOld();
             MoveAADist();
             MasterSendAADist();
 
@@ -1120,7 +1156,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         logpsiarray->SetVar(logpsihypervar);
     }
 
-    double MoveAADist() {
+    double MoveAADistOld() {
         aadistacc[0] += ProfileMove(aadist, 1.00, 1, 10, &MultiGeneDiscSelACModel::AADistLogProb, &MultiGeneDiscSelACModel::UpdateAADist, this);
         aadisttot[0] ++;
         aadistacc[1] += ProfileMove(aadist, 0.30, 3, 10, &MultiGeneDiscSelACModel::AADistLogProb, &MultiGeneDiscSelACModel::UpdateAADist, this);
@@ -1128,6 +1164,77 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         aadistacc[2] += ProfileMove(aadist, 0.10, 3, 10, &MultiGeneDiscSelACModel::AADistLogProb, &MultiGeneDiscSelACModel::UpdateAADist, this);
         aadisttot[2] ++;
         return 1.0;
+    }
+
+    double MoveAADist() {
+        aadistacc[0] += MoveAADist(10, 1, 1.0);
+        aadisttot[0] ++;
+        aadistacc[1] += MoveAADist(10, 3, 0.3);
+        aadisttot[1] ++;
+        aadistacc[2] += MoveAADist(10, 3, 0.1);
+        aadisttot[2] ++;
+        return 1.0;
+    }
+
+    double MoveAADist(int nrep, int n, double tuning) {
+
+        vector<double> bk(Naarr,0);
+        int indices[2*n];
+        double nacc = 0;
+
+        for (int rep=0; rep<nrep; rep++)    {
+
+            Random::DrawFromUrn(indices, 2 * n, Naarr);
+
+            vector<int> mask(Naa,0);
+            for (int i=0; i<2*n; i++)   {
+                int a,b;
+                getaapair(indices[i],a,b);
+                mask[a] = 1;
+                mask[b] = 1;
+            }
+
+            double deltalogprob = - PathSuffStatLogProb(mask);
+
+            for (int i=0; i<2*n; i++) {
+                bk[indices[i]] = aadist[indices[i]];
+            }
+
+            for (int i = 0; i < n; i++) {
+                int i1 = indices[2 * i];
+                int i2 = indices[2 * i + 1];
+                double tot = aadist[i1] + aadist[i2];
+                double x = aadist[i1];
+
+                double h = tot * tuning * (Random::Uniform() - 0.5);
+                x += h;
+                while ((x < 0) || (x > tot)) {
+                    if (x < 0) {
+                        x = -x;
+                    }
+                    if (x > tot) {
+                        x = 2 * tot - x;
+                    }
+                }
+                aadist[i1] = x;
+                aadist[i2] = tot - x;
+            }
+
+            UpdateAADist();
+            deltalogprob += PathSuffStatLogProb(mask);
+
+            int accept = (log(Random::Uniform()) < deltalogprob);
+            if (accept) {
+                nacc++;
+            }
+            else    {
+                for (int i=0; i<2*n; i++) {
+                    aadist[indices[i]] = bk[indices[i]];
+                }
+                UpdateAADist();
+            }
+        }
+        return nacc / nrep;
     }
 
     double MoveGranthamWeights()    {
