@@ -12,6 +12,21 @@ void AAMutSelOmegaCodonSubMatrix::ComputeStationary() const {
         total += mStationary[i];
     }
 
+    if (isinf(total))   {
+        cerr << "in codon submatrix compute stationary: inf\n";
+        exit(1);
+    }
+
+    if (isnan(total))   {
+        cerr << "in codon submatrix compute stationary: nan\n";
+        exit(1);
+    }
+
+    if (! total)    {
+        cerr << "tot stat is 0\n";
+        exit(1);
+    }
+
     // renormalize stationary probabilities
     // double min = 1;
     for (int i = 0; i < Nstate; i++) {
@@ -52,6 +67,7 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
             }
             total += Q(i, j);
 
+            /*
             if (std::isinf(Q(i, j))) {
                 cerr << "Q matrix infinite: " << Q(i, j) << '\n';
                 exit(1);
@@ -61,15 +77,26 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
                 cerr << "Q matrix negative: " << Q(i, j) << '\n';
                 exit(1);
             }
+            */
         }
     }
 
-    Q(i, i) = -total;
+    if (isinf(total))   {
+        cerr << "in codon submatrix compute Q: inf\n";
+        exit(1);
+    }
+
+    if (isnan(total))   {
+        cerr << "in codon submatrix compute Q: nan\n";
+        exit(1);
+    }
 
     if (total < 0) {
         cerr << "negative rate away\n";
         exit(1);
     }
+
+    Q(i, i) = -total;
 }
 
 double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
@@ -111,9 +138,24 @@ double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
             }
         }
 
-		totom += mStationary[i] * om;
-		totweight += mStationary[i] * weight;
+		totom += Stationary(i) * om;
+		totweight += Stationary(i) * weight;
     }
-    return totom / totweight;
+
+    double om = totom / totweight;
+
+    if (isinf(om))   {
+        cerr << "in codon submatrix compute dN/dS: inf\n";
+        cerr << totom << '\t' << totweight << '\n';
+        exit(1);
+    }
+
+    if (isnan(om))   {
+        cerr << "in codon submatrix compute dN/dS: nan\n";
+        cerr << totom << '\t' << totweight << '\n';
+        exit(1);
+    }
+
+    return om;
 }
 

@@ -192,7 +192,8 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         wpol = grantham_wpol;
         wvol = grantham_wvol;
 
-        aadist.assign(Naarr, 1.0);
+        aadist.assign(Naarr, 1.0 / Naarr);
+        Random::DirichletSample(aadist, vector<double>(Naarr, 1.0 / Naarr), ((double)Naarr));
         if (!aadistmodel)    {
             UpdateGrantham();
         }
@@ -525,7 +526,6 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
             os << "w_comp\t";
             os << "w_pol\t";
         }
-        os << "distmean\t";
         os << "distvar\t";
         os << "weightent\t";
 
@@ -564,21 +564,12 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
             os << wcom << '\t';
             os << wpol << '\t';
         }
-        os << GetMeanAADist() << '\t';
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweights) << '\t';
 
         os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
         os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
         os.flush();
-    }
-
-    double GetMeanAADist() const    {
-        double m1 = 0;
-        for (int i=0; i<Naarr; i++) {
-            m1 += aadist[i];
-        }
-        return m1 / Naarr;
     }
 
     double GetVarAADist() const {
@@ -591,6 +582,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         m1 /= Naarr;
         m2 /= Naarr;
         m2 -= m1*m1;
+        m2 *= Naarr*Naarr;
         return m2;
     }
 
@@ -598,6 +590,14 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
     void TracePsi(ostream &os) const {
         for (int gene = 0; gene < Ngene; gene++) {
             os << logpsiarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
+    void TraceGvar(ostream &os) const {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << Gvararray->GetVal(gene) << '\t';
         }
         os << '\n';
         os.flush();
@@ -619,12 +619,11 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
 
     void TraceAADist(ostream& os) const {
         for (int a=0; a<Naa; a++)   {
-            os << aaweights[a] << '\t';
+            os << aaweights[a] * Naa << '\t';
         }
-        double m = GetMeanAADist();
         for (int a=0; a<Naa; a++)   {
             for (int b=a+1; b<Naa; b++)   {
-                os << aadist[rrindex(a,b)] / m << '\t';
+                os << aadist[rrindex(a,b)] * Naarr << '\t';
             }
         }
         os << '\n';

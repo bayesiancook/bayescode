@@ -139,6 +139,7 @@ class MultiGeneDiscSelACChain : public MultiGeneChain {
         MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
         ofstream psios((name + ".genepsi").c_str());
+        ofstream gos((name + ".genegvar").c_str());
         ofstream aaos((name + ".aadist").c_str());
         GetModel()->TraceAADistHeader(aaos);
     }
@@ -151,6 +152,8 @@ class MultiGeneDiscSelACChain : public MultiGeneChain {
             if (writegenedata) {
                 ofstream psios((name + ".genepsi").c_str(), ios_base::app);
                 GetModel()->TracePsi(psios);
+                ofstream gos((name + ".genegvar").c_str(), ios_base::app);
+                GetModel()->TraceGvar(gos);
                 ofstream os((name + ".geneom").c_str(), ios_base::app);
                 GetModel()->TracePredictedDNDS(os);
             }

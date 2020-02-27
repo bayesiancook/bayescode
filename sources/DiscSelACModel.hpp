@@ -279,6 +279,7 @@ class DiscSelACModel : public ProbModel {
         wvol = grantham_wvol;
 
         aadist.assign(Naarr, 1.0 / Naarr);
+        Random::DirichletSample(aadist, vector<double>(Naarr, 1.0 / Naarr), ((double)Naarr));
         if (!aadistmodel)    {
             UpdateGrantham();
         }
@@ -302,7 +303,6 @@ class DiscSelACModel : public ProbModel {
         // with a Naarr multiplier <=> aadist is 1 on average
         selacprofiles = new SelACProfileBidimArray(aadist, G, ((double) Naarr));
 
-        Gweight.assign(Gcat, 1.0/Gcat);
         Galloc = new MultinomialAllocationVector(Nsite,Gweight);
         Goccupancy = new OccupancySuffStat(Gcat);
 
@@ -470,10 +470,10 @@ class DiscSelACModel : public ProbModel {
             double x = xmin + ((double) i)/Gcat * (xmax - xmin);
             double w = exp( - (x - logpsi)*(x-logpsi) / 2 / Gvar);
             totw += w;
-            G[i] = w;
+            Gweight[i] = w;
         }
         for (int i=0; i<Gcat; i++)  {
-            G[i] /= totw;
+            Gweight[i] /= totw;
         }
     }
 
@@ -949,14 +949,6 @@ class DiscSelACModel : public ProbModel {
         return m1 / m0;
     }
 
-    double GetMeanAADist() const    {
-        double m1 = 0;
-        for (int i=0; i<Naarr; i++) {
-            m1 += aadist[i];
-        }
-        return m1 / Naarr;
-    }
-
     double GetVarAADist() const {
         double m1 = 0;
         double m2 = 0;
@@ -967,6 +959,7 @@ class DiscSelACModel : public ProbModel {
         m1 /= Naarr;
         m2 /= Naarr;
         m2 -= m1*m1;
+        m2 *= Naarr*Naarr;
         return m2;
     }
 
@@ -979,7 +972,6 @@ class DiscSelACModel : public ProbModel {
             os << "w_comp\t";
             os << "w_pol\t";
         }
-        os << "distmean\t";
         os << "distvar\t";
         os << "weightent\t";
         os << "aaent\t";
@@ -998,13 +990,15 @@ class DiscSelACModel : public ProbModel {
             os << wcom << '\t';
             os << wpol << '\t';
         }
-        os << GetMeanAADist() << '\t';
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweights) << '\t';
         os << GetMeanAAEntropy() << '\t';
-
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
+    }
+
+    void TraceGweights(ostream& os) const {
+        os << Gweight << '\n';
     }
 
     void Monitor(ostream &os) const override {

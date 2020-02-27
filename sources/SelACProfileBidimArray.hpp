@@ -42,7 +42,11 @@ class SelACProfileBidimArray : public SimpleBidimArray<vector<double> > {
                 v[a] = 1.0;
             }
             else    {
-                v[a] = exp(psi*G[j]*aadist[rrindex(a,i)]);
+                double tmp = psi * G[j] * aadist[rrindex(a,i)];
+                v[a] = 1e-8;
+                if (tmp < 100)  {
+                    v[a] += exp(-psi*G[j]*aadist[rrindex(a,i)]);
+                }
             }
             tot += v[a];
         }

@@ -88,6 +88,17 @@ class SelACChain : public Chain {
         model->Trace(cerr);
     }
 
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream os((name + ".gweights").c_str());
+    }
+
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream os((name + ".gweights").c_str(), ios_base::app);
+        GetModel()->TraceGweights(os);
+    }
+
     void Save() override {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
