@@ -96,6 +96,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
     Chrono totchrono;
     Chrono paramchrono;
     Chrono blchrono;
+    Chrono genechrono;
     Chrono aachrono;
 
     vector<double> aadistacc, aadisttot;
@@ -636,6 +637,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         os << "prop time in param moves: " << paramchrono.GetTime() / totchrono.GetTime() << '\n';
         os << "sub prop time in bl moves   : " << blchrono.GetTime() / paramchrono.GetTime()
            << '\n';
+        os << "sub prop time in gene moves : " << genechrono.GetTime() / paramchrono.GetTime() << '\n';
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime()
            << '\n';
 
@@ -921,7 +923,7 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
         for (int rep = 0; rep < nrep; rep++) {
             paramchrono.Start();
 
-            aachrono.Start();
+            genechrono.Start();
 
             MasterReceiveGvar();
             MoveGvarHyperParameters();
@@ -930,6 +932,10 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
             MasterReceiveLogPsi();
             MoveLogPsiHyperParameters();
             MasterSendLogPsiHyperParameters();
+
+            genechrono.Stop();
+
+            aachrono.Start();
 
             MasterReceivePathSuffStat();
             MoveAADist();
