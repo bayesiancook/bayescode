@@ -12,12 +12,12 @@ void AAMutSelOmegaCodonSubMatrix::ComputeStationary() const {
         total += mStationary[i];
     }
 
-    if (isinf(total))   {
+    if (std::isinf(total))   {
         cerr << "in codon submatrix compute stationary: inf\n";
         exit(1);
     }
 
-    if (isnan(total))   {
+    if (std::isnan(total))   {
         cerr << "in codon submatrix compute stationary: nan\n";
         exit(1);
     }
@@ -81,12 +81,12 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
         }
     }
 
-    if (isinf(total))   {
+    if (std::isinf(total))   {
         cerr << "in codon submatrix compute Q: inf\n";
         exit(1);
     }
 
-    if (isnan(total))   {
+    if (std::isnan(total))   {
         cerr << "in codon submatrix compute Q: nan\n";
         exit(1);
     }
@@ -144,13 +144,13 @@ double AAMutSelOmegaCodonSubMatrix::GetPredictedDNDS() const {
 
     double om = totom / totweight;
 
-    if (isinf(om))   {
+    if (std::isinf(om))   {
         cerr << "in codon submatrix compute dN/dS: inf\n";
         cerr << totom << '\t' << totweight << '\n';
         exit(1);
     }
 
-    if (isnan(om))   {
+    if (std::isnan(om))   {
         cerr << "in codon submatrix compute dN/dS: nan\n";
         cerr << totom << '\t' << totweight << '\n';
         exit(1);
