@@ -973,7 +973,6 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
             aachrono.Start();
 
             MasterReceivePathSuffStat();
-            // MoveAADistOld();
             MoveAADist();
             MasterSendAADist();
 
@@ -1167,11 +1166,11 @@ class MultiGeneDiscSelACModel : public MultiGeneProbModel {
     }
 
     double MoveAADist() {
-        aadistacc[0] += MoveAADist(10, 1, 1.0);
+        aadistacc[0] += MoveAADist(100, 1, 0.1);
         aadisttot[0] ++;
-        aadistacc[1] += MoveAADist(10, 3, 0.3);
+        aadistacc[1] += MoveAADist(100, 3, 0.1);
         aadisttot[1] ++;
-        aadistacc[2] += MoveAADist(10, 3, 0.1);
+        aadistacc[2] += MoveAADist(100, 5, 0.1);
         aadisttot[2] ++;
         return 1.0;
     }
