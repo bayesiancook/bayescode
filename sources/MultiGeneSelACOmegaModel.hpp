@@ -1056,15 +1056,16 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MovePsiHyperParameters();
             MasterSendPsiHyperParameters();
 
-            if (aadistmode != 3) {
+            if ((aadistmode != 3) && (aadistmodel)) {
                 compacc[0] += AAPsiCompMove(1.0, 10);
                 comptot[0]++;
                 compacc[1] += AAPsiCompMove(0.1, 10);
                 comptot[1]++;
+
+                MasterSendAADist();
+                MasterSendPsi();
             }
 
-            MasterSendAADist();
-            MasterSendPsi();
 
             aachrono.Stop();
 
@@ -1140,8 +1141,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveSendPsi();
             SlaveReceivePsiHyperParameters();
 
-            SlaveReceiveAADist();
-            SlaveReceivePsi();
+            if ((aadistmode != 3) && (aadistmodel)) {
+                SlaveReceiveAADist();
+                SlaveReceivePsi();
+            }
 
             if ((burnin > 10) && (omegamode != 3)) {
                 movechrono.Start();
@@ -1481,8 +1484,27 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     double MasterMoveGranthamWeight(double& w, int nrep, double tuning) {
         double acc = 0;
         double tot = 0;
+        double logprob1 = MasterReceiveAALogProb();
         for (int rep=0; rep<nrep; rep++)    {
+
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            w *= e;
+            MasterSendAADist();
+            double logprob2 = MasterReceiveAALogProb();
+            double delta = logprob2 - logprob1;
+            delta += m;
+            int accept = (log(Random::Uniform()) < delta);
+            if (accept) {
+                acc++;
+                logprob1 = logprob2;
+            }
+            else    {
+                w /= e;
+            }
+            tot++;
         }
+        MasterSendAADist();
         return acc/tot;
     }
 
