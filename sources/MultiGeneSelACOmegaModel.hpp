@@ -1278,10 +1278,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 aadisttot[0] ++;
                 aadistacc[1] += MasterMoveGranthamWeight(wcom,3,0.1);
                 aadisttot[1] ++;
+                aadistacc[2] += MasterMoveGranthamWeight(wcom,3,0.01);
+                aadisttot[2] ++;
                 aadistacc[0] += MasterMoveGranthamWeight(wpol,3,1);
                 aadisttot[0] ++;
                 aadistacc[1] += MasterMoveGranthamWeight(wpol,3,0.1);
                 aadisttot[1] ++;
+                aadistacc[2] += MasterMoveGranthamWeight(wpol,3,0.01);
+                aadisttot[2] ++;
             }
             else    {
                 aadistacc[0] += MasterMoveAADist(3,1);
