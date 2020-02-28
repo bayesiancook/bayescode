@@ -1312,6 +1312,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 SlaveMoveGranthamWeight(3);
                 SlaveMoveGranthamWeight(3);
                 SlaveMoveGranthamWeight(3);
+                SlaveMoveGranthamWeight(3);
+                SlaveMoveGranthamWeight(3);
             }
             else    {
                 SlaveMoveAADist(3);
