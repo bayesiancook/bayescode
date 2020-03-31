@@ -1,7 +1,6 @@
 #include "Chain.hpp"
 #include <fstream>
 #include <iostream>
-#include "Chrono.hpp"
 #include "ProbModel.hpp"
 using namespace std;
 
@@ -15,6 +14,7 @@ Chain::Chain() {
     size = 0;
     model = nullptr;
     name = "";
+    maxtime = 0;
 }
 
 void Chain::MakeFiles(int force) {
@@ -67,6 +67,7 @@ void Chain::Start() {
     ofstream run_os((name + ".run").c_str());
     run_os << 1 << '\n';
     run_os.close();
+    global_chrono.Start();
     Run();
 }
 
@@ -74,6 +75,9 @@ int Chain::GetRunningStatus() {
     ifstream run_is((name + ".run").c_str());
     int run;
     run_is >> run;
+    if (maxtime)    {
+        run &= ((global_chrono.GetTime() / 3600000) < maxtime);
+    }
     return run;
 }
 
@@ -84,7 +88,7 @@ void Chain::Run() {
         Move();
         chrono.Stop();
         ofstream check_os((name + ".time").c_str());
-        check_os << chrono.GetTime() << '\n';
+        check_os << chrono.GetTime() << '\t' << global_chrono.GetTime() << '\n';
     }
     ofstream run_os((name + ".run").c_str());
     run_os << 0 << '\n';

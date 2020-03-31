@@ -54,6 +54,7 @@ void MultiGeneChain::Start() {
         ofstream run_os((name + ".run").c_str());
         run_os << 1 << '\n';
         run_os.close();
+        global_chrono.Start();
     }
     Run();
 }
@@ -69,6 +70,8 @@ int MultiGeneChain::SlaveReceiveRunningStatus() {
 }
 
 void MultiGeneChain::Run() {
+    cerr << "in run \n";
+    cerr << myid << '\n';
     if (!myid) {
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
             MasterSendRunningStatus(1);
@@ -78,7 +81,8 @@ void MultiGeneChain::Run() {
             chrono.Stop();
 
             ofstream check_os((name + ".time").c_str());
-            check_os << chrono.GetTime() << '\n';
+            check_os << chrono.GetTime() << '\t' << global_chrono.GetTime() << '\n';
+            cerr << global_chrono.GetTime() / 3600000 << '\t' << maxtime << '\n';
         }
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());

@@ -3,6 +3,7 @@
 
 #include <string>
 #include "ProbModel.hpp"
+#include "Chrono.hpp"
 
 /**
  * \brief A generic interface for a Monte Carlo Markov Chain
@@ -91,6 +92,10 @@ class Chain {
     //! return current size (number of points saved to file thus far)
     int GetSize() { return size; }
 
+    void SetMaxTime(double inmaxtime)   {
+        maxtime = inmaxtime;
+    }
+
   protected:
     //! saving frequency (i.e. number of move cycles performed between each point
     //! saved to file)
@@ -106,6 +111,8 @@ class Chain {
     string name;
     //! flag: if 1, then complete state is saved at each interation in .chain file
     int saveall;
+    double maxtime;
+    Chrono global_chrono;
 };
 
 #endif  // CHAIN_H
