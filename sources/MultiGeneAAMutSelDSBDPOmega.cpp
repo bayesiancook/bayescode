@@ -184,6 +184,8 @@ int main(int argc, char *argv[]) {
     int myid = 0;
     int nprocs = 0;
 
+    double maxtime = 0;
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -300,6 +302,9 @@ int main(int argc, char *argv[]) {
                     modalprior = 1;
                 } else if (s == "-unconsprior") {
                     modalprior = 0;
+                } else if (s == "-maxtime") {
+                    i++;
+                    maxtime = atof(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -328,11 +333,22 @@ int main(int argc, char *argv[]) {
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(
             datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior, modalprior,
             pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid, nprocs);
+
     }
 
     chrono.Stop();
     if (!myid) {
         cout << "total time to set things up: " << chrono.GetTime() << '\n';
+        if (maxtime > 0)    {
+            maxtime -= chrono.GetTime() / 3600000;
+            cout << "remaining time: " << maxtime << '\n';
+            if (maxtime < 0)    {
+                cerr << "error: maxtime already exceeded\n";
+                exit(1);
+            }
+            MPI_Finalize();
+        }
+        chain->SetMaxTime(maxtime);
     }
     chrono.Reset();
     chrono.Start();
