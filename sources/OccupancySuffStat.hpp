@@ -69,7 +69,7 @@ class OccupancySuffStat : public SimpleArray<int>, public SuffStat {
     }
 
     double GetLogProb(const vector<double>& weight) const { 
-        if (weight.size() != GetSize()) {
+        if (weight.size() != size_t(GetSize())) {
             cerr << "error in occ suffstat get log prob: non matching vector sizes\n";
             exit(1);
         }
