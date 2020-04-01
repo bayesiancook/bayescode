@@ -155,6 +155,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
 };
 
 int main(int argc, char *argv[]) {
+    Chrono chrono;
+    chrono.Start();
+
     int myid = 0;
     int nprocs = 0;
 
@@ -165,106 +168,122 @@ int main(int argc, char *argv[]) {
     MultiGeneSingleOmegaChain *chain = 0;
     string name = "";
 
-    // starting a chain from existing files
-    if (argc == 2 && argv[1][0] != '-') {
-        name = argv[1];
-        chain = new MultiGeneSingleOmegaChain(name, myid, nprocs);
-    }
+    double maxtime = 0;
 
-    // new chain
-    else {
-        string datafile = "";
-        string treefile = "";
-        int force = 1;
-        int every = 1;
-        int until = -1;
-        int blmode = 1;
-        int nucmode = 1;
-        int omegamode = 1;
-        double omegahypermean = 1.0;
-        double omegahyperinvshape = 1.0;
+    string datafile = "";
+    string treefile = "";
+    int force = 1;
+    int every = 1;
+    int until = -1;
+    int blmode = 1;
+    int nucmode = 1;
+    int omegamode = 1;
+    double omegahypermean = 1.0;
+    double omegahyperinvshape = 1.0;
 
-        try {
-            if (argc == 1) {
-                throw(0);
-            }
-
-            int i = 1;
-            while (i < argc) {
-                string s = argv[i];
-
-                if (s == "-d") {
-                    i++;
-                    datafile = argv[i];
-                } else if ((s == "-t") || (s == "-T")) {
-                    i++;
-                    treefile = argv[i];
-                } else if (s == "-f") {
-                    force = 1;
-                } else if (s == "-omega") {
-                    omegamode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        omegahypermean = atof(argv[i]);
-                        i++;
-                        omegahyperinvshape = atof(argv[i]);
-                    }
-                } else if (s == "-nucrates") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        nucmode = 2;
-                    } else if (tmp == "shrunken") {
-                        nucmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        nucmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -nucrates\n";
-                        exit(1);
-                    }
-                } else if (s == "-bl") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        blmode = 2;
-                    } else if (tmp == "shrunken") {
-                        blmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        blmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -bl\n";
-                        exit(1);
-                    }
-                } else if ((s == "-x") || (s == "-extract")) {
-                    i++;
-                    if (i == argc) throw(0);
-                    every = atoi(argv[i]);
-                    i++;
-                    if (i == argc) throw(0);
-                    until = atoi(argv[i]);
-                } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
-                    name = argv[i];
-                }
-                i++;
-            }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
-        } catch (...) {
-            cerr << "globom -d <alignment> -t <tree> <chainname> \n";
-            cerr << '\n';
-            exit(1);
+    try {
+        if (argc == 1) {
+            throw(0);
         }
 
-        chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode, omegamode, omegahypermean, omegahyperinvshape,
-                                              every, until, name, force, myid,
-                                              nprocs);
+        int i = 1;
+        while (i < argc) {
+            string s = argv[i];
+
+            if (s == "-d") {
+                i++;
+                datafile = argv[i];
+            } else if ((s == "-t") || (s == "-T")) {
+                i++;
+                treefile = argv[i];
+            } else if (s == "-f") {
+                force = 1;
+            } else if (s == "-omega") {
+                omegamode = 0;
+                i++;
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    omegahypermean = atof(argv[i]);
+                    i++;
+                    omegahyperinvshape = atof(argv[i]);
+                }
+            } else if (s == "-nucrates") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    nucmode = 2;
+                } else if (tmp == "shrunken") {
+                    nucmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    nucmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -nucrates\n";
+                    exit(1);
+                }
+            } else if (s == "-bl") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    blmode = 2;
+                } else if (tmp == "shrunken") {
+                    blmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    blmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -bl\n";
+                    exit(1);
+                }
+            } else if (s == "-maxtime") {
+                i++;
+                maxtime = atof(argv[i]);
+            } else if ((s == "-x") || (s == "-extract")) {
+                i++;
+                if (i == argc) throw(0);
+                every = atoi(argv[i]);
+                i++;
+                if (i == argc) throw(0);
+                until = atoi(argv[i]);
+            } else {
+                if (i != (argc - 1)) {
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+    } catch (...) {
+        cerr << "globom -d <alignment> -t <tree> <chainname> \n";
+        cerr << '\n';
+        exit(1);
     }
 
+    if ((datafile == "") && (treefile == ""))   {
+        // existing chain
+        chain = new MultiGeneSingleOmegaChain(name, myid, nprocs);
+    }
+    else    {
+        // new chain
+        chain = new MultiGeneSingleOmegaChain(datafile, treefile, blmode, nucmode,
+                omegamode, omegahypermean, omegahyperinvshape,
+                every, until, name, force, myid,nprocs);
+    }
+
+    chrono.Stop();
+    if (!myid) {
+        cout << "total time to set things up: " << chrono.GetTime() << '\n';
+        if (maxtime > 0)    {
+            maxtime -= chrono.GetTime() / 3600000;
+            cout << "remaining time: " << maxtime << '\n';
+            if (maxtime < 0)    {
+                cerr << "error: maxtime already exceeded\n";
+                MPI_Finalize();
+                exit(1);
+            }
+        }
+        chain->SetMaxTime(maxtime);
+    }
+    chrono.Reset();
+    chrono.Start();
     if (!myid) {
         cerr << "chain " << name << " started\n";
     }
@@ -275,6 +294,17 @@ int main(int argc, char *argv[]) {
              << "-- Points saved, current ln prob = " << chain->GetModel()->GetLogProb() << "\n";
         chain->GetModel()->Trace(cerr);
     }
+    chrono.Stop();
+    if (!myid) {
+        cout << "total time in MCMC: " << chrono.GetTime() << '\n';
+        /*
+        cout << "total time in master moves: " << chain->GetModel()->GetMasterMoveTime() << '\n';
+        cout << "mean total time in slave moves: " << chain->GetModel()->GetSlaveMoveTime() << '\n';
+        cout << "mean total time in substitution mapping: " << chain->GetModel()->GetSlaveMapTime()
+             << '\n';
+        */
+    }
 
     MPI_Finalize();
 }
+

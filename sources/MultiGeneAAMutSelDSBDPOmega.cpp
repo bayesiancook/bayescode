@@ -193,147 +193,142 @@ int main(int argc, char *argv[]) {
     string name = "";
     MultiGeneAAMutSelDSBDPOmegaChain *chain = 0;
 
-    // starting a chain from existing files
-    if (argc == 2 && argv[1][0] != '-') {
-        name = argv[1];
-        chain = new MultiGeneAAMutSelDSBDPOmegaChain(name, myid, nprocs);
-    }
+    string datafile = "";
+    string treefile = "";
+    int Ncat = 100;
+    int baseNcat = 1;
+    int force = 1;
+    int every = 1;
+    int until = -1;
 
-    // new chain
-    else {
-        string datafile = "";
-        string treefile = "";
-        int Ncat = 100;
-        int baseNcat = 1;
-        int force = 1;
-        int every = 1;
-        int until = -1;
+    int blmode = 1;
+    int nucmode = 1;
+    int basemode = 0;
+    int omegamode = 3;
+    int omegaprior = 0;
+    int modalprior = 1;
 
-        int blmode = 1;
-        int nucmode = 1;
-        int basemode = 0;
-        int omegamode = 3;
-        int omegaprior = 0;
-        int modalprior = 1;
+    double pihypermean = 0.1;
+    double pihyperinvconc = 0.2;
 
-        double pihypermean = 0.1;
-        double pihyperinvconc = 0.2;
+    int writegenedata = 1;
 
-        int writegenedata = 1;
-
-        try {
-            if (argc == 1) {
-                throw(0);
-            }
-
-            int i = 1;
-            while (i < argc) {
-                string s = argv[i];
-
-                if (s == "-d") {
-                    i++;
-                    datafile = argv[i];
-                } else if ((s == "-t") || (s == "-T")) {
-                    i++;
-                    treefile = argv[i];
-                } else if (s == "-f") {
-                    force = 1;
-                } else if (s == "-g") {
-                    writegenedata = 0;
-                } else if (s == "+g") {
-                    writegenedata = 1;
-                } else if (s == "-pi") {
-                    i++;
-                    pihypermean = atof(argv[i]);
-                    i++;
-                    pihyperinvconc = atof(argv[i]);
-                } else if (s == "-nucrates") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        nucmode = 2;
-                    } else if (tmp == "shrunken") {
-                        nucmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        nucmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -nucrates\n";
-                        exit(1);
-                    }
-                } else if (s == "-bl") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        blmode = 2;
-                    } else if (tmp == "shrunken") {
-                        blmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        blmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -bl\n";
-                        exit(1);
-                    }
-                } else if (s == "-ncat") {
-                    i++;
-                    Ncat = atoi(argv[i]);
-                } else if (s == "-basencat") {
-                    i++;
-                    baseNcat = atoi(argv[i]);
-                } else if (s == "-basemix") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        basemode = 2;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        basemode = 0;
-                    } else {
-                        cerr << "error: does not recognize command after -basemix\n";
-                        exit(1);
-                    }
-                } else if (s == "-fixomega") {
-                    omegamode = 3;
-                } else if (s == "-freeomega") {
-                    omegamode = 1;
-                } else if (s == "-gamomega") {
-                    omegaprior = 0;
-                } else if (s == "-mixomega") {
-                    omegaprior = 1;
-                } else if (s == "-modalprior")  {
-                    modalprior = 1;
-                } else if (s == "-unconsprior") {
-                    modalprior = 0;
-                } else if (s == "-maxtime") {
-                    i++;
-                    maxtime = atof(argv[i]);
-                } else if ((s == "-x") || (s == "-extract")) {
-                    i++;
-                    if (i == argc) throw(0);
-                    every = atoi(argv[i]);
-                    i++;
-                    if (i == argc) throw(0);
-                    until = atoi(argv[i]);
-                } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
-                    name = argv[i];
-                }
-                i++;
-            }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
-        } catch (...) {
-            cerr << "multigeneaamutselddp -d <list> -t <tree> -ncat <ncat> "
-                    "<chainname> \n";
-            cerr << '\n';
-            exit(1);
+    try {
+        if (argc == 1) {
+            throw(0);
         }
 
+        int i = 1;
+        while (i < argc) {
+            string s = argv[i];
+
+            if (s == "-d") {
+                i++;
+                datafile = argv[i];
+            } else if ((s == "-t") || (s == "-T")) {
+                i++;
+                treefile = argv[i];
+            } else if (s == "-f") {
+                force = 1;
+            } else if (s == "-g") {
+                writegenedata = 0;
+            } else if (s == "+g") {
+                writegenedata = 1;
+            } else if (s == "-pi") {
+                i++;
+                pihypermean = atof(argv[i]);
+                i++;
+                pihyperinvconc = atof(argv[i]);
+            } else if (s == "-nucrates") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    nucmode = 2;
+                } else if (tmp == "shrunken") {
+                    nucmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    nucmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -nucrates\n";
+                    exit(1);
+                }
+            } else if (s == "-bl") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    blmode = 2;
+                } else if (tmp == "shrunken") {
+                    blmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    blmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -bl\n";
+                    exit(1);
+                }
+            } else if (s == "-ncat") {
+                i++;
+                Ncat = atoi(argv[i]);
+            } else if (s == "-basencat") {
+                i++;
+                baseNcat = atoi(argv[i]);
+            } else if (s == "-basemix") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    basemode = 2;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    basemode = 0;
+                } else {
+                    cerr << "error: does not recognize command after -basemix\n";
+                    throw(0);
+                }
+            } else if (s == "-fixomega") {
+                omegamode = 3;
+            } else if (s == "-freeomega") {
+                omegamode = 1;
+            } else if (s == "-gamomega") {
+                omegaprior = 0;
+            } else if (s == "-mixomega") {
+                omegaprior = 1;
+            } else if (s == "-modalprior")  {
+                modalprior = 1;
+            } else if (s == "-unconsprior") {
+                modalprior = 0;
+            } else if (s == "-maxtime") {
+                i++;
+                maxtime = atof(argv[i]);
+            } else if ((s == "-x") || (s == "-extract")) {
+                i++;
+                if (i == argc) throw(0);
+                every = atoi(argv[i]);
+                i++;
+                if (i == argc) throw(0);
+                until = atoi(argv[i]);
+            } else {
+                if (i != (argc - 1)) {
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+    } catch (...) {
+        cerr << "multigeneaamutselddp -d <list> -t <tree> -ncat <ncat> "
+                "<chainname> \n";
+        cerr << '\n';
+        MPI_Finalize();
+        exit(0);
+    }
+
+    if ((datafile == "") && (treefile == ""))   {
+        // existing chain
+        chain = new MultiGeneAAMutSelDSBDPOmegaChain(name, myid, nprocs);
+    }
+    else    {
+        // new chain
         chain = new MultiGeneAAMutSelDSBDPOmegaChain(
             datafile, treefile, Ncat, baseNcat, blmode, nucmode, basemode, omegamode, omegaprior, modalprior,
             pihypermean, pihyperinvconc, every, until, writegenedata, name, force, myid, nprocs);
-
     }
 
     chrono.Stop();
@@ -344,9 +339,9 @@ int main(int argc, char *argv[]) {
             cout << "remaining time: " << maxtime << '\n';
             if (maxtime < 0)    {
                 cerr << "error: maxtime already exceeded\n";
+                MPI_Finalize();
                 exit(1);
             }
-            MPI_Finalize();
         }
         chain->SetMaxTime(maxtime);
     }

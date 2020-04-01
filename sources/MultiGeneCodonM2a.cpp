@@ -252,6 +252,8 @@ int main(int argc, char *argv[]) {
     int myid = 0;
     int nprocs = 0;
 
+    double maxtime = 0;
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -316,179 +318,177 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    // starting a chain from existing files
-    if (argc == 2 && argv[1][0] != '-') {
-        name = argv[1];
-        chain = new MultiGeneCodonM2aChain(name, myid, nprocs);
-    }
+    string datapath = "./";
+    string datafile = "";
+    string treefile = "";
 
-    // new chain
-    else {
-        string datapath = "./";
-        string datafile = "";
-        string treefile = "";
+    double pihypermean = 0.1;
+    double pihyperinvconc = 0.2;
 
-        double pihypermean = 0.1;
-        double pihyperinvconc = 0.2;
+    double puromhypermean = 0.5;
+    double puromhyperinvconc = 0.5;
+    int purommode = 1;
 
-        double puromhypermean = 0.5;
-        double puromhyperinvconc = 0.5;
-        int purommode = 1;
+    double purwhypermean = 0.5;
+    double purwhyperinvconc = 0.5;
+    int purwmode = 1;
 
-        double purwhypermean = 0.5;
-        double purwhyperinvconc = 0.5;
-        int purwmode = 1;
+    double poswhypermean = 0.5;
+    double poswhyperinvconc = 0.1;
+    int poswmode = 1;
 
-        double poswhypermean = 0.5;
-        double poswhyperinvconc = 0.1;
-        int poswmode = 1;
+    double dposomhypermean = 1.0;
+    double dposomhyperinvshape = 0.5;
+    int dposommode = 1;
 
-        double dposomhypermean = 1.0;
-        double dposomhyperinvshape = 0.5;
-        int dposommode = 1;
+    int modalprior = 1;
 
-        int modalprior = 1;
+    int blmode = 1;
+    int nucmode = 1;
 
-        int blmode = 1;
-        int nucmode = 1;
+    int blsamplemode = 0;
 
-        int blsamplemode = 0;
+    int writegenedata = 1;
 
-        int writegenedata = 1;
+    int force = 1;
+    int every = 1;
+    int until = -1;
 
-        int force = 1;
-        int every = 1;
-        int until = -1;
-
-        try {
-            if (argc == 1) {
-                throw(0);
-            }
-
-            int i = 1;
-            while (i < argc) {
-                string s = argv[i];
-
-                if (s == "-d") {
-                    i++;
-                    datafile = argv[i];
-                } else if (s == "-p") {
-                    i++;
-                    datapath = argv[i];
-                } else if ((s == "-t") || (s == "-T")) {
-                    i++;
-                    treefile = argv[i];
-                } else if (s == "-purom") {
-                    purommode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        puromhypermean = atof(argv[i]);
-                        i++;
-                        puromhyperinvconc = atof(argv[i]);
-                    }
-                } else if (s == "-dposom") {
-                    dposommode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        dposomhypermean = atof(argv[i]);
-                        i++;
-                        dposomhyperinvshape = atof(argv[i]);
-                    }
-                } else if (s == "-purw") {
-                    purwmode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        purwhypermean = atof(argv[i]);
-                        i++;
-                        purwhyperinvconc = atof(argv[i]);
-                    }
-                } else if (s == "-posw") {
-                    poswmode = 0;
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp != "uninf") {
-                        poswhypermean = atof(argv[i]);
-                        i++;
-                        poswhyperinvconc = atof(argv[i]);
-                    }
-                } else if (s == "-modalprior")  {
-                    modalprior = 1;
-                } else if (s == "-gapmodalprior")   {
-                    modalprior = 2;
-                } else if (s == "-unconsprior")    {
-                    modalprior = 0;
-                } else if (s == "-nucrates") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        nucmode = 2;
-                    } else if (tmp == "shrunken") {
-                        nucmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        nucmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -nucrates\n";
-                        exit(1);
-                    }
-                } else if (s == "-bl") {
-                    i++;
-                    string tmp = argv[i];
-                    if (tmp == "shared") {
-                        blmode = 2;
-                    } else if (tmp == "shrunken") {
-                        blmode = 1;
-                    } else if ((tmp == "ind") || (tmp == "independent")) {
-                        blmode = 0;
-                    } else {
-                        cerr << "error: does not recongnize command after -bl\n";
-                        exit(1);
-                    }
-                } else if (s == "-blint")   {
-                    blsamplemode = 1;
-                } else if (s == "-blnoint") {
-                    blsamplemode = 0;
-                } else if (s == "-pi") {
-                    i++;
-                    pihypermean = atof(argv[i]);
-                    i++;
-                    pihyperinvconc = atof(argv[i]);
-                } else if (s == "-g") {
-                    writegenedata = 0;
-                } else if (s == "+g") {
-                    writegenedata = 1;
-                } else if (s == "+G") {
-                    writegenedata = 2;
-                } else if (s == "-f") {
-                    force = 1;
-                } else if ((s == "-x") || (s == "-extract")) {
-                    i++;
-                    if (i == argc) throw(0);
-                    every = atoi(argv[i]);
-                    i++;
-                    if (i == argc) throw(0);
-                    until = atoi(argv[i]);
-                } else {
-                    if (i != (argc - 1)) {
-                        throw(0);
-                    }
-                    name = argv[i];
-                }
-                i++;
-            }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
-                throw(0);
-            }
-        } catch (...) {
-            if (! myid) {
-                cerr << "error in command\n";
-            }
-            MPI_Finalize();
-            exit(0);
+    try {
+        if (argc == 1) {
+            throw(0);
         }
 
+        int i = 1;
+        while (i < argc) {
+            string s = argv[i];
+
+            if (s == "-d") {
+                i++;
+                datafile = argv[i];
+            } else if (s == "-p") {
+                i++;
+                datapath = argv[i];
+            } else if ((s == "-t") || (s == "-T")) {
+                i++;
+                treefile = argv[i];
+            } else if (s == "-purom") {
+                purommode = 0;
+                i++;
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    puromhypermean = atof(argv[i]);
+                    i++;
+                    puromhyperinvconc = atof(argv[i]);
+                }
+            } else if (s == "-dposom") {
+                dposommode = 0;
+                i++;
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                }
+            } else if (s == "-purw") {
+                purwmode = 0;
+                i++;
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    purwhypermean = atof(argv[i]);
+                    i++;
+                    purwhyperinvconc = atof(argv[i]);
+                }
+            } else if (s == "-posw") {
+                poswmode = 0;
+                i++;
+                string tmp = argv[i];
+                if (tmp != "uninf") {
+                    poswhypermean = atof(argv[i]);
+                    i++;
+                    poswhyperinvconc = atof(argv[i]);
+                }
+            } else if (s == "-modalprior")  {
+                modalprior = 1;
+            } else if (s == "-gapmodalprior")   {
+                modalprior = 2;
+            } else if (s == "-unconsprior")    {
+                modalprior = 0;
+            } else if (s == "-nucrates") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    nucmode = 2;
+                } else if (tmp == "shrunken") {
+                    nucmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    nucmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -nucrates\n";
+                    exit(1);
+                }
+            } else if (s == "-bl") {
+                i++;
+                string tmp = argv[i];
+                if (tmp == "shared") {
+                    blmode = 2;
+                } else if (tmp == "shrunken") {
+                    blmode = 1;
+                } else if ((tmp == "ind") || (tmp == "independent")) {
+                    blmode = 0;
+                } else {
+                    cerr << "error: does not recongnize command after -bl\n";
+                    exit(1);
+                }
+            } else if (s == "-blint")   {
+                blsamplemode = 1;
+            } else if (s == "-blnoint") {
+                blsamplemode = 0;
+            } else if (s == "-pi") {
+                i++;
+                pihypermean = atof(argv[i]);
+                i++;
+                pihyperinvconc = atof(argv[i]);
+            } else if (s == "-g") {
+                writegenedata = 0;
+            } else if (s == "+g") {
+                writegenedata = 1;
+            } else if (s == "+G") {
+                writegenedata = 2;
+            } else if (s == "-f") {
+                force = 1;
+            } else if (s == "-maxtime") {
+                i++;
+                maxtime = atof(argv[i]);
+            } else if ((s == "-x") || (s == "-extract")) {
+                i++;
+                if (i == argc) throw(0);
+                every = atoi(argv[i]);
+                i++;
+                if (i == argc) throw(0);
+                until = atoi(argv[i]);
+            } else {
+                if (i != (argc - 1)) {
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+    } catch (...) {
+        if (! myid) {
+            cerr << "error in command\n";
+        }
+        MPI_Finalize();
+        exit(0);
+    }
+
+    if ((datafile == "") && (treefile == ""))   {
+        // existing chain
+        chain = new MultiGeneCodonM2aChain(name, myid, nprocs);
+    }
+    else    {
+        // new chain
         chain = new MultiGeneCodonM2aChain(
             datapath, datafile, treefile, blmode, blsamplemode, nucmode, purommode, dposommode, purwmode, poswmode,
             pihypermean, pihyperinvconc, puromhypermean, puromhyperinvconc, dposomhypermean,
@@ -499,6 +499,16 @@ int main(int argc, char *argv[]) {
     chrono.Stop();
     if (!myid) {
         cout << "total time to set things up: " << chrono.GetTime() << '\n';
+        if (maxtime > 0)    {
+            maxtime -= chrono.GetTime() / 3600000;
+            cout << "remaining time: " << maxtime << '\n';
+            if (maxtime < 0)    {
+                cerr << "error: maxtime already exceeded\n";
+                MPI_Finalize();
+                exit(1);
+            }
+        }
+        chain->SetMaxTime(maxtime);
     }
     chrono.Reset();
     chrono.Start();

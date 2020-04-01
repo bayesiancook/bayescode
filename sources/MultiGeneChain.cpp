@@ -9,7 +9,7 @@ using namespace std;
 #define nullptr 0
 
 MultiGeneChain::MultiGeneChain(int inmyid, int innprocs)
-    : Chain(), myid(inmyid), nprocs(innprocs) {}
+    : Chain(), myid(inmyid), nprocs(innprocs), maxtime(0) {}
 
 void MultiGeneChain::SavePoint() {
     if (saveall) {
@@ -54,7 +54,9 @@ void MultiGeneChain::Start() {
         ofstream run_os((name + ".run").c_str());
         run_os << 1 << '\n';
         run_os.close();
-        global_chrono.Start();
+        if (maxtime)    {
+            global_chrono.Start();
+        }
     }
     Run();
 }
@@ -69,9 +71,17 @@ int MultiGeneChain::SlaveReceiveRunningStatus() {
     return status;
 }
 
+int MultiGeneChain::GetRunningStatus()  {
+    int ret = Chain::GetRunningStatus();
+    if (maxtime)    {
+        global_chrono.Stop();
+        ret &= ((global_chrono.GetTime() / 3600000) < maxtime);
+        global_chrono.Start();
+    }
+    return ret;
+}
+
 void MultiGeneChain::Run() {
-    cerr << "in run \n";
-    cerr << myid << '\n';
     if (!myid) {
         while ((GetRunningStatus() != 0) && ((until == -1) || (size <= until))) {
             MasterSendRunningStatus(1);

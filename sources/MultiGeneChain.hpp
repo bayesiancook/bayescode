@@ -4,6 +4,7 @@
 #include <string>
 #include "Chain.hpp"
 #include "MultiGeneProbModel.hpp"
+#include "Chrono.hpp"
 
 /**
  * \brief A generic interface for a multi-gene Monte Carlo Markov Chain
@@ -31,6 +32,8 @@ class MultiGeneChain : public Chain {
 
     virtual void MakeFiles(int force) override;
 
+    virtual int GetRunningStatus() override;
+
     //! \brief master broadcasts running status (1: run should continue / 0: run
     //! should now stop)
     void MasterSendRunningStatus(int status);
@@ -43,9 +46,16 @@ class MultiGeneChain : public Chain {
     //! model of Chain)
     MultiGeneProbModel *GetMultiGeneModel() { return static_cast<MultiGeneProbModel *>(model); }
 
+    void SetMaxTime(double inmaxtime)   {
+        maxtime = inmaxtime;
+    }
+
   protected:
     int myid;
     int nprocs;
+
+    double maxtime;
+    Chrono global_chrono;
 };
 
 #endif  // MULTICHAIN_H
