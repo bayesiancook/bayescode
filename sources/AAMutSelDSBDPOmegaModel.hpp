@@ -668,12 +668,17 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! omegahyperinvshape)
     double OmegaLogPrior() const {
         double ret = 0;
+
+        // gamma distribution over 0, +infty
         if (omegaprior == 0) {
             double alpha = 1.0 / omegahyperinvshape;
             double beta = alpha / omegahypermean;
             ret = alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(omega) -
                   beta * omega;
-        } else if (omegaprior == 1) {
+        }
+        
+        // mixture of point mass at 1 and shifted gamma
+        else if (omegaprior == 1) {
             if ((dposompi <= 0) || (dposompi >= 1)) {
                 cerr << "error in omegalogprior: pi is not 0<pi<1\n";
                 exit(1);
@@ -691,6 +696,49 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                 double beta = alpha / dposomhypermean;
                 ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(dposom) -
                        beta * dposom;
+            }
+        }
+        
+        // mixture of mass at 0 + gamma over 0,+infty in log
+        else if (omegaprior == 2) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double val = log(1 + dposompi);
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(val) -
+                       beta * val;
+            }
+        }
+        
+        // mixture of mass at 1 + half cauchy (shifted)
+        else if (omegaprior == 3) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double gamma = 1.0 / dposomhyperinvshape;
+                ret -= log(Pi) + log(gamma) + log(1 + (dposom/gamma)*(dposom/gamma));
             }
         } else {
             cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
@@ -959,6 +1007,34 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                                     beta + omegapathsuffstat.GetBeta());
     }
 
+    double DrawPosOm() {
+        double ret = 0;
+        if (omegaprior == 0)    {
+            cerr << "error: in draw pos om but not under mixture model\n";
+            exit(1);
+        }
+        else if (omegaprior == 1)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            ret = 1.0 + Random::Gamma(alpha, beta);
+            /*
+            if (!dposomarray[i]) {
+                dposomarray[i] = 1e-5;
+            }
+            */
+        }
+        else if (omegaprior == 2)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            ret = exp(Random::Gamma(alpha, beta));
+        }
+        else if (omegaprior == 3)   {
+            double gamma = 1.0 / dposomhyperinvshape;
+            ret = 1 + gamma * tan(Pi * Random::Uniform() / 2);
+        }
+        return ret;
+    }
+
     int MultipleTryMoveOmega(int ntry) {
         /*
         if (omega == 1.0)   {
@@ -982,9 +1058,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         double logp0 = omegapathsuffstat.GetLogProb(1.0);
 
-        double alpha = 1.0 / dposomhyperinvshape;
-        double beta = alpha / dposomhypermean;
-
         vector<double> logparray(ntry, 0);
         vector<double> dposomarray(ntry, 0);
         double max = 0;
@@ -992,10 +1065,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             if ((!i) && (omega > 1.0)) {
                 dposomarray[i] = omega - 1.0;
             } else {
-                dposomarray[i] = Random::Gamma(alpha, beta);
-                if (!dposomarray[i]) {
-                    dposomarray[i] = 1e-5;
-                }
+                dposomarray[i] = DrawPosOm();
+                /*
+                */
             }
             logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
             if ((!i) || (max < logparray[i])) {

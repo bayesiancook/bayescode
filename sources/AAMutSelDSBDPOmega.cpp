@@ -169,12 +169,27 @@ int main(int argc, char *argv[]) {
                     omegamode = 1;
                 } else if (s == "-gamomega") {
                     omegaprior = 0;
-                } else if (s == "-mixomega") {
+                } else if ((s == "-mixomega") || (s == "-gammixomega")) {
                     omegaprior = 1;
                     i++;
                     dposompi = atof(argv[i]);
                     i++;
                     dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                } else if (s == "-loggammixomega") {
+                    omegaprior = 2;
+                    i++;
+                    dposompi = atof(argv[i]);
+                    i++;
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                } else if (s == "-cauchymixomega") {
+                    omegaprior = 3;
+                    i++;
+                    dposompi = atof(argv[i]);
+                    dposomhypermean = 0;
                     i++;
                     dposomhyperinvshape = atof(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {

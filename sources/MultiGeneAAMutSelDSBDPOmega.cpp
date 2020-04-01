@@ -288,8 +288,15 @@ int main(int argc, char *argv[]) {
                 omegamode = 1;
             } else if (s == "-gamomega") {
                 omegaprior = 0;
-            } else if (s == "-mixomega") {
+            } else if ((s == "-mixomega") || (s == "-gammixomega")) {
                 omegaprior = 1;
+                modalprior = 0;
+            } else if (s == "-loggammixomega") {
+                omegaprior = 2;
+                modalprior = 0;
+            } else if (s == "-cauchymixomega") {
+                omegaprior = 3;
+                modalprior = 0;
             } else if (s == "-modalprior")  {
                 modalprior = 1;
             } else if (s == "-unconsprior") {
