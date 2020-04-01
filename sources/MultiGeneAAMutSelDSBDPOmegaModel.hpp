@@ -46,6 +46,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     DirichletSuffStat nucstatsuffstat;
 
     // omega*: iid gamma across genes
+    double maxomega;
     double omegahypermean;
     double omegahyperinvshape;
     IIDGamma *omegaarray;
@@ -113,7 +114,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     MultiGeneAAMutSelDSBDPOmegaModel(string indatafile, string intreefile, int inNcat, int inbaseNcat,
                                      int inblmode, int innucmode, int inbasemode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
-                                     double indposompihyperinvconc, int inmyid, int innprocs)
+                                     double indposompihyperinvconc, double inmaxomega, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
         datafile = indatafile;
@@ -144,6 +145,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         modalprior = inmodalprior;
         dposompihypermean = indposompihypermean;
         dposompihyperinvconc = indposompihyperinvconc;
+        maxomega = inmaxomega;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -220,6 +222,13 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             cauchydposomarray = 0;
             for (int i = 0; i < GetLocalNgene(); i++) {
                 (*gammadposomarray)[i] = 0;
+            }
+            if (maxomega)   {
+                for (int i = 0; i < GetLocalNgene(); i++) {
+                    if ((*gammadposomarray)[i] > maxomega)    {
+                        (*gammadposomarray)[i] = maxomega;
+                    }
+                }
             }
         } else if (omegaprior == 3) {
             double gamma = 1.0 / dposomhyperinvshape;
@@ -323,6 +332,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetBaseMode(basemode);
+                geneprocess[gene]->SetMaxOmega(maxomega);
                 geneprocess[gene]->Allocate();
             }
         }

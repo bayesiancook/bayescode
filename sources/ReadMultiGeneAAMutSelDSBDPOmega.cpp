@@ -14,6 +14,7 @@ class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
     int baseNcat;
     int blmode, nucmode, basemode, omegamode, omegaprior, modalprior;
     double pihypermean, pihyperinvconc;
+    double maxomega;
 
   public:
     string GetModelType() { return modeltype; }
@@ -43,18 +44,23 @@ class MultiGeneAAMutSelDSBDPOmegaSample : public MultiGeneSample {
         is >> Ncat >> baseNcat;
         is >> blmode >> nucmode >> basemode >> omegamode >> omegaprior >> modalprior;
         is >> pihypermean >> pihyperinvconc;
+        maxomega = 0;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
+            is >> maxomega;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "-- Error when reading model\n";
+                exit(1);
+            }
         }
         is >> chainevery >> chainuntil >> chainsize;
 
         if (modeltype == "MULTIGENEAAMUTSELDSBDPOMEGA") {
             model = new MultiGeneAAMutSelDSBDPOmegaModel(datafile, treefile, Ncat, baseNcat, blmode,
                                                          nucmode, basemode, omegamode, omegaprior, modalprior,
-                                                         pihypermean, pihyperinvconc, myid, nprocs);
+                                                         pihypermean, pihyperinvconc, maxomega, myid, nprocs);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

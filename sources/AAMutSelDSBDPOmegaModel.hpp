@@ -98,6 +98,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double omega;
     OmegaPathSuffStat omegapathsuffstat;
 
+    double maxomega;
+
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet
     // distributions
 
@@ -201,6 +203,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basemode = 0;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
+        maxomega = 0;
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -258,6 +261,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basemode = 0;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
+        maxomega = 0;
 
         codondata = incodondata;
 
@@ -299,6 +303,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         totb1 = totb2 = totb3 = totb4 = 0;
 
         // Allocate();
+    }
+
+    void SetMaxOmega(double inmax)  {
+        maxomega = inmax;
     }
 
     //! \brief set estimation method for branch lengths
@@ -1016,7 +1024,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         else if (omegaprior == 1)   {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
-            ret = 1.0 + Random::Gamma(alpha, beta);
+            do  {
+                ret = 1.0 + Random::Gamma(alpha, beta);
+            } while ((maxomega > 0) && (ret > maxomega));
             /*
             if (!dposomarray[i]) {
                 dposomarray[i] = 1e-5;
@@ -1026,11 +1036,15 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         else if (omegaprior == 2)   {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
-            ret = exp(Random::Gamma(alpha, beta));
+            do  {
+                ret = exp(Random::Gamma(alpha, beta));
+            } while ((maxomega > 0) && (ret > maxomega));
         }
         else if (omegaprior == 3)   {
             double gamma = 1.0 / dposomhyperinvshape;
-            ret = 1 + gamma * tan(Pi * Random::Uniform() / 2);
+            do  {
+                ret = 1 + gamma * tan(Pi * Random::Uniform() / 2);
+            } while ((maxomega > 0) && (ret > maxomega));
         }
         return ret;
     }
