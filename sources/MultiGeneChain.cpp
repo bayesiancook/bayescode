@@ -92,7 +92,6 @@ void MultiGeneChain::Run() {
 
             ofstream check_os((name + ".time").c_str());
             check_os << chrono.GetTime() << '\t' << global_chrono.GetTime() << '\n';
-            cerr << global_chrono.GetTime() / 3600000 << '\t' << maxtime << '\n';
         }
         MasterSendRunningStatus(0);
         ofstream run_os((name + ".run").c_str());
