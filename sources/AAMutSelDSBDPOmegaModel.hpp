@@ -1003,6 +1003,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             GibbsResampleOmega();
         } else {
             MultipleTryMoveOmega(100);
+            if (omega != 1.0)   {
+                MHMoveOmega(10, 1.0);
+                MHMoveOmega(10, 0.1);
+            }
         }
         UpdateCodonMatrices();
     }
@@ -1012,6 +1016,34 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         double beta = alpha / omegahypermean;
         omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
                                     beta + omegapathsuffstat.GetBeta());
+    }
+
+    double OmegaLogProb(double dposom) const {
+        return OmegaLogPrior() + omegapathsuffstat.GetLogProb(1.0 + dposom);
+    }
+
+    double MHMoveOmega(int nrep, double tuning)    {
+        double dposom = omega - 1;
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep=0; rep<nrep; rep++)    {
+            double deltalogprob = -OmegaLogProb(dposom);
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            dposom *= e;
+            deltalogprob += OmegaLogProb(dposom);
+            deltalogprob += m;
+            int acc = (log(Random::Uniform()) < deltalogprob);
+            if (acc)    {
+                nacc++;
+            }
+            else    {
+                dposom /= e;
+            }
+            ntot++;
+        }
+        omega = dposom + 1;
+        return nacc/ntot;
     }
 
     double DrawPosOm() {
@@ -1024,26 +1056,26 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             do  {
-                ret = 1.0 + Random::Gamma(alpha, beta);
+                ret = Random::Gamma(alpha, beta);
             } while ((maxomega > 0) && (ret > maxomega));
-            if (ret == 1) {
-                 ret = 1.000001;
+            if (!ret) {
+                 ret = 1e-5;
             }
         }
         else if (omegaprior == 2)   {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             do  {
-                ret = exp(Random::Gamma(alpha, beta));
+                ret = exp(Random::Gamma(alpha, beta)) - 1;
             } while ((maxomega > 0) && (ret > maxomega));
-            if (ret == 1) {
-                 ret = 1.000001;
+            if (!ret) {
+                 ret = 1e-5;
             }
         }
         else if (omegaprior == 3)   {
             double gamma = 1.0 / dposomhyperinvshape;
             do  {
-                ret = 1 + gamma * tan(Pi * Random::Uniform() / 2);
+                ret = gamma * tan(Pi * Random::Uniform() / 2);
             } while ((maxomega > 0) && (ret > maxomega));
         }
         return ret;
