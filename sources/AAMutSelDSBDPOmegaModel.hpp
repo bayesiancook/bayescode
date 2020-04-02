@@ -1,4 +1,3 @@
-
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "Chrono.hpp"
 #include "CodonSequenceAlignment.hpp"
@@ -717,7 +716,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                 cerr << "error in omegalogprior: omega < 1\n";
                 exit(1);
             }
-            double dposom = omega - 1.0;
+            double dposom = log(omega);
             if (dposom == 0) {
                 ret = log(1 - dposompi);
             } else {
@@ -1027,11 +1026,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             do  {
                 ret = 1.0 + Random::Gamma(alpha, beta);
             } while ((maxomega > 0) && (ret > maxomega));
-            /*
-            if (!dposomarray[i]) {
-                dposomarray[i] = 1e-5;
+            if (ret == 1) {
+                 ret = 1.000001;
             }
-            */
         }
         else if (omegaprior == 2)   {
             double alpha = 1.0 / dposomhyperinvshape;
@@ -1039,6 +1036,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             do  {
                 ret = exp(Random::Gamma(alpha, beta));
             } while ((maxomega > 0) && (ret > maxomega));
+            if (ret == 1) {
+                 ret = 1.000001;
+            }
         }
         else if (omegaprior == 3)   {
             double gamma = 1.0 / dposomhyperinvshape;
