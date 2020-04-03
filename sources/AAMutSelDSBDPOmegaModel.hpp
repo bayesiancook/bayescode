@@ -1002,10 +1002,10 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         if (omegaprior == 0) {
             GibbsResampleOmega();
         } else {
-            MultipleTryMoveOmega(1000);
+            MultipleTryMoveOmega(100);
             if (omega != 1.0)   {
-                MHMoveOmega(100, 1.0);
-                MHMoveOmega(100, 0.1);
+                MHMoveOmega(10, 1.0);
+                MHMoveOmega(10, 0.1);
             }
         }
         UpdateCodonMatrices();
