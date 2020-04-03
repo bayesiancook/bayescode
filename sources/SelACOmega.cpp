@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         int Gcat = 4;
         // uncons by default
         int aadistmode = 0;
-        int aadistmodel = 1;
+        int aadistmodel = 0;
         int omegamode = 3;
         int omegaprior = 0;
         double dposompi = 0.1;
