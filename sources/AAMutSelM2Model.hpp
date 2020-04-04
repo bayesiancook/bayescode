@@ -474,18 +474,18 @@ class AAMutSelM2Model : public ProbModel {
         branchlength->SetShape(1.0 / blhyperinvshape);
     }
 
-    void SetMixtureParameters(double indposom, double inposw)   {
-        dposom = indposom;
+    void SetOmegaMixtureParameters(double inposw, double indposom)   {
         posw = inposw;
+        dposom = indposom;
         componentomegaarray->SetParameters(dposom + 1, posw);
     }
 
-    void GetMixtureParameters(double &indposom, double &inposw) const   {
+    void GetOmegaMixtureParameters(double &indposom, double &inposw) const   {
         indposom = dposom;
         inposw = posw;
     }
 
-    void SetMixtureHyperParameters(double inpi, double inposwhypermean, double inposwhyperinvconc,
+    void SetOmegaMixtureHyperParameters(double inpi, double inposwhypermean, double inposwhyperinvconc,
             double indposomhypermean, double indposomhyperinvshape) {
 
         pi = inpi;
@@ -670,6 +670,16 @@ class AAMutSelM2Model : public ProbModel {
         omegasitealloc->GibbsResample(omegasitepostprobarray);
         return total;
     }
+
+	void GetSitesPostProb(double *array) const {
+	    for (int i = 0; i < GetNsite(); i++) {
+		array[i] = omegasitepostprobarray[i][2];
+		if (omegasitepostprobarray[i][2] < 0) {
+		    cerr << "error in AAMutSelM2Model::GetSitesPostProb: negative prob\n";
+		    exit(1);
+		}
+	    }
+	}
 
     //! \brief log prior over hyperparameter of prior over branch lengths (here,
     //! lambda ~ exponential of rate 10)

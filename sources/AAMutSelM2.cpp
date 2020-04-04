@@ -63,7 +63,7 @@ class AAMutSelM2Chain : public Chain {
     void New(int force) override {
         cerr << "new model\n";
         model = new AAMutSelM2Model(datafile, treefile, Ncat, baseNcat);
-        GetModel()->SetMixtureHyperParameters(pi, poswhypermean, poswhyperinvconc, dposomhypermean, dposomhyperinvshape);
+        GetModel()->SetOmegaMixtureHyperParameters(pi, poswhypermean, poswhyperinvconc, dposomhypermean, dposomhyperinvshape);
         cerr << "allocate\n";
         GetModel()->Allocate();
         cerr << "update\n";
@@ -95,7 +95,7 @@ class AAMutSelM2Chain : public Chain {
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
             model = new AAMutSelM2Model(datafile, treefile, Ncat, baseNcat);
-            GetModel()->SetMixtureHyperParameters(pi, poswhypermean, poswhyperinvconc, dposomhypermean, dposomhyperinvshape);
+            GetModel()->SetOmegaMixtureHyperParameters(pi, poswhypermean, poswhyperinvconc, dposomhypermean, dposomhyperinvshape);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

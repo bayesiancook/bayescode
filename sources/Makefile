@@ -7,7 +7,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= aamutselm2 discselac multigenediscselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= multigeneaamutselm2 aamutselm2 discselac multigenediscselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -84,6 +84,10 @@ $(PROGSDIR)/readmultigenecodonm2a$(EXEEXT): ReadMultiGeneCodonM2a.o $(OBJS)
 aamutselm2$(EXEEXT): $(PROGSDIR)/aamutselm2$(EXEEXT)
 $(PROGSDIR)/aamutselm2$(EXEEXT): AAMutSelM2.o $(OBJS)
 	$(CC) AAMutSelM2.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigeneaamutselm2$(EXEEXT): $(PROGSDIR)/multigeneaamutselm2$(EXEEXT)
+$(PROGSDIR)/multigeneaamutselm2$(EXEEXT): MultiGeneAAMutSelM2.o $(OBJS)
+	$(CC) MultiGeneAAMutSelM2.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 aamutselddp$(EXEEXT): $(PROGSDIR)/aamutselddp$(EXEEXT)
 $(PROGSDIR)/aamutselddp$(EXEEXT): AAMutSelDSBDPOmega.o $(OBJS)
