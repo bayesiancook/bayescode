@@ -8,8 +8,8 @@ class MechM2aMix : public SimpleArray<double> {
     MechM2aMix(double posom, double posw) : SimpleArray<double>(2), weight(2) {
         (*this)[0] = 1.0;
         (*this)[1] = posom;
-        weight[0] = posw;
-        weight[1] = (1 - posw);
+        weight[0] = (1-posw);
+        weight[1] = posw;
     }
 
     ~MechM2aMix() {}
@@ -17,8 +17,8 @@ class MechM2aMix : public SimpleArray<double> {
     void SetParameters(double posom, double posw) {
         (*this)[0] = 1.0;
         (*this)[1] = posom;
-        weight[0] = posw;
-        weight[1] = (1 - posw);
+        weight[0] = (1-posw);
+        weight[1] = posw;
     }
 
     const vector<double> &GetWeights() const { return weight; }

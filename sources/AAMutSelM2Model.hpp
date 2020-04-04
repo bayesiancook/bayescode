@@ -480,9 +480,9 @@ class AAMutSelM2Model : public ProbModel {
         componentomegaarray->SetParameters(dposom + 1, posw);
     }
 
-    void GetOmegaMixtureParameters(double &indposom, double &inposw) const   {
-        indposom = dposom;
+    void GetOmegaMixtureParameters(double &inposw, double &indposom) const   {
         inposw = posw;
+        indposom = dposom;
     }
 
     void SetOmegaMixtureHyperParameters(double inpi, double inposwhypermean, double inposwhyperinvconc,
@@ -673,11 +673,11 @@ class AAMutSelM2Model : public ProbModel {
 
 	void GetSitesPostProb(double *array) const {
 	    for (int i = 0; i < GetNsite(); i++) {
-		array[i] = omegasitepostprobarray[i][2];
-		if (omegasitepostprobarray[i][2] < 0) {
-		    cerr << "error in AAMutSelM2Model::GetSitesPostProb: negative prob\n";
-		    exit(1);
-		}
+            array[i] = omegasitepostprobarray[i][2];
+            if (omegasitepostprobarray[i][2] < 0) {
+                cerr << "error in AAMutSelM2Model::GetSitesPostProb: negative prob\n";
+                exit(1);
+            }
 	    }
 	}
 
@@ -699,6 +699,13 @@ class AAMutSelM2Model : public ProbModel {
         double total = 0;
         total += PosOmegaLogPrior();
         total += PosWeightLogPrior();
+        if (std::isnan(total) || std::isinf(total))  {
+            cerr << "error: nan; \n";
+            cerr << posw << '\t' << dposom << '\n';
+            cerr << dposomhypermean << '\t' << dposomhyperinvshape << '\n';
+            cerr << pi << '\t' << poswhypermean << '\t' << poswhyperinvconc << '\n';
+            exit(1);
+        }
         return total;
     }
 

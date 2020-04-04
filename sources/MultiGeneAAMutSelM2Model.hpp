@@ -314,12 +314,12 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
         }
     }
 
-    void SetOmegaMixtureHyperParameters(double indposomhypermean, double indposomhyperinvshape,
-            double inposwhypermean, double inposwhyperinvconc)  {
-        dposomhypermean = indposomhypermean;
-        dposomhyperinvshape = indposomhyperinvshape;
+    void SetOmegaMixtureHyperParameters(double inposwhypermean, double inposwhyperinvconc,
+            double indposomhypermean, double indposomhyperinvshape) {
         poswhypermean = inposwhypermean;
         poswhyperinvconc = inposwhyperinvconc;
+        dposomhypermean = indposomhypermean;
+        dposomhyperinvshape = indposomhyperinvshape;
     }
 
     void SetOmegaMixtureArrays() {
@@ -331,7 +331,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
         if (myid) {
             dposomarray->PriorResample(*poswarray);
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->SetOmegaMixtureParameters((*dposomarray)[gene], (*poswarray)[gene]);
+                geneprocess[gene]->SetOmegaMixtureParameters((*poswarray)[gene], (*dposomarray)[gene]);
             }
         }
 
@@ -1089,6 +1089,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
     void MoveGeneOmegaMixtureParameters() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveOmega();
+            geneprocess[gene]->GetOmegaMixtureParameters((*poswarray)[gene], (*dposomarray)[gene]);
         }
     }
 
