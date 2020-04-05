@@ -292,8 +292,12 @@ double CodonM2aModel::PathSuffStatLogProb() const {
     return componentpathsuffstatarray->GetLogProb(*componentcodonmatrixarray);
 }
 
-double CodonM2aModel::OmegaPathSuffStatLogProb() const {
+void CodonM2aModel::UpdateOmegaMixture()    {
     componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
+}
+
+double CodonM2aModel::OmegaPathSuffStatLogProb() const {
+    // componentomegaarray->SetParameters(purom, dposom + 1, purw, posw);
     return componentomegaarray->GetPostProbArray(*siteomegapathsuffstatarray, sitepostprobarray);
 }
 
@@ -425,14 +429,13 @@ void CodonM2aModel::MoveParameters(int nrep) {
         MoveOmega();
 
         if (!FixedNucRates()) {
-            UpdateMatrices();
             MoveNucRates();
         }
     }
 }
 
 void CodonM2aModel::ResampleSub(double frac) {
-    UpdateMatrices();
+    // UpdateMatrices();
     phyloprocess->Move(frac);
 }
 
@@ -486,17 +489,17 @@ void CodonM2aModel::MoveOmega() {
     CollectOmegaPathSuffStat();
 
     if (puromhyperinvconc)  {
-        SlidingMove(purom, 0.1, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+        SlidingMove(purom, 0.1, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::UpdateOmegaMixture, this);
     }
     if (purwhyperinvconc)   {
-        SlidingMove(purw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+        SlidingMove(purw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::UpdateOmegaMixture, this);
     }
     if (pi != 0) {
         if (dposomhyperinvshape)    {
-            ScalingMove(dposom, 1.0, 10, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate, this);
+            ScalingMove(dposom, 1.0, 10, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::UpdateOmegaMixture, this);
         }
         if (poswhyperinvconc)   {
-            SlidingMove(posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::NoUpdate,
+            SlidingMove(posw, 1.0, 10, 0, 1, &CodonM2aModel::OmegaLogProb, &CodonM2aModel::UpdateOmegaMixture,
                     this);
         }
     }
@@ -504,6 +507,7 @@ void CodonM2aModel::MoveOmega() {
         SwitchPosWeight(10);
     }
     ResampleAlloc();
+    UpdateCodonMatrices();
 }
 
 void CodonM2aModel::CollectOmegaPathSuffStat() {
@@ -529,12 +533,14 @@ double CodonM2aModel::SwitchPosWeight(int nrep) {
             double beta = (1 - poswhypermean) / poswhyperinvconc;
             posw = Random::BetaSample(alpha, beta);
         }
+        UpdateOmegaMixture();
         deltalogprob += PosSwitchLogPrior() + OmegaPathSuffStatLogProb();
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (accepted) {
             nacc++;
         } else {
             posw = bkposw;
+            UpdateOmegaMixture();
         }
         ntot++;
     }

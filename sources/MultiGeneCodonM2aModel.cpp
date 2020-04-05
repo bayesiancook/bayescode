@@ -333,14 +333,6 @@ void MultiGeneCodonM2aModel::SetMixtureArrays() {
     double dposombeta = dposomalpha / dposomhypermean;
     dposomarray->SetShape(dposomalpha);
     dposomarray->SetScale(dposombeta);
-    if (myid) {
-        dposomarray->PriorResample(*poswarray);
-        // necessary after changing some dposom values
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetMixtureParameters((*puromarray)[gene], (*dposomarray)[gene],
-                                                    (*purwarray)[gene], (*poswarray)[gene]);
-        }
-    }
 
     double purwalpha = purwhypermean / purwhyperinvconc;
     double purwbeta = (1 - purwhypermean) / purwhyperinvconc;
@@ -352,6 +344,17 @@ void MultiGeneCodonM2aModel::SetMixtureArrays() {
     poswarray->SetPi(pi);
     poswarray->SetAlpha(poswalpha);
     poswarray->SetBeta(poswbeta);
+}
+
+void MultiGeneCodonM2aModel::ResampleEmptyOmegas() {
+
+    // resample dposom from the prior, for those genes for which posw == 0
+    dposomarray->PriorResample(*poswarray);
+    // notify the gene processes of this change
+    for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        geneprocess[gene]->SetMixtureParameters((*puromarray)[gene], (*dposomarray)[gene],
+                                                (*purwarray)[gene], (*poswarray)[gene]);
+    }
 }
 
 //-------------------
@@ -601,8 +604,6 @@ double MultiGeneCodonM2aModel::GetLogPrior() const {
 
     // mixture
     total += MixtureHyperLogPrior();
-    // already accounted for by gene component
-    // total += MixtureLogPrior();
 
     return total;
 }
@@ -746,7 +747,7 @@ void MultiGeneCodonM2aModel::SlaveMove() {
         // mixture hyperparameters
         SlaveSendMixtureHyperSuffStat();
         SlaveReceiveMixtureHyperParameters();
-        SetMixtureArrays();
+        ResampleEmptyOmegas();
 
         // global branch lengths, or gene branch lengths hyperparameters
         if (blmode == 2) {
@@ -797,7 +798,10 @@ void MultiGeneCodonM2aModel::GeneResampleSub(double frac) {
 
 void MultiGeneCodonM2aModel::MoveGeneParameters(int nrep) {
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
+        // move gene-specific parameters
         geneprocess[gene]->MoveParameters(nrep);
+
+        // collect new parameter values across genes (at the level of the slave)
         geneprocess[gene]->GetMixtureParameters((*puromarray)[gene], (*dposomarray)[gene],
                                                 (*purwarray)[gene], (*poswarray)[gene]);
         if (blmode != 2) {
@@ -868,10 +872,6 @@ double MultiGeneCodonM2aModel::GeneBranchLengthsHyperSuffStatLogProb(int gene, i
 
     double alpha = 1.0 / blhyperinvshape;
     double beta = alpha / branchlength->GetVal(branch);
-    /*
-    double alpha = branchlengtharray->GetVal(gene).GetAlpha(branch);
-    double beta = branchlengtharray->GetVal(gene).GetBeta(branch);
-    */
 
     return alpha * log(beta) - Random::logGamma(alpha) + Random::logGamma(alpha + count) - (alpha + count) * log(beta + b);
 }
@@ -1018,7 +1018,7 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
     }
 
     if (poswmode == 1) {
-	MovePoswHyper();
+        MovePoswHyper();
     }
 
     if (purwmode == 1) {
@@ -1037,6 +1037,7 @@ void MultiGeneCodonM2aModel::MoveMixtureHyperParameters() {
             ResamplePi();
         }
     }
+    SetMixtureArrays();
 }
 
 void MultiGeneCodonM2aModel::MovePoswHyper()	{
@@ -1120,6 +1121,9 @@ void MultiGeneCodonM2aModel::MasterSendBranchLengthsHyperParameters() {
 
 void MultiGeneCodonM2aModel::SlaveReceiveBranchLengthsHyperParameters() {
     SlaveReceiveGlobal(*branchlength, blhyperinvshape);
+    if (blmode == 1) {
+        branchlengtharray->SetShape(1.0 / blhyperinvshape);
+    }
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
     }
@@ -1231,9 +1235,17 @@ void MultiGeneCodonM2aModel::MasterReceiveGeneNucRates() {
     MasterReceiveGeneArray(*nucrelratearray, *nucstatarray);
 }
 
+void MultiGeneCodonM2aModel::MasterSendNucRatesHyperParameters() {
+    MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
+    MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
+}
+
 void MultiGeneCodonM2aModel::SlaveReceiveNucRatesHyperParameters() {
     SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
     SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
+
+    nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
+    nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter, nucrelratehyperinvconc,
@@ -1281,7 +1293,7 @@ void MultiGeneCodonM2aModel::MasterSendMixtureHyperParameters() { MasterSendGlob
 
 void MultiGeneCodonM2aModel::SlaveReceiveMixtureHyperParameters() {
     SlaveReceiveGlobal(mixhyperparam);
-
+    SetMixtureArrays();
     for (int gene = 0; gene < GetLocalNgene(); gene++) {
         geneprocess[gene]->SetMixtureHyperParameters(
             puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape, pi,
@@ -1289,10 +1301,6 @@ void MultiGeneCodonM2aModel::SlaveReceiveMixtureHyperParameters() {
     }
 }
 
-void MultiGeneCodonM2aModel::MasterSendNucRatesHyperParameters() {
-    MasterSendGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
-    MasterSendGlobal(nucstathypercenter, nucstathyperinvconc);
-}
 void MultiGeneCodonM2aModel::SlaveSendMixtureHyperSuffStat() {
     puromsuffstat.Clear();
     puromarray->AddSuffStat(puromsuffstat);

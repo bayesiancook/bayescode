@@ -203,6 +203,8 @@ class CodonM2aModel : public ProbModel {
     //! Just successive calls to UpdateNucMatrix() and then UpdateCodonMatrices();
     void UpdateMatrices();
 
+    void UpdateOmegaMixture();
+
     //! \brief dummy function that does not do anything.
     //!
     //! Used for the templates of ScalingMove, SlidingMove and ProfileMove
