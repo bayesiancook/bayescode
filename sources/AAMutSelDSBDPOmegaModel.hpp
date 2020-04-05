@@ -581,6 +581,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         componentcodonmatrixarray->UpdateCodonMatrices();
     }
 
+    void UpdateCodonMatrices(const Permutation& permut)   {
+        for (int i=0; i<Ncat; i++)  {
+            if (permut.GetVal(i) != i) {
+                UpdateCodonMatrix(i);
+            }
+        }
+    }
+
     //! \brief tell codon matrix k that its parameters have changed and that it
     //! should be updated
     void UpdateCodonMatrix(int k) { (*componentcodonmatrixarray)[k].CorruptMatrix(); }
@@ -923,7 +931,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! Gibbs resample substitution mappings conditional on current parameter
     //! configuration
     void ResampleSub(double frac) {
-        UpdateMatrices();
+        // UpdateMatrices();
         phyloprocess->Move(frac);
     }
 
@@ -1203,14 +1211,16 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     //! MCMC module for the mixture amino-acid fitness profiles
     void MoveAAMixture(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
+
             MoveAAProfiles();
             ResampleEmptyComponents();
+
             ResampleAlloc();
             LabelSwitchingMove();
+            CollectComponentPathSuffStat();
+
             ResampleWeights();
             MoveKappa();
-            CollectComponentPathSuffStat();
-            UpdateCodonMatrices();
         }
     }
 
@@ -1410,6 +1420,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         weight->LabelSwitchingMove(5, *occupancy, permut);
         sitealloc->Permute(permut);
         componentaafitnessarray->Permute(permut);
+        UpdateCodonMatrices(permut);
     }
 
     //! Gibbs resample mixture weights (based on occupancy suff stats)

@@ -339,14 +339,24 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     }
 
     void FastUpdate() {
+        UpdateBranchLengths();
+        UpdateNucRates();
+        UpdateOmegaMixture();
+    }
+
+    void UpdateBranchLengths()  {
         branchlength->SetScale(lambda);
         if (blmode == 1) {
             branchlengtharray->SetShape(1.0 / blhyperinvshape);
         }
+    }
 
+    void UpdateNucRates()   {
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+    }
 
+    void UpdateOmegaMixture()   {
         if (omegaprior == 0) {
             double alpha = 1.0 / omegahyperinvshape;
             double beta = alpha / omegahypermean;
@@ -1419,8 +1429,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                     &MultiGeneAAMutSelDSBDPOmegaModel::NucRatesHyperLogProb,
                     &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
 
-        nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
-        nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+        UpdateNucRates();
     }
 
     void MoveOmegaHyperParameters() {
@@ -1551,6 +1560,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void SlaveReceiveBranchLengthsHyperParameters() {
         SlaveReceiveGlobal(*branchlength, blhyperinvshape);
+        UpdateBranchLengths();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetBranchLengthsHyperParameters(*branchlength, blhyperinvshape);
         }
@@ -1595,6 +1605,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void SlaveReceiveNucRatesHyperParameters() {
         SlaveReceiveGlobal(nucrelratehypercenter, nucrelratehyperinvconc);
         SlaveReceiveGlobal(nucstathypercenter, nucstathyperinvconc);
+        UpdateNucRates();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRatesHyperParameters(nucrelratehypercenter,
                                                           nucrelratehyperinvconc,
@@ -1686,12 +1697,26 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void SlaveReceiveOmegaHyperParameters() {
         if (omegaprior == 0) {
             SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
+            double alpha = 1.0 / omegahyperinvshape;
+            double beta = alpha / omegahypermean;
+            omegaarray->SetShape(alpha);
+            omegaarray->SetScale(beta);
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
             }
         } else {
             SlaveReceiveGlobal(dposompi);
             SlaveReceiveGlobal(dposomhypermean, dposomhyperinvshape);
+            if ((omegaprior == 1) || (omegaprior == 2)) {
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                gammadposomarray->SetPi(dposompi);
+                gammadposomarray->SetShape(alpha);
+                gammadposomarray->SetScale(beta);
+            } else if (omegaprior == 3) {
+                cauchydposomarray->SetPi(dposompi);
+                cauchydposomarray->SetGamma(1.0 / dposomhyperinvshape);
+            }
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                             dposomhyperinvshape);
