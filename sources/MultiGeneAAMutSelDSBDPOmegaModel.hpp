@@ -525,9 +525,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << "meanomega\t";
                 os << "varomega\t";
             } else if ((omegaprior == 1) || (omegaprior == 2))  {
-                os << "npos\tposmean\tdposom_pi\tmeandposom\tinvshape\t";
+                os << "npos\tdposom_pi\tmeandposom\tinvshape\t";
             } else  {
-                os << "npos\tposmean\tdposom_pi\tcauchyinvshape\t";
+                os << "npos\tdposom_pi\tcauchyinvshape\t";
             }
         }
         if (Ncat > 1) {
@@ -571,11 +571,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << omegaarray->GetVar() << '\t';
             } else if ((omegaprior == 1) || (omegaprior == 2))  {
                 os << gammadposomarray->GetNpos() << '\t';
-                os << gammadposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
             } else if (omegaprior == 3) {
                 os << cauchydposomarray->GetNpos() << '\t';
-                os << cauchydposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhyperinvshape << '\t';
             }
         }
