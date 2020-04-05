@@ -41,10 +41,12 @@ class MechM2aMix : public SimpleArray<double> {
             postprob[cat] /= tot;
         }
         double ret = log(tot) + max;
+        /*
         if (std::isinf(ret)) {
             cerr << "ret is inf: " << tot << '\t' << max << '\n';
             exit(1);
         }
+        */
         if (std::isnan(ret)) {
             cerr << "ret is nan: " << tot << '\t' << max << '\n';
             for (int cat = 0; cat < GetSize(); cat++) {
