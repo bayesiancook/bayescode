@@ -46,7 +46,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     DirichletSuffStat nucstatsuffstat;
 
     // omega*: iid gamma across genes
-    double maxomega;
+    double maxdposom;
     double omegahypermean;
     double omegahyperinvshape;
     IIDGamma *omegaarray;
@@ -114,7 +114,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     MultiGeneAAMutSelDSBDPOmegaModel(string indatafile, string intreefile, int inNcat, int inbaseNcat,
                                      int inblmode, int innucmode, int inbasemode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
-                                     double indposompihyperinvconc, double inmaxomega, int inmyid, int innprocs)
+                                     double indposompihyperinvconc, double inmaxdposom, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
 
         datafile = indatafile;
@@ -145,7 +145,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         modalprior = inmodalprior;
         dposompihypermean = indposompihypermean;
         dposompihyperinvconc = indposompihyperinvconc;
-        maxomega = inmaxomega;
+        maxdposom = inmaxdposom;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -223,10 +223,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
             for (int i = 0; i < GetLocalNgene(); i++) {
                 (*gammadposomarray)[i] = 0;
             }
-            if (maxomega)   {
+            if (maxdposom)   {
                 for (int i = 0; i < GetLocalNgene(); i++) {
-                    if ((*gammadposomarray)[i] > maxomega)    {
-                        (*gammadposomarray)[i] = maxomega;
+                    if ((*gammadposomarray)[i] > maxdposom)    {
+                        (*gammadposomarray)[i] = maxdposom;
                     }
                 }
             }
@@ -332,7 +332,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
                 geneprocess[gene]->SetBaseMode(basemode);
-                geneprocess[gene]->SetMaxOmega(maxomega);
+                geneprocess[gene]->SetMaxDPosOm(maxdposom);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -535,9 +535,9 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << "meanomega\t";
                 os << "varomega\t";
             } else if ((omegaprior == 1) || (omegaprior == 2))  {
-                os << "npos\tdposom_pi\tmeandposom\tinvshape\t";
+                os << "npos\tposmean\tdposom_pi\tmeandposom\tinvshape\t";
             } else  {
-                os << "npos\tdposom_pi\tcauchyinvshape\t";
+                os << "npos\tposmean\tdposom_pi\tcauchyinvshape\t";
             }
         }
         if (Ncat > 1) {
@@ -581,9 +581,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 os << omegaarray->GetVar() << '\t';
             } else if ((omegaprior == 1) || (omegaprior == 2))  {
                 os << gammadposomarray->GetNpos() << '\t';
+                os << gammadposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
             } else if (omegaprior == 3) {
                 os << cauchydposomarray->GetNpos() << '\t';
+                os << cauchydposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhyperinvshape << '\t';
             }
         }

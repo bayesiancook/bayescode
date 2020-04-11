@@ -14,6 +14,7 @@ class AAMutSelDSBDPOmegaChain : public Chain {
     string modeltype, datafile, treefile;
     int omegamode, omegaprior;
     double dposompi, dposomhypermean, dposomhyperinvshape;
+    double maxdposom;
     int Ncat, baseNcat;
 
   public:
@@ -23,7 +24,8 @@ class AAMutSelDSBDPOmegaChain : public Chain {
 
     AAMutSelDSBDPOmegaChain(string indatafile, string intreefile, int inomegamode, int inomegaprior,
                             double indposompi, double indposomhypermean,
-                            double indposomhyperinvshape, int inNcat, int inbaseNcat, int inevery,
+                            double indposomhyperinvshape, double inmaxdposom,
+                            int inNcat, int inbaseNcat, int inevery,
                             int inuntil, string inname, int force)
         : modeltype("AAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
@@ -33,6 +35,7 @@ class AAMutSelDSBDPOmegaChain : public Chain {
           dposompi(indposompi),
           dposomhypermean(indposomhypermean),
           dposomhyperinvshape(indposomhyperinvshape),
+          maxdposom(inmaxdposom),
           Ncat(inNcat),
           baseNcat(inbaseNcat) {
         every = inevery;
@@ -51,7 +54,9 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         cerr << "new model\n";
         model =
             new AAMutSelDSBDPOmegaModel(datafile, treefile, omegamode, omegaprior, Ncat, baseNcat);
-        if (omegaprior == 1) {
+        if (omegaprior != 0) {
+            GetModel()->SetMaxDPosOm(maxdposom);
+
             GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean, dposomhyperinvshape);
         }
         cerr << "allocate\n";
@@ -72,7 +77,7 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape;
+        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >> maxdposom;
         is >> Ncat >> baseNcat;
         int tmp;
         is >> tmp;
@@ -85,7 +90,8 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
             model = new AAMutSelDSBDPOmegaModel(datafile, treefile, omegamode, omegaprior, Ncat,
                                                 baseNcat);
-            if (omegaprior == 1) {
+            if (omegaprior != 0) {
+                GetModel()->SetMaxDPosOm(maxdposom);
                 GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                      dposomhyperinvshape);
             }
@@ -105,8 +111,9 @@ class AAMutSelDSBDPOmegaChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
-        param_os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean
-                 << '\t' << dposomhyperinvshape << '\n';
+        param_os << omegamode << '\t' << omegaprior;
+        param_os << '\t' << dposompi << '\t' << dposomhypermean;
+        param_os << '\t' << dposomhyperinvshape << '\t' << maxdposom << '\n';
         param_os << Ncat << '\t' << baseNcat << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -135,6 +142,7 @@ int main(int argc, char *argv[]) {
         double dposompi = 0.1;
         double dposomhypermean = 1.0;
         double dposomhyperinvshape = 0.5;
+        double maxdposom = 0;
         name = "";
         int force = 1;
         int every = 1;
@@ -163,6 +171,9 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-basencat") {
                     i++;
                     baseNcat = atoi(argv[i]);
+                } else if (s == "-maxdposom")   {
+                    i++;
+                    maxdposom = atof(argv[i]);
                 } else if (s == "-fixomega") {
                     omegamode = 3;
                 } else if (s == "-freeomega") {
@@ -217,7 +228,7 @@ int main(int argc, char *argv[]) {
         }
 
         chain = new AAMutSelDSBDPOmegaChain(datafile, treefile, omegamode, omegaprior, dposompi,
-                                            dposomhypermean, dposomhyperinvshape, Ncat, baseNcat,
+                                            dposomhypermean, dposomhyperinvshape, maxdposom, Ncat, baseNcat,
                                             every, until, name, force);
     }
 

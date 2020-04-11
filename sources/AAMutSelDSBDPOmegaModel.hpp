@@ -97,7 +97,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double omega;
     OmegaPathSuffStat omegapathsuffstat;
 
-    double maxomega;
+    double maxdposom;
 
     // base distribution G0 is itself a stick-breaking mixture of Dirichlet
     // distributions
@@ -202,7 +202,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basemode = 0;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
-        maxomega = 0;
+        maxdposom = 0;
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -260,7 +260,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         basemode = 0;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
-        maxomega = 0;
+        maxdposom = 0;
 
         codondata = incodondata;
 
@@ -304,8 +304,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         // Allocate();
     }
 
-    void SetMaxOmega(double inmax)  {
-        maxomega = inmax;
+    void SetMaxDPosOm(double inmax)  {
+        maxdposom = inmax;
     }
 
     //! \brief set estimation method for branch lengths
@@ -753,7 +753,11 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             } else {
                 ret = log(dposompi);
                 double gamma = 1.0 / dposomhyperinvshape;
-                ret -= log(Pi) + log(gamma) + log(1 + (dposom/gamma)*(dposom/gamma));
+                // truncated Cauchy, both sides (0,maxdposom)
+                ret += log(Pi * gamma * (1 + (dposom/gamma)*(dposom/gamma)));
+                if (maxdposom)  {
+                    ret -= log(2.0 / Pi * atan(maxdposom/gamma));
+                }
             }
         } else {
             cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
@@ -1041,7 +1045,8 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             dposom *= e;
             deltalogprob += OmegaLogProb(dposom);
             deltalogprob += m;
-            int acc = (log(Random::Uniform()) < deltalogprob);
+            int acc = (log(Random::Uniform()) < deltalogprob)
+                && ((!maxdposom) || (dposom < maxdposom));
             if (acc)    {
                 nacc++;
             }
@@ -1065,7 +1070,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             double beta = alpha / dposomhypermean;
             do  {
                 ret = Random::Gamma(alpha, beta);
-            } while ((maxomega > 0) && (ret > maxomega));
+            } while ((maxdposom > 0) && (ret > maxdposom));
             if (!ret) {
                  ret = 1e-5;
             }
@@ -1075,7 +1080,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             double beta = alpha / dposomhypermean;
             do  {
                 ret = exp(Random::Gamma(alpha, beta)) - 1;
-            } while ((maxomega > 0) && (ret > maxomega));
+            } while ((maxdposom > 0) && (ret > maxdposom));
             if (!ret) {
                  ret = 1e-5;
             }
@@ -1084,7 +1089,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             double gamma = 1.0 / dposomhyperinvshape;
             do  {
                 ret = gamma * tan(Pi * Random::Uniform() / 2);
-            } while ((maxomega > 0) && (ret > maxomega));
+            } while ((maxdposom > 0) && (ret > maxdposom));
         }
         return ret;
     }
