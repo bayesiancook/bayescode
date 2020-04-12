@@ -7,7 +7,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= multigeneaamutselm2 aamutselm2 discselac multigenediscselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -100,6 +100,10 @@ $(PROGSDIR)/discselac$(EXEEXT): DiscSelAC.o $(OBJS)
 selac$(EXEEXT): $(PROGSDIR)/selac$(EXEEXT)
 $(PROGSDIR)/selac$(EXEEXT): SelACOmega.o $(OBJS)
 	$(CC) SelACOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+fastselac$(EXEEXT): $(PROGSDIR)/fastselac$(EXEEXT)
+$(PROGSDIR)/fastselac$(EXEEXT): FastSelAC.o $(OBJS)
+	$(CC) FastSelAC.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readaamutselddp$(EXEEXT): $(PROGSDIR)/readaamutselddp$(EXEEXT)
 $(PROGSDIR)/readaamutselddp$(EXEEXT): ReadAAMutSelDSBDPOmega.o $(OBJS)
