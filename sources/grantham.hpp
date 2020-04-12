@@ -13,7 +13,9 @@ const double grantham_pol[] = {8.1,5.5,13.0,12.3,5.2,9.0,10.4,5.2,11.3,4.9,5.7,1
 const double grantham_vol[] = {31,55,54,83,132,3,96,111,119,111,105,56,32.5,85,124,32,61,84,170,136};
 
 // associated weights
-const double grantham_wcom = 1.833; // 0.459 in Beaulieu et al
+const double grantham_wcom = 1.833;
+// 0.459 in Beaulieu et al
+const double grantham_wcom_selac = 0.459;
 const double grantham_wpol = 0.1018;
 const double grantham_wvol = 0.000399;
 
