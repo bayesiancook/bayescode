@@ -231,9 +231,19 @@ class FastSelACModel : public ProbModel {
         return diff;
     }
 
+    double GetLogPrior() const {
+        double tot = 0;
+        for (int i=0; i<Naarr; i++) {
+            tot -= aadist[i];
+        }
+        tot -= log(psi);
+        tot -= log(Ginvshape);
+        return tot;
+    }
+
     double GetLogProb() const override {
         double diff = GetMSD();
-        return - diff * diff / 2 / epsilon / epsilon;
+        return GetLogPrior() - diff * diff / 2 / epsilon / epsilon;
     }
 
     // moving
@@ -243,16 +253,26 @@ class FastSelACModel : public ProbModel {
         MoveAAWeight();
         MoveGinvshape();
         MovePsi();
+        AAPsiCompMove(1,10);
+        AAPsiCompMove(0.1,10);
         return 1.0;
     }
 
     double MoveAADist() {
+        int nrep = 50;
+        for (int i=0; i<nrep; i++) {
+            int j = (int) (Naarr * Random::Uniform());
+            aadist_acc[0] += ScalingMove(aadist[j], 1.00, 1, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+            aadist_tot[0] ++;
+        }
+        /*
         aadist_acc[0] += ProfileMove(aadist, 1.00, 1, 10, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         aadist_tot[0] ++;
         aadist_acc[1] += ProfileMove(aadist, 0.3, 3, 10, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         aadist_tot[1] ++;
         aadist_acc[2] += ProfileMove(aadist, 0.1, 3, 10, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         aadist_tot[2] ++;
+        */
         return 1.0;
     }
 
@@ -286,7 +306,37 @@ class FastSelACModel : public ProbModel {
         return 1.0;
     }
 
-    // tracing 
+    double AAPsiCompMove(double tuning, int nrep)    {
+
+        double nacc = 0;
+        double ntot = 0;
+
+        for (int rep=0; rep<nrep; rep++)    {
+            double delta = -GetLogPrior();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            psi /= e;
+            for (int i=0; i<Naarr; i++) {
+                aadist[i] *= e;
+            }
+            delta += GetLogPrior();
+            delta += (Naarr-1)*m;
+
+            int accepted = (log(Random::Uniform()) < delta);
+            if (accepted) {
+                nacc++;
+            } else {
+                psi *= e;
+                for (int i=0; i<Naarr; i++) {
+                    aadist[i] /= e;
+                }
+            }
+            ntot++;
+        }
+
+        Update();
+        return nacc / ntot;
+    }
 
     double GetMeanAAEntropy() const {
         double m1 = 0;
@@ -298,6 +348,15 @@ class FastSelACModel : public ProbModel {
             }
         }
         return m1 / m0;
+    }
+
+    double GetMeanAADist() const {
+        double m1 = 0;
+        for (int i=0; i<Naarr; i++) {
+            m1 += aadist[i];
+        }
+        m1 /= Naarr;
+        return m1;
     }
 
     double GetVarAADist() const {
@@ -314,13 +373,14 @@ class FastSelACModel : public ProbModel {
     }
 
     void TraceHeader(ostream &os) const override {
-        os << "#logprob\tGinvshape\tpsi\tvaraa\taaweight\taaent\tomega\tvaromega\n";
+        os << "#logprob\tGinvshape\tpsi\tmeanaa\tvaraa\taaweight\taaent\tomega\tvaromega\n";
     }
 
     void Trace(ostream& os) const override {
         os << GetLogProb() << '\t';
         os << Ginvshape << '\t';
         os << psi << '\t';
+        os << GetMeanAADist() << '\t';
         os << GetVarAADist() << '\t';
         os << Random::GetEntropy(aaweight) << '\t';
         os << GetMeanAAEntropy() << '\t';
