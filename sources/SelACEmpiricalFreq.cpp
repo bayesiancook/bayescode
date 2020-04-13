@@ -61,6 +61,7 @@ int main(int argc, char* argv[])    {
         weight[i] /= tot;
     }
 
+    os << Naa << '\n';
     for (int i=0; i<Naa; i++)   {
         os << weight[i];
         for (int j=0; j<Naa; j++)   {
