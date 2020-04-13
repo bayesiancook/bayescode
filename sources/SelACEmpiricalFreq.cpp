@@ -17,6 +17,7 @@ int main(int argc, char* argv[])    {
     for (int g=0; g<Ngene; g++) {
         string datafile;
         is >> datafile;
+        cerr << datafile << '\n';
         auto data = new FileSequenceAlignment(datafile);
         if (data->GetNsite() % 3) {
             cerr << "error : not a correctly formatted codon-alignment: " << datafile << '\n';
