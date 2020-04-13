@@ -507,6 +507,7 @@ class FastSelACModel : public ProbModel {
 
     void FromStream(istream &is) override {
         is >> Ginvshape;
+        is >> psi;
         for (int i=0; i<Naa; i++)   {
             is >> aaweight[i];
         }
@@ -517,6 +518,7 @@ class FastSelACModel : public ProbModel {
 
     void ToStream(ostream &os) const override {
         os << Ginvshape;
+        os << '\t' << psi;
         for (int i=0; i<Naa; i++)   {
             os << '\t' << aaweight[i];
         }

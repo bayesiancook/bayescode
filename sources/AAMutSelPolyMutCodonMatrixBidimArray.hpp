@@ -108,6 +108,34 @@ class AAMutSelPolyMutCodonMatrixBidimArray : public BidimArray<SubMatrix>,
         }
     }
 
+    // assuming uniform weights
+    void GetMeanAAFrequencies(vector<vector<double>>& compaafreq) const {
+
+        if (GetNrow() != Naa)   {
+            cerr << "error in get mean aa freqs\n";
+            exit(1);
+        }
+
+        for (int a=0; a<Naa; a++)   {
+            for (int b=0; b<Naa; b++)   {
+                compaafreq[a][b] = 0;
+            }
+        }
+        for (int i = 0; i < GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                const AAMutSelPolyMutOmegaCodonSubMatrix& mat = GetVal(i,j);
+                for (int k=0; k<mat.GetNstate(); k++)   {
+                    compaafreq[i][mat.GetCodonStateSpace()->Translation(k)] += mat.Stationary(k);
+                }
+            }
+        }
+        for (int i = 0; i < GetNrow(); i++) {
+            for (int a=0; a<Naa; a++)   {
+                compaafreq[i][a] /= GetNcol();
+            }
+        }
+    }
+
   private:
     const BidimSelector<vector<double>> &fitnessarray;
     const CodonStateSpace &codonstatespace;
