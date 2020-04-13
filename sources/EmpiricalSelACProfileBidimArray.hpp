@@ -45,15 +45,10 @@ class EmpiricalSelACProfileBidimArray : public SimpleBidimArray<vector<double> >
         vector<double>& v = (*this)(i,j);
         double tot = 0;
         for (int a=0; a<Naa; a++)   {
-            if (a == i) {
-                v[a] = 1.0;
-            }
-            else    {
-                double tmp = psi * G[j] * log(aafitness[i][a]);
-                v[a] = 1e-8;
-                if (tmp < 100)  {
-                    v[a] += exp(tmp);
-                }
+            double tmp = psi * G[j] * log(aafitness[i][a]);
+            v[a] = 1e-50;
+            if (tmp < 100)  {
+                v[a] += exp(tmp);
             }
             tot += v[a];
         }
