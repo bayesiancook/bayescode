@@ -161,6 +161,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
             GetModel()->SetModalMixturePrior(modalprior);
+            GetModel()->SetBurnin(20);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

@@ -167,6 +167,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void SetBurnin(double in)   {
+        burnin = in;
+    }
+
     void Allocate() {
         lambda = 10;
         branchlength = new BranchIIDGamma(*tree, 1.0, lambda);

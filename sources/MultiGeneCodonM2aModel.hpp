@@ -96,6 +96,10 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
                                    double inpurwhypermean, double inpurwhyperinvconc,
                                    double inposwhypermean, double inposwhyperinvconc);
 
+    void SetBurnin(double in)   {
+        burnin = in;
+    }
+
     void UpdateNucMatrix();
     void SetMixtureArrays();
 
