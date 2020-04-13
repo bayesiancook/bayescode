@@ -34,6 +34,8 @@ class CodonSequenceAlignment : public SequenceAlignment {
     double GetMeanDiff() const;
     double GetMeanEmpiricaldNdS() const;
 
+    vector<vector<int>> GetSiteAAEmpiricalCounts() const;
+
   private:
     void ToStream(std::ostream &os, int pos);
     SequenceAlignment *DNAsource;

@@ -196,4 +196,17 @@ double CodonSequenceAlignment::GetMeanEmpiricaldNdS() const {
     return meanndiff/meandiff/2.5;
 }
 
+vector<vector<int>> CodonSequenceAlignment::GetSiteAAEmpiricalCounts() const {
+    vector<vector<int>> count(GetNsite(), vector<int>(Naa, 0));
+    for (int i=0; i<GetNsite(); i++)    {
+        for (int j=0; j<GetNtaxa(); j++)    {
+            if (Data[j][i] != unknown)  {
+                count[i][GetCodonStateSpace()->Translation(Data[j][i])]++;
+            }
+        }
+    }
+    return count;
+}
+
+
 
