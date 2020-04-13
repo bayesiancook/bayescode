@@ -113,7 +113,7 @@ class FastSelACModel : public ProbModel {
 
         // allocate
         nucmatrix = new HKYSubMatrix(kappa,gamma);
-        Ginvshape = 1.0;
+        Ginvshape = 2.0;
         G.assign(Gcat, 1.0/Gcat);
         UpdateG();
         psi = 1.0;
@@ -128,6 +128,10 @@ class FastSelACModel : public ProbModel {
         UpdateGrantham(grantham_wcom_selac, grantham_wpol, grantham_wvol);
 
         aaweight.assign(Naa, 1.0/Naa);
+        for (int i=0; i<Naa; i++)   {
+            aaweight[i] = LG_Stat[i];
+        }
+
         Gweight.assign(Gcat, 1.0/Gcat);
 
         selacprofiles = new SelACProfileBidimArray(aadist,G,psi);
@@ -210,6 +214,23 @@ class FastSelACModel : public ProbModel {
         ComputeSummaryStatistics();
     }
 
+    void Update(int a, int b)  {
+
+        selacprofiles->UpdateRow(a);
+        selacprofiles->UpdateRow(b);
+        meancodonmatrix->DenormalizeByStat();
+        meancodonmatrix->AddRow(a,-1);
+        meancodonmatrix->AddRow(b,-1);
+        codonmatrices->CorruptRow(a);
+        codonmatrices->CorruptRow(b);
+        meancodonmatrix->AddRow(a,+1);
+        meancodonmatrix->AddRow(b,+1);
+        meancodonmatrix->NormalizeByStat();
+
+        aamatrix->ComputeFullArray();
+        ComputeSummaryStatistics();
+    }
+
     double GetMSD() const {
         double diff = 0;
         double tmp = 100*(obsmeanomega - predmeanomega)/obsmeanomega;
@@ -217,7 +238,7 @@ class FastSelACModel : public ProbModel {
         tmp = 100*(obsrelvaromega - predrelvaromega)/obsrelvaromega;
         diff += tmp*tmp;
         for (int i=0; i<Naa; i++)   {
-            tmp = 200 * (obsaafreq[i] - predaafreq[i]);
+            tmp = 20 * (obsaafreq[i] - predaafreq[i]);
             diff += tmp*tmp;
         }
         double obstot = 0;
@@ -249,19 +270,53 @@ class FastSelACModel : public ProbModel {
     // moving
 
     double Move() override {
-        MoveAADist();
-        MoveAAWeight();
-        MoveGinvshape();
+        aadist_acc[0] += FastMoveAADist(200,1.0);
+        aadist_tot[0] ++;
+        // MoveAADist();
+        // MoveAAWeight();
+        // MoveGinvshape();
         MovePsi();
         AAPsiCompMove(1,10);
         AAPsiCompMove(0.1,10);
         return 1.0;
     }
 
+    double FastMoveAADist(int nrep, double tuning) {
+        double nacc = 0;
+        double ntot = 0;
+        for (int i=0; i<nrep; i++)  {
+            int a = (int) (Naa * Random::Uniform());
+            int b = (int) ((Naa-1) * Random::Uniform());
+            if (b >= a) b++;
+            int j = rrindex(a,b);
+            double delta = -GetLogProb();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            aadist[j] *= e;
+            Update(a,b);
+            delta += GetLogProb();
+            delta += m;
+            int acc = (log(Random::Uniform()) < delta);
+            if (acc)    {
+                nacc++;
+            }
+            else    {
+                aadist[j] /= e;
+                Update(a,b);
+            }
+            ntot++;
+        }
+        return nacc / ntot;
+    }
+
     double MoveAADist() {
         int nrep = 50;
         for (int i=0; i<nrep; i++) {
-            int j = (int) (Naarr * Random::Uniform());
+            // int j = (int) (Naarr * Random::Uniform());
+            int a = (int) (Naa * Random::Uniform());
+            int b = (int) ((Naa-1) * Random::Uniform());
+            if (b >= a) b++;
+            int j = rrindex(a,b);
             aadist_acc[0] += ScalingMove(aadist[j], 1.00, 1, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
             aadist_tot[0] ++;
         }
@@ -287,21 +342,21 @@ class FastSelACModel : public ProbModel {
     }
 
     double MoveGinvshape()  {
-        G_acc[0] += ScalingMove(Ginvshape, 1.0, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        G_acc[0] += ScalingMove(Ginvshape, 0.3, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         G_tot[0] ++;
-        G_acc[1] += ScalingMove(Ginvshape, 0.3, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        G_acc[1] += ScalingMove(Ginvshape, 0.03, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         G_tot[1] ++;
-        G_acc[2] += ScalingMove(Ginvshape, 0.1, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        G_acc[2] += ScalingMove(Ginvshape, 0.003, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         G_tot[2] ++;
         return 1.0;
     }
 
     double MovePsi()  {
-        psi_acc[0] += ScalingMove(psi, 1.0, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        psi_acc[0] += ScalingMove(psi, 0.3, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         psi_tot[0] ++;
-        psi_acc[1] += ScalingMove(psi, 0.3, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        psi_acc[1] += ScalingMove(psi, 0.03, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         psi_tot[1] ++;
-        psi_acc[2] += ScalingMove(psi, 0.1, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
+        psi_acc[2] += ScalingMove(psi, 0.003, 3, &FastSelACModel::GetLogProb, &FastSelACModel::Update, this);
         psi_tot[2] ++;
         return 1.0;
     }

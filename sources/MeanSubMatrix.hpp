@@ -24,6 +24,64 @@ class MeanCodonSubMatrixFromBidimArray : public virtual CodonSubMatrix    {
             // ComputeFullArray();
     }
 
+    void AddRow(int i, int sign)    {
+        if (i >= array.GetNrow())   {
+            cerr << "error in add column: overflow\n";
+            exit(1);
+        }
+        for (int j=0; j<array.GetNcol(); j++) {
+            for (int a=0; a<GetNstate(); a++) {
+                mStationary[a] += sign * rowweights[i] * colweights[j] * array.GetVal(i,j).Stationary(a);
+            }
+        }
+
+        for (int j=0; j<array.GetNcol(); j++) {
+            for (int a=0; a<GetNstate(); a++)   {
+                for (int b=0; b<GetNstate(); b++)   {
+                    Q(a,b) += sign * rowweights[i] * colweights[j] * array.GetVal(i,j).Stationary(a) * array.GetVal(i,j)(a,b);
+                }
+            }
+        }
+    }
+
+    void AddColumn(int j, int sign)    {
+        if (j >= array.GetNcol())   {
+            cerr << "error in add column: overflow\n";
+            exit(1);
+        }
+        for (int i=0; i<array.GetNrow(); i++) {
+            for (int a=0; a<GetNstate(); a++) {
+                mStationary[a] += sign * rowweights[i] * colweights[j] * array.GetVal(i,j).Stationary(a);
+            }
+        }
+
+        for (int i=0; i<array.GetNrow(); i++) {
+            for (int a=0; a<GetNstate(); a++)   {
+                for (int b=0; b<GetNstate(); b++)   {
+                    Q(a,b) += sign * rowweights[i] * colweights[j] * array.GetVal(i,j).Stationary(a) * array.GetVal(i,j)(a,b);
+                }
+            }
+        }
+    }
+
+    void DenormalizeByStat()  {
+        for (int a=0; a<GetNstate(); a++)   {
+            double stat = Stationary(a);
+            for (int b=0; b<GetNstate(); b++)   {
+                Q(a,b) *= stat;
+            }
+        }
+    }
+
+    void NormalizeByStat()    {
+        for (int a=0; a<GetNstate(); a++)   {
+            double stat = Stationary(a);
+            for (int b=0; b<GetNstate(); b++)   {
+                Q(a,b) /= stat;
+            }
+        }
+    }
+
     void ComputeFullArray() {
         ComputeStationary();
         for (int a=0; a<GetNstate(); a++)   {

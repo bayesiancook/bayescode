@@ -23,12 +23,20 @@ class SelACProfileBidimArray : public SimpleBidimArray<vector<double> > {
     }
 
     void UpdateRow(int i)   {
+        if (i > GetNrow())  {
+            cerr << "error in selac array: row overflow\n";
+            exit(1);
+        }
         for (int j = 0; j < GetNcol(); j++) {
             Update(i,j);
         }
     }
 
     void UpdateColumn(int j)   {
+        if (j > GetNcol())  {
+            cerr << "error in selac array: col overflow\n";
+            exit(1);
+        }
         for (int i = 0; i < GetNrow(); i++) {
             Update(i,j);
         }
