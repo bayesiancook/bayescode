@@ -3,7 +3,7 @@
 #include "LG.hpp"
 #include "MeanSubMatrix.hpp"
 #include "HKYSubMatrix.hpp"
-#include "SelACProfileBidimArray.hpp"
+#include "EmpiricalSelACProfileBidimArray.hpp"
 #include "AAMutSelPolyMutCodonMatrixBidimArray.hpp"
 #include "MeanSubMatrix.hpp"
 #include "AAProjectedCodonSubMatrix.hpp"
@@ -24,6 +24,7 @@ class FastEmpiricalSelACModel : public ProbModel {
     HKYSubMatrix *nucmatrix;
 
     CodonStateSpace* statespace;
+    // vector<int> aamult;
 
     // amino acid selection
     int Gcat;
@@ -36,13 +37,10 @@ class FastEmpiricalSelACModel : public ProbModel {
     vector<vector<double>> obscompaafreq;
     vector<vector<double>> predcompaafreq;
 
-    vector<double> aadist;
-    vector<double> granthaadist;
-    int Naa;
-    int Naarr;
+    vector<vector<double>> aafitness;
 
     // putting things together
-    SelACProfileBidimArray* selacprofiles;
+    EmpiricalSelACProfileBidimArray* selacprofiles;
 
     // to do with double and triple mutants
     AAMutSelPolyMutCodonMatrixBidimArray* codonmatrices;
@@ -57,8 +55,8 @@ class FastEmpiricalSelACModel : public ProbModel {
     double obsrelvaromega;
     double predrelvaromega;
 
-    vector<double> aadist_acc;
-    vector<double> aadist_tot;
+    vector<double> aafit_acc;
+    vector<double> aafit_tot;
     vector<double> G_acc;
     vector<double> G_tot;
     vector<double> psi_acc;
@@ -79,9 +77,6 @@ class FastEmpiricalSelACModel : public ProbModel {
         kappa = inkappa;
         gamma = ingamma;
         u = inu;
-
-        Naa = 20;
-        Naarr = Naa * (Naa-1) / 2;
 
         preddnds.assign(Naa, vector<double>(Gcat,0));
 
@@ -106,8 +101,8 @@ class FastEmpiricalSelACModel : public ProbModel {
         }
 
         // monitoring
-        aadist_acc.assign(3,0);
-        aadist_tot.assign(3,0.1);
+        aafit_acc.assign(1,0);
+        aafit_tot.assign(1,0.1);
         G_acc.assign(3,0);
         G_tot.assign(3,0.1);
         psi_acc.assign(3,0);
@@ -120,27 +115,27 @@ class FastEmpiricalSelACModel : public ProbModel {
         UpdateG();
         psi = 3.5;
         statespace = new CodonStateSpace(Universal);
-
-        aadist.assign(Naarr, 1.0);
-        UpdateGrantham(grantham_wcom_selac, grantham_wpol, grantham_wvol);
-        granthaadist.assign(Naarr, 1.0);
-        for (int i=0; i<Naarr; i++) {
-            granthaadist[i] = aadist[i];
-        }
         /*
-        int index = 0;
-        for (int i=0; i<Naa; i++)   {
-            for (int j=i+1; j<Naa; j++)   {
-                aadist[index] = -log(obscompaafreq[i][j] + obscompaafreq[j][i] + 0.01);
-                cerr << AminoAcids[i] << AminoAcids[j] << '\t' << aadist[index] << '\n';
-                index++;
-            }
+        aamult.assign(Naa, 0);
+        for (int i=0; i<statespace->GetNstate(); i++)   {
+            int aa = statespace->Translation(i);
+            aamult[aa]++;
+        }
+        for (int aa=0; aa<Naa; aa++)    {
+            cerr << AminoAcids[aa] << '\t' << aamult[aa] << '\n';
         }
         */
 
+        aafitness.assign(Naa, vector<double>(Naa,1.0));
+        for (int i=0; i<Naa; i++)   {
+            for (int j=0; j<Naa; j++)   {
+                aafitness[i][j] = obscompaafreq[i][j];
+            }
+        }
+
         Gweight.assign(Gcat, 1.0/Gcat);
 
-        selacprofiles = new SelACProfileBidimArray(aadist,G,psi);
+        selacprofiles = new EmpiricalSelACProfileBidimArray(aafitness,G,psi);
 
         codonmatrices = new AAMutSelPolyMutCodonMatrixBidimArray(*selacprofiles, *statespace, *nucmatrix, u, 1.0);
 
@@ -151,31 +146,6 @@ class FastEmpiricalSelACModel : public ProbModel {
 
     void UpdateG()  {
         Random::DiscGamma(G,1.0/Ginvshape);
-    }
-
-    int rrindex(int i, int j) const {
-        return (i < j) ? (2 * Naa - i - 1) * i / 2 + j - i - 1
-                       : (2 * Naa - j - 1) * j / 2 + i - j - 1;
-    }
-
-    void UpdateGrantham(double wcom, double wpol, double wvol)   {
-        double tot = 0;
-        for (int a=0; a<Naa; a++)   {
-            for (int b=a+1; b<Naa; b++)   {
-                double tcom = grantham_com[b] - grantham_com[a];
-                double tpol = grantham_pol[b] - grantham_pol[a];
-                double tvol = grantham_vol[b] - grantham_vol[a];
-                double d = sqrt(wcom*tcom*tcom + wpol*tpol*tpol + wvol*tvol*tvol);
-                aadist[rrindex(a,b)] = d;
-                tot += d;
-            }
-        }
-        tot /= Naarr;
-        for (int a=0; a<Naa; a++)   {
-            for (int b=a+1; b<Naa; b++)   {
-                aadist[rrindex(a,b)] /= tot;
-            }
-        }
     }
 
     void GetPredictedDNDS(double& mean, double& relvar) const  {
@@ -224,13 +194,10 @@ class FastEmpiricalSelACModel : public ProbModel {
         ComputeSummaryStatistics();
     }
 
-    void Update(int a, int b)  {
+    void Update(int a)  {
         selacprofiles->UpdateRow(a);
-        selacprofiles->UpdateRow(b);
         codonmatrices->CorruptRow(a);
-        codonmatrices->CorruptRow(b);
         ComputePredictedDNDS(a);
-        ComputePredictedDNDS(b);
         ComputeSummaryStatistics();
     }
 
@@ -252,16 +219,18 @@ class FastEmpiricalSelACModel : public ProbModel {
 
     double AALogPrior() const   {
         double tot = 0;
-        for (int i=0; i<Naarr; i++) {
-            tot -= aadist[i];
+        for (int i=0; i<Naa; i++)   {
+            for (int j=0; j<Naa; j++)   {
+                tot -= aafitness[i][j];
+            }
         }
         return tot;
     }
 
     double GetLogPrior() const {
         double tot = 0;
-        tot -= psi;
-        tot -= Ginvshape;
+        tot -= log(psi);
+        tot -= log(Ginvshape);
         tot += AALogPrior();
         return tot;
     }
@@ -276,29 +245,26 @@ class FastEmpiricalSelACModel : public ProbModel {
     double Move() override {
         int nrep = 10;
         for (int rep=0; rep<nrep; rep++)    {
-            aadist_acc[0] += FastMoveAADist(200,1.0);
-            aadist_tot[0] ++;
+            aafit_acc[0] += MoveAAFitness(200, 1.0);
+            aafit_tot[0] ++;
+            MoveAllAAFitness(10, 1.0);
             MoveGinvshape();
-            MovePsi();
-            AAPsiCompMove(1,10);
-            AAPsiCompMove(0.1,10);
+            // MovePsi();
         }
         return 1.0;
     }
 
-    double FastMoveAADist(int nrep, double tuning) {
+    double MoveAAFitness(int nrep, double tuning) {
         double nacc = 0;
         double ntot = 0;
         for (int i=0; i<nrep; i++)  {
             int a = (int) (Naa * Random::Uniform());
-            int b = (int) ((Naa-1) * Random::Uniform());
-            if (b >= a) b++;
-            int j = rrindex(a,b);
+            int b = (int) (Naa * Random::Uniform());
             double delta = -GetLogProb();
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
-            aadist[j] *= e;
-            Update(a,b);
+            aafitness[a][b] *= e;
+            Update(a);
             delta += GetLogProb();
             delta += m;
             int acc = (log(Random::Uniform()) < delta);
@@ -306,8 +272,37 @@ class FastEmpiricalSelACModel : public ProbModel {
                 nacc++;
             }
             else    {
-                aadist[j] /= e;
-                Update(a,b);
+                aafitness[a][b] /= e;
+                Update(a);
+            }
+            ntot++;
+        }
+        return nacc / ntot;
+    }
+
+    double MoveAllAAFitness(int nrep, double tuning)    {
+        double nacc = 0;
+        double ntot = 0;
+        for (int i=0; i<nrep; i++)  {
+            int a = (int) (Naa * Random::Uniform());
+            double delta = -GetLogPrior();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            for (int b=0; b<Naa; b++)   {
+                aafitness[a][b] *= e;
+            }
+            Update(a);
+            delta += GetLogPrior();
+            delta += m;
+            int acc = (log(Random::Uniform()) < delta);
+            if (acc)    {
+                nacc++;
+            }
+            else    {
+                for (int b=0; b<Naa; b++)   {
+                    aafitness[a][b] /= e;
+                }
+                Update(a);
             }
             ntot++;
         }
@@ -334,38 +329,6 @@ class FastEmpiricalSelACModel : public ProbModel {
         return 1.0;
     }
 
-    double AAPsiCompMove(double tuning, int nrep)    {
-
-        double nacc = 0;
-        double ntot = 0;
-
-        for (int rep=0; rep<nrep; rep++)    {
-            double delta = -GetLogPrior();
-            double m = tuning * (Random::Uniform() - 0.5);
-            double e = exp(m);
-            psi /= e;
-            for (int i=0; i<Naarr; i++) {
-                aadist[i] *= e;
-            }
-            delta += GetLogPrior();
-            delta += (Naarr-1)*m;
-
-            int accepted = (log(Random::Uniform()) < delta);
-            if (accepted) {
-                nacc++;
-            } else {
-                psi *= e;
-                for (int i=0; i<Naarr; i++) {
-                    aadist[i] /= e;
-                }
-            }
-            ntot++;
-        }
-
-        Update();
-        return nacc / ntot;
-    }
-
     double GetMeanAAEntropy() const {
         double m1 = 0;
         double m0 = 0;
@@ -378,38 +341,14 @@ class FastEmpiricalSelACModel : public ProbModel {
         return m1 / m0;
     }
 
-    double GetMeanAADist() const {
-        double m1 = 0;
-        for (int i=0; i<Naarr; i++) {
-            m1 += aadist[i];
-        }
-        m1 /= Naarr;
-        return m1;
-    }
-
-    double GetVarAADist() const {
-        double m1 = 0;
-        double m2 = 0;
-        for (int i=0; i<Naarr; i++) {
-            m1 += aadist[i];
-            m2 += aadist[i]*aadist[i];
-        }
-        m1 /= Naarr;
-        m2 /= Naarr;
-        m2 -= m1*m1;
-        return m2;
-    }
-
     void TraceHeader(ostream &os) const override {
-        os << "#logprob\tGinvshape\tpsi\tmeanaa\tvaraa\taaent\tomega\tvaromega\n";
+        os << "#logprob\tGinvshape\tpsi\taaent\tomega\tvaromega\n";
     }
 
     void Trace(ostream& os) const override {
         os << GetLogProb() << '\t';
         os << Ginvshape << '\t';
         os << psi << '\t';
-        os << GetMeanAADist() << '\t';
-        os << GetVarAADist() << '\t';
         os << GetMeanAAEntropy() << '\t';
         os << predmeanomega << '\t';
         os << predrelvaromega << '\n';
@@ -421,8 +360,8 @@ class FastEmpiricalSelACModel : public ProbModel {
 
     void Monitor(ostream &os) const override {
         os << "aa fitness\t";
-        for (size_t i=0; i<aadist_acc.size(); i++)  {
-            os << aadist_acc[i] / aadist_tot[i] << '\t';
+        for (size_t i=0; i<aafit_acc.size(); i++)  {
+            os << aafit_acc[i] / aafit_tot[i] << '\t';
         }
         os << '\n';
 
@@ -440,35 +379,13 @@ class FastEmpiricalSelACModel : public ProbModel {
     }
 
     void MonitorCompAAFreqs(ostream& os) const  {
-        double tot = 0;
-        for (int i=0; i<Naarr; i++)   {
-            tot += aadist[i];
-        }
-        tot /= Naarr;
         for (int a=0; a<Naa; a++)   {
+            double tot = 0;
             for (int b=0; b<Naa; b++)   {
-                os << AminoAcids[a] << AminoAcids[b] << '\t' << predcompaafreq[a][b] << '\t' << obscompaafreq[a][b] << '\t' << log(predcompaafreq[a][b]) << '\t' << log(obscompaafreq[a][b]) << '\t';
-               if (a == b)  {
-                  os << 0 << '\n';
-               }
-               else {
-                  os << aadist[rrindex(a,b)]/tot << '\n';
-               }
+                tot += aafitness[a][b];
             }
-        }
-    }
-
-    void MonitorAADist(ostream& os) {
-        double tot = 0;
-        for (int i=0; i<Naarr; i++)   {
-            tot += aadist[i];
-        }
-        tot /= Naarr;
-        int index = 0;
-        for (int a=0; a<Naa; a++)   {
-            for (int b=a+1; b<Naa; b++) {
-                os << AminoAcids[a] << AminoAcids[b] << '\t' << aadist[index]/tot << '\t' << granthaadist[index] << '\n';
-                index++;
+            for (int b=0; b<Naa; b++)   {
+                os << AminoAcids[a] << AminoAcids[b] << '\t' << predcompaafreq[a][b] << '\t' << obscompaafreq[a][b] << '\t' << log(predcompaafreq[a][b]) << '\t' << log(obscompaafreq[a][b]) << '\t' << aafitness[a][b] / tot * Naa << '\t' << log(aafitness[a][b] / tot * Naa) << '\n';
             }
         }
     }
@@ -476,21 +393,24 @@ class FastEmpiricalSelACModel : public ProbModel {
     void FromStream(istream &is) override {
         is >> Ginvshape;
         is >> psi;
-        for (int i=0; i<Naarr; i++)   {
-            is >> aadist[i];
+        for (int i=0; i<Naa; i++)   {
+            for (int j=0; j<Naa; j++)   {
+                is >> aafitness[i][j];
+            }
         }
     }
 
     void ToStream(ostream &os) const override {
         os << Ginvshape;
-        double tot = 0;
-        for (int i=0; i<Naarr; i++)   {
-            tot += aadist[i];
-        }
-        tot /= Naarr;
-        os << '\t' << psi * tot;
-        for (int i=0; i<Naarr; i++)   {
-            os << '\t' << aadist[i] / tot;
+        os << '\t' << psi;
+        for (int i=0; i<Naa; i++)   {
+            double tot = 0;
+            for (int j=0; j<Naa; j++)   {
+                tot += aafitness[i][j];
+            }
+            for (int j=0; j<Naa; j++)   {
+                os << '\t' << aafitness[i][j] / tot * Naa;
+            }
         }
         os << '\n';
     }
@@ -510,8 +430,6 @@ class FastEmpiricalSelACModel : public ProbModel {
             Monitor(mos);
             ofstream fos((name + ".aafreqs").c_str());
             MonitorCompAAFreqs(fos);
-            ofstream aos((name + ".aadist").c_str());
-            MonitorAADist(aos);
         }
     }
 };
@@ -527,8 +445,8 @@ int main(int argc, char* argv[])    {
     double kappa = 3;
     double obsmeanomega = 0.3;
     double obsrelvaromega = 2;
-    double epsilon = 1.0;
-    double u = 0;
+    double epsilon = 0.001;
+    double u = 0.01;
     int Gcat = 4;
     string aafitnessfile = "";
     string name = "";
