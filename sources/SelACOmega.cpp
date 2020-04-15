@@ -12,6 +12,7 @@ class SelACOmegaChain : public Chain {
   private:
     // Chain parameters
     string modeltype, datafile, treefile;
+    string aadistfile;
     int aadistmodel;
     int aadistmode;
     int omegamode, omegaprior;
@@ -23,13 +24,14 @@ class SelACOmegaChain : public Chain {
 
     string GetModelType() override { return modeltype; }
 
-    SelACOmegaChain(string indatafile, string intreefile, int inaadistmodel, int inaadistmode, int inomegamode, int inomegaprior,
+    SelACOmegaChain(string indatafile, string intreefile, string inaadistfile, int inaadistmodel, int inaadistmode, int inomegamode, int inomegaprior,
                             double indposompi, double indposomhypermean,
                             double indposomhyperinvshape, int inGcat, int inevery,
                             int inuntil, string inname, int force)
         : modeltype("AAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
           treefile(intreefile),
+          aadistfile(inaadistfile),
           aadistmodel(inaadistmodel),
           aadistmode(inaadistmode),
           omegamode(inomegamode),
@@ -53,7 +55,7 @@ class SelACOmegaChain : public Chain {
     void New(int force) override {
         cerr << "new model\n";
         model =
-            new SelACOmegaModel(datafile, treefile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
+            new SelACOmegaModel(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
         if (omegaprior == 1) {
             GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean, dposomhyperinvshape);
         }
@@ -75,6 +77,7 @@ class SelACOmegaChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> aadistfile;
         is >> aadistmodel;
         is >> aadistmode;
         is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape;
@@ -88,7 +91,7 @@ class SelACOmegaChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
-            model = new SelACOmegaModel(datafile, treefile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
+            model = new SelACOmegaModel(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
             if (omegaprior == 1) {
                 GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                      dposomhyperinvshape);
@@ -109,6 +112,7 @@ class SelACOmegaChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << aadistfile << '\n';
         param_os << aadistmodel << '\n';
         param_os << aadistmode << '\n';
         param_os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean
@@ -134,6 +138,7 @@ int main(int argc, char *argv[]) {
     else {
         string datafile = "";
         string treefile = "";
+        string aadistfile = "none";
         int Gcat = 4;
         // uncons by default
         int aadistmode = 0;
@@ -163,6 +168,11 @@ int main(int argc, char *argv[]) {
                 } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
+                } else if (s == "-aa")  {
+                    i++;
+                    aadistfile = argv[i];
+                    aadistmodel = 1;
+                    aadistmode = 3;
                 } else if (s == "-f") {
                     force = 1;
                 } else if (s == "-gcat") {
@@ -210,7 +220,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new SelACOmegaChain(datafile, treefile, aadistmodel, aadistmode, omegamode, omegaprior, dposompi,
+        chain = new SelACOmegaChain(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, dposompi,
                                             dposomhypermean, dposomhyperinvshape, Gcat,
                                             every, until, name, force);
     }
