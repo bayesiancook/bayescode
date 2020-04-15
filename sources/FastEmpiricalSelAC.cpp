@@ -63,6 +63,8 @@ class FastEmpiricalSelACModel : public ProbModel {
     vector<double> G_tot;
     vector<double> psi_acc;
     vector<double> psi_tot;
+    vector<double> gpsi_acc;
+    vector<double> gpsi_tot;
 
     vector<vector<double>> preddnds;
 
@@ -112,6 +114,8 @@ class FastEmpiricalSelACModel : public ProbModel {
         G_tot.assign(3,0.1);
         psi_acc.assign(3,0);
         psi_tot.assign(3,0.1);
+        gpsi_acc.assign(4,0);
+        gpsi_tot.assign(4,0.1);
 
         nucmatrix = new HKYSubMatrix(kappa,gamma);
 
@@ -236,9 +240,9 @@ class FastEmpiricalSelACModel : public ProbModel {
 
     double GetMSD() const {
         double diff = 0;
-        double tmp = 100*(obsmeanomega - predmeanomega)/obsmeanomega;
+        double tmp = 50*(obsmeanomega - predmeanomega)/obsmeanomega;
         diff += tmp*tmp;
-        tmp = 100*(obsrelvaromega - predrelvaromega)/obsrelvaromega;
+        tmp = 50*(obsrelvaromega - predrelvaromega)/obsrelvaromega;
         diff += tmp*tmp;
 
         for (int i=0; i<Naa; i++)   {
@@ -276,10 +280,26 @@ class FastEmpiricalSelACModel : public ProbModel {
     double Move() override {
         int nrep = 10;
         for (int rep=0; rep<nrep; rep++)    {
-            aadist_acc[0] += FastMoveAADist(200,1.0);
+
+            aadist_acc[0] += FastMoveAADist(100,1.0);
             aadist_tot[0] ++;
+            aadist_acc[1] += FastMoveAADist(100,0.1);
+            aadist_tot[1] ++;
+
             MoveGinvshape();
             MovePsi();
+
+            /*
+            gpsi_acc[0] += GPsiCompMove(3, 1.0, 40.0);
+            gpsi_tot[0] ++;
+            gpsi_acc[1] += GPsiCompMove(3, 0.1, 40.0);
+            gpsi_tot[1] ++;
+            gpsi_acc[2] += GPsiCompMove(3, 1.0, 10.0);
+            gpsi_tot[2] ++;
+            gpsi_acc[3] += GPsiCompMove(3, 0.1, 10.0);
+            gpsi_tot[3] ++;
+            */
+
             AAPsiCompMove(1,10);
             AAPsiCompMove(0.1,10);
         }
@@ -312,6 +332,37 @@ class FastEmpiricalSelACModel : public ProbModel {
             ntot++;
         }
         return nacc / ntot;
+    }
+
+    double GPsiCompMove(int nrep, double tuning, double f)   {
+
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep=0; rep<nrep; rep++)    {
+            double delta = -GetLogProb();
+            double m = tuning * (Random::Uniform() - 0.5);
+            psi += m;
+            Ginvshape += m/f;
+            if ((psi > 0) && (Ginvshape > 0))   {
+                Update();
+                delta += GetLogProb();
+                int acc = (log(Random::Uniform()) < delta);
+                if (acc)    {
+                    nacc++;
+                }
+                else    {
+                    psi -= m;
+                    Ginvshape -= m/f;
+                    Update();
+                }
+            }
+            else    {
+                psi -= m;
+                Ginvshape -= m/f;
+            }
+            ntot++;
+        }
+        return nacc/ntot;
     }
 
     double MoveGinvshape()  {
@@ -433,8 +484,14 @@ class FastEmpiricalSelACModel : public ProbModel {
         os << '\n';
 
         os << "psi\t";
-        for (size_t i=0; i<G_acc.size(); i++)  {
+        for (size_t i=0; i<psi_acc.size(); i++)  {
             os << psi_acc[i] / psi_tot[i] << '\t';
+        }
+        os << '\n';
+
+        os << "G/psi\t";
+        for (size_t i=0; i<gpsi_acc.size(); i++)  {
+            os << gpsi_acc[i] / gpsi_tot[i] << '\t';
         }
         os << '\n';
     }
@@ -559,7 +616,7 @@ int main(int argc, char* argv[])    {
             i++;
             epsilon = atof(argv[i]);
         }
-        else if (s == "-cat")   {
+        else if (s == "-gcat")   {
             i++;
             Gcat = atoi(argv[i]);
         }
