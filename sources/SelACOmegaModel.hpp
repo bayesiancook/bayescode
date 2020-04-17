@@ -77,6 +77,10 @@ class SelACOmegaModel : public ProbModel {
     double omega;
     OmegaPathSuffStat omegapathsuffstat;
 
+    double wcomhypermean;
+    double wcomhyperinvshape;
+    double wpolhypermean;
+    double wpolhyperinvshape;
     double wcom;
     double wpol;
     double wvol;
@@ -98,7 +102,10 @@ class SelACOmegaModel : public ProbModel {
     AADiffSelCodonMatrixBidimArray* codonmatrices;
 
     // site allocation to each of the 20 amino-acid categories
+    vector<double> aaweighthypercenter;
+    double aaweighthyperinvconc;
     vector<double> aaweight;
+
     vector<double> Gweight;
     MultinomialAllocationVector* alloc;
     MultinomialAllocationVector* Galloc;
@@ -145,6 +152,8 @@ class SelACOmegaModel : public ProbModel {
 
     vector<double> aadist_acc;
     vector<double> aadist_tot;
+    vector<double> grantham_acc;
+    vector<double> grantham_tot;
     vector<double> G_acc;
     vector<double> G_tot;
     vector<double> psi_acc;
@@ -272,6 +281,8 @@ class SelACOmegaModel : public ProbModel {
 
         aadist_acc.assign(3,0);
         aadist_tot.assign(3,0.1);
+        grantham_acc.assign(1,0);
+        grantham_tot.assign(1,0.1);
         G_acc.assign(3,0);
         G_tot.assign(3,0.1);
         psi_acc.assign(3,0);
@@ -306,6 +317,10 @@ class SelACOmegaModel : public ProbModel {
         dposomhypermean = 1;
         dposomhyperinvshape = 0.5;
 
+        wcomhypermean = grantham_wcom;
+        wcomhyperinvshape = 1.0;
+        wpolhypermean = grantham_wpol;
+        wpolhyperinvshape = 1.0;
         wcom = grantham_wcom;
         wpol = grantham_wpol;
         wvol = grantham_wvol;
@@ -337,7 +352,10 @@ class SelACOmegaModel : public ProbModel {
 
         selacprofiles = new SelACProfileBidimArray(aadist,G,psi);
 
+        aaweighthypercenter.assign(Naa, 1.0 / Naa);
+        aaweighthyperinvconc = 1.0 / Naa;
         aaweight.assign(Naa, 1.0/Naa);
+
         Gweight.assign(Gcat, 1.0/Gcat);
         alloc = new MultinomialAllocationVector(Nsite,aaweight);
         Galloc = new MultinomialAllocationVector(Nsite,Gweight);
@@ -415,6 +433,13 @@ class SelACOmegaModel : public ProbModel {
         dposomhyperinvshape = ininvshape;
     }
 
+    void SetWHyperParameters(double inwcomhypermean, double inwcomhyperinvshape, double inwpolhypermean, double inwpolhyperinvshape)    {
+        wcomhypermean = inwcomhypermean;
+        wcomhyperinvshape = inwcomhyperinvshape;
+        wpolhypermean = inwpolhypermean;
+        wpolhyperinvshape = inwpolhyperinvshape;
+    }
+
     void SetW(double inwcom, double inwpol) {
         wcom = inwcom;
         wpol = inwpol;
@@ -429,6 +454,11 @@ class SelACOmegaModel : public ProbModel {
     void SetAAWeight(const vector<double>& inaaweight)  {
         aaweight = inaaweight;
         UpdateSelAC();
+    }
+
+    void SetAAWeightHyperParameters(const vector<double>& inaaweighthypercenter, double inaaweighthyperinvconc)   {
+        aaweighthypercenter = inaaweighthypercenter;
+        aaweighthyperinvconc = inaaweighthyperinvconc;
     }
 
     void SetG(double inGinvshape)   {
@@ -459,6 +489,15 @@ class SelACOmegaModel : public ProbModel {
 
     double GetPsi() const {
         return psi;
+    }
+
+    void GetW(double& inwcom, double& inwpol) const {
+        inwcom = wcom;
+        inwpol = wpol;
+    }
+
+    void GetAAWeight(vector<double>& inaaweight) const {
+        inaaweight = aaweight;
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -602,7 +641,7 @@ class SelACOmegaModel : public ProbModel {
         return total;
     }
 
-    double GHyperLogPrior() const {
+    double GLogPrior() const {
         if (Ghypermean == 0)  {
             return -log(Ginvshape);
         }
@@ -611,7 +650,7 @@ class SelACOmegaModel : public ProbModel {
         return alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(Ginvshape) - beta * Ginvshape;
     }
 
-    double PsiHyperLogPrior() const {
+    double PsiLogPrior() const {
         if (psihypermean == 0)  {
             return -log(psi);
         }
@@ -620,18 +659,36 @@ class SelACOmegaModel : public ProbModel {
         return alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(psi) - beta * psi;
     }
 
+    double WLogPrior() const   {
+        double total = 0;
+        double wcomalpha = 1.0 / wcomhyperinvshape;
+        double wcombeta = wcomalpha / wcomhypermean;
+        total += wcomalpha * log(wcombeta) - Random::logGamma(wcomalpha) + (wcomalpha - 1) * log(wcom) - wcombeta * wcom;
+        double wpolalpha = 1.0 / wpolhyperinvshape;
+        double wpolbeta = wpolalpha / wpolhypermean;
+        total += wpolalpha * log(wpolbeta) - Random::logGamma(wpolalpha) + (wpolalpha - 1) * log(wpol) - wpolbeta * wpol;
+        return total;
+    }
+
+    double AAWeightLogPrior() const    {
+        return Random::logDirichletDensity(aaweight, aaweighthypercenter, 1.0/aaweighthyperinvconc);
+    }
+
     double AALogPrior() const {
         double total = 0;
-        total += PsiHyperLogPrior();
-        total -= GHyperLogPrior();
+        total += PsiLogPrior();
+        total -= GLogPrior();
         if (! aadistmodel)   {
-            total -= log(wcom) + log(wpol);
+            total += WLogPrior();
         }
         else    {
-            for (int i=0; i<Naarr; i++) {
-                total -= aadist[i];
+            if (aadistmode < 2) {
+                for (int i=0; i<Naarr; i++) {
+                    total -= aadist[i];
+                }
             }
         }
+        total += AAWeightLogPrior();
         return total;
     }
 
@@ -806,14 +863,13 @@ class SelACOmegaModel : public ProbModel {
 
     void MoveSelAC()    {
 
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                MoveGranthamWeights();
-            }
-            else    {
-                MoveAADist();
-                AAPsiCompMove(1.0, 10);
-            }
+        if (aadistmodel && (aadistmode < 2)) {
+            MoveAADist();
+            AAPsiCompMove(1.0, 10);
+        }
+
+        if (! aadistmodel)   {
+            MoveGranthamWeights();
         }
 
         if (Gcat > 1)   {
@@ -877,25 +933,6 @@ class SelACOmegaModel : public ProbModel {
     }
 
     int MultipleTryMoveOmega(int ntry) {
-        /*
-        if (omega == 1.0)   {
-
-            // initial prob: (1-pi)*p(D | omega == 1.0)
-            // ntry values of dposom
-            // final prob: pi* < p(D | omega == 1.0 + dposom) >
-        }
-
-        else    {
-
-            // ntry values of dposom, with first value being equal to current omega
-        - 1.0
-            // initial prob: pi* < p(D | omega == 1.0 + dposom) >
-            // final prob: (1-pi)*p(D | omega == 1.0)
-        }
-        // MH decision rule between omega == 1.0 or omega > 1.0
-        // if decision -> omega > 1.0, then randomly sample dposom among ntry values
-        and set omega = 1.0 + dposom
-        */
 
         double logp0 = omegapathsuffstat.GetLogProb(1.0);
 
@@ -928,22 +965,6 @@ class SelACOmegaModel : public ProbModel {
         }
         double logp1 = log(tot/ntry) + max;
 
-        // Multiple-Try Gibbs version
-        /*
-        double m = (logp0>logp1) ? logp0 : logp1;
-        double q0 = (1-dposompi) * exp(logp0-m);
-        double q1 = dposompi * exp(logp1-m);
-        double p0 = q0 / (q0+q1);
-
-        if (Random::Uniform() < p0) {
-            omega = 1.0;
-        }
-        else    {
-            // randomly choose dposom among the ntry values in array
-        }
-        */
-
-        // Multiple-Try MH version
         int accept = 0;
         int choice = 0;
 
@@ -1093,22 +1114,10 @@ class SelACOmegaModel : public ProbModel {
     */
 
     double MoveGranthamWeights()    {
-        aadist_acc[0] += ScalingMove(wcom, 1.0, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[0] ++;
-        /*
-        aadist_acc[1] += ScalingMove(wcom, 0.3, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[1] ++;
-        aadist_acc[2] += ScalingMove(wcom, 0.1, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[2] ++;
-        */
-        aadist_acc[0] += ScalingMove(wpol, 1.0, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[0] ++;
-        /*
-        aadist_acc[1] += ScalingMove(wpol, 0.3, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[1] ++;
-        aadist_acc[2] += ScalingMove(wpol, 0.1, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
-        aadist_tot[2] ++;
-        */
+        grantham_acc[0] += ScalingMove(wcom, 1.0, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
+        grantham_tot[0] ++;
+        grantham_acc[0] += ScalingMove(wpol, 1.0, 3, &SelACOmegaModel::AALogProb, &SelACOmegaModel::UpdateSelAC, this);
+        grantham_tot[0] ++;
         return 1.0;
     }
 
@@ -1208,7 +1217,7 @@ class SelACOmegaModel : public ProbModel {
         UpdateOccupancies();
         double total = 0;
         for (int i=0; i<Naa; i++)   {
-            aaweight[i] = Random::sGamma(1 + aaoccupancy->GetVal(i));
+            aaweight[i] = Random::sGamma(aaweighthypercenter[i] / aaweighthyperinvconc + aaoccupancy->GetVal(i));
             total += aaweight[i];
         }
         for (int i=0; i<Naa; i++)   {
@@ -1282,13 +1291,15 @@ class SelACOmegaModel : public ProbModel {
             os << "omega\t";
         }
         os << "dnds\t";
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                os << "w_comp\t";
-                os << "w_pol\t";
+        if (! aadistmodel)   {
+            os << "w_comp\t";
+            os << "w_pol\t";
+        }
+        else {
+            if (aadistmode < 2) {
+                os << "distmean\t";
+                os << "distvar\t";
             }
-            os << "distmean\t";
-            os << "distvar\t";
         }
         os << "weightent\t";
         os << "aaent\t";
@@ -1308,11 +1319,11 @@ class SelACOmegaModel : public ProbModel {
             os << omega << '\t';
         }
         os << GetPredictedDNDS() << '\t';
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                os << wcom << '\t';
-                os << wpol << '\t';
-            }
+        if (! aadistmodel)   {
+            os << wcom << '\t';
+            os << wpol << '\t';
+        }
+        else if (aadistmode < 2) {
             os << GetMeanAADist() << '\t';
             os << GetVarAADist() << '\t';
         }
@@ -1326,11 +1337,18 @@ class SelACOmegaModel : public ProbModel {
     void Monitor(ostream &os) const override {
         os << totchrono.GetTime() << '\t' << aachrono.GetTime() << '\n';
         os << "prop time in aa moves  : " << aachrono.GetTime() / totchrono.GetTime() << '\n';
-        if (aadistmode < 2) {
+        if (aadistmodel && (aadistmode < 2)) {
             os << "aadist\n";
             for (size_t i=0; i<aadist_acc.size(); i++)  {
                 os << aadist_acc[i] / aadist_tot[i] << '\n';
             }
+        }
+        if (! aadistmodel)  {
+            os << "grantham weights\n";
+            for (size_t i=0; i<grantham_acc.size(); i++)  {
+                os << grantham_acc[i] / grantham_tot[i] << '\n';
+            }
+            os << '\n';
         }
         os << "G\n";
         for (size_t i=0; i<G_acc.size(); i++)  {
@@ -1355,13 +1373,11 @@ class SelACOmegaModel : public ProbModel {
 
         is >> psi;
         is >> Ginvshape;
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                is >> wcom >> wpol;
-            }
-            else    {
-                is >> aadist;
-            }
+        if (! aadistmodel)   {
+            is >> wcom >> wpol;
+        }
+        else if (aadistmode < 2) {
+            is >> aadist;
         }
         is >> aaweight;
         is >> *alloc;
@@ -1385,13 +1401,11 @@ class SelACOmegaModel : public ProbModel {
 
         os << psi << '\t';
         os << Ginvshape << '\t';
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                os << wcom << '\t' << wpol << '\t';
-            }
-            else    {
-                os << aadist << '\t';
-            }
+        if (! aadistmodel)   {
+            os << wcom << '\t' << wpol << '\t';
+        }
+        else if (aadistmode < 2) {
+            os << aadist << '\t';
         }
         os << aaweight << '\t';
         os << *alloc << '\t';
@@ -1416,13 +1430,11 @@ class SelACOmegaModel : public ProbModel {
         }
         size++;
         size++;
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                size += 2;
-            }
-            else    {
-                size += aadist.size();
-            }
+        if (! aadistmodel)   {
+            size += 2;
+        }
+        else if (aadistmode < 2) {
+            size += aadist.size();
         }
         size += aaweight.size();
         size += alloc->GetMPISize();
@@ -1446,13 +1458,11 @@ class SelACOmegaModel : public ProbModel {
 
         is >> psi;
         is >> Ginvshape;
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                is >> wcom >> wpol;
-            }
-            else    {
-                is >> aadist;
-            }
+        if (! aadistmodel)   {
+            is >> wcom >> wpol;
+        }
+        else if (aadistmode < 2) {
+            is >> aadist;
         }
         is >> aaweight;
         is >> *alloc;
@@ -1476,13 +1486,11 @@ class SelACOmegaModel : public ProbModel {
 
         os << psi;
         os << Ginvshape;
-        if (aadistmode < 2) {
-            if (! aadistmodel)   {
-                os << wcom << wpol;
-            }
-            else    {
-                os << aadist;
-            }
+        if (! aadistmodel)   {
+            os << wcom << wpol;
+        }
+        else if (aadistmode < 2) {
+            os << aadist;
         }
         os << aaweight;
         os << *alloc;

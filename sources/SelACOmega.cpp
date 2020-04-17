@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
         string aadistfile = "none";
         int Gcat = 4;
         // uncons by default
-        int aadistmode = 0;
+        int aadistmode = 1;
         int aadistmodel = 0;
         int omegamode = 3;
         int omegaprior = 0;

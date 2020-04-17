@@ -58,26 +58,35 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
     // each gene has its own gamma distribution and its own pi
     int aadistmodel;
-    int Gcat;
-    double Ghypermean;
-    double Ghyperinvshape;
-    IIDGamma* Garray;
-    GammaSuffStat Ghypersuffstat;
-
-    // sharing the aadist parameters
-    double wcom;
-    double wpol;
-    double wvol;
     // distance matrix between amino acids 
     vector<double> aadist;
-    // prior probs for optimal amino acids
-    vector<double> aaweight;
-    OccupancySuffStat* aaoccupancy;
+
+    // for grantham
+    double wcomhypermean;
+    double wcomhyperinvshape;
+    IIDGamma* wcomarray;
+    GammaSuffStat wcomhypersuffstat;
+
+    double wpolhypermean;
+    double wpolhyperinvshape;
+    IIDGamma* wpolarray;
+    GammaSuffStat wpolhypersuffstat;
+
+    vector<double> aaweighthypercenter;
+    double aaweighthyperinvconc;
+    IIDDirichlet *aaweightarray;
+    DirichletSuffStat aaweighthypersuffstat;
 
     double psihypermean;
     double psihyperinvshape;
     IIDGamma* psiarray;
     GammaSuffStat psihypersuffstat;
+
+    int Gcat;
+    double Ghypermean;
+    double Ghyperinvshape;
+    IIDGamma* Garray;
+    GammaSuffStat Ghypersuffstat;
 
     std::vector<SelACOmegaModel *> geneprocess;
 
@@ -97,7 +106,9 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     Chrono blchrono;
     Chrono aachrono;
 
-    vector<double> aadistacc, aadisttot, gacc, gtot, compacc, comptot;
+    vector<double> aadistacc, aadisttot;
+    vector<double> compacc, comptot;
+
     int burnin;
 
   public:
@@ -109,7 +120,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                                      int inblmode, int innucmode, int inaadistmode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
                                      double indposompihyperinvconc, int inmyid, int innprocs)
-        : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc) {
+        : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc), aaweighthypersuffstat(Naa) {
 
         datafile = indatafile;
         treefile = intreefile;
@@ -210,18 +221,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             exit(1);
         }
 
-        wcom = grantham_wcom;
-        wpol = grantham_wpol;
-        wvol = grantham_wvol;
-
         aadist.assign(Naarr, 1.0);
-        if (!aadistmodel)    {
-            UpdateGrantham();
-        }
-
-        aaweight.assign(Naa, 1.0/Naa);
-        aaoccupancy = new OccupancySuffStat(Naa);
-
         if (! GetMyid())    {
             if (aadistfile != "None") {
                 ifstream is(aadistfile.c_str());
@@ -235,6 +235,24 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 }
             }
         }
+
+        if (! aadistmodel)  {
+            wcomhypermean = 1.0;
+            wcomhyperinvshape = 1.0;
+            double wcomalpha = 1.0 / wcomhyperinvshape;
+            double wcombeta = wcomalpha / wcomhypermean;
+            wcomarray = new IIDGamma(GetLocalNgene(), wcomalpha, wcombeta);
+
+            wpolhypermean = 1.0;
+            wpolhyperinvshape = 1.0;
+            double wpolalpha = 1.0 / wpolhyperinvshape;
+            double wpolbeta = wpolalpha / wpolhypermean;
+            wpolarray = new IIDGamma(GetLocalNgene(), wpolalpha, wpolbeta);
+        }
+
+        aaweighthypercenter.assign(Naa, 1.0 / Naa);
+        aaweighthyperinvconc = 0.1 / Naa;
+        aaweightarray = new IIDDirichlet(GetLocalNgene(), aaweighthypercenter, 1.0 / aaweighthyperinvconc);
 
         psihypermean = 10.0;
         psihyperinvshape = 1.0;
@@ -311,35 +329,13 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         aadistacc.assign(3,0);
         aadisttot.assign(3,0);
-        gacc.assign(3,0);
-        gtot.assign(3,0);
-        compacc.assign(2,0);
-        comptot.assign(2,0);
+        compacc.assign(3,0);
+        comptot.assign(3,0);
     }
 
     int rrindex(int i, int j) const {
         return (i < j) ? (2 * Naa - i - 1) * i / 2 + j - i - 1
                        : (2 * Naa - j - 1) * j / 2 + i - j - 1;
-    }
-
-    void UpdateGrantham()   {
-        double tot = 0;
-        for (int a=0; a<Naa; a++)   {
-            for (int b=a+1; b<Naa; b++)   {
-                double tcom = grantham_com[b] - grantham_com[a];
-                double tpol = grantham_pol[b] - grantham_pol[a];
-                double tvol = grantham_vol[b] - grantham_vol[a];
-                double d = sqrt(wcom*tcom*tcom + wpol*tpol*tpol + wvol*tvol*tvol);
-                aadist[rrindex(a,b)] = d;
-                tot += d;
-            }
-        }
-        tot /= Naarr;
-        for (int a=0; a<Naa; a++)   {
-            for (int b=a+1; b<Naa; b++)   {
-                aadist[rrindex(a,b)] /= tot;
-            }
-        }
     }
 
     void UpdateG()  {
@@ -356,11 +352,28 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         psiarray->SetScale(beta);
     }
 
+    void UpdateAAWeight()  {
+        aaweightarray->SetConcentration(1.0 / aaweighthyperinvconc);
+    }
+
+    void UpdateW()    {
+        double wcomalpha = 1.0 / wcomhyperinvshape;
+        double wcombeta = wcomalpha / wcomhypermean;
+        wcomarray->SetShape(wcomalpha);
+        wcomarray->SetScale(wcombeta);
+
+        double wpolalpha = 1.0 / wpolhyperinvshape;
+        double wpolbeta = wpolalpha / wpolhypermean;
+        wpolarray->SetShape(wpolalpha);
+        wpolarray->SetScale(wpolbeta);
+    }
+
     void UpdateSelAC()  {
         UpdateG();
         UpdatePsi();
+        UpdateAAWeight();
         if (! aadistmodel)   {
-            UpdateGrantham();
+            UpdateW();
         }
     }
 
@@ -412,7 +425,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MasterSendPsi();
             MasterSendGHyperParameters();
             MasterSendG();
-            MasterSendSelAC();
+            MasterSendAAWeightHyperParameters();
+            MasterSendAAWeight();
+            if (! aadistmodel)  {
+                MasterSendWHyperParameters();
+                MasterSendW();
+            }
+            else    {
+                MasterSendAADist();
+            }
 
             MasterReceiveLogProbs();
         }
@@ -438,7 +459,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         SlaveReceivePsi();
         SlaveReceiveGHyperParameters();
         SlaveReceiveG();
-        SlaveReceiveSelAC();
+        SlaveReceiveAAWeightHyperParameters();
+        SlaveReceiveAAWeight();
+        if (! aadistmodel)  {
+            SlaveReceiveWHyperParameters();
+            SlaveReceiveW();
+        }
+        else    {
+            SlaveReceiveAADist();
+        }
 
         GeneUpdate();
 
@@ -474,7 +503,16 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MasterSendPsi();
             MasterSendGHyperParameters();
             MasterSendG();
-            MasterSendSelAC();
+            MasterSendAAWeightHyperParameters();
+            MasterSendAAWeight();
+            if (! aadistmodel)  {
+                MasterSendWHyperParameters();
+                MasterSendW();
+            }
+            else    {
+                MasterSendAADist();
+            }
+
         }
     }
 
@@ -498,7 +536,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         SlaveReceivePsi();
         SlaveReceiveGHyperParameters();
         SlaveReceiveG();
-        SlaveReceiveSelAC();
+        SlaveReceiveAAWeightHyperParameters();
+        SlaveReceiveAAWeight();
+        if (! aadistmodel)  {
+            SlaveReceiveWHyperParameters();
+            SlaveReceiveW();
+        }
+        else    {
+            SlaveReceiveAADist();
+        }
 
         GenePostPred(name);
     }
@@ -561,12 +607,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
         os << "meanpsi\tinvshape\t";
         if (! aadistmodel)   {
-            os << "w_comp\t";
-            os << "w_pol\t";
+            os << "wcompmean\tinvshape\t";
+            os << "wcpolmean\tinvshape\t";
         }
-        os << "distmean\t";
-        os << "distvar\t";
-        os << "weightent\t";
+        else if (aadistmode < 3) {
+            os << "distmean\t";
+            os << "distvar\t";
+        }
+        os << "weightent\tinvconc\t";
 
         os << "nucrr\tinvconc\t";
         os << "nucstat\tinvconc\n";
@@ -609,12 +657,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
         os << psihypermean << '\t' << psihyperinvshape << '\t';
         if (! aadistmodel)   {
-            os << wcom << '\t';
-            os << wpol << '\t';
+            os << wcomhypermean << '\t' << wcomhyperinvshape << '\t';
+            os << wpolhypermean << '\t' << wpolhyperinvshape << '\t';
         }
-        os << GetMeanAADist() << '\t';
-        os << GetVarAADist() << '\t';
-        os << Random::GetEntropy(aaweight) << '\t';
+        else if (aadistmode < 3) {
+            os << GetMeanAADist() << '\t';
+            os << GetVarAADist() << '\t';
+        }
+        os << Random::GetEntropy(aaweighthypercenter) << '\t' << aaweighthyperinvconc << '\t';
 
         os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
         os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
@@ -674,6 +724,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os.flush();
     }
 
+    void TraceW(ostream &os) const {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << wcomarray->GetVal(gene) << '\t';
+            os << wpolarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+        os.flush();
+    }
+
     void TraceAADistHeader(ostream& os) const {
         os << "#";
         for (int a=0; a<Naa; a++)   {
@@ -689,9 +748,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void TraceAADist(ostream& os) const {
-        for (int a=0; a<Naa; a++)   {
-            os << aaweight[a] << '\t';
-        }
         double m = GetMeanAADist();
         for (int a=0; a<Naa; a++)   {
             for (int b=a+1; b<Naa; b++)   {
@@ -711,18 +767,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os << "sub prop time in aa moves   : " << aachrono.GetTime() / paramchrono.GetTime()
            << '\n';
 
-        if (aadistmode < 2) {
+        if ((! aadistmodel) && (aadistmode < 3)) {
             os << "aa : ";
-           for (size_t i=0; i<aadistacc.size(); i++)    {
-              os << aadistacc[i] / aadisttot[i] << '\t';
-           }
-           os << '\n';
-
-           os << "comp : ";
-           for (size_t i=0; i<compacc.size(); i++)    {
-              os << compacc[i] / comptot[i] << '\t';
-           }
-           os << '\n';
+            for (size_t i=0; i<aadistacc.size(); i++)    {
+                os << aadistacc[i] / aadisttot[i] << '\t';
+            }
+            os << '\n';
         }
     }
 
@@ -762,12 +812,16 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         is >> Ghypermean >> Ghyperinvshape;
         is >> *Garray;
         if (! aadistmodel)   {
-            is >> wcom >> wpol;
+            is >> wcomhypermean >> wcomhyperinvshape;
+            is >> *wcomarray;
+            is >> wpolhypermean >> wpolhyperinvshape;
+            is >> *wpolarray;
         }
-        else    {
+        else if (aadistmode < 3) {
             is >> aadist;
         }
-        is >> aaweight;
+        is >> aaweighthypercenter >> aaweighthyperinvconc;
+        is >> *aaweightarray;
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             int size;
@@ -837,12 +891,16 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os << *Garray << '\t';
 
         if (! aadistmodel)   {
-            os << wcom << '\t' << wpol << '\t';
+            os << wcomhypermean << '\t' << wcomhyperinvshape << '\t';
+            os << *wcomarray << '\t';
+            os << wpolhypermean << '\t' << wpolhyperinvshape << '\t';
+            os << *wpolarray << '\t';
         }
-        else    {
+        else if (aadistmode < 3) {
             os << aadist << '\t';
         }
-        os << aaweight << '\t';
+        os << aaweighthypercenter << '\t' << aaweighthyperinvconc << '\t';
+        os << *aaweightarray << '\t';
 
         for (int proc = 1; proc < GetNprocs(); proc++) {
             MPI_Status stat;
@@ -926,15 +984,34 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return Garray->GetLogProb();
     }
 
+    double AAWeightHyperLogPrior() const   {
+        return -aaweighthyperinvconc;
+    }
+
+    double AAWeightLogPrior() const    {
+        return aaweightarray->GetLogProb();
+    }
+
+    double WHyperLogPrior() const   {
+        double total = 0;
+        total -= wcomhypermean;
+        total -= wcomhyperinvshape;
+        total -= wpolhypermean;
+        total -= wpolhyperinvshape;
+        return total;
+    }
+
+    double WLogPrior() const    {
+        double total = 0;
+        total += wcomarray->GetLogProb();
+        total += wpolarray->GetLogProb();
+        return total;
+    }
+
     double AADistLogPrior() const   {
         double total = 0;
-        if (! aadistmodel)   {
-            total -= log(wcom) + log(wpol);
-        }
-        else    {
-            for (int i=0; i<Naarr; i++) {
-                total -= aadist[i];
-            }
+        for (int i=0; i<Naarr; i++) {
+            total -= aadist[i];
         }
         return total;
     }
@@ -945,7 +1022,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         total += GLogPrior();
         total += PsiHyperLogPrior();
         total += PsiLogPrior();
-        total += AADistLogPrior();
+        if (! aadistmodel)  {
+            total += WHyperLogPrior();
+            total += WLogPrior();
+        }
+        else if (aadistmode < 3) {
+            total += AADistLogPrior();
+        }
+        total += AAWeightHyperLogPrior();
+        total += AAWeightLogPrior();
         return total;
     }
 
@@ -1060,6 +1145,21 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return ret;
     }
 
+    double WHyperSuffStatLogProb() const  {
+        double ret = 0;
+        double wcomalpha = 1.0 / wcomhyperinvshape;
+        double wcombeta = wcomalpha / wcomhypermean;
+        ret += wcomhypersuffstat.GetLogProb(wcomalpha, wcombeta);
+        double wpolalpha = 1.0 / wpolhyperinvshape;
+        double wpolbeta = wpolalpha / wpolhypermean;
+        ret += wpolhypersuffstat.GetLogProb(wpolalpha, wpolbeta);
+        return ret;
+    }
+
+    double AAWeightHyperSuffStatLogProb() const {
+        return aaweighthypersuffstat.GetLogProb(aaweighthypercenter, 1.0 / aaweighthyperinvconc);
+    }
+
     //-------------------
     // Log Probs for MH moves
     //-------------------
@@ -1088,6 +1188,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     // log prob for moving psi hyperparameters
     double GHyperLogProb() const { return GHyperLogPrior() + GHyperSuffStatLogProb(); }
 
+    // log prob for moving psi hyperparameters
+    double WHyperLogProb() const { return WHyperLogPrior() + WHyperSuffStatLogProb(); }
+
+    // log prob for moving psi hyperparameters
+    double AAWeightHyperLogProb() const { return AAWeightHyperLogPrior() + AAWeightHyperSuffStatLogProb(); }
+
     //-------------------
     // Moves
     //-------------------
@@ -1101,8 +1207,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
             aachrono.Start();
 
-            MasterMoveSelAC();
-
             MasterReceivePsi();
             MovePsiHyperParameters();
             MasterSendPsiHyperParameters();
@@ -1111,16 +1215,20 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             MoveGHyperParameters();
             MasterSendGHyperParameters();
 
-            if ((aadistmode != 3) && (aadistmodel)) {
-                compacc[0] += AAPsiCompMove(1.0, 10);
-                comptot[0]++;
-                compacc[1] += AAPsiCompMove(0.1, 10);
-                comptot[1]++;
+            MasterReceiveAAWeight();
+            MoveAAWeightHyperParameters();
+            MasterSendAAWeightHyperParameters();
 
+            if (! aadistmodel)  {
+                MasterReceiveW();
+                MoveWHyperParameters();
+                MasterSendWHyperParameters();
+            }
+            else if (aadistmode < 3)    {
+                MasterMoveSelAC();
                 MasterSendAADist();
                 MasterSendPsi();
             }
-
 
             aachrono.Stop();
 
@@ -1198,7 +1306,11 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveSendG();
             SlaveReceiveGHyperParameters();
 
-            if ((aadistmode != 3) && (aadistmodel)) {
+            if (! aadistmodel)  {
+                SlaveSendW();
+                SlaveReceiveWHyperParameters();
+            }
+            else if (aadistmode < 3)    {
                 SlaveReceiveAADist();
                 SlaveReceivePsi();
             }
@@ -1274,9 +1386,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->MoveSelAC();
             (*psiarray)[gene] = geneprocess[gene]->GetPsi();
             (*Garray)[gene] = geneprocess[gene]->GetG();
+            if (! aadistmodel) {
+                geneprocess[gene]->GetW((*wcomarray)[gene], (*wpolarray)[gene]);
+            }
+            geneprocess[gene]->GetAAWeight((*aaweightarray)[gene]);
         }
     }
 
+    /*
     void ResampleAAWeight() {
         double total = 0;
         for (int i=0; i<Naa; i++)   {
@@ -1301,6 +1418,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         aaoccupancy->Clear();
         MasterReceiveAdditive(*aaoccupancy);
     }
+    */
 
     void MovePsiHyperParameters()   {
 
@@ -1342,53 +1460,58 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         Garray->SetScale(beta);
     }
 
-    void MasterMoveSelAC() {
-        if (aadistmode != 3) {
-            if (! aadistmodel)  {
-                aadistacc[0] += MasterMoveGranthamWeight(wcom,3,1);
-                aadisttot[0] ++;
-                aadistacc[1] += MasterMoveGranthamWeight(wcom,3,0.1);
-                aadisttot[1] ++;
-                aadistacc[2] += MasterMoveGranthamWeight(wcom,3,0.01);
-                aadisttot[2] ++;
-                aadistacc[0] += MasterMoveGranthamWeight(wpol,3,1);
-                aadisttot[0] ++;
-                aadistacc[1] += MasterMoveGranthamWeight(wpol,3,0.1);
-                aadisttot[1] ++;
-                aadistacc[2] += MasterMoveGranthamWeight(wpol,3,0.01);
-                aadisttot[2] ++;
-            }
-            else    {
-                aadistacc[0] += MasterMoveAADist(3,1);
-                aadisttot[0] ++;
-                aadistacc[1] += MasterMoveAADist(3,0.1);
-                aadisttot[1] ++;
-            }
-        }
+    void MoveWHyperParameters()   {
 
-        MasterReceiveAAWeightSuffStat();
-        ResampleAAWeight();
-        MasterSendAAWeight();
+        wcomhypersuffstat.Clear();
+        wcomhypersuffstat.AddSuffStat(*wcomarray);
+        wpolhypersuffstat.Clear();
+        wpolhypersuffstat.AddSuffStat(*wpolarray);
+
+        ScalingMove(wcomhypermean, 1.0, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wcomhypermean, 0.3, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wcomhyperinvshape, 1.0, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wcomhyperinvshape, 0.3, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+
+        ScalingMove(wpolhypermean, 1.0, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wpolhypermean, 0.3, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wpolhyperinvshape, 1.0, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(wpolhyperinvshape, 0.3, 10,
+                &MultiGeneSelACOmegaModel::WHyperLogProb, &MultiGeneSelACOmegaModel::NoUpdate, this);
+
+        double wcomalpha = 1.0 / wcomhyperinvshape;
+        double wcombeta = wcomalpha / wcomhypermean;
+        wcomarray->SetShape(wcomalpha);
+        wcomarray->SetScale(wcombeta);
+
+        double wpolalpha = 1.0 / wpolhyperinvshape;
+        double wpolbeta = wpolalpha / wpolhypermean;
+        wpolarray->SetShape(wpolalpha);
+        wcomarray->SetScale(wpolbeta);
+    }
+
+    void MasterMoveSelAC() {
+
+        aadistacc[0] += MasterMoveAADist(3,1);
+        aadisttot[0] ++;
+        aadistacc[1] += MasterMoveAADist(3,0.1);
+        aadisttot[1] ++;
+
+        compacc[0] += AAPsiCompMove(1.0, 10);
+        comptot[0]++;
+        compacc[1] += AAPsiCompMove(0.1, 10);
+        comptot[1]++;
     }
 
     void SlaveMoveSelAC()  {
-        if (aadistmode != 3) {
-            if (! aadistmodel)  {
-                SlaveMoveGranthamWeight(3);
-                SlaveMoveGranthamWeight(3);
-                SlaveMoveGranthamWeight(3);
-                SlaveMoveGranthamWeight(3);
-                SlaveMoveGranthamWeight(3);
-                SlaveMoveGranthamWeight(3);
-            }
-            else    {
-                SlaveMoveAADist(3);
-                SlaveMoveAADist(3);
-            }
-        }
-
-        SlaveSendAAWeightSuffStat();
-        SlaveReceiveAAWeight();
+        SlaveMoveAADist(3);
+        SlaveMoveAADist(3);
     }
 
     double AAPsiCompMove(double tuning, int nrep)    {
@@ -1489,20 +1612,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveMoveAADist(int nrep)  {
-        // SlaveReceiveAADist();
         SlaveSendAALogProbs();
         for (int rep=0; rep<nrep; rep++)    {
             SlaveReceiveAADist();
             SlaveSendAALogProbs();
-
-            /*
-            SlaveReceiveAADist();
-            SlaveSendAALogProbs();
-            */
         }
         SlaveReceiveAADist();
     }
 
+    /*
     double MasterMoveGranthamWeight(double& w, int nrep, double tuning) {
         double acc = 0;
         double tot = 0;
@@ -1538,7 +1656,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
         SlaveReceiveAADist();
     }
-
+    */
 
     double MasterReceiveAALogProb() {
         double ret = 0;
@@ -1571,6 +1689,34 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             }
         }
         SlaveSendAdditive(logprobs);
+    }
+
+    void MoveAAWeightHyperParameters() {
+
+        aaweighthypersuffstat.Clear();
+        // aaweighthypersuffstat.AddSuffStat(*aaweightarray);
+        aaweightarray->AddSuffStat(aaweighthypersuffstat);
+
+        ProfileMove(aaweighthypercenter, 1.0, 1, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ProfileMove(aaweighthypercenter, 0.3, 1, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ProfileMove(aaweighthypercenter, 0.1, 3, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(aaweighthyperinvconc, 1.0, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(aaweighthyperinvconc, 0.3, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+        ScalingMove(aaweighthyperinvconc, 0.03, 10,
+                    &MultiGeneSelACOmegaModel::AAWeightHyperLogProb,
+                    &MultiGeneSelACOmegaModel::NoUpdate, this);
+
+        aaweightarray->SetConcentration(1.0 / aaweighthyperinvconc);
     }
 
     void MoveGeneNucRates() {
@@ -1928,9 +2074,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendPsi() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            (*psiarray)[gene] = geneprocess[gene]->GetPsi();
-        }
         SlaveSendGeneArray(*psiarray);
     }
 
@@ -1961,9 +2104,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendG() {
-        for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            (*Garray)[gene] = geneprocess[gene]->GetG();
-        }
         SlaveSendGeneArray(*Garray);
     }
 
@@ -1979,77 +2119,75 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void MasterSendW()  {
-        MasterSendGlobal(wcom,wpol);
+        MasterSendGeneArray(*wcomarray,*wpolarray);
     }
 
     void SlaveReceiveW()    {
-        SlaveReceiveGlobal(wcom,wpol);
+        SlaveReceiveGeneArray(*wcomarray,*wpolarray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetW(wcom, wpol);
+            geneprocess[gene]->SetW((*wcomarray)[gene], (*wpolarray)[gene]);
+        }
+    }
+
+    void MasterReceiveW() {
+        MasterReceiveGeneArray(*wcomarray, *wpolarray);
+    }
+
+    void SlaveSendW() {
+        SlaveSendGeneArray(*wcomarray, *wpolarray);
+    }
+
+    void MasterSendWHyperParameters() {
+        MasterSendGlobal(wcomhypermean, wcomhyperinvshape);
+        MasterSendGlobal(wpolhypermean, wpolhyperinvshape);
+    }
+
+    void SlaveReceiveWHyperParameters()   {
+        SlaveReceiveGlobal(wcomhypermean, wcomhyperinvshape);
+        SlaveReceiveGlobal(wpolhypermean, wpolhyperinvshape);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetWHyperParameters(wcomhypermean, wcomhyperinvshape, wpolhypermean, wpolhyperinvshape);
         }
     }
 
     void MasterSendAAWeight()  {
-        MasterSendGlobal(aaweight);
+        MasterSendGeneArray(*aaweightarray);
     }
 
     void SlaveReceiveAAWeight()    {
-        SlaveReceiveGlobal(aaweight);
+        SlaveReceiveGeneArray(*aaweightarray);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetAAWeight(aaweight);
+            geneprocess[gene]->SetAAWeight((*aaweightarray)[gene]);
+        }
+    }
+
+    void MasterReceiveAAWeight() {
+        MasterReceiveGeneArray(*aaweightarray);
+    }
+
+    void SlaveSendAAWeight() {
+        SlaveSendGeneArray(*aaweightarray);
+    }
+
+    void MasterSendAAWeightHyperParameters() {
+        MasterSendGlobal(aaweighthypercenter, aaweighthyperinvconc);
+    }
+
+    void SlaveReceiveAAWeightHyperParameters()   {
+        SlaveReceiveGlobal(aaweighthypercenter, aaweighthyperinvconc);
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->SetAAWeightHyperParameters(aaweighthypercenter, aaweighthyperinvconc);
         }
     }
 
     void MasterSendAADist() {
-        if (! aadistmodel)  {
-            MasterSendGlobal(wcom, wpol);
-        }
-        else    {
-            MasterSendGlobal(aadist);
-        }
+        MasterSendGlobal(aadist);
     }
 
     void SlaveReceiveAADist()   {
-        if (! aadistmodel)  {
-            SlaveReceiveGlobal(wcom, wpol);
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->SetW(wcom, wpol);
-            }
-        }
-        else    {
-            SlaveReceiveGlobal(aadist);
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->SetAADist(aadist);
-            }
-        }
-    }
-
-    void MasterSendSelAC() {
-        MasterSendGlobal(aaweight);
-        if (! aadistmodel)  {
-            MasterSendGlobal(wcom, wpol);
-        }
-        else    {
-            MasterSendGlobal(aadist);
-        }
-    }
-
-    void SlaveReceiveSelAC()  {
-        SlaveReceiveGlobal(aaweight);
-        if (! aadistmodel)  {
-            SlaveReceiveGlobal(wcom, wpol);
-        }
-        else    {
-            SlaveReceiveGlobal(aadist);
-        }
+        SlaveReceiveGlobal(aadist);
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->SetAAWeight(aaweight);
-            if (! aadistmodel)  {
-                geneprocess[gene]->SetW(wcom, wpol);
-            }
-            else    {
-                geneprocess[gene]->SetAADist(aadist);
-            }
+            geneprocess[gene]->SetAADist(aadist);
         }
     }
 
