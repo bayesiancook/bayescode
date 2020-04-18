@@ -455,17 +455,17 @@ class SelACOmegaModel : public ProbModel {
     }
 
     void SetAADist(const vector<double>& inaadist)  {
-        aadist = inaadist;
+        copy(inaadist.begin(), inaadist.end(), aadist.begin());
         UpdateSelAC();
     }
 
     void SetAAWeight(const vector<double>& inaaweight)  {
-        aaweight = inaaweight;
+        copy(inaaweight.begin(), inaaweight.end(), aaweight.begin());
         UpdateSelAC();
     }
 
     void SetAAWeightHyperParameters(const vector<double>& inaaweighthypercenter, double inaaweighthyperinvconc)   {
-        aaweighthypercenter = inaaweighthypercenter;
+        copy(inaaweighthypercenter.begin(), inaaweighthypercenter.end(), aaweighthypercenter.begin());
         aaweighthyperinvconc = inaaweighthyperinvconc;
     }
 
@@ -505,7 +505,7 @@ class SelACOmegaModel : public ProbModel {
     }
 
     void GetAAWeight(vector<double>& inaaweight) const {
-        inaaweight = aaweight;
+        copy(aaweight.begin(), aaweight.end(), inaaweight.begin());
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -513,25 +513,25 @@ class SelACOmegaModel : public ProbModel {
                                     double innucrelratehyperinvconc,
                                     const std::vector<double> &innucstathypercenter,
                                     double innucstathyperinvconc) {
-        nucrelratehypercenter = innucrelratehypercenter;
+        copy(innucrelratehypercenter.begin(), innucrelratehypercenter.end(), nucrelratehypercenter.begin());
         nucrelratehyperinvconc = innucrelratehyperinvconc;
-        nucstathypercenter = innucstathypercenter;
+        copy(innucstathypercenter.begin(), innucstathypercenter.end(), nucstathypercenter.begin());
         nucstathyperinvconc = innucstathyperinvconc;
     }
 
     //! set nucleotide rates to a new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate,
                      const std::vector<double> &innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
+        copy(innucrelrate.begin(), innucrelrate.end(), nucrelrate.begin());
+        copy(innucstat.begin(), innucstat.end(), nucstat.begin());
         UpdateMatrices();
     }
 
     //! copy nucleotide rates into vectors given as arguments (multi-gene
     //! analyses)
     void GetNucRates(std::vector<double> &innucrelrate, std::vector<double> &innucstat) const {
-        innucrelrate = nucrelrate;
-        innucstat = nucstat;
+        copy(nucrelrate.begin(), nucrelrate.end(), innucrelrate.begin());
+        copy(nucstat.begin(), nucstat.end(), innucstat.begin());
     }
 
     //! \brief tell the nucleotide matrix that its parameters have changed and

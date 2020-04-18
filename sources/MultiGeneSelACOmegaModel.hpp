@@ -1006,7 +1006,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         if (omegamode != 3) {
             total += OmegaHyperLogPrior();
-            total += OmegaLogPrior();
+            // total += OmegaLogPrior();
         }
 
         total += AALogPrior();
@@ -1021,10 +1021,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return total;
     }
 
-    double PsiLogPrior() const  {
-        return psiarray->GetLogProb();
-    }
-
     double GHyperLogPrior() const   {
         double total = 0;
         total -= Ghypermean;
@@ -1032,16 +1028,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return total;
     }
 
-    double GLogPrior() const    {
-        return Garray->GetLogProb();
-    }
-
     double AAWeightHyperLogPrior() const   {
         return -aaweighthyperinvconc;
-    }
-
-    double AAWeightLogPrior() const    {
-        return aaweightarray->GetLogProb();
     }
 
     double WHyperLogPrior() const   {
@@ -1050,13 +1038,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         total -= wcomhyperinvshape;
         total -= wpolhypermean;
         total -= wpolhyperinvshape;
-        return total;
-    }
-
-    double WLogPrior() const    {
-        double total = 0;
-        total += wcomarray->GetLogProb();
-        total += wpolarray->GetLogProb();
         return total;
     }
 
@@ -1071,18 +1052,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     double AALogPrior() const   {
         double total = 0;
         total += GHyperLogPrior();
-        total += GLogPrior();
         total += PsiHyperLogPrior();
-        total += PsiLogPrior();
         if (! aadistmodel)  {
             total += WHyperLogPrior();
-            total += WLogPrior();
         }
         else if (aadistmode < 3) {
             total += AADistLogPrior();
         }
         total += AAWeightHyperLogPrior();
-        total += AAWeightLogPrior();
         return total;
     }
 
@@ -1133,18 +1110,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             total -= dposomhyperinvshape;
         }
         return total;
-    }
-
-    double OmegaLogPrior() const {
-        double ret = 0;
-        if (omegaprior == 0) {
-            ret += omegaarray->GetLogProb();
-        } else if ((omegaprior == 1) || (omegaprior == 2))  {
-            ret += gammadposomarray->GetLogProb();
-        } else if (omegaprior == 3) {
-            ret += cauchydposomarray->GetLogProb();
-        }
-        return ret;
     }
 
     double GetLogLikelihood() const { return lnL; }
@@ -1268,12 +1233,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     //-------------------
 
     void MasterMove() override {
-        cerr << "master move\n";
         totchrono.Start();
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
-            cerr << rep << '\n';
             paramchrono.Start();
 
             aachrono.Start();
@@ -1352,7 +1315,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         totchrono.Stop();
 
         burnin++;
-        cerr << "master move ok\n";
     }
 
     // slave move
@@ -1377,6 +1339,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             SlaveReceivePsiHyperParameters();
             SlaveSendG();
             SlaveReceiveGHyperParameters();
+            SlaveSendAAWeight();
+            SlaveReceiveAAWeightHyperParameters();
 
             if (! aadistmodel)  {
                 SlaveSendW();
@@ -1771,7 +1735,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     void MoveAAWeightHyperParameters() {
 
         aaweighthypersuffstat.Clear();
-        // aaweighthypersuffstat.AddSuffStat(*aaweightarray);
         aaweightarray->AddSuffStat(aaweighthypersuffstat);
 
         ProfileMove(aaweighthypercenter, 1.0, 1, 10,
@@ -2097,24 +2060,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     // omega (and hyperparameters)
     void SlaveSendOmega() {
         if (omegaprior == 0) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            }
             SlaveSendGeneArray(*omegaarray);
         } else if (omegaprior == 1) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
-            }
             SlaveSendGeneArray(*gammadposomarray);
         } else if (omegaprior == 2) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
-            }
             SlaveSendGeneArray(*gammadposomarray);
         } else if (omegaprior == 3) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
-            }
             SlaveSendGeneArray(*cauchydposomarray);
         }
     }
