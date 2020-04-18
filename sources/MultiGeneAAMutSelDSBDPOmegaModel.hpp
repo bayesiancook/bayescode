@@ -845,6 +845,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         if (omegamode != 3) {
             total += OmegaHyperLogPrior();
+	    // should be removed (already counted in gene processes)
             total += OmegaLogPrior();
         }
         total += BaseStickBreakingHyperLogPrior();
@@ -1627,24 +1628,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void SlaveSendOmega() {
         if (omegaprior == 0) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            }
             SlaveSendGeneArray(*omegaarray);
         } else if (omegaprior == 1) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
-            }
             SlaveSendGeneArray(*gammadposomarray);
         } else if (omegaprior == 2) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
-            }
             SlaveSendGeneArray(*gammadposomarray);
         } else if (omegaprior == 3) {
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
-            }
             SlaveSendGeneArray(*cauchydposomarray);
         }
     }
