@@ -163,7 +163,7 @@ class ProbModel {
         double ntot = 0;
         vector<double> bk(x.size(), 0);
         for (int rep = 0; rep < nrep; rep++) {
-            bk = x;
+            copy(x.begin(), x.end(), bk.begin());
             double deltalogprob = -(This->*logprobf)();
             double loghastings = Random::ProfileProposeMove(x, x.size(), tuning, n);
             (This->*updatef)();
@@ -173,7 +173,7 @@ class ProbModel {
             if (accepted) {
                 nacc++;
             } else {
-                x = bk;
+                copy(bk.begin(), bk.end(), x.begin());
                 (This->*updatef)();
             }
             ntot++;
