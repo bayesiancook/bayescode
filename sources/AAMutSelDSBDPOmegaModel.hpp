@@ -1095,7 +1095,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     }
 
     int MultipleTryMoveOmega(int ntry) {
-        /*
+       /*
         if (omega == 1.0)   {
 
             // initial prob: (1-pi)*p(D | omega == 1.0)

@@ -17,6 +17,7 @@ class SelACOmegaChain : public Chain {
     int aadistmode;
     int omegamode, omegaprior;
     double dposompi, dposomhypermean, dposomhyperinvshape;
+    double maxdposom;
     int Gcat;
 
   public:
@@ -26,7 +27,7 @@ class SelACOmegaChain : public Chain {
 
     SelACOmegaChain(string indatafile, string intreefile, string inaadistfile, int inaadistmodel, int inaadistmode, int inomegamode, int inomegaprior,
                             double indposompi, double indposomhypermean,
-                            double indposomhyperinvshape, int inGcat, int inevery,
+                            double indposomhyperinvshape, double inmaxdposom, int inGcat, int inevery,
                             int inuntil, string inname, int force)
         : modeltype("AAMUTSELDSBDPOMEGA"),
           datafile(indatafile),
@@ -39,6 +40,7 @@ class SelACOmegaChain : public Chain {
           dposompi(indposompi),
           dposomhypermean(indposomhypermean),
           dposomhyperinvshape(indposomhyperinvshape),
+          maxdposom(inmaxdposom),
           Gcat(inGcat)  {
         every = inevery;
         until = inuntil;
@@ -56,7 +58,9 @@ class SelACOmegaChain : public Chain {
         cerr << "new model\n";
         model =
             new SelACOmegaModel(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
-        if (omegaprior == 1) {
+        if (omegaprior != 0) {
+            GetModel()->SetMaxDPosOm(maxdposom);
+
             GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean, dposomhyperinvshape);
         }
         cerr << "allocate\n";
@@ -80,7 +84,7 @@ class SelACOmegaChain : public Chain {
         is >> aadistfile;
         is >> aadistmodel;
         is >> aadistmode;
-        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape;
+        is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >> maxdposom;
         is >> Gcat;
         int tmp;
         is >> tmp;
@@ -92,7 +96,8 @@ class SelACOmegaChain : public Chain {
 
         if (modeltype == "AAMUTSELDSBDPOMEGA") {
             model = new SelACOmegaModel(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, Gcat);
-            if (omegaprior == 1) {
+            if (omegaprior != 0) {
+                GetModel()->SetMaxDPosOm(maxdposom);
                 GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                      dposomhyperinvshape);
             }
@@ -115,8 +120,9 @@ class SelACOmegaChain : public Chain {
         param_os << aadistfile << '\n';
         param_os << aadistmodel << '\n';
         param_os << aadistmode << '\n';
-        param_os << omegamode << '\t' << omegaprior << '\t' << dposompi << '\t' << dposomhypermean
-                 << '\t' << dposomhyperinvshape << '\n';
+        param_os << omegamode << '\t' << omegaprior;
+        param_os << '\t' << dposompi << '\t' << dposomhypermean;
+        param_os << '\t' << dposomhyperinvshape << '\t' << maxdposom << '\n';
         param_os << Gcat << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -148,6 +154,7 @@ int main(int argc, char *argv[]) {
         double dposompi = 0.1;
         double dposomhypermean = 1.0;
         double dposomhyperinvshape = 0.5;
+        double maxdposom = 0;
         name = "";
         int force = 1;
         int every = 1;
@@ -182,18 +189,36 @@ int main(int argc, char *argv[]) {
                     aadistmodel = 0;
                 } else if (s == "-uncons")  {
                     aadistmodel = 1;
+                } else if (s == "-maxdposom")   {
+                    i++;
+                    maxdposom = atof(argv[i]);
                 } else if (s == "-fixomega") {
                     omegamode = 3;
                 } else if (s == "-freeomega") {
                     omegamode = 1;
                 } else if (s == "-gamomega") {
                     omegaprior = 0;
-                } else if (s == "-mixomega") {
+                } else if ((s == "-mixomega") || (s == "-gammixomega")) {
                     omegaprior = 1;
                     i++;
                     dposompi = atof(argv[i]);
                     i++;
                     dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                } else if (s == "-loggammixomega") {
+                    omegaprior = 2;
+                    i++;
+                    dposompi = atof(argv[i]);
+                    i++;
+                    dposomhypermean = atof(argv[i]);
+                    i++;
+                    dposomhyperinvshape = atof(argv[i]);
+                } else if (s == "-cauchymixomega") {
+                    omegaprior = 3;
+                    i++;
+                    dposompi = atof(argv[i]);
+                    dposomhypermean = 0;
                     i++;
                     dposomhyperinvshape = atof(argv[i]);
                 } else if ((s == "-x") || (s == "-extract")) {
@@ -220,9 +245,10 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new SelACOmegaChain(datafile, treefile, aadistfile, aadistmodel, aadistmode, omegamode, omegaprior, dposompi,
-                                            dposomhypermean, dposomhyperinvshape, Gcat,
-                                            every, until, name, force);
+        chain = new SelACOmegaChain(datafile, treefile, aadistfile, 
+                aadistmodel, aadistmode, omegamode, omegaprior, 
+                dposompi, dposomhypermean, dposomhyperinvshape, maxdposom, Gcat,
+                every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

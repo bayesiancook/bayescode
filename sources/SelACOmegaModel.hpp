@@ -77,6 +77,8 @@ class SelACOmegaModel : public ProbModel {
     double omega;
     OmegaPathSuffStat omegapathsuffstat;
 
+    double maxdposom;
+
     double wcomhypermean;
     double wcomhyperinvshape;
     double wpolhypermean;
@@ -182,6 +184,7 @@ class SelACOmegaModel : public ProbModel {
         aadistmode = inaadistmode;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
+        maxdposom = 0;
 
         Gcat = inGcat;
 
@@ -215,6 +218,7 @@ class SelACOmegaModel : public ProbModel {
         aadistmode = inaadistmode;
         omegamode = inomegamode;
         omegaprior = inomegaprior;
+        maxdposom = 0;
 
         Gcat = inGcat;
 
@@ -229,6 +233,10 @@ class SelACOmegaModel : public ProbModel {
         Nbranch = tree->GetNbranch();
 
         // Allocate();
+    }
+
+    void SetMaxDPosOm(double inmax)  {
+        maxdposom = inmax;
     }
 
     //! \brief set estimation method for branch lengths
@@ -715,12 +723,17 @@ class SelACOmegaModel : public ProbModel {
     //! omegahyperinvshape)
     double OmegaLogPrior() const {
         double ret = 0;
+
+        // gamma distribution over 0, +infty
         if (omegaprior == 0) {
             double alpha = 1.0 / omegahyperinvshape;
             double beta = alpha / omegahypermean;
             ret = alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(omega) -
                   beta * omega;
-        } else if (omegaprior == 1) {
+        }
+        
+        // mixture of point mass at 1 and shifted gamma
+        else if (omegaprior == 1) {
             if ((dposompi <= 0) || (dposompi >= 1)) {
                 cerr << "error in omegalogprior: pi is not 0<pi<1\n";
                 exit(1);
@@ -738,6 +751,53 @@ class SelACOmegaModel : public ProbModel {
                 double beta = alpha / dposomhypermean;
                 ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(dposom) -
                        beta * dposom;
+            }
+        }
+        
+        // mixture of mass at 0 + gamma over 0,+infty in log
+        else if (omegaprior == 2) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = log(omega);
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double val = log(1 + dposompi);
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(val) -
+                       beta * val;
+            }
+        }
+        
+        // mixture of mass at 1 + half cauchy (shifted)
+        else if (omegaprior == 3) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double gamma = 1.0 / dposomhyperinvshape;
+                // truncated Cauchy, both sides (0,maxdposom)
+                ret += log(Pi * gamma * (1 + (dposom/gamma)*(dposom/gamma)));
+                if (maxdposom)  {
+                    ret -= log(2.0 / Pi * atan(maxdposom/gamma));
+                }
             }
         } else {
             cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
@@ -921,6 +981,10 @@ class SelACOmegaModel : public ProbModel {
             GibbsResampleOmega();
         } else {
             MultipleTryMoveOmega(100);
+            if (omega != 1.0)   {
+                MHMoveOmega(10, 1.0);
+                MHMoveOmega(10, 0.1);
+            }
         }
         UpdateCodonMatrices();
     }
@@ -932,12 +996,92 @@ class SelACOmegaModel : public ProbModel {
                                     beta + omegapathsuffstat.GetBeta());
     }
 
+    double OmegaLogProb(double dposom) const {
+        return OmegaLogPrior() + omegapathsuffstat.GetLogProb(1.0 + dposom);
+    }
+
+    double MHMoveOmega(int nrep, double tuning)    {
+        double dposom = omega - 1;
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep=0; rep<nrep; rep++)    {
+            double deltalogprob = -OmegaLogProb(dposom);
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            dposom *= e;
+            deltalogprob += OmegaLogProb(dposom);
+            deltalogprob += m;
+            int acc = (log(Random::Uniform()) < deltalogprob)
+                && ((!maxdposom) || (dposom < maxdposom));
+            if (acc)    {
+                nacc++;
+            }
+            else    {
+                dposom /= e;
+            }
+            ntot++;
+        }
+        omega = dposom + 1;
+        return nacc/ntot;
+    }
+
+    double DrawPosOm() {
+        double ret = 0;
+        if (omegaprior == 0)    {
+            cerr << "error: in draw pos om but not under mixture model\n";
+            exit(1);
+        }
+        else if (omegaprior == 1)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            do  {
+                ret = Random::Gamma(alpha, beta);
+            } while ((maxdposom > 0) && (ret > maxdposom));
+            if (!ret) {
+                 ret = 1e-5;
+            }
+        }
+        else if (omegaprior == 2)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            do  {
+                ret = exp(Random::Gamma(alpha, beta)) - 1;
+            } while ((maxdposom > 0) && (ret > maxdposom));
+            if (!ret) {
+                 ret = 1e-5;
+            }
+        }
+        else if (omegaprior == 3)   {
+            double gamma = 1.0 / dposomhyperinvshape;
+            do  {
+                ret = gamma * tan(Pi * Random::Uniform() / 2);
+            } while ((maxdposom > 0) && (ret > maxdposom));
+        }
+        return ret;
+    }
+
     int MultipleTryMoveOmega(int ntry) {
+       /*
+        if (omega == 1.0)   {
+
+            // initial prob: (1-pi)*p(D | omega == 1.0)
+            // ntry values of dposom
+            // final prob: pi* < p(D | omega == 1.0 + dposom) >
+        }
+
+        else    {
+
+            // ntry values of dposom, with first value being equal to current omega
+        - 1.0
+            // initial prob: pi* < p(D | omega == 1.0 + dposom) >
+            // final prob: (1-pi)*p(D | omega == 1.0)
+        }
+        // MH decision rule between omega == 1.0 or omega > 1.0
+        // if decision -> omega > 1.0, then randomly sample dposom among ntry values
+        and set omega = 1.0 + dposom
+        */
 
         double logp0 = omegapathsuffstat.GetLogProb(1.0);
-
-        double alpha = 1.0 / dposomhyperinvshape;
-        double beta = alpha / dposomhypermean;
 
         vector<double> logparray(ntry, 0);
         vector<double> dposomarray(ntry, 0);
@@ -946,10 +1090,9 @@ class SelACOmegaModel : public ProbModel {
             if ((!i) && (omega > 1.0)) {
                 dposomarray[i] = omega - 1.0;
             } else {
-                dposomarray[i] = Random::Gamma(alpha, beta);
-                if (!dposomarray[i]) {
-                    dposomarray[i] = 1e-5;
-                }
+                dposomarray[i] = DrawPosOm();
+                /*
+                */
             }
             logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
             if ((!i) || (max < logparray[i])) {
@@ -965,6 +1108,22 @@ class SelACOmegaModel : public ProbModel {
         }
         double logp1 = log(tot/ntry) + max;
 
+        // Multiple-Try Gibbs version
+        /*
+        double m = (logp0>logp1) ? logp0 : logp1;
+        double q0 = (1-dposompi) * exp(logp0-m);
+        double q1 = dposompi * exp(logp1-m);
+        double p0 = q0 / (q0+q1);
+
+        if (Random::Uniform() < p0) {
+            omega = 1.0;
+        }
+        else    {
+            // randomly choose dposom among the ntry values in array
+        }
+        */
+
+        // Multiple-Try MH version
         int accept = 0;
         int choice = 0;
 

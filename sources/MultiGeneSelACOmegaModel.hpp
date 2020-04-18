@@ -1,6 +1,7 @@
 
 #include "SelACOmegaModel.hpp"
 #include "IIDBernoulliGamma.hpp"
+#include "IIDBernoulliCauchy.hpp"
 #include "MultiGeneProbModel.hpp"
 #include "Parallel.hpp"
 #include "Permutation.hpp"
@@ -42,6 +43,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     DirichletSuffStat nucstatsuffstat;
 
     // omega*: iid gamma across genes
+    double maxdposom;
     double omegahypermean;
     double omegahyperinvshape;
     IIDGamma *omegaarray;
@@ -53,7 +55,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     double dposompi;
     double dposomhypermean;
     double dposomhyperinvshape;
-    IIDBernoulliGamma *dposomarray;
+    IIDBernoulliGamma *gammadposomarray;
+    IIDBernoulliCauchy *cauchydposomarray;
     BernoulliGammaSuffStat dposomhypersuffstat;
 
     // each gene has its own gamma distribution and its own pi
@@ -119,7 +122,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     MultiGeneSelACOmegaModel(string indatafile, string intreefile, string inaadistfile, int inGcat, int inaadistmodel,
                                      int inblmode, int innucmode, int inaadistmode, int inomegamode,
                                      int inomegaprior, int inmodalprior, double indposompihypermean,
-                                     double indposompihyperinvconc, int inmyid, int innprocs)
+                                     double indposompihyperinvconc, double inmaxdposom, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs), nucrelratesuffstat(Nrr), nucstatsuffstat(Nnuc), aaweighthypersuffstat(Naa) {
 
         datafile = indatafile;
@@ -140,6 +143,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         modalprior = inmodalprior;
         dposompihypermean = indposompihypermean;
         dposompihyperinvconc = indposompihyperinvconc;
+        maxdposom = inmaxdposom;
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -159,6 +163,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             std::cerr << "number of branches : " << Nbranch << '\n';
             std::cerr << "-- Tree and data fit together\n";
         }
+    }
+
+    void SetBurnin(double in)   {
+        burnin = in;
     }
 
     void Allocate() {
@@ -209,17 +217,34 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                     (*omegaarray)[i] = 1.0;
                 }
             }
-        } else if (omegaprior == 1) {
+        } else if ((omegaprior == 1) || (omegaprior == 2)) {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
-            dposomarray = new IIDBernoulliGamma(GetLocalNgene(), dposompi, alpha, beta);
+            gammadposomarray = new IIDBernoulliGamma(GetLocalNgene(), dposompi, alpha, beta);
+            cauchydposomarray = 0;
             for (int i = 0; i < GetLocalNgene(); i++) {
-                (*dposomarray)[i] = 0;
+                (*gammadposomarray)[i] = 0;
+            }
+            if (maxdposom)   {
+                for (int i = 0; i < GetLocalNgene(); i++) {
+                    if ((*gammadposomarray)[i] > maxdposom)    {
+                        (*gammadposomarray)[i] = maxdposom;
+                    }
+                }
+            }
+        } else if (omegaprior == 3) {
+            double gamma = 1.0 / dposomhyperinvshape;
+            cauchydposomarray = new IIDBernoulliCauchy(GetLocalNgene(), dposompi, gamma);
+            gammadposomarray = 0;
+            for (int i = 0; i < GetLocalNgene(); i++) {
+                (*cauchydposomarray)[i] = 0;
             }
         } else {
             cerr << "error: unrecognized omega prior\n";
             exit(1);
         }
+
+        genednds = new SimpleArray<double>(GetLocalNgene());
 
         aadist.assign(Naarr, 1.0);
         if (! GetMyid())    {
@@ -265,8 +290,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         double galpha = 1.0 / Ghyperinvshape;
         double gbeta = galpha / Ghypermean;
         Garray = new IIDGamma(GetLocalNgene(), galpha, gbeta);
-
-        genednds = new SimpleArray<double>(GetLocalNgene());
 
         lnL = 0;
         GeneLogPrior = 0;
@@ -323,6 +346,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetBLMode(blmode);
                 geneprocess[gene]->SetNucMode(nucmode);
+                geneprocess[gene]->SetMaxDPosOm(maxdposom);
                 geneprocess[gene]->Allocate();
             }
         }
@@ -377,6 +401,24 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void UpdateOmegaMixture()   {
+        if (omegaprior == 0) {
+            double alpha = 1.0 / omegahyperinvshape;
+            double beta = alpha / omegahypermean;
+            omegaarray->SetShape(alpha);
+            omegaarray->SetScale(beta);
+        } else if ((omegaprior == 1) || (omegaprior == 2)) {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            gammadposomarray->SetPi(dposompi);
+            gammadposomarray->SetShape(alpha);
+            gammadposomarray->SetScale(beta);
+        } else if (omegaprior == 3) {
+            cauchydposomarray->SetPi(dposompi);
+            cauchydposomarray->SetGamma(1.0 / dposomhyperinvshape);
+        }
+    }
+
     void FastUpdate() {
         branchlength->SetScale(lambda);
         if (blmode == 1) {
@@ -386,18 +428,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 
-        if (omegaprior == 0) {
-            double alpha = 1.0 / omegahyperinvshape;
-            double beta = alpha / omegahypermean;
-            omegaarray->SetShape(alpha);
-            omegaarray->SetScale(beta);
-        } else {
-            double alpha = 1.0 / dposomhyperinvshape;
-            double beta = alpha / dposomhypermean;
-            dposomarray->SetPi(dposompi);
-            dposomarray->SetShape(alpha);
-            dposomarray->SetScale(beta);
-        }
+        UpdateOmegaMixture();
 
         UpdateSelAC();
     }
@@ -597,8 +628,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             if (omegaprior == 0) {
                 os << "meanomega\t";
                 os << "varomega\t";
-            } else {
+            } else if ((omegaprior == 1) || (omegaprior == 2))  {
                 os << "npos\tposmean\tdposom_pi\tmeandposom\tinvshape\t";
+            } else  {
+                os << "npos\tposmean\tdposom_pi\tcauchyinvshape\t";
             }
         }
 
@@ -645,10 +678,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             if (omegaprior == 0) {
                 os << omegaarray->GetMean() << '\t';
                 os << omegaarray->GetVar() << '\t';
-            } else {
-                os << dposomarray->GetNpos() << '\t';
-                os << dposomarray->GetPosMean() << '\t';
+            } else if ((omegaprior == 1) || (omegaprior == 2))  {
+                os << gammadposomarray->GetNpos() << '\t';
+                os << gammadposomarray->GetPosMean() << '\t';
                 os << dposompi << '\t' << dposomhypermean << '\t' << dposomhyperinvshape << '\t';
+            } else if (omegaprior == 3) {
+                os << cauchydposomarray->GetNpos() << '\t';
+                os << cauchydposomarray->GetPosMean() << '\t';
+                os << dposompi << '\t' << dposomhyperinvshape << '\t';
             }
         }
 
@@ -692,15 +729,22 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         return m2;
     }
 
-
     void TraceOmega(ostream &os) const {
         if (omegaprior == 0) {
             for (int gene = 0; gene < Ngene; gene++) {
                 os << omegaarray->GetVal(gene) << '\t';
             }
-        } else {
+        } else if (omegaprior == 1) {
             for (int gene = 0; gene < Ngene; gene++) {
-                os << 1.0 + dposomarray->GetVal(gene) << '\t';
+                os << 1.0 + gammadposomarray->GetVal(gene) << '\t';
+            }
+        } else if (omegaprior == 2) {
+            for (int gene = 0; gene < Ngene; gene++) {
+                os << exp(gammadposomarray->GetVal(gene)) << '\t';
+            }
+        } else if (omegaprior == 3) {
+            for (int gene = 0; gene < Ngene; gene++) {
+                os << 1.0 + cauchydposomarray->GetVal(gene) << '\t';
             }
         }
         os << '\n';
@@ -799,11 +843,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 is >> omegahypermean;
                 is >> omegahyperinvshape;
                 is >> *omegaarray;
-            } else {
+            } else if ((omegaprior == 1) || (omegaprior == 2))  {
                 is >> dposompi;
                 is >> dposomhypermean;
                 is >> dposomhyperinvshape;
-                is >> *dposomarray;
+                is >> *gammadposomarray;
+            } else if (omegaprior == 3) {
+                is >> dposompi;
+                is >> dposomhyperinvshape;
+                is >> *cauchydposomarray;
             }
         }
 
@@ -876,11 +924,15 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 os << omegahypermean << '\t';
                 os << omegahyperinvshape << '\t';
                 os << *omegaarray << '\t';
-            } else {
+            } else if ((omegaprior == 1) || (omegaprior == 2))  {
                 os << dposompi << '\t';
                 os << dposomhypermean << '\t';
                 os << dposomhyperinvshape << '\t';
-                os << *dposomarray << '\t';
+                os << *gammadposomarray << '\t';
+            } else if (omegaprior == 3) {
+                os << dposompi << '\t';
+                os << dposomhyperinvshape << '\t';
+                os << *cauchydposomarray << '\t';
             }
         }
 
@@ -1065,7 +1117,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             if (modalprior && (omegahyperinvshape > 1.0))  {
                 total += Random::INFPROB;
             }
-        } else if (omegaprior == 1) {
+        } else if ((omegaprior == 1) || (omegaprior == 2)) {
             double pialpha = dposompihypermean / dposompihyperinvconc;
             double pibeta = (1 - dposompihypermean) / dposompihyperinvconc;
             total += (pialpha - 1) * log(1.0 - dposompi) + (pibeta - 1) * log(dposompi);
@@ -1074,6 +1126,11 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             if (modalprior && (dposomhyperinvshape > 1.0))  {
                 total += Random::INFPROB;
             }
+        } else if (omegaprior == 3) {
+            double pialpha = dposompihypermean / dposompihyperinvconc;
+            double pibeta = (1 - dposompihypermean) / dposompihyperinvconc;
+            total += (pialpha - 1) * log(1.0 - dposompi) + (pibeta - 1) * log(dposompi);
+            total -= dposomhyperinvshape;
         }
         return total;
     }
@@ -1082,8 +1139,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         double ret = 0;
         if (omegaprior == 0) {
             ret += omegaarray->GetLogProb();
-        } else {
-            ret += dposomarray->GetLogProb();
+        } else if ((omegaprior == 1) || (omegaprior == 2))  {
+            ret += gammadposomarray->GetLogProb();
+        } else if (omegaprior == 3) {
+            ret += cauchydposomarray->GetLogProb();
         }
         return ret;
     }
@@ -1121,10 +1180,13 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             double alpha = 1.0 / omegahyperinvshape;
             double beta = alpha / omegahypermean;
             ret = omegahypersuffstat.GetLogProb(alpha, beta);
-        } else {
+        } else if ((omegaprior == 1) || (omegaprior == 2))  {
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             ret = dposomhypersuffstat.GetLogProb(dposompi, alpha, beta);
+        } else  {
+            cerr << "error: prior not valid in omega hyper suff stat log prob\n";
+            exit(1);
         }
         return ret;
     }
@@ -1180,7 +1242,14 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     // log prob for moving omega hyperparameters
-    double OmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
+    double GammaOmegaHyperLogProb() const { return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb(); }
+
+    double CauchyOmegaHyperLogProb() const { return OmegaHyperLogPrior() + cauchydposomarray->GetPosLogProb();}
+
+    void CauchyOmegaUpdate() {
+        cauchydposomarray->SetPi(dposompi);
+        cauchydposomarray->SetGamma(1.0 / dposomhyperinvshape);
+    }
 
     // log prob for moving psi hyperparameters
     double PsiHyperLogProb() const { return PsiHyperLogPrior() + PsiHyperSuffStatLogProb(); }
@@ -1199,10 +1268,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     //-------------------
 
     void MasterMove() override {
+        cerr << "master move\n";
         totchrono.Start();
         int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
+            cerr << rep << '\n';
             paramchrono.Start();
 
             aachrono.Start();
@@ -1281,6 +1352,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         totchrono.Stop();
 
         burnin++;
+        cerr << "master move ok\n";
     }
 
     // slave move
@@ -1299,8 +1371,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             // gene aadist
             movechrono.Stop();
 
-            SlaveMoveSelAC();
             MoveGeneSelAC();
+
             SlaveSendPsi();
             SlaveReceivePsiHyperParameters();
             SlaveSendG();
@@ -1311,6 +1383,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 SlaveReceiveWHyperParameters();
             }
             else if (aadistmode < 3)    {
+                SlaveMoveSelAC();
                 SlaveReceiveAADist();
                 SlaveReceivePsi();
             }
@@ -1375,8 +1448,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->MoveOmega();
             if (omegaprior == 0) {
                 (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
-            } else {
-                (*dposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
+            } else if (omegaprior == 1) {
+                (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
+            } else if (omegaprior == 2) {
+                (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
+            } else if (omegaprior == 1) {
+                (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
             }
         }
     }
@@ -1840,21 +1917,21 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             omegahypersuffstat.AddSuffStat(*omegaarray);
 
             ScalingMove(omegahypermean, 1.0, 10,
-                        &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::NoUpdate, this);
             ScalingMove(omegahypermean, 0.3, 10,
-                        &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::NoUpdate, this);
             if (modalprior) {
-                SlidingMove(omegahyperinvshape,1.0,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
-                SlidingMove(omegahyperinvshape,0.3,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
-                SlidingMove(omegahyperinvshape,0.1,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(omegahyperinvshape,1.0,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(omegahyperinvshape,0.3,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(omegahyperinvshape,0.1,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
             } else  {
                 ScalingMove(omegahyperinvshape, 1.0, 10,
-                            &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
                 ScalingMove(omegahyperinvshape, 0.3, 10,
-                            &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
             }
 
@@ -1862,27 +1939,28 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             double beta = alpha / omegahypermean;
             omegaarray->SetShape(alpha);
             omegaarray->SetScale(beta);
-        } else {
+
+        } else if ((omegaprior == 1) || (omegaprior == 2))  {
             dposomhypersuffstat.Clear();
-            dposomhypersuffstat.AddSuffStat(*dposomarray);
+            dposomhypersuffstat.AddSuffStat(*gammadposomarray);
 
             ScalingMove(dposomhypermean, 1.0, 10,
-                        &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::NoUpdate, this);
             ScalingMove(dposomhypermean, 0.3, 10,
-                        &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::NoUpdate, this);
 
             if (modalprior) {
-                SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
-                SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
-                SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneSelACOmegaModel::OmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(dposomhyperinvshape,1.0,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(dposomhyperinvshape,0.3,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
+                SlidingMove(dposomhyperinvshape,0.1,10,0,1.0,&MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,&MultiGeneSelACOmegaModel::NoUpdate,this);
             } else  {
                 ScalingMove(dposomhyperinvshape, 1.0, 10,
-                            &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
                 ScalingMove(dposomhyperinvshape, 0.3, 10,
-                            &MultiGeneSelACOmegaModel::OmegaHyperLogProb,
+                            &MultiGeneSelACOmegaModel::GammaOmegaHyperLogProb,
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
             }
 
@@ -1893,10 +1971,41 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             }
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
-            dposomarray->SetPi(dposompi);
-            dposomarray->SetShape(alpha);
-            dposomarray->SetScale(beta);
+            gammadposomarray->SetPi(dposompi);
+            gammadposomarray->SetShape(alpha);
+            gammadposomarray->SetScale(beta);
+
+        } else if (omegaprior == 3) {
+
+            ScalingMove(dposomhyperinvshape, 1.0, 10,
+                        &MultiGeneSelACOmegaModel::CauchyOmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::CauchyOmegaUpdate, this);
+            ScalingMove(dposomhyperinvshape, 0.3, 10,
+                        &MultiGeneSelACOmegaModel::CauchyOmegaHyperLogProb,
+                        &MultiGeneSelACOmegaModel::CauchyOmegaUpdate, this);
+
+            if (burnin > 10) {
+                if (dposompihyperinvconc) {
+                    ResampleDPosOmPi();
+                }
+            }
+            CauchyOmegaUpdate();
         }
+    }
+
+    int GetNpos() const {
+        if (! omegaprior)   {
+            cerr << "error in get npos: not under mixture model\n";
+            exit(1);
+        }
+        int ret = 0;
+        if ((omegaprior == 1) || (omegaprior == 2)) {
+            ret = gammadposomarray->GetNpos();
+        }
+        else    {
+            ret = cauchydposomarray->GetNpos();
+        }
+        return ret;
     }
 
     void ResampleDPosOmPi() {
@@ -1986,34 +2095,47 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     // omega (and hyperparameters)
-
     void SlaveSendOmega() {
         if (omegaprior == 0) {
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 (*omegaarray)[gene] = geneprocess[gene]->GetOmega();
             }
             SlaveSendGeneArray(*omegaarray);
-        } else {
+        } else if (omegaprior == 1) {
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                (*dposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
+                (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
             }
-            SlaveSendGeneArray(*dposomarray);
+            SlaveSendGeneArray(*gammadposomarray);
+        } else if (omegaprior == 2) {
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
+            }
+            SlaveSendGeneArray(*gammadposomarray);
+        } else if (omegaprior == 3) {
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1.0;
+            }
+            SlaveSendGeneArray(*cauchydposomarray);
         }
     }
 
     void MasterReceiveOmega() {
         if (omegaprior == 0) {
             MasterReceiveGeneArray(*omegaarray);
-        } else {
-            MasterReceiveGeneArray(*dposomarray);
+        } else if ((omegaprior == 1) || (omegaprior == 2))  {
+            MasterReceiveGeneArray(*gammadposomarray);
+        } else if (omegaprior == 3) {
+            MasterReceiveGeneArray(*cauchydposomarray);
         }
     }
 
     void MasterSendOmega() {
         if (omegaprior == 0) {
             MasterSendGeneArray(*omegaarray);
-        } else {
-            MasterSendGeneArray(*dposomarray);
+        } else if ((omegaprior == 1) || (omegaprior == 2))  {
+            MasterSendGeneArray(*gammadposomarray);
+        } else if (omegaprior == 3) {
+            MasterSendGeneArray(*cauchydposomarray);
         }
     }
 
@@ -2023,10 +2145,20 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetOmega((*omegaarray)[gene]);
             }
-        } else {
-            SlaveReceiveGeneArray(*dposomarray);
+        } else if (omegaprior == 1) {
+            SlaveReceiveGeneArray(*gammadposomarray);
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene]->SetOmega((*dposomarray)[gene] + 1);
+                geneprocess[gene]->SetOmega((*gammadposomarray)[gene] + 1);
+            }
+        } else if (omegaprior == 2) {
+            SlaveReceiveGeneArray(*gammadposomarray);
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene]->SetOmega(exp((*gammadposomarray)[gene]));
+            }
+        } else if (omegaprior == 3) {
+            SlaveReceiveGeneArray(*cauchydposomarray);
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                geneprocess[gene]->SetOmega((*cauchydposomarray)[gene] + 1);
             }
         }
     }
@@ -2045,12 +2177,26 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     void SlaveReceiveOmegaHyperParameters() {
         if (omegaprior == 0) {
             SlaveReceiveGlobal(omegahypermean, omegahyperinvshape);
+            double alpha = 1.0 / omegahyperinvshape;
+            double beta = alpha / omegahypermean;
+            omegaarray->SetShape(alpha);
+            omegaarray->SetScale(beta);
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetOmegaHyperParameters(omegahypermean, omegahyperinvshape);
             }
         } else {
             SlaveReceiveGlobal(dposompi);
             SlaveReceiveGlobal(dposomhypermean, dposomhyperinvshape);
+            if ((omegaprior == 1) || (omegaprior == 2)) {
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                gammadposomarray->SetPi(dposompi);
+                gammadposomarray->SetShape(alpha);
+                gammadposomarray->SetScale(beta);
+            } else if (omegaprior == 3) {
+                cauchydposomarray->SetPi(dposompi);
+                cauchydposomarray->SetGamma(1.0 / dposomhyperinvshape);
+            }
             for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                             dposomhyperinvshape);
@@ -2058,6 +2204,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    // SelAC
     void MasterSendPsi()    {
         MasterSendGeneArray(*psiarray);
     }
