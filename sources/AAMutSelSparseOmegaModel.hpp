@@ -63,6 +63,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     int fitnesshypermode;
     int fixaa;
 
+    // 0: simple gamma prior
+    // 1: mix of (1-pi) at 1 and pi at 1+d, with d ~
+    // Gamma(dposomhypermean,dposomhyperinvshape) 2: mix of 2 (modal) gamma
+    // distributions: one at 1 and another one with mean > 1
+    int omegaprior;
+
     // -----
     // external parameters
     // -----
@@ -106,6 +112,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	double omega;
 	OmegaPathSuffStat omegapathsuffstat;
 	
+    double dposompi;
+    double dposomhypermean;
+    double dposomhyperinvshape;
+
+    double maxdposom;
+
     double fitnessshape;
     vector<double> fitnesscenter;
     IIDMultiGamma* fitness;
@@ -127,6 +139,9 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	PathSuffStatArray* sitepathsuffstatarray;
     MultiGammaSuffStat hyperfitnesssuffstat;
 
+    int size;
+    int burnin;
+
   public:
 
     //! \brief constructor
@@ -134,13 +149,18 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! parameters:
     //! - datafile: name of file containing codon sequence alignment
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
-    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, int infitnesshypermode, double infixaa, double inepsilon, double inpi) : hyperfitnesssuffstat(Naa) {
+    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, int inomegaprior, int infitnesshypermode, double infixaa, double inepsilon, double inpi) : hyperfitnesssuffstat(Naa) {
 
         blmode = 0;
         nucmode = 0;
         omegamode = inomegamode;
+        omegaprior = inomegaprior;
         fitnesshypermode = infitnesshypermode;
         fixaa = infixaa;
+        maxdposom = 0;
+
+        size = 0;
+        burnin = 20;
 
         //
         // maskmode = 3: no masks: aa fitness ~ iid uniform
@@ -179,6 +199,18 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             }
         }
         ReadFiles(datafile, treefile);
+    }
+
+    void SetSize(int insize)    {
+        size = insize;
+    }
+
+    void SetBurnin(int inburnin)    {
+        burnin = inburnin;
+    }
+
+    void SetMaxDPosOm(double inmax)  {
+        maxdposom = inmax;
     }
 
     // AAMutSelSparseOmegaModel(const AAMutSelSparseOmegaModel&) = delete;
@@ -247,7 +279,10 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         // global omega (fixed to 1 by default)
         omegahypermean = 1.0;
         omegahyperinvshape = 1.0;
-		omega = 1.0;
+        omega = 1.0;
+        dposompi = 0.1;
+        dposomhypermean = 1;
+        dposomhyperinvshape = 0.5;
 
         fitnessshape = 20.0;
         fitnesscenter.assign(Naa,1.0/Naa);
@@ -311,6 +346,8 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         omegamode = mode;
     }
 
+    void SetOmegaPrior(int inprior) { omegaprior = inprior; }
+
     //! \brief set estimation method for site profile masks
     //!
     //! Used in a multigene context.
@@ -371,21 +408,27 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         innucstat = nucstat;
     }
 
-    //! return current omega value
-    double GetOmega() const {
-        return omega;
-    }
-
     //! set omega to new value (multi-gene analyses)
-    void SetOmega(double inomega)   {
+    void SetOmega(double inomega) {
         omega = inomega;
         CorruptCodonMatrices();
     }
 
     //! set omega hyperparams to new value (multi-gene analyses)
-    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)   {
+    void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape) {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
+    }
+
+    void SetDPosOmHyperParameters(double inpi, double inmean, double ininvshape) {
+        dposompi = inpi;
+        dposomhypermean = inmean;
+        dposomhyperinvshape = ininvshape;
+    }
+
+    //! return current omega value
+    double GetOmega() const {
+        return omega;
     }
 
     //! \brief set value of background fitness of low-fitness amino-acids
@@ -509,12 +552,91 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         return total;
     }
 
-    //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
-	double OmegaLogPrior() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-		return alpha * log(beta) - Random::logGamma(alpha) + (alpha-1) * log(omega) - beta*omega;
-	}
+    //! log prior over omega
+    double OmegaLogPrior() const {
+        double ret = 0;
+
+        // gamma distribution over 0, +infty
+        if (omegaprior == 0) {
+            double alpha = 1.0 / omegahyperinvshape;
+            double beta = alpha / omegahypermean;
+            ret = alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(omega) -
+                  beta * omega;
+        }
+        
+        // mixture of point mass at 1 and shifted gamma
+        else if (omegaprior == 1) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(dposom) -
+                       beta * dposom;
+            }
+        }
+        
+        // mixture of mass at 0 + gamma over 0,+infty in log
+        else if (omegaprior == 2) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = log(omega);
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double val = log(1 + dposompi);
+                double alpha = 1.0 / dposomhyperinvshape;
+                double beta = alpha / dposomhypermean;
+                ret += alpha * log(beta) - Random::logGamma(alpha) + (alpha - 1) * log(val) -
+                       beta * val;
+            }
+        }
+        
+        // mixture of mass at 1 + half cauchy (shifted)
+        else if (omegaprior == 3) {
+            if ((dposompi <= 0) || (dposompi >= 1)) {
+                cerr << "error in omegalogprior: pi is not 0<pi<1\n";
+                exit(1);
+            }
+            if (omega < 1.0) {
+                cerr << "error in omegalogprior: omega < 1\n";
+                exit(1);
+            }
+            double dposom = omega - 1.0;
+            if (dposom == 0) {
+                ret = log(1 - dposompi);
+            } else {
+                ret = log(dposompi);
+                double gamma = 1.0 / dposomhyperinvshape;
+                // truncated Cauchy, both sides (0,maxdposom)
+                ret += log(Pi * gamma * (1 + (dposom/gamma)*(dposom/gamma)));
+                if (maxdposom)  {
+                    ret -= log(2.0 / Pi * atan(maxdposom/gamma));
+                }
+            }
+        } else {
+            cerr << "error in OmegaLogPrior: unrecognized prior mode\n";
+            exit(1);
+        }
+        return ret;
+    }
 
     //! log prior over fitness hyperparameters
     double FitnessHyperLogPrior() const {
@@ -644,6 +766,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	double Move() override {
         ResampleSub(1.0);
         MoveParameters(3,20);
+        size++;
         return 1.0;
 	}
 
@@ -678,7 +801,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
             if (nucmode < 2)    {
                 MoveNucRates();
             }
-            if (omegamode < 2)  {
+            if ((omegamode < 2) && (size >= burnin))  {
                 MoveOmega();
             }
         }
@@ -732,15 +855,158 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	}
 
     //! MH move on omega
-	void MoveOmega()	{
+    void MoveOmega() {
+        omegapathsuffstat.Clear();
+        omegapathsuffstat.AddSuffStat(*sitecodonmatrixarray, *sitepathsuffstatarray);
+        if (omegaprior == 0) {
+            GibbsResampleOmega();
+        } else {
+            MultipleTryMoveOmega(100);
+            if (omega != 1.0)   {
+                MHMoveOmega(10, 1.0);
+                MHMoveOmega(10, 0.1);
+            }
+        }
+        CorruptCodonMatrices();
+    }
 
-		omegapathsuffstat.Clear();
-		omegapathsuffstat.AddSuffStat(*sitecodonmatrixarray,*sitepathsuffstatarray);
+    void GibbsResampleOmega() {
         double alpha = 1.0 / omegahyperinvshape;
         double beta = alpha / omegahypermean;
-		omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(), beta + omegapathsuffstat.GetBeta());
-		CorruptCodonMatrices();
-	}
+        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
+                                    beta + omegapathsuffstat.GetBeta());
+    }
+
+    double OmegaLogProb(double dposom) const {
+        return OmegaLogPrior() + omegapathsuffstat.GetLogProb(1.0 + dposom);
+    }
+
+    double MHMoveOmega(int nrep, double tuning)    {
+        double dposom = omega - 1;
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep=0; rep<nrep; rep++)    {
+            double deltalogprob = -OmegaLogProb(dposom);
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            dposom *= e;
+            deltalogprob += OmegaLogProb(dposom);
+            deltalogprob += m;
+            int acc = (log(Random::Uniform()) < deltalogprob)
+                && ((!maxdposom) || (dposom < maxdposom));
+            if (acc)    {
+                nacc++;
+            }
+            else    {
+                dposom /= e;
+            }
+            ntot++;
+        }
+        omega = dposom + 1;
+        return nacc/ntot;
+    }
+
+    double DrawPosOm() {
+        double ret = 0;
+        if (omegaprior == 0)    {
+            cerr << "error: in draw pos om but not under mixture model\n";
+            exit(1);
+        }
+        else if (omegaprior == 1)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            do  {
+                ret = Random::Gamma(alpha, beta);
+            } while ((maxdposom > 0) && (ret > maxdposom));
+            if (!ret) {
+                 ret = 1e-5;
+            }
+        }
+        else if (omegaprior == 2)   {
+            double alpha = 1.0 / dposomhyperinvshape;
+            double beta = alpha / dposomhypermean;
+            do  {
+                ret = exp(Random::Gamma(alpha, beta)) - 1;
+            } while ((maxdposom > 0) && (ret > maxdposom));
+            if (!ret) {
+                 ret = 1e-5;
+            }
+        }
+        else if (omegaprior == 3)   {
+            double gamma = 1.0 / dposomhyperinvshape;
+            do  {
+                ret = gamma * tan(Pi * Random::Uniform() / 2);
+            } while ((maxdposom > 0) && (ret > maxdposom));
+        }
+        return ret;
+    }
+
+    int MultipleTryMoveOmega(int ntry) {
+
+        double logp0 = omegapathsuffstat.GetLogProb(1.0);
+
+        vector<double> logparray(ntry, 0);
+        vector<double> dposomarray(ntry, 0);
+        double max = 0;
+        for (int i = 0; i < ntry; i++) {
+            if ((!i) && (omega > 1.0)) {
+                dposomarray[i] = omega - 1.0;
+            } else {
+                dposomarray[i] = DrawPosOm();
+            }
+            logparray[i] = omegapathsuffstat.GetLogProb(1.0 + dposomarray[i]);
+            if ((!i) || (max < logparray[i])) {
+                max = logparray[i];
+            }
+        }
+
+        double tot = 0;
+        vector<double> cumulprob(ntry, 0);
+        for (int i = 0; i < ntry; i++) {
+            tot += exp(logparray[i] - max);
+            cumulprob[i] = tot;
+        }
+        double logp1 = log(tot/ntry) + max;
+
+        int accept = 0;
+        int choice = 0;
+
+        if (omega == 1.0) {
+            double logratio = log(dposompi) + logp1 - log(1.0 - dposompi) - logp0;
+            if (log(Random::Uniform()) < logratio) {
+                choice = 1;
+                accept = 1;
+            } else {
+                choice = 0;
+            }
+        } else {
+            double logratio = log(1.0 - dposompi) + logp0 - log(dposompi) - logp1;
+            if (log(Random::Uniform()) < logratio) {
+                choice = 0;
+                accept = 1;
+            } else {
+                choice = 1;
+            }
+        }
+
+        if (choice == 1) {
+            // randomly choose dposom among the ntry values in array
+            double u = tot * Random::Uniform();
+            int i = 0;
+            while ((i < ntry) && (u > cumulprob[i])) {
+                i++;
+            }
+            if (i == ntry) {
+                cerr << "error in MultipleTryMoveOmega: overflow\n";
+                exit(1);
+            }
+            omega = 1.0 + dposomarray[i];
+        } else {
+            omega = 1.0;
+        }
+
+        return accept;
+    }
 
     //! MH compensatory move on fitness parameters and hyper-parameters
     void CompMoveFitness()  {
@@ -996,9 +1262,19 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         return mean/n;
     }
 
+    double GetPredictedDNDS() const  {
+        double mean = 0;
+        for (int i=0; i<GetNsite(); i++) {
+            mean += sitecodonmatrixarray->GetVal(i).GetPredictedDNDS();
+        }
+        mean /= Nsite;
+        return mean;
+    }
+
     void TraceHeader(ostream& os) const override {
         os << "#logprior\tlnL\tlength\t";
 		os << "omega\t";
+        os << "dnds\t";
         if (maskmode == 0) {
             os << "pi\t";
         }
@@ -1022,6 +1298,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         os << GetLogLikelihood() << '\t';
         os << 3*branchlength->GetTotalLength() << '\t';
 		os << omega << '\t';
+        os << GetPredictedDNDS() << '\t';
         if (maskmode == 0) {
             os << pi << '\t';
         }
