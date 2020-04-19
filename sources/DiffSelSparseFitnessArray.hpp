@@ -243,17 +243,25 @@ class MutSelSparseFitnessArray : public SimpleArray<vector<double>> {
     //! update site i
     void Update(int i) {
         vector<double> &x = (*this)[i];
-        double total = 0;
+        double total1 = 0;
+        int n1 = 0;
         for (int k = 0; k < GetDim(); k++) {
             if (mask.GetVal(i)[k]) {
-                x[k] = fitness.GetVal(i)[k];
+                n1++;
+                total1 += fitness.GetVal(i)[k];
+            }
+	    }
+        double total2 = 0;
+        for (int k = 0; k < GetDim(); k++) {
+            if (mask.GetVal(i)[k]) {
+                x[k] = fitness.GetVal(i)[k] / total1 * n1;
             } else {
                 x[k] = epsilon;
             }
-            total += x[k];
+            total2 += x[k];
         }
         for (int k = 0; k < GetDim(); k++) {
-            x[k] /= total;
+            x[k] /= total2;
         }
     }
 
