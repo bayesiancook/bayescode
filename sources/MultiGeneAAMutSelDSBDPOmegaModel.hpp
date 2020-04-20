@@ -13,7 +13,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     const TaxonSet *taxonset;
     std::vector<CodonSequenceAlignment*> alivector;
 
-    string datapath;
     string datafile;
     string treefile;
 
@@ -105,6 +104,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     Chrono aachrono;
 
     int burnin;
+    int chainsize;
 
   public:
     //-------------------
@@ -123,7 +123,8 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
         Ncat = inNcat;
 
-        burnin = 0;
+        burnin = 20;
+	chainsize = 0;
 
         basemin = 0;
         if (inbaseNcat < 0) {
@@ -167,9 +168,10 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void SetBurnin(double in)   {
-        burnin = in;
+    void SetChainSize(double insize)	{
+	    chainsize = insize;
     }
+	   
 
     void Allocate() {
         lambda = 10;
@@ -1058,7 +1060,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 basechrono.Stop();
             }
 
-            if ((burnin > 10) && (omegamode != 3)) {
+            if ((chainsize >= burnin) && (omegamode != 3)) {
                 MasterReceiveOmega();
                 movechrono.Start();
                 MoveOmegaHyperParameters();
@@ -1106,7 +1108,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         
         totchrono.Stop();
 
-        burnin++;
+        chainsize++;
     }
 
     // slave move
@@ -1141,7 +1143,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 movechrono.Stop();
             }
 
-            if ((burnin > 10) && (omegamode != 3)) {
+            if ((chainsize >= burnin) && (omegamode != 3)) {
                 movechrono.Start();
                 MoveGeneOmegas();
                 movechrono.Stop();
@@ -1180,7 +1182,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendLogProbs();
         SlaveSendPredictedDNDS();
 
-        burnin++;
+        chainsize++;
     }
 
     void GeneResampleSub(double frac) {
@@ -1492,7 +1494,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                             &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
             }
 
-            if (burnin > 10) {
+            if (chainsize >= burnin) {
                 if (dposompihyperinvconc) {
                     ResampleDPosOmPi();
                 }
@@ -1512,7 +1514,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                         &MultiGeneAAMutSelDSBDPOmegaModel::CauchyOmegaHyperLogProb,
                         &MultiGeneAAMutSelDSBDPOmegaModel::CauchyOmegaUpdate, this);
 
-            if (burnin > 10) {
+            if (chainsize >= burnin) {
                 if (dposompihyperinvconc) {
                     ResampleDPosOmPi();
                 }
