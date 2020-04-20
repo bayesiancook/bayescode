@@ -558,7 +558,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     void TraceGeneTreeLength(ostream &os) const {
         for (int gene = 0; gene < Ngene; gene++) {
-            os << omegaarray->GetVal(gene) << '\t';
+            os << branchlengtharray->GetVal(gene).GetTotalLength() << '\t';
         }
         os << '\n';
         os.flush();
