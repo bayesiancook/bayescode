@@ -109,7 +109,7 @@ class AAMutSelSparseOmegaChain : public Chain  {
             GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
                                                  dposomhyperinvshape);
         }
-        GetModel()->SetSize(GetSize());
+        GetModel()->SetChainSize(GetSize());
         GetModel()->Allocate();
         model->FromStream(is);
         GetModel()->Update();
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])	{
         double maxdposom = 0;
         int fixhyper = 3;
         int fixfitness = 0;
-        double epsilon = 0.001;
+        double epsilon = -1;
         double pi = -1;
         name = "";
         int force = 1;
@@ -195,6 +195,9 @@ int main(int argc, char* argv[])	{
                 else if (s == "-freeomega") {
                     omegamode = 1;
                 } 
+                else if (s == "-postomega") {
+                    omegamode = -1;
+                }
                 else if (s == "-gamomega") {
                     omegaprior = 0;
                 } 

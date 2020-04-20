@@ -58,6 +58,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     int blmode;
     int nucmode;
     int omegamode;
+    int postomega;
     int maskepsilonmode;
     int maskmode;
     int fitnesshypermode;
@@ -73,10 +74,10 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     // external parameters
     // -----
 
-    Tree* tree;
+    const Tree* tree;
     FileSequenceAlignment* data;
     const TaxonSet* taxonset;
-    CodonSequenceAlignment* codondata;
+    const CodonSequenceAlignment* codondata;
 
     // number of sites
     int Nsite;
@@ -139,7 +140,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	PathSuffStatArray* sitepathsuffstatarray;
     MultiGammaSuffStat hyperfitnesssuffstat;
 
-    int size;
+    int chainsize;
     int burnin;
 
   public:
@@ -149,17 +150,24 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! parameters:
     //! - datafile: name of file containing codon sequence alignment
     //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
-    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, int inomegaprior, int infitnesshypermode, double infixaa, double inepsilon, double inpi) : hyperfitnesssuffstat(Naa) {
+    AAMutSelSparseOmegaModel(const std::string& datafile, const std::string& treefile, int inomegamode, int inomegaprior, int infitnesshypermode, int infixaa, double inepsilon, double inpi) : hyperfitnesssuffstat(Naa) {
 
         blmode = 0;
         nucmode = 0;
-        omegamode = inomegamode;
+        if (inomegamode == -1)    {
+            omegamode = 1;
+            postomega = 1;
+        }
+        else    {
+            postomega = 0;
+            omegamode = inomegamode;
+        }
         omegaprior = inomegaprior;
         fitnesshypermode = infitnesshypermode;
         fixaa = infixaa;
         maxdposom = 0;
 
-        size = 0;
+        chainsize = 0;
         burnin = 20;
 
         //
@@ -201,8 +209,81 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         ReadFiles(datafile, treefile);
     }
 
-    void SetSize(int insize)    {
-        size = insize;
+    //! \brief constructor
+    //!
+    //! parameters:
+    //! - datafile: name of file containing codon sequence alignment
+    //! - treefile: name of file containing tree topology (and branch conditions, such as specified by branch names)
+    AAMutSelSparseOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inomegamode, int inomegaprior, int infitnesshypermode, int infixaa, double inepsilon, double inpi) : hyperfitnesssuffstat(Naa) {
+
+        blmode = 0;
+        nucmode = 0;
+        if (inomegamode == -1)    {
+            omegamode = 1;
+            postomega = 1;
+        }
+        else    {
+            postomega = 0;
+            omegamode = inomegamode;
+        }
+        omegaprior = inomegaprior;
+        fitnesshypermode = infitnesshypermode;
+        fixaa = infixaa;
+        maxdposom = 0;
+
+        chainsize = 0;
+        burnin = 20;
+
+        //
+        // maskmode = 3: no masks: aa fitness ~ iid uniform
+        // maskmode = 2: fixed pi
+        // maskmode = 0: pi estimated
+        //
+        // maskepsilonmode = 3: free epsilon
+        // maskepsilonmode = 0: fixed epsilon
+        //
+        // fitnesshypermode = 3: fixed hyperparameters for fitness profiles
+        // fitnesshypermode = 0:: hyperparameters estimated
+        //
+        // fixaa: flat fitness profiles
+        //
+
+        if (inepsilon == 1)   {
+            maskepsilon = 1;
+            maskmode = 3;
+            maskepsilonmode = 3;
+        }
+        else if (inepsilon >= 0) {
+            maskepsilon = inepsilon;
+            maskepsilonmode = 3;
+            maskmode = 0;
+        }
+        else    {
+            maskepsilonmode = 0;
+            maskmode = 0;
+        }
+
+        pi = 0.1;
+        if (maskmode < 2)   {
+            if (inpi != -1.0) {
+                maskmode = 2;
+                pi = inpi;
+            }
+        }
+        codondata = incodondata;
+
+        Nsite = codondata->GetNsite();  // # columns
+        Ntaxa = codondata->GetNtaxa();
+
+        taxonset = codondata->GetTaxonSet();
+
+        tree = intree;
+        Nbranch = tree->GetNbranch();
+
+    }
+
+    void SetChainSize(int insize)    {
+        chainsize = insize;
     }
 
     void SetBurnin(int inburnin)    {
@@ -233,16 +314,16 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
-
+        Tree* tmptree = new Tree(treefile);
         // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        tmptree->RegisterWith(taxonset);
+        tmptree->SetIndices();
+        tree = tmptree;
 
         // traversal of the tree, so as to number links, branches and nodes
         // convention is: branches start at 1 (branch number 0 is the null branch behind the root)
         // nodes start at 0 (for the root), and nodes 1..Ntaxa are tip nodes (corresponding to taxa
         // in sequence alignment)
-        tree->SetIndices();
         Nbranch = tree->GetNbranch();
     }
 
@@ -294,7 +375,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         fitnessprofile = new MutSelSparseFitnessArray(*fitness,*sitemaskarray,maskepsilon);
         
         // mut sel codon matrices (based on the fitness profiles of the mixture)
-        sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, fitnessprofile, omega);
+        if (postomega)  {
+            sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, fitnessprofile, 1.0);
+        }
+        else    {
+            sitecodonmatrixarray = new AAMutSelOmegaCodonSubMatrixArray(GetCodonStateSpace(), nucmatrix, fitnessprofile, omega);
+        }
 
 		phyloprocess = new PhyloProcess(tree,codondata,branchlength,0,sitecodonmatrixarray);
 		phyloprocess->Unfold();
@@ -411,7 +497,9 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! set omega to new value (multi-gene analyses)
     void SetOmega(double inomega) {
         omega = inomega;
-        CorruptCodonMatrices();
+        if (! postomega)    {
+            CorruptCodonMatrices();
+        }
     }
 
     //! set omega hyperparams to new value (multi-gene analyses)
@@ -432,9 +520,22 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     }
 
     //! \brief set value of background fitness of low-fitness amino-acids
-    void SetMaskEpsilon(double in)  {
+    void SetEpsilon(double in)  {
         maskepsilon = in;
         fitnessprofile->SetEpsilon(maskepsilon);
+    }
+
+    double GetEpsilon() const   {
+        return maskepsilon;
+    }
+
+    void SetPi(double inpi) {
+        pi = inpi;
+        sitemaskarray->SetPi(pi);
+    }
+
+    double GetPi() const    {
+        return pi;
     }
 
     void Update() override {
@@ -467,7 +568,9 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! The matrices are not directly updated at that step. Instead, corruption is notified,
     //! such that the matrices know that they will have to recalculate whichever component is requested later on upon demand.
     void CorruptCodonMatrices() {
-        sitecodonmatrixarray->SetOmega(omega);
+        if (! postomega)    {
+            sitecodonmatrixarray->SetOmega(omega);
+        }
         sitecodonmatrixarray->UpdateCodonMatrices();
     }
 
@@ -766,7 +869,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
 	double Move() override {
         ResampleSub(1.0);
         MoveParameters(3,20);
-        size++;
+        chainsize++;
         return 1.0;
 	}
 
@@ -778,36 +881,41 @@ class AAMutSelSparseOmegaModel : public ProbModel {
                 MoveBranchLengths();
             }
             CollectSitePathSuffStat();
-            UpdateAll();
-            for (int rep = 0; rep < nrep; rep++) {
-                if (! fixaa)    {
-                    MoveFitness();
-                    CompMoveFitness();
-                }
-                if (maskmode < 3)   {
-                    MoveMasks();
-                }
-                if (maskmode < 2)   {
-                    MoveMaskHyperParameters();
-                }
-                // works best when not used
-                if (fitnesshypermode < 2)   {
-                    MoveFitnessHyperParameters();
-                }
-                if (maskepsilonmode < 2)    {
-                    MoveMaskEpsilon();
-                }
-            }
+            MoveAA(nrep);
             if (nucmode < 2)    {
                 MoveNucRates();
             }
-            if ((omegamode < 2) && (size >= burnin))  {
+            if ((omegamode < 2) && (postomega || (chainsize >= burnin)))  {
                 MoveOmega();
             }
         }
 
         UpdateAll();
     }
+
+    void MoveAA(int nrep)   {
+        UpdateAll();
+        for (int rep = 0; rep < nrep; rep++) {
+            if (! fixaa)    {
+                MoveFitness();
+                CompMoveFitness();
+            }
+            if (maskmode < 3)   {
+                MoveMasks();
+            }
+            if (maskmode < 2)   {
+                MoveMaskHyperParameters();
+            }
+            // works best when not used
+            if (fitnesshypermode < 2)   {
+                MoveFitnessHyperParameters();
+            }
+            if (maskepsilonmode < 2)    {
+                MoveMaskEpsilon();
+            }
+        }
+    }
+
 
     //! Gibbs resample substitution mappings conditional on current parameter configuration
     void ResampleSub(double frac)   {
@@ -867,7 +975,9 @@ class AAMutSelSparseOmegaModel : public ProbModel {
                 MHMoveOmega(10, 0.1);
             }
         }
-        CorruptCodonMatrices();
+        if (! postomega)    {
+            CorruptCodonMatrices();
+        }
     }
 
     void GibbsResampleOmega() {
@@ -1259,7 +1369,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
                 n += m[a];
             }
         }
-        return mean/n;
+        mean /= n;
+        return mean;
+    }
+
+    double GetMeanAAEntropy() const {
+        return fitnessprofile->GetMeanEntropy();
     }
 
     double GetPredictedDNDS() const  {
@@ -1285,6 +1400,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         if (maskepsilonmode < 2)    {
             os << "epsilon\t";
         }
+        os << "aaent\n";
         if (fitnesshypermode < 2)   {
             os << "shape\t";
             os << "center\t";
@@ -1309,6 +1425,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         if (maskepsilonmode < 2)    {
             os << maskepsilon << '\t';
         }
+        os << GetMeanAAEntropy() << '\t';
         if (fitnesshypermode < 2)   {
             os << fitnessshape << '\t';
             os << Random::GetEntropy(fitnesscenter) << '\t';
