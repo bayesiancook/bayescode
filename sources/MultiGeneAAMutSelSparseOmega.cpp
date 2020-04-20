@@ -175,6 +175,8 @@ class MultiGeneAAMutSelSparseOmegaChain : public MultiGeneChain {
         }
         MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
+        ofstream eos((name + ".geneeps").c_str());
+        ofstream pos((name + ".genepi").c_str());
     }
 
     void SavePoint() override {
@@ -188,6 +190,10 @@ class MultiGeneAAMutSelSparseOmegaChain : public MultiGeneChain {
                 else    {
                     GetModel()->TraceOmega(os);
                 }
+                ofstream eos((name + ".geneeps").c_str(), ios_base::app);
+                GetModel()->TraceEpsilon(eos);
+                ofstream pos((name + ".genepi").c_str(), ios_base::app);
+                GetModel()->TracePi(pos);
             }
         }
     }
@@ -227,7 +233,7 @@ int main(int argc, char *argv[]) {
     double maxdposom = 0;
 
     double epsilonhypermean = 0.01;
-    double epsilonhyperinvconc = 0.1;
+    double epsilonhyperinvconc = 1.0;
     double pihypermean = 0.1;
     double pihyperinvconc = 0.5;
 

@@ -1377,6 +1377,10 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         return fitnessprofile->GetMeanEntropy();
     }
 
+    double GetMeanWidth() const {
+        return sitemaskarray->GetMeanWidth();
+    }
+
     double GetPredictedDNDS() const  {
         double mean = 0;
         for (int i=0; i<GetNsite(); i++) {
@@ -1400,7 +1404,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         if (maskepsilonmode < 2)    {
             os << "epsilon\t";
         }
-        os << "aaent\n";
+        os << "aaent\t";
         if (fitnesshypermode < 2)   {
             os << "shape\t";
             os << "center\t";
