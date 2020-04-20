@@ -1754,7 +1754,7 @@ class DiffSelDoublySparseModel : public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << 3 * branchlength->GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << maskprob << '\t';
         os << GetMeanWidth() << '\t';
         os << maskepsilon << '\t';

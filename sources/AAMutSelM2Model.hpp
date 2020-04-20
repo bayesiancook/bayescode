@@ -1514,8 +1514,7 @@ class AAMutSelM2Model : public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        // 3x: per coding site (and not per nucleotide site)
-        os << 3 * branchlength->GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << posw << '\t';
         os << 1.0 + dposom << '\t';
         os << GetNcluster() << '\t';

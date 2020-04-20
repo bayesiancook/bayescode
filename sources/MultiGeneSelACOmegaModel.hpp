@@ -669,10 +669,10 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         if (blmode == 2) {
-            os << 3 * GetMeanTotalLength() << '\t';
+            os << GetMeanTotalLength() << '\t';
         } else {
-            os << 3 * GetMeanLength() << '\t';
-            os << 3 * sqrt(GetVarLength()) << '\t';
+            os << GetMeanLength() << '\t';
+            os << sqrt(GetVarLength()) << '\t';
         }
         if (omegamode != 3) {
             if (omegaprior == 0) {

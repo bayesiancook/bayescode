@@ -1089,7 +1089,7 @@ class DiscSelACModel : public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << 3 * branchlength->GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << exp(logpsi) << '\t';
         os << Gvar << '\t';
         os << GetPredictedDNDS() << '\t';

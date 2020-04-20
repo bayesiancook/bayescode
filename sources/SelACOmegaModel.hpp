@@ -1469,7 +1469,7 @@ class SelACOmegaModel : public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << 3 * branchlength->GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << psi << '\t';
         if (Gcat > 1)   {
             os << Ginvshape << '\t';

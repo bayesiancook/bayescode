@@ -1335,8 +1335,7 @@ class AAMutSelGSBDPOmegaModel : public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        // 3x: per coding site (and not per nucleotide site)
-        os << 3 * branchlength->GetTotalLength() << '\t';
+        os << branchlength->GetTotalLength() << '\t';
         os << omega << '\t';
         os << GetPredictedDNDS() << '\t';
         if (Gcat > 1)   {
