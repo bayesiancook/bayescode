@@ -27,10 +27,10 @@
 
 class SingleOmegaModel : public ProbModel {
     // tree and data
-    Tree *tree;
+    const Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
-    CodonSequenceAlignment *codondata;
+    const CodonSequenceAlignment *codondata;
 
     int Nsite;
     int Ntaxa;
@@ -114,12 +114,26 @@ class SingleOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
-
+        Tree* tmptree = new Tree(treefile);
         // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        tmptree->RegisterWith(taxonset);
+        tmptree->SetIndices();
+        tree = tmptree;
 
-        tree->SetIndices();
+        Nbranch = tree->GetNbranch();
+    }
+
+    SingleOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree) {
+
+        blmode = 0;
+        nucmode = 0;
+
+        codondata = incodondata;
+        Nsite = codondata->GetNsite();
+        Ntaxa = codondata->GetNtaxa();
+        taxonset = codondata->GetTaxonSet();
+
+        tree = intree;
         Nbranch = tree->GetNbranch();
     }
 
