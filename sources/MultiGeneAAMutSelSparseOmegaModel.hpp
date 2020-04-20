@@ -1129,7 +1129,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MoveGeneAA() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->MoveAA(20);
+            geneprocess[gene]->MoveAA(3);
             if (epsilonhyperinvconc)    {
                 (*epsilonarray)[gene] = geneprocess[gene]->GetEpsilon();
             }
