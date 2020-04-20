@@ -1207,7 +1207,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                 (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
             } else if (omegaprior == 2) {
                 (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
-            } else if (omegaprior == 1) {
+            } else if (omegaprior == 3) {
                 (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
             }
         }

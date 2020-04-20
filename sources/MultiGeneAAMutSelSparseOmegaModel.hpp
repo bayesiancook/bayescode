@@ -74,6 +74,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
     double lnL;
     double GeneLogPrior;
     double MeanStatEnt;
+    double MeanWidth;
     double moveTime;
     double mapTime;
     Chrono movechrono;
@@ -107,7 +108,8 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         treefile = intreefile;
         AllocateAlignments(datafile);
 
-        burnin = 20;
+        burnin = 10;
+        chainsize = 0;
 
         blmode = inblmode;
         nucmode = innucmode;
@@ -243,6 +245,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         lnL = 0;
         GeneLogPrior = 0;
         MeanStatEnt = 0;
+        MeanWidth = 0;
 
 
         if (!GetMyid()) {
@@ -505,6 +508,20 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         os << '\n';
     }
 
+    void TraceEpsilon(ostream& os) const   {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << epsilonarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+    }
+
+    void TracePi(ostream& os) const {
+        for (int gene = 0; gene < Ngene; gene++) {
+            os << piarray->GetVal(gene) << '\t';
+        }
+        os << '\n';
+    }
+
     void MasterReceivePredictedDNDS() {
         MasterReceiveGeneArray(*genednds);
     }
@@ -552,6 +569,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         if (pihyperinvconc) {
             os << "pi\tinvconc\t";
         }
+        os << "width\t";
         os << "aastatent\t";
         os << "nucrr\tinvconc\t";
         os << "nucstat\tinvconc\n";
@@ -598,6 +616,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         if (pihyperinvconc) {
             os << pihypermean << '\t' << pihyperinvconc << '\t';
         }
+        os << MeanWidth << '\t';
         os << MeanStatEnt << '\t';
         os << Random::GetEntropy(nucrelratehypercenter) << '\t' << nucrelratehyperinvconc << '\t';
         os << Random::GetEntropy(nucstathypercenter) << '\t' << nucstathyperinvconc << '\n';
@@ -964,7 +983,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MasterMove() override {
         totchrono.Start();
-        int nrep = 30;
+        int nrep = 20;
 
         for (int rep = 0; rep < nrep; rep++) {
             paramchrono.Start();
@@ -1040,7 +1059,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-        int nrep = 30;
+        int nrep = 20;
 
         for (int rep = 0; rep < nrep; rep++) {
             movechrono.Start();
@@ -1121,7 +1140,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
                 (*gammadposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
             } else if (omegaprior == 2) {
                 (*gammadposomarray)[gene] = log(geneprocess[gene]->GetOmega());
-            } else if (omegaprior == 1) {
+            } else if (omegaprior == 3) {
                 (*cauchydposomarray)[gene] = geneprocess[gene]->GetOmega() - 1;
             }
         }
@@ -1129,7 +1148,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MoveGeneAA() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->MoveAA(3);
+            geneprocess[gene]->MoveAA(10);
             if (epsilonhyperinvconc)    {
                 (*epsilonarray)[gene] = geneprocess[gene]->GetEpsilon();
             }
@@ -1673,14 +1692,17 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         GeneLogPrior = 0;
         lnL = 0;
         MeanStatEnt = 0;
+        MeanWidth = 0;
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
             MeanStatEnt += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanAAEntropy();
+            MeanWidth += geneprocess[gene]->GetNsite() * geneprocess[gene]->GetMeanWidth();
         }
         SlaveSendAdditive(GeneLogPrior);
         SlaveSendAdditive(lnL);
         SlaveSendAdditive(MeanStatEnt);
+        SlaveSendAdditive(MeanWidth);
 
         moveTime = movechrono.GetTime();
         mapTime = mapchrono.GetTime();
@@ -1694,8 +1716,11 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         MasterReceiveAdditive(GeneLogPrior);
         MasterReceiveAdditive(lnL);
         MeanStatEnt = 0;
+        MeanWidth = 0;
         MasterReceiveAdditive(MeanStatEnt);
         MeanStatEnt /= GetTotNsite();
+        MasterReceiveAdditive(MeanWidth);
+        MeanWidth /= GetTotNsite();
 
         moveTime = 0;
         mapTime = 0;
