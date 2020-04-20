@@ -113,6 +113,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     vector<double> compacc, comptot;
 
     int burnin;
+    int chainsize;
 
   public:
     //-------------------
@@ -133,7 +134,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         Gcat = inGcat;
         aadistmodel = inaadistmodel;
 
-        burnin = 0;
+        burnin = 20;
+        chainsize = 0;
 
         blmode = inblmode;
         nucmode = innucmode;
@@ -165,8 +167,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         }
     }
 
-    void SetBurnin(double in)   {
-        burnin = in;
+    void SetChainSize(int insize)   {
+        chainsize = insize;
     }
 
     void Allocate() {
@@ -1266,7 +1268,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
             aachrono.Stop();
 
-            if ((burnin > 10) && (omegamode != 3)) {
+            if ((chainsize >= burnin) && (omegamode != 3)) {
                 MasterReceiveOmega();
                 movechrono.Start();
                 MoveOmegaHyperParameters();
@@ -1314,7 +1316,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         
         totchrono.Stop();
 
-        burnin++;
+        chainsize++;
     }
 
     // slave move
@@ -1352,7 +1354,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                 SlaveReceivePsi();
             }
 
-            if ((burnin > 10) && (omegamode != 3)) {
+            if ((chainsize >= burnin) && (omegamode != 3)) {
                 movechrono.Start();
                 MoveGeneOmegas();
                 movechrono.Stop();
@@ -1391,7 +1393,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
         SlaveSendLogProbs();
         SlaveSendPredictedDNDS();
 
-        burnin++;
+        chainsize++;
     }
 
     void GeneResampleSub(double frac) {
@@ -1927,7 +1929,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
             }
 
-            if (burnin > 10) {
+            if (chainsize >= burnin) {
                 if (dposompihyperinvconc) {
                     ResampleDPosOmPi();
                 }
@@ -1947,7 +1949,7 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                         &MultiGeneSelACOmegaModel::CauchyOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::CauchyOmegaUpdate, this);
 
-            if (burnin > 10) {
+            if (chainsize >= burnin) {
                 if (dposompihyperinvconc) {
                     ResampleDPosOmPi();
                 }
