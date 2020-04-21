@@ -1008,7 +1008,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
 
         if (omegamode != 3) {
             total += OmegaHyperLogPrior();
-            // total += OmegaLogPrior();
         }
 
         total += AALogPrior();
@@ -1974,12 +1973,8 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     }
 
     void ResampleDPosOmPi() {
-        int n0 = dposomhypersuffstat.GetN0();
-        int n1 = dposomhypersuffstat.GetN1();
-        if ((n0 + n1) != Ngene) {
-            cerr << "error in resample pi\n";
-            exit(1);
-        }
+        int n1 = GetNpos();
+        int n0 = Ngene- n1;
         double pialpha = dposompihypermean / dposompihyperinvconc;
         double pibeta = (1 - dposompihypermean) / dposompihyperinvconc;
         double postalpha = Random::sGamma(pialpha + n1);
