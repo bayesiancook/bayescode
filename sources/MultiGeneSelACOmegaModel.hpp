@@ -1928,11 +1928,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                             &MultiGeneSelACOmegaModel::NoUpdate, this);
             }
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             gammadposomarray->SetPi(dposompi);
@@ -1948,11 +1949,12 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
                         &MultiGeneSelACOmegaModel::CauchyOmegaHyperLogProb,
                         &MultiGeneSelACOmegaModel::CauchyOmegaUpdate, this);
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             CauchyOmegaUpdate();
         }
     }

@@ -104,6 +104,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
     Chrono aachrono;
 
     int burnin;
+    int chainsize;
 
   public:
     //-------------------
@@ -132,7 +133,8 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
 
         Ncat = inNcat;
 
-        burnin = 0;
+        burnin = 20;
+        chainsize = 0;
 
         basemin = 0;
         if (inbaseNcat < 0) {
@@ -176,6 +178,10 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
             std::cerr << "number of branches : " << Nbranch << '\n';
             std::cerr << "-- Tree and data fit together\n";
         }
+    }
+
+    void SetChainSize(double insize)	{
+	    chainsize = insize;
     }
 
     void Allocate() {
@@ -945,6 +951,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
             paramchrono.Start();
 
             // mixture hyperparameters
+
             MasterReceiveOmegaMixtureHyperSuffStat();
             MoveOmegaMixtureHyperParameters();
             MasterSendOmegaMixtureHyperParameters();
@@ -1000,7 +1007,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
         
         totchrono.Stop();
 
-        burnin++;
+        chainsize++;
     }
 
     // slave move
@@ -1070,7 +1077,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
         SlaveSendOmegaMixtureParameters();
         SlaveSendLogProbs();
 
-        burnin++;
+        chainsize++;
     }
 
     void GeneResampleSub(double frac) {
@@ -1339,7 +1346,7 @@ class MultiGeneAAMutSelM2Model : public MultiGeneProbModel {
             MovePoswHyper();
         }
 
-        if (burnin > 10) {
+        if (chainsize >= burnin)    {
             if (pihyperinvconc) {
                 ResamplePi();
             }

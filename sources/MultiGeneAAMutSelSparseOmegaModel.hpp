@@ -1361,11 +1361,12 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
                             &MultiGeneAAMutSelSparseOmegaModel::NoUpdate, this);
             }
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             gammadposomarray->SetPi(dposompi);
@@ -1381,11 +1382,12 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
                         &MultiGeneAAMutSelSparseOmegaModel::CauchyOmegaHyperLogProb,
                         &MultiGeneAAMutSelSparseOmegaModel::CauchyOmegaUpdate, this);
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             CauchyOmegaUpdate();
         }
     }

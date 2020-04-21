@@ -124,7 +124,7 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         Ncat = inNcat;
 
         burnin = 20;
-	chainsize = 0;
+        chainsize = 0;
 
         basemin = 0;
         if (inbaseNcat < 0) {
@@ -171,7 +171,6 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
     void SetChainSize(double insize)	{
 	    chainsize = insize;
     }
-	   
 
     void Allocate() {
         lambda = 10;
@@ -1494,11 +1493,13 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                             &MultiGeneAAMutSelDSBDPOmegaModel::NoUpdate, this);
             }
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // useless, since omega does not move anyway when chainsize < burnin
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             double alpha = 1.0 / dposomhyperinvshape;
             double beta = alpha / dposomhypermean;
             gammadposomarray->SetPi(dposompi);
@@ -1514,11 +1515,12 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
                         &MultiGeneAAMutSelDSBDPOmegaModel::CauchyOmegaHyperLogProb,
                         &MultiGeneAAMutSelDSBDPOmegaModel::CauchyOmegaUpdate, this);
 
-            if (chainsize >= burnin) {
-                if (dposompihyperinvconc) {
-                    ResampleDPosOmPi();
-                }
+            // if (chainsize >= burnin) {
+            if (dposompihyperinvconc) {
+                ResampleDPosOmPi();
             }
+            // }
+
             CauchyOmegaUpdate();
         }
     }

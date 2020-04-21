@@ -679,8 +679,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         return ret;
     }
 
-    //! log prior over omega (gamma of mean omegahypermean and inverse shape
-    //! omegahyperinvshape)
+    //! log prior over omega (gamma of mean omegahypermean and inverse shape omegahyperinvshape)
     double OmegaLogPrior() const {
         double ret = 0;
 

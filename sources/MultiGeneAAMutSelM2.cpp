@@ -128,6 +128,7 @@ class MultiGeneAAMutSelM2Chain : public MultiGeneChain {
             exit(1);
         }
 
+        GetModel()->SetChainSize(GetSize());
         GetModel()->Allocate();
         model->FromStream(is);
         GetModel()->Update();
