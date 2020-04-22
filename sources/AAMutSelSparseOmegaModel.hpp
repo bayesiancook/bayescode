@@ -868,7 +868,7 @@ class AAMutSelSparseOmegaModel : public ProbModel {
     //! \brief complete MCMC move schedule
 	double Move() override {
         ResampleSub(1.0);
-        MoveParameters(3,20);
+        MoveParameters(30,2);
         chainsize++;
         return 1.0;
 	}

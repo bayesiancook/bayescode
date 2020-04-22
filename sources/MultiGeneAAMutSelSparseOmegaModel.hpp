@@ -983,7 +983,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MasterMove() override {
         totchrono.Start();
-        int nrep = 20;
+        int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
             paramchrono.Start();
@@ -1059,7 +1059,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-        int nrep = 20;
+        int nrep = 30;
 
         for (int rep = 0; rep < nrep; rep++) {
             movechrono.Start();
@@ -1148,7 +1148,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MoveGeneAA() {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
-            geneprocess[gene]->MoveAA(10);
+            geneprocess[gene]->MoveAA(2);
             if (epsilonhyperinvconc)    {
                 (*epsilonarray)[gene] = geneprocess[gene]->GetEpsilon();
             }
