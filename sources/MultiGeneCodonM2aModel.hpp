@@ -60,7 +60,6 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // Data structures
     // ------------------
 
-  private:
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;

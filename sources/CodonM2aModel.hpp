@@ -54,6 +54,110 @@
 #include "WhiteNoise.hpp"
 
 class CodonM2aModel : public ProbModel {
+
+    //-------------------
+    // Data structures
+    // ------------------
+
+    const Tree *tree;
+    SequenceAlignment *data;
+    const TaxonSet *taxonset;
+    const CodonSequenceAlignment *codondata;
+
+    int Nsite;
+    int Ntaxa;
+    int Nbranch;
+
+    double lambda;
+    BranchIIDGamma *blhypermean;
+    double blhyperinvshape;
+    GammaWhiteNoise *branchlength;
+
+    //
+    // parameters of the distribution of omega across sites
+    //
+
+    // omega0 < 1: weight purw * (1 - posw)
+    // omega1 = 1: weight (1-purw) * (1-posw)
+    // omega2 > 1: weight posw
+
+    // omega0 = purom
+    double purom;
+
+    // omega2 = 1 + dposom
+    double dposom;
+
+    double posw;
+    double purw;
+
+    M2aMix *componentomegaarray;
+    MultinomialAllocationVector *sitealloc;
+    mutable vector<vector<double>> sitepostprobarray;
+
+    //
+    // hyperparameters of the priors over the mixture parameters
+    //
+
+    // prior probability for the gene to be under positive selection (i.e. prior
+    // prob that posw > 0)
+    double pi;
+
+    // Beta prior for purom (with hypermean and hyper inverse concentration)
+    double puromhypermean;
+    double puromhyperinvconc;
+
+    // Gamma prior for dposom = omega_pos - 1 (with hyper mean and inverse shape
+    // parameter)
+    double dposomhypermean;
+    double dposomhyperinvshape;
+
+    // Beta prior for purw
+    double purwhypermean;
+    double purwhyperinvconc;
+
+    // Beta prior for posw (assuming posw>0)
+    double poswhypermean;
+    double poswhyperinvconc;
+
+    // nucleotide rates hyperparameters
+    vector<double> nucrelratehypercenter;
+    double nucrelratehyperinvconc;
+    vector<double> nucstathypercenter;
+    double nucstathyperinvconc;
+
+    // nucleotide rate parameters
+    vector<double> nucrelrate;
+    vector<double> nucstat;
+    GTRSubMatrix *nucmatrix;
+
+    // array of matrices across components of the mixture
+    MGOmegaCodonSubMatrixArray *componentcodonmatrixarray;
+
+    // arrays of matrices across sites (such as determined by the site allocations
+    // to the mixture components) two versions differing only by their exact type
+
+    // used for collecting omega suffstats: need to have access to the *codon*
+    // matrix for each site
+    MixtureSelector<MGOmegaCodonSubMatrix> *sitecodonmatrixarray;
+
+    // used by PhyloProcess: has to be a Selector<SubMatrix>
+    MixtureSelector<SubMatrix> *sitesubmatrixarray;
+
+    PhyloProcess *phyloprocess;
+
+    // suffstats
+
+    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
+    GammaSuffStat hyperlengthsuffstat;
+    OmegaPathSuffStatArray *siteomegapathsuffstatarray;
+    PathSuffStatArray *sitepathsuffstatarray;
+    PathSuffStatArray *componentpathsuffstatarray;
+
+    NucPathSuffStat nucpathsuffstat;
+
+    int blmode;
+    int nucmode;
+
   public:
     //-------------------
     // Constructors
@@ -943,108 +1047,4 @@ class CodonM2aModel : public ProbModel {
         exit(1);
         // nucstat = data->GetEmpiricalFreq();
     }
-
-    //-------------------
-    // Data structures
-    // ------------------
-
-  private:
-    const Tree *tree;
-    SequenceAlignment *data;
-    const TaxonSet *taxonset;
-    const CodonSequenceAlignment *codondata;
-
-    int Nsite;
-    int Ntaxa;
-    int Nbranch;
-
-    double lambda;
-    BranchIIDGamma *blhypermean;
-    double blhyperinvshape;
-    GammaWhiteNoise *branchlength;
-
-    //
-    // parameters of the distribution of omega across sites
-    //
-
-    // omega0 < 1: weight purw * (1 - posw)
-    // omega1 = 1: weight (1-purw) * (1-posw)
-    // omega2 > 1: weight posw
-
-    // omega0 = purom
-    double purom;
-
-    // omega2 = 1 + dposom
-    double dposom;
-
-    double posw;
-    double purw;
-
-    M2aMix *componentomegaarray;
-    MultinomialAllocationVector *sitealloc;
-    mutable vector<vector<double>> sitepostprobarray;
-
-    //
-    // hyperparameters of the priors over the mixture parameters
-    //
-
-    // prior probability for the gene to be under positive selection (i.e. prior
-    // prob that posw > 0)
-    double pi;
-
-    // Beta prior for purom (with hypermean and hyper inverse concentration)
-    double puromhypermean;
-    double puromhyperinvconc;
-
-    // Gamma prior for dposom = omega_pos - 1 (with hyper mean and inverse shape
-    // parameter)
-    double dposomhypermean;
-    double dposomhyperinvshape;
-
-    // Beta prior for purw
-    double purwhypermean;
-    double purwhyperinvconc;
-
-    // Beta prior for posw (assuming posw>0)
-    double poswhypermean;
-    double poswhyperinvconc;
-
-    // nucleotide rates hyperparameters
-    vector<double> nucrelratehypercenter;
-    double nucrelratehyperinvconc;
-    vector<double> nucstathypercenter;
-    double nucstathyperinvconc;
-
-    // nucleotide rate parameters
-    vector<double> nucrelrate;
-    vector<double> nucstat;
-    GTRSubMatrix *nucmatrix;
-
-    // array of matrices across components of the mixture
-    MGOmegaCodonSubMatrixArray *componentcodonmatrixarray;
-
-    // arrays of matrices across sites (such as determined by the site allocations
-    // to the mixture components) two versions differing only by their exact type
-
-    // used for collecting omega suffstats: need to have access to the *codon*
-    // matrix for each site
-    MixtureSelector<MGOmegaCodonSubMatrix> *sitecodonmatrixarray;
-
-    // used by PhyloProcess: has to be a Selector<SubMatrix>
-    MixtureSelector<SubMatrix> *sitesubmatrixarray;
-
-    PhyloProcess *phyloprocess;
-
-    // suffstats
-
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    GammaSuffStat hyperlengthsuffstat;
-    OmegaPathSuffStatArray *siteomegapathsuffstatarray;
-    PathSuffStatArray *sitepathsuffstatarray;
-    PathSuffStatArray *componentpathsuffstatarray;
-
-    NucPathSuffStat nucpathsuffstat;
-
-    int blmode;
-    int nucmode;
 };
