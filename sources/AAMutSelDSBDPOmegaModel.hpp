@@ -177,6 +177,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double accb1, accb2, accb3, accb4;
     double totb1, totb2, totb3, totb4;
 
+    int chainsize;
+    int burnin;
+
   public:
     //-------------------
     // Construction and allocation
@@ -197,6 +200,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     AAMutSelDSBDPOmegaModel(string datafile, string treefile, int inomegamode, int inomegaprior,
                             int inNcat, int inbaseNcat) {
+        chainsize = 0;
+        burnin = 20;
+
         blmode = 0;
         nucmode = 0;
         basemode = 0;
@@ -255,6 +261,9 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
     AAMutSelDSBDPOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inomegamode, int inomegaprior,
                             int inNcat, int inbaseNcat) {
+        chainsize = 0;
+        burnin = 20;
+
         blmode = 0;
         nucmode = 0;
         basemode = 0;
@@ -302,6 +311,14 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
         totb1 = totb2 = totb3 = totb4 = 0;
 
         // Allocate();
+    }
+
+    void SetChainSize(int insize)    {
+        chainsize = insize;
+    }
+
+    void SetBurnin(int inburnin)    {
+        burnin = inburnin;
     }
 
     void SetMaxDPosOm(double inmax)  {
@@ -928,6 +945,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
     double Move() override {
         ResampleSub(1.0);
         MoveParameters(30);
+        chainsize++;
         return 1.0;
     }
 
@@ -953,7 +971,7 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
                 MoveNucRates();
             }
 
-            if (omegamode < 2) {
+            if ((omegamode < 2) && (chainsize >= burnin))  {
                 MoveOmega();
             }
 

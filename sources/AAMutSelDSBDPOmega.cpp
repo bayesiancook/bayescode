@@ -100,6 +100,7 @@ class AAMutSelDSBDPOmegaChain : public Chain {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        GetModel()->SetChainSize(GetSize());
         GetModel()->Allocate();
         model->FromStream(is);
         GetModel()->Update();

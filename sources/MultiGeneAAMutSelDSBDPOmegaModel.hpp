@@ -170,6 +170,11 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
 
     void SetChainSize(double insize)	{
 	    chainsize = insize;
+        if (myid) {
+            for (int gene=0; gene<GetNgene(); gene++)   {
+                geneprocess[gene]->SetChainSize(insize);
+            }
+        }
     }
 
     void Allocate() {
