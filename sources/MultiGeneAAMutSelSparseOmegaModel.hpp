@@ -1,4 +1,3 @@
-
 #include "AAMutSelSparseOmegaModel.hpp"
 #include "IIDBernoulliGamma.hpp"
 #include "IIDBernoulliCauchy.hpp"
@@ -983,7 +982,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MasterMove() override {
         totchrono.Start();
-        int nrep = 30;
+        int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
             paramchrono.Start();
@@ -1059,7 +1058,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-        int nrep = 30;
+        int nrep = 10;
 
         for (int rep = 0; rep < nrep; rep++) {
             movechrono.Start();
