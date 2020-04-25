@@ -744,6 +744,11 @@ class CodonM9Model : public ProbModel {
         branchlength->GibbsResample(*lengthpathsuffstatarray);
     }
 
+    //! resample all branches not conditioned by sequence data from prior (as indicated by lengthpathsuffstats)
+    void ResampleEmptyBranches()    {
+        branchlength->ResampleEmptyBranches(*lengthpathsuffstatarray);
+    }
+
     //! MH move on branch lengths hyperparameters (here, scaling move on lambda,
     //! based on suffstats for branch lengths)
     void MoveLambda() {
