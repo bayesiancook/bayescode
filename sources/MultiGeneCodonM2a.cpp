@@ -108,6 +108,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             cerr << "allocate\n";
         }
         GetModel()->Allocate();
+        GetModel()->SetChainSize(GetSize());
         if (!myid) {
             cerr << "update\n";
         }
@@ -161,7 +162,6 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
                 puromhypermean, puromhyperinvconc, dposomhypermean, dposomhyperinvshape,
                 purwhypermean, purwhyperinvconc, poswhypermean, poswhyperinvconc);
             GetModel()->SetModalMixturePrior(modalprior);
-            GetModel()->SetBurnin(20);
         } else {
             cerr << "Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -172,6 +172,7 @@ class MultiGeneCodonM2aChain : public MultiGeneChain {
             cerr << "allocate\n";
         }
         GetModel()->Allocate();
+        GetModel()->SetChainSize(GetSize());
 
         if (!myid) {
             cerr << "read from file\n";

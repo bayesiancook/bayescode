@@ -114,8 +114,8 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
             exit(1);
         }
 
-        GetModel()->SetChainSize(GetSize());
         GetModel()->Allocate();
+        GetModel()->SetChainSize(GetSize());
         model->FromStream(is);
         GetModel()->Update();
 

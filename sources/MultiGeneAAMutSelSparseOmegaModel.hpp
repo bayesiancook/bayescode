@@ -147,7 +147,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
     void SetChainSize(int insize) {
         chainsize = insize;
         if (myid) {
-            for (int gene=0; gene<GetNgene(); gene++)   {
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene]->SetChainSize(insize);
             }
         }
@@ -982,7 +982,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
 
     void MasterMove() override {
         totchrono.Start();
-        int nrep = 10;
+        int nrep = 15;
 
         for (int rep = 0; rep < nrep; rep++) {
             paramchrono.Start();
@@ -1058,7 +1058,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
         mapchrono.Stop();
         movechrono.Stop();
 
-        int nrep = 10;
+        int nrep = 15;
 
         for (int rep = 0; rep < nrep; rep++) {
             movechrono.Start();
