@@ -71,7 +71,7 @@ class CodonM9Chain : public Chain {
     }
 
     void New(int force) override {
-        model = new CodonM9Model(datafile, treefile);
+        model = new CodonM9Model(datafile, treefile, pi);
 
         GetModel()->SetMixtureHyperParameters(
                 pi,
@@ -113,7 +113,7 @@ class CodonM9Chain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "CODONM9") {
-            model = new CodonM9Model(datafile, treefile);
+            model = new CodonM9Model(datafile, treefile, pi);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';

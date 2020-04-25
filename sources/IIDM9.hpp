@@ -39,11 +39,13 @@ class M9SuffStat : public SuffStat {
             count[2] ++;
         }
         else if (omega > 1.0)   {
+            count[3]++;
             double dposom = omega -1;
             gammasum += dposom;
             gammasumlog += log(dposom);
         }
         else    {
+            count[1]++;
             betasumlog0 += log(1.0-omega);
             betasumlog1 += log(omega);
         }
@@ -269,11 +271,8 @@ class IIDM9 : public SimpleArray<double> {
             double bk = v;
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
 
-            // works
             // if omega == 0 and there are substitutions, then log prob is -infty
-            if (suffstat.GetCount())    {
-                logprob[0] = log(0);
-            }
+            logprob[0] = suffstat.GetCount() ? log(0) : 0;
             // for omega == 1
             logprob[2] = - suffstat.GetBeta()*v;
 

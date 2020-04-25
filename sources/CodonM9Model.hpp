@@ -123,7 +123,7 @@ class CodonM9Model : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    CodonM9Model(string datafile, string treefile) {
+    CodonM9Model(string datafile, string treefile, double inpi) {
 
         blmode = 0;
         nucmode = 0;
@@ -145,10 +145,11 @@ class CodonM9Model : public ProbModel {
 
         Nbranch = tree->GetNbranch();
 
-        // SetDefaultMixtureHyperParameters();
+        pi = inpi;
+        purifweighthypercenter.assign(3,1.0/3);
     }
 
-    CodonM9Model(const CodonSequenceAlignment* incodondata, const Tree* intree)   {
+    CodonM9Model(const CodonSequenceAlignment* incodondata, const Tree* intree, double inpi)   {
 
         blmode = 0;
         nucmode = 0;
@@ -163,7 +164,8 @@ class CodonM9Model : public ProbModel {
         tree = intree;
         Nbranch = tree->GetNbranch();
 
-        // SetDefaultMixtureHyperParameters();
+        purifweighthypercenter.assign(3,1.0/3);
+        pi = inpi;
     }
 
     //! model allocation
@@ -196,6 +198,7 @@ class CodonM9Model : public ProbModel {
 
         // Omega
 
+        purifweight.assign(3,0);
         copy(purifweighthypercenter.begin(), purifweighthypercenter.end(), purifweight.begin());
         posw = poswhypermean;
 
