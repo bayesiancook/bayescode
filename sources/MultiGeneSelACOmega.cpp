@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
     string treefile = "";
     string aadistfile = "None";
     int Gcat = 4;
-    int force = 1;
+    int force = 0;
     int every = 1;
     int until = -1;
 
@@ -340,6 +340,19 @@ int main(int argc, char *argv[]) {
     }
     else    {
         // new chain
+        // check whether chain is already existing (and running) before extending it
+        if (! force)    {
+            ifstream is((name + ".run").c_str());
+            int tmp;
+            is >> tmp;
+            if (tmp)    {
+                if (! myid) {
+                    cerr << "error: chain still running\n";
+                }
+                MPI_Finalize();
+                exit(0);
+            }
+        }
         chain = new MultiGeneSelACOmegaChain(
             datafile, treefile, aadistfile,
             Gcat, aadistmodel, blmode, nucmode, aadistmode, 

@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 
     string datafile = "";
     string treefile = "";
-    int force = 1;
+    int force = 0;
     int every = 1;
     int until = -1;
     int blmode = 1;
@@ -304,6 +304,19 @@ int main(int argc, char *argv[]) {
 
     if ((datafile == "") && (treefile == ""))   {
         // existing chain
+        // check whether chain is already existing (and running) before extending it
+        if (! force)    {
+            ifstream is((name + ".run").c_str());
+            int tmp;
+            is >> tmp;
+            if (tmp)    {
+                if (! myid) {
+                    cerr << "error: chain still running\n";
+                }
+                MPI_Finalize();
+                exit(0);
+            }
+        }
         chain = new MultiGeneSiteOmegaChain(name, myid, nprocs);
     }
     else    {
