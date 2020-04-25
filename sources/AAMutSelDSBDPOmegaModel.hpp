@@ -238,7 +238,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
         cerr << "ncat : " << Ncat << '\n';
-        cerr << "basencat : " << baseNcat << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -298,7 +297,6 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
 
         std::cerr << "-- Number of sites: " << Nsite << std::endl;
         cerr << "ncat : " << Ncat << '\n';
-        cerr << "basencat : " << baseNcat << '\n';
 
         taxonset = codondata->GetTaxonSet();
 

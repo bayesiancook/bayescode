@@ -147,7 +147,7 @@ class MultiGeneAAMutSelSparseOmegaModel : public MultiGeneProbModel {
     void SetChainSize(int insize) {
         chainsize = insize;
         if (myid) {
-            for (int gene=0; gene<GetNgene(); gene++)   {
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
                 geneprocess[gene]->SetChainSize(insize);
             }
         }

@@ -134,6 +134,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     double moveTime;
     double mapTime;
 
+    int chainsize;
     int burnin;
 
     // 0: free (fixed hyper parameters)
@@ -175,7 +176,8 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
 
-        burnin = 0;
+        burnin = 20;
+        chainsize = 0;
 
         // 0 : gathering branch lengths across genes and then using gamma suff stats to resample hyperparams
         // 1 : gathering suff stats across genes, then resampling hyperparams based on integrated bls
@@ -378,9 +380,17 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
         poswhyperinvconc = inposwhyperinvconc;
     }
 
-    void SetBurnin(double in)   {
-        burnin = in;
+    void SetChainSize(int insize) {
+        chainsize = insize;
+        /*
+        if (myid) {
+            for (int gene=0; gene<GetLocalNgene(); gene++)   {
+                geneprocess[gene]->SetChainSize(insize);
+            }
+        }
+        */
     }
+
 
     void UpdateNucMatrix()  {
         nucmatrix->CopyStationary((*nucstatarray)[0]);
@@ -1112,7 +1122,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
                 MasterSendNucRatesHyperParameters();
             }
         }
-        burnin++;
+        chainsize++;
         if (blmode != 2) {
             MasterReceiveGeneBranchLengths();
         }
@@ -1172,7 +1182,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
                 SlaveReceiveNucRatesHyperParameters();
             }
         }
-        burnin++;
+        chainsize++;
 
         // collect current state
         if (blmode != 2) {
@@ -1404,7 +1414,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
                         &MultiGeneCodonM2aModel::NoUpdate, this);
         }
 
-        if (burnin > 10) {
+        if (chainsize >= burnin)    {
             if (pihyperinvconc) {
                 ResamplePi();
             }
