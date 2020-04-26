@@ -46,8 +46,8 @@ class M9SuffStat : public SuffStat {
         }
         else    {
             count[1]++;
-            betasumlog0 += log(1.0-omega);
-            betasumlog1 += log(omega);
+            betasumlog0 += log(omega);
+            betasumlog1 += log(1.0-omega);
         }
     }
 
@@ -212,14 +212,16 @@ class IIDM9 : public SimpleArray<double> {
             ret = log((1-posw)*weight[2]);
         }
         else if (GetVal(index) > 1.0)   {
-            ret = log(posw) * Random::logGammaDensity(GetVal(index) - 1.0, shape, scale);
+            ret = log(posw) + Random::logGammaDensity(GetVal(index) - 1.0, shape, scale);
         }
         else    {
-            ret = log((1-posw)*weight[1]) * Random::logBetaDensity(GetVal(index), alpha, beta);
+            ret = log((1-posw)*weight[1]) + Random::logBetaDensity(GetVal(index), alpha, beta);
         }
         return ret;
     }
 
+    // never used
+    /*
     //! resample all entries, given current shape and scale parameters and given
     //! an array of Poisson sufficient statistics of same size
     double MHMove(double tuning, int nrep,  const Selector<PoissonSuffStat> &suffstatarray) {
@@ -249,6 +251,7 @@ class IIDM9 : public SimpleArray<double> {
         }
         return nacc / ntot;
     }
+    */
 
     double MultipleTryMove(int nsample, const Selector<PoissonSuffStat> &suffstatarray) {
 
@@ -267,26 +270,26 @@ class IIDM9 : public SimpleArray<double> {
 
         for (int i=0; i<GetSize(); i++) {
 
-            double& v = (*this)[i];
-            double bk = v;
+            double& omega = (*this)[i];
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
 
-            // if omega == 0 and there are substitutions, then log prob is -infty
+            // if omega == 0 and there are substitutions, then log likelihood is -infty
             logprob[0] = suffstat.GetCount() ? log(0) : 0;
             // for omega == 1
-            logprob[2] = - suffstat.GetBeta()*v;
+            logprob[2] = - suffstat.GetBeta();
 
             // for 0 < omega < 1
             double purmax = 0;
             for (int k=0; k<nsample; k++)   {
-                if ((!k) && (bk>0) && (bk<1)) {
-                    v = bk;
+                double om = 0;
+                if ((!k) && (omega>0) && (omega<1.0)) {
+                    om = omega;
                 }
                 else    {
-                    v = Random::BetaSample(alpha,beta);
+                    om = Random::BetaSample(alpha,beta);
                 }
-                purlogprob[k] = suffstat.GetCount()*log(v) - suffstat.GetBeta()*v;
-                purom[k] = v;
+                purlogprob[k] = suffstat.GetCount()*log(om) - suffstat.GetBeta()*om;
+                purom[k] = om;
                 if ((!k) || (purmax < purlogprob[k]))   {
                     purmax = purlogprob[k];
                 }
@@ -294,20 +297,25 @@ class IIDM9 : public SimpleArray<double> {
 
             double purtot = 0;
             for (int k=0; k<nsample; k++)   {
-                purtot += exp(purlogprob[k] - purmax);
+                purprob[k] = exp(purlogprob[k] - purmax);
+                purtot += purprob[k];
             }
-            logprob[1] = log(purtot) + purmax;
+            logprob[1] = log(purtot/nsample) + purmax;
+            for (int k=0; k<nsample; k++)   {
+                purprob[k] /= purtot;
+            }
 
             double posmax = 0;
             for (int k=0; k<nsample; k++)   {
-                if ((!k) && (bk>1)) {
-                    v = bk;
+                double om = 0;
+                if ((!k) && (omega>1)) {
+                    om = omega;
                 }
                 else    {
-                    v = 1.0 + Random::GammaSample(shape,scale);
+                    om = 1.0 + Random::GammaSample(shape,scale);
                 }
-                poslogprob[k] = suffstat.GetCount()*log(v) - suffstat.GetBeta()*v;
-                posom[k] = v;
+                poslogprob[k] = suffstat.GetCount()*log(om) - suffstat.GetBeta()*om;
+                posom[k] = om;
                 if ((!k) || (posmax < poslogprob[k]))   {
                     posmax = poslogprob[k];
                 }
@@ -318,7 +326,7 @@ class IIDM9 : public SimpleArray<double> {
                 posprob[k] = exp(poslogprob[k] - posmax);
                 postot += posprob[k];
             }
-            logprob[3] = log(postot) + posmax;
+            logprob[3] = log(postot/nsample) + posmax;
             for (int k=0; k<nsample; k++)   {
                 posprob[k] /= postot;
             }
@@ -342,23 +350,24 @@ class IIDM9 : public SimpleArray<double> {
             for (int k=0; k<4; k++) {
                 postprob[k] /= tot;
             }
+            double bkomega = omega;
             int choose = Random::DrawFromDiscreteDistribution(postprob);
             if (choose == 0)    {
-                v = 0;
+                omega = 0;
             }
             else if (choose == 1)   {
                 int c = Random::DrawFromDiscreteDistribution(purprob);
-                v = purom[c];
+                omega = purom[c];
             }
             else if (choose == 2)   {
-                v = 1.0;
+                omega = 1.0;
             }
             else    {
                 int c = Random::DrawFromDiscreteDistribution(posprob);
-                v = posom[c];
+                omega = posom[c];
             }
 
-            if (v != bk)    {
+            if (omega != bkomega)    {
                 nacc++;
             }
         }
