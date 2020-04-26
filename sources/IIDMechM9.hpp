@@ -146,7 +146,7 @@ class IIDMechM9 : public SimpleArray<double> {
             (*this)[i] = 1.0 + Random::GammaSample(shape, scale);
         }
         else    {
-            (*this)[9] = 1.0;
+            (*this)[i] = 1.0;
         }
     }
 
@@ -211,7 +211,7 @@ class IIDMechM9 : public SimpleArray<double> {
                 posprob[k] = exp(poslogprob[k] - posmax);
                 postot += posprob[k];
             }
-            logprob[3] = log(postot/nsample) + posmax;
+            logprob[1] = log(postot/nsample) + posmax;
             for (int k=0; k<nsample; k++)   {
                 posprob[k] /= postot;
             }

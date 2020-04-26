@@ -142,6 +142,17 @@ class AAMutSelSparseM9Chain : public Chain  {
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
+
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream os((name + ".siteom").c_str(), ios_base::app);
+        GetModel()->TraceOmega(os);
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream os((name + ".siteom").c_str());
+    }
 };
 
 int main(int argc, char* argv[])	{
