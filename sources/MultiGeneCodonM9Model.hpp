@@ -105,11 +105,6 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
     IIDGamma* geneomegaarray;
     double lnL;
     double GeneLogPrior;
-    double GeneBLLogPrior;
-    double GeneNucRatesLogPrior;
-    double GeneOmegaLogPrior;
-    double moveTime;
-    double mapTime;
 
     int chainsize;
     int burnin;
@@ -170,7 +165,7 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
 
         purifmeanhypermean = 0.5;
         purifmeanhyperinvconc = 0.5;
-        purifinvconchypermean = 2.0;
+        purifinvconchypermean = 1.0;
         purifinvconchyperinvshape = 1.0;
 
         posmeanhypermean = 1.0;
@@ -283,9 +278,9 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
         double poswalpha = poswhypermean / poswhyperinvconc;
         double poswbeta = (1 - poswhypermean) / poswhyperinvconc;
         poswarray = new IIDBernoulliBeta(GetLocalNgene(), pi, poswalpha, poswbeta);
+        poswarray->OffsetZeros(0.01);
 
-        double purifweighthyperconc = 1.0 / purifweighthyperinvconc;
-        purifweightarray = new IIDDirichlet(GetLocalNgene(),purifweighthypercenter,purifweighthyperconc);
+        purifweightarray = new IIDDirichlet(GetLocalNgene(),purifweighthypercenter,1.0 / purifweighthyperinvconc);
 
         if (!GetMyid()) {
             geneprocess.assign(0, (CodonM9Model *)0);
@@ -1835,50 +1830,21 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
 
     void SlaveSendLogProbs()    {
         GeneLogPrior = 0;
-        GeneBLLogPrior = 0;
-        GeneNucRatesLogPrior = 0;
-        GeneOmegaLogPrior = 0;
         lnL = 0;
-        moveTime = movechrono.GetTime();
-        mapTime = mapchrono.GetTime();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             GeneLogPrior += geneprocess[gene]->GetLogPrior();
-            GeneBLLogPrior += geneprocess[gene]->BranchLengthsLogPrior();
-            GeneNucRatesLogPrior += geneprocess[gene]->NucRatesLogPrior();
-            GeneOmegaLogPrior += geneprocess[gene]->OmegaLogPrior();
             lnL += geneprocess[gene]->GetLogLikelihood();
         }
         SlaveSendAdditive(GeneLogPrior);
-        SlaveSendAdditive(GeneBLLogPrior);
-        SlaveSendAdditive(GeneNucRatesLogPrior);
-        SlaveSendAdditive(GeneOmegaLogPrior);
         SlaveSendAdditive(lnL);
-        SlaveSendAdditive(moveTime);
-        SlaveSendAdditive(mapTime);
     }
 
     void MasterReceiveLogProbs()    {
         GeneLogPrior = 0;
         MasterReceiveAdditive(GeneLogPrior);
-        GeneBLLogPrior = 0;
-        MasterReceiveAdditive(GeneBLLogPrior);
-        GeneNucRatesLogPrior = 0;
-        MasterReceiveAdditive(GeneNucRatesLogPrior);
-        GeneOmegaLogPrior = 0;
-        MasterReceiveAdditive(GeneOmegaLogPrior);
         lnL = 0;
         MasterReceiveAdditive(lnL);
-        moveTime = 0;
-        mapTime = 0;
-        MasterReceiveAdditive(moveTime);
-        MasterReceiveAdditive(mapTime);
-        moveTime /= (GetNprocs() - 1);
-        mapTime /= (GetNprocs() - 1);
     }
-
-    double GetSlaveMoveTime() const { return moveTime; }
-
-    double GetSlaveMapTime() const { return mapTime; }
 
     double GetMasterMoveTime() const { return movechrono.GetTime(); }
 

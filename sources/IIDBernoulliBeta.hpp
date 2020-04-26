@@ -141,6 +141,13 @@ class IIDBernoulliBeta : public SimpleArray<double> {
         }
     }
 
+    void OffsetZeros(double in) {
+        for (int i=0; i<GetSize(); i++) {
+            if (!(*this)[i])    {
+                (*this)[i] = 0.1;
+            }
+        }
+    }
     //! get number of entries that are equal to 0
     int GetNullSet() const {
         int tot = 0;

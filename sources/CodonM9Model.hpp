@@ -146,7 +146,20 @@ class CodonM9Model : public ProbModel {
         Nbranch = tree->GetNbranch();
 
         pi = inpi;
+
+        purifmeanhypermean = 0.5;
+        purifmeanhyperinvconc = 0.5;
+        purifinvconchypermean = 1.0;
+        purifinvconchyperinvshape = 1.0;
         purifweighthypercenter.assign(3,1.0/3);
+        purifweighthyperinvconc = 1.0;
+
+        poswhypermean = 0.5;
+        poswhyperinvconc = 0.1;
+        posmeanhypermean = 1.0;
+        posmeanhyperinvshape = 1.0;
+        posinvshapehypermean = 1.0;
+        posinvshapehyperinvshape = 1.0;
     }
 
     CodonM9Model(const CodonSequenceAlignment* incodondata, const Tree* intree, double inpi)   {
@@ -164,8 +177,21 @@ class CodonM9Model : public ProbModel {
         tree = intree;
         Nbranch = tree->GetNbranch();
 
-        purifweighthypercenter.assign(3,1.0/3);
         pi = inpi;
+
+        purifmeanhypermean = 0.5;
+        purifmeanhyperinvconc = 0.5;
+        purifinvconchypermean = 1.0;
+        purifinvconchyperinvshape = 1.0;
+        purifweighthypercenter.assign(3,1.0/3);
+        purifweighthyperinvconc = 1.0;
+
+        poswhypermean = 0.5;
+        poswhyperinvconc = 0.1;
+        posmeanhypermean = 1.0;
+        posmeanhyperinvshape = 1.0;
+        posinvshapehypermean = 1.0;
+        posinvshapehyperinvshape = 1.0;
     }
 
     //! model allocation
@@ -321,7 +347,7 @@ class CodonM9Model : public ProbModel {
         posmean = inposmean;
         posinvshape = inposinvshape;
         copy(inpurifweight.begin(), inpurifweight.end(), purifweight.begin());
-	UpdateOmega();
+        UpdateOmega();
     }
 
     void SetMixtureHyperParameters(
@@ -511,6 +537,11 @@ class CodonM9Model : public ProbModel {
         total += PosOmegaLogPrior();
         total += PurWeightLogPrior();
         total += PosWeightLogPrior();
+        if (std::isinf(total))  {
+            cerr << "omega hyper log prior: inf\n";
+            cerr << PurOmegaLogPrior() << '\t' << PosOmegaLogPrior() << '\t' << PurWeightLogPrior() << '\t' << PosWeightLogPrior() << '\n';
+            exit(1);
+        }
         return total;
     }
 
