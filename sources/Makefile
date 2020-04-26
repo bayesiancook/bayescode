@@ -7,7 +7,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= aamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -112,6 +112,10 @@ $(PROGSDIR)/aamutselsparse$(EXEEXT): AAMutSelSparseOmega.o $(OBJS)
 multigeneaamutselm2$(EXEEXT): $(PROGSDIR)/multigeneaamutselm2$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselm2$(EXEEXT): MultiGeneAAMutSelM2.o $(OBJS)
 	$(CC) MultiGeneAAMutSelM2.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigeneaamutselsparsem9$(EXEEXT): $(PROGSDIR)/multigeneaamutselsparsem9$(EXEEXT)
+$(PROGSDIR)/multigeneaamutselsparsem9$(EXEEXT): MultiGeneAAMutSelSparseM9.o $(OBJS)
+	$(CC) MultiGeneAAMutSelSparseM9.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneaamutselsparse$(EXEEXT): $(PROGSDIR)/multigeneaamutselsparse$(EXEEXT)
 $(PROGSDIR)/multigeneaamutselsparse$(EXEEXT): MultiGeneAAMutSelSparseOmega.o $(OBJS)
