@@ -151,49 +151,47 @@ class MultiGeneAAMutSelSparseOmegaChain : public MultiGeneChain {
         }
     }
 
-    /*
-    void Monitor() override {
-        if (myid)   {
-            cerr << "error: in specialized monitor\n";
-            exit(1);
-        }
-        MultiGeneChain::Monitor();
-        // ofstream trace_os((name + ".basemix").c_str(), ios_base::app);
-        ofstream trace_os((name + ".basemix").c_str());
-        GetModel()->TraceMixture(trace_os);
-        ofstream logo_os((name + ".basemixlogo").c_str());
-        GetModel()->PrintBaseMixtureLogo(logo_os);
-        ofstream sample_os((name + ".basesamplelogo").c_str());
-        GetModel()->PrintBaseSampleLogo(sample_os);
-    }
-    */
-
     void MakeFiles(int force) override {
         if (myid) {
             cerr << "error: in specialized makefiles\n";
             exit(1);
         }
         MultiGeneChain::MakeFiles(force);
-        ofstream os((name + ".geneom").c_str());
-        ofstream eos((name + ".geneeps").c_str());
-        ofstream pos((name + ".genepi").c_str());
+        if (writegenedata)  {
+            if (omegamode != 3) {
+                ofstream os((name + ".geneom").c_str());
+            }
+            ofstream os((name + ".genednds").c_str());
+            ofstream eos((name + ".geneeps").c_str());
+            ofstream pos((name + ".genepi").c_str());
+            if (writegenedata == 2) {
+                ofstream os((name + ".sitednds").c_str());
+            }
+        }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
         if (writegenedata) {
             if (!myid) {
-                ofstream os((name + ".geneom").c_str(), ios_base::app);
-                if (omegamode == 3) {
-                    GetModel()->TracePredictedDNDS(os);
-                }
-                else    {
+                if (omegamode != 3) {
+                    ofstream os((name + ".geneom").c_str(), ios_base::app);
                     GetModel()->TraceOmega(os);
                 }
+                ofstream dos((name + ".genednds").c_str(), ios_base::app);
+                GetModel()->TracePredictedDNDS(dos);
                 ofstream eos((name + ".geneeps").c_str(), ios_base::app);
                 GetModel()->TraceEpsilon(eos);
                 ofstream pos((name + ".genepi").c_str(), ios_base::app);
                 GetModel()->TracePi(pos);
+            }
+        }
+        if (writegenedata == 2) {
+            if (!myid) {
+                ofstream os((name + ".sitednds").c_str(), ios_base::app);
+                GetModel()->MasterTraceSitePredictedDNDS(os);
+            } else {
+                GetModel()->SlaveTraceSitePredictedDNDS();
             }
         }
     }
@@ -260,6 +258,8 @@ int main(int argc, char *argv[]) {
                 writegenedata = 0;
             } else if (s == "+g") {
                 writegenedata = 1;
+            } else if (s == "+G") {
+                writegenedata = 2;
             } else if ((s == "-eps") || (s == "-epsilon"))   {
                 i++;
                 epsilonhypermean = atof(argv[i]);

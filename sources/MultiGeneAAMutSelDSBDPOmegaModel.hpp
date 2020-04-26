@@ -510,6 +510,61 @@ class MultiGeneAAMutSelDSBDPOmegaModel : public MultiGeneProbModel {
         SlaveSendGeneArray(*genednds);
     }
 
+    void MasterTraceSitePredictedDNDS(ostream &os) {
+        for (int proc = 1; proc < GetNprocs(); proc++) {
+            int totnsite = GetSlaveTotNsite(proc);
+            double *array = new double[totnsite];
+            MPI_Status stat;
+            MPI_Recv(array, totnsite, MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD, &stat);
+
+            int i = 0;
+            for (int gene = 0; gene < Ngene; gene++) {
+                if (GeneAlloc[gene] == proc) {
+                    os << GeneName[gene] << '\t';
+                    int nsite = GeneNsite[gene];
+                    for (int k = 0; k < nsite; k++) {
+                        os << array[i++] << '\t';
+                    }
+                }
+            }
+            if (i != totnsite) {
+                cerr << "error in MultiGeneCodonM2aModel::MasterTraceSiteOmega: non "
+                        "matching number of sites\n";
+                exit(1);
+            }
+            delete[] array;
+        }
+        os << '\n';
+        os.flush();
+    }
+
+    void SlaveTraceSitePredictedDNDS() {
+        int ngene = GetLocalNgene();
+        int totnsite = GetLocalTotNsite();
+        double *array = new double[totnsite];
+        int i = 0;
+        for (int gene = 0; gene < ngene; gene++) {
+            geneprocess[gene]->GetSitePredictedDNDS(array + i);
+            for (int j = 0; j < GeneNsite[gene]; j++) {
+                if (array[i + j] < 0) {
+                    cerr << "error in slave\n";
+                    cerr << i << '\t' << j << '\t' << GeneName[gene] << '\t' << GeneNsite[gene] << '\t'
+                         << geneprocess[gene]->GetNsite() << '\n';
+                    exit(1);
+                }
+            }
+            i += GetLocalGeneNsite(gene);
+        }
+        if (i != totnsite) {
+            cerr << "error in SlaveTraceSitePredictedDNDS: non "
+                    "matching number of sites\n";
+            exit(1);
+        }
+
+        MPI_Send(array, totnsite, MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
+        delete[] array;
+    }
+
     CodonStateSpace *GetCodonStateSpace() const {
         return (CodonStateSpace *)refcodondata->GetStateSpace();
     }

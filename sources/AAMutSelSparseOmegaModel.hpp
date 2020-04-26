@@ -1381,6 +1381,12 @@ class AAMutSelSparseOmegaModel : public ProbModel {
         return sitemaskarray->GetMeanWidth();
     }
 
+    void GetSitePredictedDNDS(double* array)  const   {
+        for (int i=0; i<GetNsite(); i++)    {
+            array[i] = sitecodonmatrixarray->GetVal(i).GetPredictedDNDS();
+        }
+    }
+
     double GetPredictedDNDS() const  {
         double mean = 0;
         for (int i=0; i<GetNsite(); i++) {

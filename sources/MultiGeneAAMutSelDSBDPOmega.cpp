@@ -168,20 +168,35 @@ class MultiGeneAAMutSelDSBDPOmegaChain : public MultiGeneChain {
             exit(1);
         }
         MultiGeneChain::MakeFiles(force);
-        ofstream os((name + ".geneom").c_str());
+        if (writegenedata)  {
+            if (omegamode != 3) {
+                ofstream os((name + ".geneom").c_str());
+            }
+            ofstream os((name + ".genednds").c_str());
+            if (writegenedata == 2) {
+                ofstream os((name + ".sitednds").c_str());
+            }
+        }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
         if (writegenedata) {
             if (!myid) {
-                ofstream os((name + ".geneom").c_str(), ios_base::app);
-                if (omegamode == 3) {
-                    GetModel()->TracePredictedDNDS(os);
-                }
-                else    {
+                if (omegamode != 3) {
+                    ofstream os((name + ".geneom").c_str(), ios_base::app);
                     GetModel()->TraceOmega(os);
                 }
+                ofstream dos((name + ".genednds").c_str(), ios_base::app);
+                GetModel()->TracePredictedDNDS(dos);
+            }
+        }
+        if (writegenedata == 2) {
+            if (!myid) {
+                ofstream os((name + ".sitednds").c_str(), ios_base::app);
+                GetModel()->MasterTraceSitePredictedDNDS(os);
+            } else {
+                GetModel()->SlaveTraceSitePredictedDNDS();
             }
         }
     }
@@ -246,6 +261,8 @@ int main(int argc, char *argv[]) {
                 writegenedata = 0;
             } else if (s == "+g") {
                 writegenedata = 1;
+            } else if (s == "+G") {
+                writegenedata = 2;
             } else if (s == "-pi") {
                 i++;
                 pihypermean = atof(argv[i]);
