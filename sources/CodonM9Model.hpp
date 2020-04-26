@@ -677,8 +677,7 @@ class CodonM9Model : public ProbModel {
         nucpathsuffstat.AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
     }
 
-    // Omega
-    
+    // Omega Hyper
     double OmegaHyperSuffStatLogProb() const {
         return omegahypersuffstat.GetLogProb(purifweight, posw, purifmean, purifinvconc, posmean, posinvshape);
     }
