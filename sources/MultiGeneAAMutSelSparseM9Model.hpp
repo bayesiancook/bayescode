@@ -655,6 +655,7 @@ class MultiGeneAAMutSelSparseM9Model : public MultiGeneProbModel {
         }
         os << "pospi\t";
         os << "nposfrac\t";
+        os << "posw\tinvconc\t";
         os << "meanom\tvarom\t";
         if (epsilonhyperinvconc)    {
             os << "eps\tinvconc\t";
@@ -691,6 +692,7 @@ class MultiGeneAAMutSelSparseM9Model : public MultiGeneProbModel {
         }
         os << pospi << '\t';
         os << GetNpos() << '\t';
+        os << poswhypermean << '\t' << poswhyperinvconc << '\t';
         os << GetMeanOmega() << '\t' << GetVarOmega() << '\t';
         if (epsilonhyperinvconc)    {
             os << epsilonhypermean << '\t' << epsilonhyperinvconc << '\t';

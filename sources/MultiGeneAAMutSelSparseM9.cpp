@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
     int nucmode = 1;
     int omegamode = 3;
     int omegaprior = 0;
-    int modalprior = 1;
+    int modalprior = 0;
 
     double dposompihypermean = 0.1;
     double dposompihyperinvconc = 0.2;

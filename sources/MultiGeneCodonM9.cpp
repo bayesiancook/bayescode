@@ -299,7 +299,7 @@ int main(int argc, char *argv[]) {
     double posinvshapehypermean = 1.0;
     double posinvshapehyperinvshape = 1.0;
 
-    int modalprior = 1;
+    int modalprior = 0;
 
     int blmode = 1;
     int nucmode = 1;
