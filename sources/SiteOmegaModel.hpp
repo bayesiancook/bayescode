@@ -169,6 +169,11 @@ class SiteOmegaModel : public ProbModel {
 
         // Omega
 
+        omegameanhypermean = 1.0;
+        omegameanhyperinvshape = 1.0;
+        omegainvshapehypermean = 1.0;
+        omegainvshapehyperinvshape = 1.0;
+
         omegamean = 1.0;
         omegainvshape = 0.3;
         double alpha = 1.0 / omegainvshape;
@@ -418,10 +423,25 @@ class SiteOmegaModel : public ProbModel {
         double invshapebeta = invshapealpha / omegainvshapehypermean;
         total += Random::logGammaDensity(omegainvshape, invshapealpha, invshapebeta);
 
+        if (std::isnan(total))  {
+            cerr << "omega hyper log prior: nan\n";
+            cerr << omegameanhypermean << '\t' << omegameanhyperinvshape << '\n';
+            cerr << omegainvshapehypermean << '\t' << omegainvshapehyperinvshape << '\n';
+            cerr << omegamean << '\t' << omegainvshape << '\n';
+            exit(1);
+        }
+
         return total;
     }
 
-    double OmegaLogPrior() const { return omegaarray->GetLogProb(); }
+    double OmegaLogPrior() const {
+        double ret = omegaarray->GetLogProb(); 
+        if (std::isnan(ret))  {
+            cerr << "omega log prior: nan\n";
+            exit(1);
+        }
+        return ret;
+    }
 
     //-------------------
     // Suff Stat and suffstatlogprobs
