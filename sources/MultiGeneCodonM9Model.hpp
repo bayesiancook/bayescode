@@ -102,7 +102,7 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
 
     std::vector<CodonM9Model *> geneprocess;
 
-    IIDGamma* geneomegaarray;
+    SimpleArray<double>* geneomegaarray;
     double lnL;
     double GeneLogPrior;
 
@@ -257,7 +257,7 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
             nucmatrix = 0;
         }
 
-        geneomegaarray = new IIDGamma(GetLocalNgene(), 1.0, 1.0);
+        geneomegaarray = new SimpleArray<double>(GetLocalNgene());
 
         double purifmeanalpha = purifmeanhypermean / purifmeanhyperinvconc;
         double purifmeanbeta = (1-purifmeanhypermean) / purifmeanhyperinvconc;
