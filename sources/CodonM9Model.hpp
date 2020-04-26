@@ -907,6 +907,10 @@ class CodonM9Model : public ProbModel {
         }
     }
 
+    double GetMeanOmega() const {
+        return omegaarray->GetMean();
+    }
+
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
         os << "omegamean\t";

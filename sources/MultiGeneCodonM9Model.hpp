@@ -1251,6 +1251,8 @@ class MultiGeneCodonM9Model : public MultiGeneProbModel {
                     (*posmeanarray)[gene], (*posinvshapearray)[gene],
                     (*purifweightarray)[gene]);
 
+            (*geneomegaarray)[gene] = geneprocess[gene]->GetMeanOmega();
+
             if (blmode != 2) {
                 geneprocess[gene]->GetBranchLengths((*branchlengtharray)[gene]);
             }
