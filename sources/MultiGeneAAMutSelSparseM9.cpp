@@ -256,13 +256,7 @@ int main(int argc, char *argv[]) {
 
     int blmode = 1;
     int nucmode = 1;
-    int omegamode = 3;
-    int omegaprior = 0;
     int modalprior = 0;
-
-    double dposompihypermean = 0.1;
-    double dposompihyperinvconc = 0.2;
-    double maxdposom = 0;
 
     double epsilonhypermean = 0.01;
     double epsilonhyperinvconc = 1.0;
@@ -346,33 +340,10 @@ int main(int argc, char *argv[]) {
                     cerr << "error: does not recongnize command after -bl\n";
                     exit(1);
                 }
-            } else if (s == "-maxdposom")    {
-                i++;
-                maxdposom = atof(argv[i]);
-            } else if (s == "-fixomega") {
-                omegamode = 3;
-            } else if (s == "-freeomega") {
-                omegamode = 1;
-            } else if (s == "-gamomega") {
-                omegaprior = 0;
-            } else if ((s == "-mixomega") || (s == "-gammixomega")) {
-                omegaprior = 1;
-                modalprior = 0;
-            } else if (s == "-loggammixomega") {
-                omegaprior = 2;
-                modalprior = 0;
-            } else if (s == "-cauchymixomega") {
-                omegaprior = 3;
-                modalprior = 0;
             } else if (s == "-modalprior")  {
                 modalprior = 1;
             } else if (s == "-unconsprior") {
                 modalprior = 0;
-            } else if (s == "-dposompi") {
-                i++;
-                dposompihypermean = atof(argv[i]);
-                i++;
-                dposompihyperinvconc = atof(argv[i]);
             } else if (s == "-maxtime") {
                 i++;
                 maxtime = atof(argv[i]);
