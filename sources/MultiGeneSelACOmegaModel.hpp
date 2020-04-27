@@ -13,7 +13,6 @@ class MultiGeneSelACOmegaModel : public MultiGeneProbModel {
     const TaxonSet *taxonset;
     std::vector<CodonSequenceAlignment*> alivector;
 
-    string datapath;
     string datafile;
     string treefile;
     string aadistfile;

@@ -147,27 +147,35 @@ class MultiGeneSelACOmegaChain : public MultiGeneChain {
             exit(1);
         }
         MultiGeneChain::MakeFiles(force);
-        ofstream os((name + ".geneom").c_str());
-        ofstream psios((name + ".genepsi").c_str());
-        ofstream aaos((name + ".aadist").c_str());
-        GetModel()->TraceAADistHeader(aaos);
+        if ((aadistmodel == 1) && (aadistmode == 2))    {
+            ofstream aaos((name + ".aadist").c_str());
+            GetModel()->TraceAADistHeader(aaos);
+        }
+        if (writegenedata)  {
+            if (omegamode != 3) {
+                ofstream os((name + ".geneom").c_str());
+            }
+            ofstream os((name + ".genednds").c_str());
+            ofstream psios((name + ".genepsi").c_str());
+        }
     }
 
     void SavePoint() override {
         MultiGeneChain::SavePoint();
         if (! myid) {
-            ofstream os((name + ".aadist").c_str(), ios_base::app);
-            GetModel()->TraceAADist(os);
+            if ((aadistmodel == 1) && (aadistmode == 2))    {
+                ofstream os((name + ".aadist").c_str(), ios_base::app);
+                GetModel()->TraceAADist(os);
+            }
             if (writegenedata) {
-                ofstream psios((name + ".genepsi").c_str(), ios_base::app);
-                GetModel()->TracePsi(psios);
-                ofstream os((name + ".geneom").c_str(), ios_base::app);
-                if (omegamode == 3) {
-                    GetModel()->TracePredictedDNDS(os);
-                }
-                else    {
+                if (omegamode != 3) {
+                    ofstream os((name + ".geneom").c_str(), ios_base::app);
                     GetModel()->TraceOmega(os);
                 }
+                ofstream dos((name + ".genednds").c_str(), ios_base::app);
+                GetModel()->TracePredictedDNDS(dos);
+                ofstream psios((name + ".genepsi").c_str(), ios_base::app);
+                GetModel()->TracePsi(psios);
             }
         }
     }
