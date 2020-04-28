@@ -1,17 +1,17 @@
 #include <cmath>
 #include <fstream>
-#include "AAMutSelDSBDPOmegaModel.hpp"
+#include "AAMutSelSparseOmegaModel.hpp"
 #include "Sample.hpp"
 using namespace std;
 
 /**
- * \brief An MCMC sample for AAMutSelDSBDPOmegaModel
+ * \brief An MCMC sample for AAMutSelSparseOmegaModel
  *
  * implements a read function, returning the MCMC estimate of the posterior
  * probabilities of differential effects across sites
  */
 
-class AAMutSelDSBDPOmegaSample : public Sample {
+class AAMutSelSparseOmegaSample : public Sample {
   private:
     string modeltype;
     string datafile;
@@ -19,16 +19,20 @@ class AAMutSelDSBDPOmegaSample : public Sample {
     int omegamode, omegaprior;
     double dposompi, dposomhypermean, dposomhyperinvshape;
     double maxdposom;
-    int Ncat, baseNcat;
+    int fixhyper;
+    int fixfitness;
+    // -1: estimated
+    double epsilon;
+    double pi;
 
   public:
     string GetModelType() override { return modeltype; }
 
-    AAMutSelDSBDPOmegaModel *GetModel() override { return (AAMutSelDSBDPOmegaModel *)model; }
+    AAMutSelSparseOmegaModel *GetModel() override { return (AAMutSelSparseOmegaModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)
-    AAMutSelDSBDPOmegaSample(string filename, int inburnin, int inevery, int inuntil)
+    AAMutSelSparseOmegaSample(string filename, int inburnin, int inevery, int inuntil)
         : Sample(filename, inburnin, inevery, inuntil) {
         Open();
     }
@@ -47,7 +51,10 @@ class AAMutSelDSBDPOmegaSample : public Sample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> omegamode >> omegaprior >> dposompi >> dposomhypermean >> dposomhyperinvshape >> maxdposom;
-        is >> Ncat >> baseNcat;
+        is >> fixhyper;
+        is >> fixfitness;
+        is >> epsilon;
+        is >> pi;
         int check;
         is >> check;
         if (check) {
@@ -57,9 +64,9 @@ class AAMutSelDSBDPOmegaSample : public Sample {
         is >> chainevery >> chainuntil >> chainsize;
 
         // make a new model depending on the type obtained from the file
-        if (modeltype == "AAMUTSELDSBDPOMEGA") {
-            model = new AAMutSelDSBDPOmegaModel(datafile, treefile, omegamode, omegaprior, Ncat,
-                                                baseNcat);
+        if (modeltype == "AAMUTSELSparseOMEGA") {
+            model = new AAMutSelSparseOmegaModel(datafile,treefile,omegamode,omegaprior,fixhyper,fixfitness,epsilon,pi);
+
             if (omegaprior != 0) {
                 GetModel()->SetMaxDPosOm(maxdposom);
                 GetModel()->SetDPosOmHyperParameters(dposompi, dposomhypermean,
@@ -143,7 +150,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    AAMutSelDSBDPOmegaSample *sample = new AAMutSelDSBDPOmegaSample(name, burnin, every, until);
+    AAMutSelSparseOmegaSample *sample = new AAMutSelSparseOmegaSample(name, burnin, every, until);
     if (ppred == 2) {
         sample->AllPostPred();
     } else if (ppred == 1)  {

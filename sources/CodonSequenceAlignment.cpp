@@ -14,14 +14,28 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
             cerr << "not multiple of three\n";
             exit(1);
         }
-        Nsite = from->GetNsite() / 3;
-        Ntaxa = from->GetNtaxa();
 
         statespace = new CodonStateSpace(type);
         ownstatespace = true;
 
         taxset = new TaxonSet(*DNAsource->GetTaxonSet());
         owntaxset = true;
+
+	if (from->GetNstate() == statespace->GetNstate())	{
+	Nsite = from->GetNsite();
+	Ntaxa = from->GetNtaxa();
+	Data.assign(Ntaxa, std::vector<int>(Nsite, 0));
+	for (int i = 0; i < Ntaxa; i++) {
+	    for (int j = 0; j < Nsite; j++) {
+		    Data[i][j] = from->GetState(i,j);
+	    }
+	}
+	}
+
+	else	{
+        Nsite = from->GetNsite() / 3;
+        Ntaxa = from->GetNtaxa();
+
 
         // make my own arrays
         // make translation
@@ -36,12 +50,10 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
                         if ((DNAsource->GetState(i, 3 * j) != -1) &&
                             (DNAsource->GetState(i, 3 * j + 1) != -1) &&
                             (DNAsource->GetState(i, 3 * j + 2) != -1)) {
-                            // cerr << "in CodonSequenceAlignment: taxon " <<
-                            // taxset->GetTaxon(i) <<
-                            // " and codon " << j+1 << " (site " << 3*j+1 << ") :";
-                            // cerr << nucspace->GetState(DNAsource->GetState(i, 3*j)) <<
-                            // nucspace->GetState(DNAsource->GetState(i, 3*j+1)) <<
-                            // nucspace->GetState(DNAsource->GetState(i, 3*j+2)) << '\n';
+                            cerr << "in CodonSequenceAlignment: taxon " <<
+                            taxset->GetTaxon(i) <<
+                            " and codon " << j+1 << " (site " << 3*j+1 << ") :";
+			    cerr << DNAsource->GetState(i, 3 * j) << " " <<  DNAsource->GetState(i, 3 * j + 1) << " " << DNAsource->GetState(i, 3 * j + 2) << '\n';
                         }
                     }
                 } catch (...) {
@@ -58,6 +70,7 @@ CodonSequenceAlignment::CodonSequenceAlignment(SequenceAlignment *from, bool for
                     }
                 }
             }
+	    }
         }
 
     } catch (Exception) {
@@ -143,6 +156,79 @@ double CodonSequenceAlignment::GetMeanAADiversity() const   {
     }
     meandiv /= Nsite;
     return meandiv;
+}
+
+double CodonSequenceAlignment::GetNAAConstantColumns() const   {
+
+    int aaconst = 0;
+    for (int i = 0; i < Nsite; i++) {
+        vector<int> count(Naa,0);
+        for (int j=0; j<Ntaxa; j++) {
+                if (GetState(j,i) != unknown)   {
+                    int a = GetCodonStateSpace()->Translation(GetState(j,i));
+                    count[a]++;
+                }
+        }
+        int div = 0;
+        for (int a=0; a<Naa; a++)   {
+            if (count[a])   {
+                div++;
+            }
+        }
+        if (div == 1)   {
+            aaconst++;
+        }
+    }
+    return aaconst;
+}
+
+double CodonSequenceAlignment::GetAAFreq21() const   {
+
+    int nonconst = 0;
+    double freq21 = 0;
+    for (int i = 0; i < Nsite; i++) {
+        vector<int> count(Naa,0);
+        for (int j=0; j<Ntaxa; j++) {
+                if (GetState(j,i) != unknown)   {
+                    int a = GetCodonStateSpace()->Translation(GetState(j,i));
+                    count[a]++;
+                }
+        }
+        int div = 0;
+        for (int a=0; a<Naa; a++)   {
+            if (count[a])   {
+                div++;
+            }
+        }
+        if (div > 1)   {
+            nonconst++;
+            int max1 = 0;
+            int aamax = 0;
+            for (int a=0; a<Naa; a++)   {
+                if (max1 < count[a])    {
+                    max1 = count[a];
+                    aamax = a;
+                }
+            }
+            int max2 = 0;
+            for (int a=0; a<Naa; a++)   {
+                if ((a != aamax) && (max2 < count[a]))    {
+                    max2 = count[a];
+                }
+            }
+            if (max2 > max1)   {
+                cerr << "error in max (freq21)\n";
+                exit(1);
+            }
+            if (max2 == 0)  {
+                cerr << "error: max is 0\n";
+                exit(1);
+            }
+            freq21 += double(max2) / max1;
+        }
+    }
+    if (! nonconst) return 0;
+    return freq21 / nonconst;
 }
 
 double CodonSequenceAlignment::GetMeanDiff() const   {

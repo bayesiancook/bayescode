@@ -605,6 +605,16 @@ void PhyloProcess::PostPredSample(string name, bool rootprior) {
     os.close();
 }
 
+SequenceAlignment* PhyloProcess::PostPredSample(bool rootprior) {
+    for (int i = 0; i < GetNsite(); i++) {
+        PostPredSample(i, rootprior);
+    }
+    SequenceAlignment* tmpdata = new SequenceAlignment(*GetData());
+    GetLeafData(tmpdata);
+    return tmpdata;
+}
+
+
 void PhyloProcess::PostPredSample(int site, bool rootprior) {
     if (!rootprior) {
         Pruning(GetRoot(), site);

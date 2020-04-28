@@ -45,6 +45,22 @@ class ProbModel {
         exit(1);
     }
 
+    virtual vector<string> GetPostPredStatNames() const {
+        cerr << "error: in ProbModel::GetPostPredStatNames()\n";
+        exit(1);
+        return vector<string>(0,"");
+    }
+
+    virtual void AllPost(vector<double>& stats) {
+        cerr << "error: in ProbModel::AllPost\n";
+        exit(1);
+    }
+
+    virtual void AllPostPred(vector<double>& stats) {
+        cerr << "error: in ProbModel::AllPostPred\n";
+        exit(1);
+    }
+
     //! return lof prob of the current model configuration
     virtual double GetLogProb() const { return 0; }
 

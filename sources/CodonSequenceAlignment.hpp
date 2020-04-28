@@ -30,6 +30,8 @@ class CodonSequenceAlignment : public SequenceAlignment {
     //! formatted output (simply, a nucleotide alignment)
     void ToStream(std::ostream &os);
 
+    double GetNAAConstantColumns() const;
+    double GetAAFreq21() const;
     double GetMeanAADiversity() const;
     double GetMeanDiff() const;
     double GetMeanEmpiricaldNdS() const;

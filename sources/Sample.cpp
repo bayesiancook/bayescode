@@ -73,3 +73,44 @@ void Sample::PostPred() {
     }
     cerr << '\n';
 }
+
+void Sample::AllPostPred() {
+
+    vector<string> statnames = GetModel()->GetPostPredStatNames();
+    size_t nstat = statnames.size();
+    vector<double> stats(nstat, 0);
+    vector<double> obsstats(nstat, 0);
+    vector<double> meanstats(nstat, 0);
+    vector<double> varstats(nstat, 0);
+    vector<double> ppstats(nstat, 0);
+
+    model->AllPost(obsstats);
+
+    cerr << size << " points to read\n";
+    for (int i=0; i<size; i++) {
+        cerr << '.';
+        GetNextPoint();
+
+        model->AllPostPred(stats);
+        for (size_t j=0; j<nstat; j++)  {
+            meanstats[j] += stats[j];
+            varstats[j] += stats[j]*stats[j];
+            if (stats[j] > obsstats[j]) {
+                ppstats[j]++;
+            }
+        }
+    }
+    cerr << '\n';
+
+    ofstream os((name + ".ppred").c_str());
+    os << "stat\tobs\tpred\tzscore\tpp\n";
+    for (size_t j=0; j<nstat; j++)  {
+        ppstats[j] /= size;
+        meanstats[j] /= size;
+        varstats[j] /= size;
+        varstats[j] -= meanstats[j]*meanstats[j];
+        double z = (obsstats[j] - meanstats[j]) / sqrt(varstats[j]);
+        os << statnames[j] << '\t' << obsstats[j] << '\t' << meanstats[j] << '\t' << z << '\t' << ppstats[j] << '\n';
+    }
+}
+

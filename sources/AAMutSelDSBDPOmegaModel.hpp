@@ -1880,4 +1880,48 @@ class AAMutSelDSBDPOmegaModel : public ProbModel {
             os << omega;
         }
     }
+
+    vector<string> GetPostPredStatNames()  const override {
+        size_t nstat = 3;
+        vector<string> names(nstat, "");
+        names[0] = "div";
+        names[1] = "nconst";
+        names[2] = "freq21";
+        return names;
+    }
+
+    void AllPostPred(vector<double>& stats) override {
+        if (blmode == 0) {
+            blhypermean->SetAllBranches(1.0 / lambda);
+        }
+        baseweight->SetKappa(basekappa);
+        weight->SetKappa(kappa);
+        UpdateBaseOccupancies();
+        UpdateOccupancies();
+        UpdateMatrices();
+        SequenceAlignment* ali = phyloprocess->PostPredSample();
+        CodonSequenceAlignment* codonali = new CodonSequenceAlignment(ali);
+        size_t nstat = 3;
+        if (stats.size() != nstat) {
+            cerr << "error in getppred stats: non matching vector size\n";
+            exit(1);
+        }
+        stats[0] = codonali->GetMeanAADiversity();
+        stats[1] = codonali->GetNAAConstantColumns();
+        stats[2] = codonali->GetAAFreq21();
+
+        delete codonali;
+        delete ali;
+    }
+
+    void AllPost(vector<double>& stats) override {
+        size_t nstat = 3;
+        if (stats.size() != nstat) {
+            cerr << "error in getppred stats: non matching vector size\n";
+            exit(1);
+        }
+        stats[0] = codondata->GetMeanAADiversity();
+        stats[1] = codondata->GetNAAConstantColumns();
+        stats[2] = codondata->GetAAFreq21();
+    }
 };

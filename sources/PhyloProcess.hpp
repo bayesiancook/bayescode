@@ -119,6 +119,7 @@ class PhyloProcess {
 
     //! posterior predictive resampling under current parameter configuration
     void PostPredSample(string name, bool rootprior = true);  // unclamped Nielsen
+    SequenceAlignment* PostPredSample(bool rootprior = true);  // unclamped Nielsen
 
     //! get data from tips (after simulation) and put in into sequence alignment
     void GetLeafData(SequenceAlignment *data);

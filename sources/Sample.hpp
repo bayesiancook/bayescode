@@ -36,6 +36,7 @@ class Sample {
     virtual void GetNextPoint();
 
     virtual void PostPred();
+    virtual void AllPostPred();
 
     //! \brief return a pointer to model configuration specified by current point
     //! (i.e. last point that was read from file)
