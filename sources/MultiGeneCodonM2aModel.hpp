@@ -894,7 +894,7 @@ class MultiGeneCodonM2aModel : public MultiGeneProbModel {
     // mixture
     double MixtureHyperLogPrior() const {
         double total = 0;
-        if (pi) {
+        if (pi && pihyperinvconc) {
             // beta distribution for pi, if not 0
             double pialpha = pihypermean / pihyperinvconc;
             double pibeta = (1 - pihypermean) / pihyperinvconc;
