@@ -227,6 +227,18 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "-hyper")   {
+                    i++;
+                    ifstream is(argv[i]);
+                    string temp;
+                    is >> temp >> puromhypermean;
+                    is >> temp >> puromhyperinvconc;
+                    is >> temp >> dposomhypermean;
+                    is >> temp >> dposomhyperinvshape;
+                    is >> temp >> purwhypermean;
+                    is >> temp >> purwhyperinvconc;
+                    is >> temp >> poswhypermean;
+                    is >> temp >> poswhyperinvconc;
                 } else if (s == "-pi") {
                     i++;
                     pi = atof(argv[i]);
