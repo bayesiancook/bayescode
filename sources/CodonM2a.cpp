@@ -232,13 +232,50 @@ int main(int argc, char *argv[]) {
                     ifstream is(argv[i]);
                     string temp;
                     is >> temp >> puromhypermean;
+                    if (temp != "purom_mean")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> puromhyperinvconc;
+                    if (temp != "purom_invconc")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> dposomhypermean;
+                    if (temp != "dposom_mean")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> dposomhyperinvshape;
+                    if (temp != "dposom_invshape")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> purwhypermean;
+                    if (temp != "purw_mean")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> purwhyperinvconc;
+                    if (temp != "purw_invconc")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> poswhypermean;
+                    if (temp != "posw_mean")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                     is >> temp >> poswhyperinvconc;
+                    if (temp != "posw_invconc")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
+                    is >> temp >> pi;
+                    if (temp != "pi")   {
+                        cerr << "error when reading hyper\n";
+                        exit(1);
+                    }
                 } else if (s == "-pi") {
                     i++;
                     pi = atof(argv[i]);
