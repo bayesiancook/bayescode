@@ -182,6 +182,16 @@ class CodonM2aModel : public ProbModel {
 
         tree = intree;
         Nbranch = tree->GetNbranch();
+
+        // default values
+        puromhypermean = 0.5;
+        puromhyperinvconc = 0.5;
+        purwhypermean = 0.5;
+        purwhyperinvconc = 0.5;
+        poswhypermean = 0.5;
+        poswhyperinvconc = 0.1;
+        dposomhypermean = 1.0;
+        dposomhyperinvshape = 0.5;
     }
 
     CodonM2aModel(string datapath, string datafile, string treefile, double inpi)   {
@@ -209,6 +219,16 @@ class CodonM2aModel : public ProbModel {
         tree = tmptree;
 
         Nbranch = tree->GetNbranch();
+
+        // default values
+        puromhypermean = 0.5;
+        puromhyperinvconc = 0.5;
+        purwhypermean = 0.5;
+        purwhyperinvconc = 0.5;
+        poswhypermean = 0.5;
+        poswhyperinvconc = 0.1;
+        dposomhypermean = 1.0;
+        dposomhyperinvshape = 0.5;
     }
 
 
