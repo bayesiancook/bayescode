@@ -56,11 +56,17 @@ class MultiGeneCodonM2aSample : public MultiGeneSample {
         is >> poswhypermean >> poswhyperinvconc;
         is >> modalprior;
 
-        int check;
-        is >> check;
-        if (check)  {
-            cerr << "Error when reading model\n";
-            exit(1);
+        // bug: this was not in param file
+        purommode = 1;
+        int tmp;
+        is >> tmp;
+        if (tmp) {
+            is >> purommode;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "Error when reading model\n";
+                exit(1);
+            }
         }
         is >> chainevery >> chainuntil >> chainsize;
 
