@@ -15,12 +15,12 @@ class AAMutselArgParse : public BaseArgParse {
     AAMutselArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
 
     ValueArg<int> ncat{
-        "", "ncat", "truncation of the first-level stick-breaking process", false, 100, "int", cmd};
+        "", "ncat", "truncation of the first-level stick-breaking process", false, 30, "int", cmd};
     ValueArg<int> basencat{"", "basencat", "truncation of the second-level stick-breaking process",
         false, 1, "int", cmd};
     ValueArg<double> omegashift{"", "omegashift",
         "the shift applied to omega (typically 1 for detecting adaptation, 0 for general case)",
-        false, 1.0, "double", cmd};
+        false, 0.0, "double", cmd};
     ValueArg<std::string> deltaomegaarray{
             "", "deltaomegaarray", "Delta-omega array file (to clamp)", false, "Null", "string", cmd};
     ValueArg<int> omegancat{
