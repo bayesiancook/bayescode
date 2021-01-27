@@ -229,5 +229,6 @@ double Chi2Pval(double x, int df) {
     return p;
 }
 
-#define PointGamma(prob, alpha, beta) \
-    PointChi2(prob, 2.0 * (alpha)) / (2.0 * (beta))  // yan23.dec2004
+double PointGamma(double prob, double alpha, double beta) {
+    return PointChi2(prob, 2.0 * (alpha)) / (2.0 * (beta));  // yan23.dec2004
+}
