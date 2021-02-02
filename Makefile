@@ -132,7 +132,10 @@ mutselomega: _build
 	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/flat_bglobin
 	_build/readmutselomega -b 10 _mutselomega/flat_bglobin
 	_build/mutselomega _mutselomega/flat_bglobin
-	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --deltaomegaarray data/bglobin/deltaomegaarray.csv --ncat 10 -u 30 _mutselomega/clamped_bglobin
+	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --fitness_profiles data/bglobin/bglobin.prefs --deltaomegaarray data/bglobin/deltaomegaarray.csv -u 30 _mutselomega/clamped_bglobin
+	_build/readmutselomega -b 10 _mutselomega/clamped_bglobin
+	_build/mutselomega _mutselomega/clamped_bglobin
+	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --deltaomegaarray data/bglobin/deltaomegaarray.csv --ncat 10 -u 30 _mutselomega/clamped_bglobin
 	_build/readmutselomega -b 10 _mutselomega/clamped_bglobin
 	_build/mutselomega _mutselomega/clamped_bglobin
 	_build/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/bglobin

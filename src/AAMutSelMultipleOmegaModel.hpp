@@ -77,9 +77,72 @@ std::vector<double> open_delta_omega_array(std::string const &file_name) {
     return delta_omega_array;
 }
 
-class AAMutSelMultipleOmegaModel : public ChainComponent {
-    std::string datafile, treefile;
+double distance(std::vector<double> const &v1, std::vector<double> const &v2) {
+    double tot = 0;
+    assert(v1.size() == v2.size());
+    for (size_t i = 0; i < v1.size(); i++) { tot += abs(v1[i] - v2[i]); }
+    return tot;
+}
 
+std::tuple<std::vector<std::vector<double>>, std::vector<size_t>> open_preferences(
+    std::string const &file_name) {
+    std::vector<std::vector<double>> fitness_profiles{};
+    std::vector<size_t> alloc;
+
+    std::ifstream input_stream(file_name);
+    if (!input_stream) {
+        std::cerr << "Preferences file " << file_name << " doesn't exist" << std::endl;
+    }
+
+    std::string line;
+
+    // skip the header of the file
+    getline(input_stream, line);
+    char sep{' '};
+    long nbr_col = 0;
+    for (char sep_test : std::vector<char>({' ', ',', '\t'})) {
+        long n = std::count(line.begin(), line.end(), sep_test);
+        if (n > nbr_col) {
+            sep = sep_test;
+            nbr_col = n + 1;
+        }
+    }
+    nbr_col -= 20;
+
+    while (getline(input_stream, line)) {
+        std::vector<double> fitness_profil(20, 0.0);
+        std::string word;
+        std::istringstream line_stream(line);
+        unsigned counter{0};
+
+        while (getline(line_stream, word, sep)) {
+            if (counter >= nbr_col) { fitness_profil[counter - nbr_col] = stod(word); }
+            counter++;
+        }
+
+        bool push = true;
+        assert(std::abs(std::accumulate(fitness_profil.begin(), fitness_profil.end(), 0.0) - 1.0) <
+               1e-5);
+        for (size_t i = 0; i < fitness_profiles.size(); i++) {
+            if (distance(fitness_profiles[i], fitness_profil) < 1e-5) {
+                push = false;
+                alloc.push_back(i);
+                break;
+            }
+        }
+        if (push) {
+            alloc.push_back(fitness_profiles.size());
+            fitness_profiles.push_back(fitness_profil);
+        }
+        assert(alloc[alloc.size() - 1] < fitness_profiles.size());
+    }
+    return std::make_tuple(fitness_profiles, alloc);
+}
+
+
+class AAMutSelMultipleOmegaModel : public ChainComponent {
+    std::string datafile, treefile, profilesfile{"Null"};
+    bool clamp_profiles{false}, clamp_profiles_allocation{false};
     std::unique_ptr<Tracer> tracer;
     std::unique_ptr<const Tree> tree;
 
@@ -179,18 +242,14 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // 2: shared across genes
     // 3: fixed
 
-    // currently: shared across genes
+    // currently: free wo shrinkage
     int blmode;
-    // currently, free without shrinkage: shared across genes
+    // currently, free wo shrinkages
     int nucmode;
-    // currently, shared across genes.
-    // free without shrinkage, only with baseNcat = 1
-    // free with shrinkage: not really interesting
+    // currently, free wo shrinkage
     int basemode;
 
-    // 0: simple gamma prior
-    // 1: mix of (1-pi) at 1 and pi at 1+d, with d ~Gamma(dposomhypermean,dposomhyperinvshape)
-    // 2: mix of 2 (modal) gamma distributions: one at 1 and another one with mean > 1
+    // currently: free wo shrinkage or fixed (1 or 3)
     int omegamode;
 
     bool flatfitness;
@@ -216,12 +275,13 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! 100)
     //! - baseNcat: truncation of the second-level stick-breaking process (by
     //! default: 1)
-    AAMutSelMultipleOmegaModel(std::string const &indatafile, std::string const &intreefile,
-        int inomegamode, int inNcat, int inbaseNcat, int inomegaNcat, double inomegashift,
-        bool inflatfitness, std::string const &indelta_omega_array_file)
-        : datafile(indatafile),
-          treefile(intreefile),
-          delta_omega_array_file(indelta_omega_array_file),
+    AAMutSelMultipleOmegaModel(std::string indatafile, std::string intreefile,
+        std::string inprofilesfile, int inomegamode, int inNcat, int inbaseNcat, int inomegaNcat,
+        double inomegashift, bool inflatfitness, std::string indelta_omega_array_file)
+        : datafile(std::move(indatafile)),
+          treefile(std::move(intreefile)),
+          profilesfile(std::move(inprofilesfile)),
+          delta_omega_array_file(std::move(indelta_omega_array_file)),
           omegaNcat(inomegaNcat),
           omega_shift(inomegashift),
           baseNcat(inbaseNcat),
@@ -263,17 +323,46 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
             baseNcat = 1;
             Ncat = 1;
         }
+
+        std::tuple<std::vector<std::vector<double>>, std::vector<size_t>> prefs{};
+        if (!profilesfile.empty() and profilesfile != "Null") {
+            if (flatfitness) {
+                std::cerr << "Giving a preferences profiles file and setting 'flatfitness' to true "
+                             "is incompatible. These parameters are exclusive to one another."
+                          << std::endl;
+                exit(1);
+            }
+            prefs = open_preferences(profilesfile);
+            clamp_profiles = true;
+            Ncat = static_cast<int>(std::get<0>(prefs).size());
+            if (static_cast<int>(std::get<1>(prefs).size()) == Nsite) {
+                std::cout << "Input preferences profiles file has the same number of profiles "
+                             "as the alignment, hence site allocations are considered fixed."
+                          << std::endl;
+                clamp_profiles_allocation = true;
+            } else {
+                std::cout << "Input preferences profiles file has a smaller number of profiles "
+                             "than the alignment, hence site allocations are computed."
+                          << std::endl;
+            }
+        }
+        assert(Ncat <= Nsite);
+
         std::vector<double> opened_delta_omega_array;
         if (!delta_omega_array_file.empty() and delta_omega_array_file != "Null") {
             opened_delta_omega_array = open_delta_omega_array(delta_omega_array_file);
             clamp_delta_omega_array = true;
+            std::cout << "Input omega values are provided, hence are considered fixed but site "
+                         "allocations are computed."
+                      << std::endl;
+            omegamode = 0;
             omegaNcat = opened_delta_omega_array.size();
         }
-        std::cerr << "-- Number of sites: " << Nsite << std::endl;
-        std::cerr << "Ncat : " << Ncat << '\n';
-        std::cerr << "baseNcat : " << baseNcat << '\n';
-        std::cerr << "omegaNcat : " << omegaNcat << '\n';
-        std::cerr << "OmegaShift : " << omega_shift << '\n';
+        std::cout << "Number of sites: " << Nsite << std::endl;
+        std::cout << "Number of profile categories (cut-off for infinite mixture): " << Ncat
+                  << '\n';
+        std::cout << "Number of omega categories (finite mixture) : " << omegaNcat << '\n';
+        std::cout << "Additive shift in omega: " << omega_shift << '\n';
 
         taxonset = codondata->GetTaxonSet();
 
@@ -324,9 +413,9 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         basesuffstatarray = new DirichletSuffStatArray(baseNcat, Naa);
         componentalloc = new MultinomialAllocationVector(Ncat, baseweight->GetArray());
         componentcenterarray =
-                new MixtureSelector<std::vector<double>>(basecenterarray, componentalloc);
+            new MixtureSelector<std::vector<double>>(basecenterarray, componentalloc);
         componentconcentrationarray =
-                new MixtureSelector<double>(baseconcentrationarray, componentalloc);
+            new MixtureSelector<double>(baseconcentrationarray, componentalloc);
 
         //
         // (truncated) Dirichlet mixture of aa fitness profiles
@@ -334,7 +423,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
         // Ncat fitness profiles iid from the base distribution
         componentaafitnessarray =
-                new MultiDirichlet(componentcenterarray, componentconcentrationarray);
+            new MultiDirichlet(componentcenterarray, componentconcentrationarray);
         if (flatfitness) { componentaafitnessarray->Flatten(); }
 
         // mixture weights (truncated stick breaking process)
@@ -354,7 +443,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         delta_omegahyperinvshape = 1.0;
         delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
         if (clamp_delta_omega_array) {
-            for (int omegacat = 0; omegacat < omegaNcat; omegacat++){
+            for (int omegacat = 0; omegacat < omegaNcat; omegacat++) {
                 (*delta_omega_array)[omegacat] = opened_delta_omega_array[omegacat];
             }
         }
@@ -363,26 +452,38 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         omega_weight = new Dirichlet(omegaNcat, omega_weight_kappa);
         omega_alloc = new MultinomialAllocationVector(GetNsite(), omega_weight->GetArray());
 
+        // selector, specifying which aa fitness array should be used for each site
+        siteaafitnessarray =
+            new MixtureSelector<std::vector<double>>(componentaafitnessarray, profile_alloc);
+
+        if (clamp_profiles) {
+            for (int cat = 0; cat < Ncat; cat++) {
+                (*componentaafitnessarray)[cat] = std::get<0>(prefs)[cat];
+            }
+        }
+        if (clamp_profiles_allocation) {
+            for (int site = 0; site < Nsite; site++) {
+                (*profile_alloc)[site] = static_cast<unsigned>(std::get<1>(prefs)[site]);
+                assert(siteaafitnessarray->GetVal(site).size() == 20);
+            }
+        }
+
         // Ncat*omegaNcat mut sel codon matrices (based on the Ncat fitness profiles of the mixture,
         // and the omegaNcat finite mixture for omega)
         componentcodonmatrixbidimarray = new AAMutSelCodonMatrixBidimArray(GetCodonStateSpace(),
-                                                                           nucmatrix, componentaafitnessarray, delta_omega_array, omega_shift);
+            nucmatrix, componentaafitnessarray, delta_omega_array, omega_shift);
 
         // Bidimselector, specifying which codon matrix should be used for each site
         sitesubmatrixarray = new DoubleMixtureSelector<SubMatrix>(
-                componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
+            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
 
         // Bidimselector, specifying which codon matrix should be used for each site (needed to
         // collect omegapathsuffstatarray)
         sitecodonsubmatrixarray = new DoubleMixtureSelector<AAMutSelOmegaCodonSubMatrix>(
-                componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
-
-        // selector, specifying which aa fitness array should be used for each site
-        siteaafitnessarray =
-                new MixtureSelector<std::vector<double>>(componentaafitnessarray, profile_alloc);
+            componentcodonmatrixbidimarray, profile_alloc, omega_alloc);
 
         phyloprocess =
-                new PhyloProcess(tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray);
+            new PhyloProcess(tree.get(), codondata, branchlength, nullptr, sitesubmatrixarray);
         phyloprocess->Unfold();
 
         sitepathsuffstatarray = new PathSuffStatArray(Nsite);
@@ -519,16 +620,19 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         double total = 0;
         if (blmode < 2) { total += BranchLengthsLogPrior(); }
         if (nucmode < 2) { total += NucRatesLogPrior(); }
-        if (basemode < 2) {
-            if (baseNcat > 1) {
-                total += BaseStickBreakingHyperLogPrior();
-                total += BaseStickBreakingLogPrior();
+
+        if (!clamp_profiles) {
+            if (basemode < 2) {
+                if (baseNcat > 1) {
+                    total += BaseStickBreakingHyperLogPrior();
+                    total += BaseStickBreakingLogPrior();
+                }
+                total += BaseLogPrior();
             }
-            total += BaseLogPrior();
+            total += StickBreakingHyperLogPrior();
+            total += StickBreakingLogPrior();
+            total += AALogPrior();
         }
-        total += StickBreakingHyperLogPrior();
-        total += StickBreakingLogPrior();
-        total += AALogPrior();
         if (omegamode < 2) { total += DeltaOmegaLogProb(); }
         return total;
     }
@@ -742,7 +846,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
                 aachrono.Stop();
 
                 basechrono.Start();
-                if (basemode < 2) { MoveBase(3); }
+                if (basemode < 2 and !clamp_profiles) { MoveBase(3); }
                 basechrono.Stop();
             }
 
@@ -784,13 +888,17 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! MCMC module for the mixture amino-acid fitness profiles
     void MoveAAMixture(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            MoveAAProfiles();
-            ResampleEmptyProfileComponents();
-            ResampleProfileAlloc();
-            ProfileLabelSwitchingMove();
-            ResampleProfileWeights();
-            MoveKappa();
-            CorruptCodonMatrices();
+            if (!clamp_profiles) {
+                MoveAAProfiles();
+                ResampleEmptyProfileComponents();
+            }
+            if (!clamp_profiles_allocation) {
+                ResampleProfileAlloc();
+                ProfileLabelSwitchingMove();
+                ResampleProfileWeights();
+                MoveKappa();
+            }
+            if (!clamp_profiles_allocation or !clamp_profiles) { CorruptCodonMatrices(); }
         }
     }
 
@@ -1333,7 +1441,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     void ToStream(std::ostream &os) const {
         os << "AAMutSelMultipleOmega" << '\t';
-        os << datafile << '\t' << treefile << '\t';
+        os << datafile << '\t' << treefile << '\t' << profilesfile << '\t';
         os << delta_omega_array_file << '\t';
         os << omegaNcat << '\t';
         os << omega_shift << '\t';
@@ -1352,7 +1460,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
                       << "\n";
             exit(1);
         }
-        is >> datafile >> treefile;
+        is >> datafile >> treefile >> profilesfile;
         is >> delta_omega_array_file;
         is >> omegaNcat;
         is >> omega_shift;

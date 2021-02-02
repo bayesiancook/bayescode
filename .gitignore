@@ -9,6 +9,5 @@ _build*
 _test/
 _aamutsel/
 _mutselomega/
-data/
 .vscode/
 *.profraw
