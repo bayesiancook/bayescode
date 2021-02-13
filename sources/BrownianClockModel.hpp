@@ -9,6 +9,8 @@
 #include "Tree.hpp"
 #include "BrownianTreeProcess.hpp"
 #include "Chronogram.hpp"
+#include "PoissonSuffStat.hpp"
+#include "CodonSuffStat.hpp"
 #include "dSOmegaPathSuffStat.hpp"
 
 class BrownianClockModel: public ProbModel {
@@ -25,16 +27,16 @@ class BrownianClockModel: public ProbModel {
 
     Chronogram* chronogram;
 
-    double alphatau;
-    double betatau;
-    double tau;
-    double rootrate;
-    BrownianTreeProcess* lognoderate;
-    BranchExpoLengthArray* branchlength;
+    double tauds;
+    double rootds;
 
-    // Poisson suffstats for substitution histories, as a function of branch lengths
-    PoissonSuffStatBranchArray *lengthpathsuffstatarray;
-    PoissonSuffStat rootratesuffstat;
+    double tauom;
+    double rootomega;
+
+    BrownianTreeProcess* logds;
+    BrownianTreeProcess* logomega;
+    BranchExpoLengthArray* branchlength;
+    BranchExpoMeanArray* branchomega;
 
     // Nucleotide rates
     vector<double> nucrelratehypercenter;
@@ -50,24 +52,19 @@ class BrownianClockModel: public ProbModel {
     // of nucleotide rates
     NucPathSuffStat nucpathsuffstat;
 
-    // Omega
-    double omegahypermean;
-    double omegahyperinvshape;
-    double omega;
-
     // a codon matrix (parameterized by nucmatrix and omega)
-    MGOmegaCodonSubMatrix *codonmatrix;
+    MGOmegaCodonSubMatrixBranchArray* codonmatrixarray;
+    MGOmegaCodonSubMatrix* rootcodonmatrix;
 
     // PhyloProcess
 
     PhyloProcess *phyloprocess;
 
-    PathSuffStat pathsuffstat;
-    OmegaPathSuffStat omegapathsuffstat;
-    /*
-    PathSuffStatNodeArray* pathsuffstatnodearray;
-    dSOmegaPathSuffStatBranchArray* dsompathsuffstat;
-    */
+    PathSuffStatNodeArray* pathsuffstatarray;
+    dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
+    PoissonSuffStat rootdssuffstat;
+    OmegaPathSuffStat rootomegasuffstat;
+
 
   public:
     //-------------------
@@ -109,13 +106,17 @@ class BrownianClockModel: public ProbModel {
     void Allocate() {
 
         chronogram = new Chronogram(*tree);
-        alphatau = 1.0;
-        betatau = 1.0;
-        tau = 1.0;
-        lognoderate = new BrownianTreeProcess(*chronogram, tau);
-        rootrate = 0.1;
-        branchlength = new BranchExpoLengthArray(*lognoderate, *chronogram, rootrate);
-        lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+
+        tauds = 1.0;
+        tauom = 1.0;
+
+        logds = new BrownianTreeProcess(*chronogram, tauds);
+        rootds = 0.1;
+        branchlength = new BranchExpoLengthArray(*logds, *chronogram, rootds);
+
+        logomega = new BrownianTreeProcess(*chronogram, tauom);
+        rootomega = 0.1;
+        branchomega = new BranchExpoMeanArray(*logomega, rootomega);
 
         // Nucleotide rates
 
@@ -133,20 +134,14 @@ class BrownianClockModel: public ProbModel {
 
         nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
 
-        // Omega
+        codonmatrixarray = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, branchomega);
+        rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, 1.0);
 
-        omegahypermean = 1.0;
-        omegahyperinvshape = 1.0;
-        omega = 1.0;
-        codonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, omega);
-
-        /*
-        pathsuffstatnodearray = new PathSuffStatNodeArray(*tree);
-        dsompathsuffstat = new dSOmegaPathSuffStatBranchArray(*tree);
-        */
-
-        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrix);
+        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray, rootcodonmatrix);
         phyloprocess->Unfold();
+
+        pathsuffstatarray = new PathSuffStatNodeArray(*tree);
+        dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
     }
 
     //-------------------
@@ -162,9 +157,6 @@ class BrownianClockModel: public ProbModel {
         return (CodonStateSpace *)codondata->GetStateSpace();
     }
 
-    //! return current value of omega
-    double GetOmega() const { return omega; }
-
     //-------------------
     // Setting and updating
     // ------------------
@@ -174,22 +166,27 @@ class BrownianClockModel: public ProbModel {
         nucmatrix->CorruptMatrix();
     }
 
-    void TouchCodonMatrix() {
-        codonmatrix->SetOmega(omega);
-        codonmatrix->CorruptMatrix();
+    void TouchCodonMatrices() {
+        codonmatrixarray->UpdateCodonMatrices();
+        rootcodonmatrix->CorruptMatrix();
     }
 
     void TouchMatrices() {
         TouchNucMatrix();
-        TouchCodonMatrix();
+        TouchCodonMatrices();
     }
 
     void NoUpdate() {}
 
     void Update() override {
-        lognoderate->SetTau(tau);
-        branchlength->SetRootRate(rootrate);
+        logds->SetTau(tauds);
+        branchlength->SetRootShift(rootds);
         branchlength->Update();
+
+        logomega->SetTau(tauom);
+        branchomega->SetRootShift(rootomega);
+        branchomega->Update();
+
         TouchMatrices();
         ResampleSub(1.0);
     }
@@ -201,8 +198,14 @@ class BrownianClockModel: public ProbModel {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(string name) override {
-        lognoderate->SetTau(tau);
+        logds->SetTau(tauds);
+        branchlength->SetRootShift(rootds);
         branchlength->Update();
+
+        logomega->SetTau(tauom);
+        branchomega->SetRootShift(rootomega);
+        branchomega->Update();
+
         TouchMatrices();
         phyloprocess->PostPredSample(name);
     }
@@ -216,12 +219,17 @@ class BrownianClockModel: public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        total += TauLogPrior();
-        total += RootRateLogPrior();
         total += ChronoLogPrior();
-        total += BrownianClockLogPrior();
+
+        total += TaudSLogPrior();
+        total += BrowniandSLogPrior();
+        total += RootdSLogPrior();
+
+        total += TauOmegaLogPrior();
+        total += BrownianOmegaLogPrior();
+        total += RootOmegaLogPrior();
+
         total += NucRatesLogPrior();
-        total += OmegaLogPrior();
         return total;
     }
 
@@ -234,20 +242,32 @@ class BrownianClockModel: public ProbModel {
 
     // Branch lengths
 
-    double TauLogPrior() const {
-        return -tau;
+    double TaudSLogPrior() const {
+        return -tauds;
     }
 
-    double RootRateLogPrior() const {
-        return -rootrate;
+    double TauOmegaLogPrior() const {
+        return -tauom;
+    }
+
+    double RootdSLogPrior() const {
+        return -rootds;
+    }
+
+    double RootOmegaLogPrior() const    {
+        return -rootomega;
     }
 
     double ChronoLogPrior() const   {
         return 0;
     }
 
-    double BrownianClockLogPrior() const    {
-        return lognoderate->GetLogProb();
+    double BrowniandSLogPrior() const    {
+        return logds->GetLogProb();
+    }
+
+    double BrownianOmegaLogPrior() const    {
+        return logomega->GetLogProb();
     }
 
     // Nucleotide rates
@@ -262,49 +282,78 @@ class BrownianClockModel: public ProbModel {
         return total;
     }
 
-    // Omega
-
-    //! log prior over omega (gamma of mean omegahypermean and shape
-    //! 1/omegahyperinvshape)
-    double OmegaLogPrior() const {
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        return Random::logGammaDensity(omega, alpha, beta);
+    void CollectPathSuffStat() {
+        pathsuffstatarray->Clear();
+        pathsuffstatarray->AddSuffStat(*phyloprocess);
     }
 
-    //-------------------
-    // Suff Stat and suffstatlogprobs
-    //-------------------
-
-    // Branch lengths
-
-    //! \brief const access to array of length-pathsuffstats across branches
-    //!
-    //! Useful for resampling branch lengths conditional on the current
-    //! substitution mapping
-    const PoissonSuffStatBranchArray *GetLengthPathSuffStatArray() const {
-        return lengthpathsuffstatarray;
+    void CollectdSOmegaPathSuffStat() {
+        dsompathsuffstatarray->Clear();
+        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
     }
 
-    //! collect sufficient statistics for moving branch lengths (directly from the
-    //! substitution mappings)
-    void CollectLengthSuffStat() {
-        lengthpathsuffstatarray->Clear();
-        lengthpathsuffstatarray->AddLengthPathSuffStat(*phyloprocess);
-    }
-
-    void CollectRootRateSuffStat()  {
-        rootratesuffstat.Clear();
+    void CollectRootdSSuffStat()  {
+        rootdssuffstat.Clear();
         for (int i=0; i<Nbranch; i++)   {
-            rootratesuffstat.AddSuffStat(lengthpathsuffstatarray->GetVal(i).GetCount(), lengthpathsuffstatarray->GetVal(i).GetBeta() * branchlength->GetVal(i));
+            const dSOmegaPathSuffStat& ss = dsompathsuffstatarray->GetVal(i);
+            double omega = branchomega->GetVal(i);
+            double length = branchlength->GetVal(i);
+            if (std::isnan(length)) {
+                cerr << "in collect root dsss : length is nan\n";
+                exit(1);
+            }
+            if (std::isnan(omega)) {
+                cerr << "in collect root dsss : omega is nan\n";
+                exit(1);
+            }
+            rootdssuffstat.AddSuffStat(ss.GetCount(), ss.GetBeta(omega) * length);
         }
     }
 
-    void GibbsResampleRootRate()    {
-        double count = rootratesuffstat.GetCount();
-        double beta = rootratesuffstat.GetBeta() / rootrate;
-        rootrate = Random::GammaSample(1.0 + count, 1.0 + beta);
-        branchlength->SetRootRate(rootrate);
+    void GibbsResampleRootdS()    {
+        double count = rootdssuffstat.GetCount();
+        double beta = rootdssuffstat.GetBeta() / rootds;
+        cerr << "gibbs resample before \n";
+        cerr << rootdssuffstat.GetBeta() << '\t' << rootds << '\n';
+        rootds = Random::GammaSample(1.0 + count, 1.0 + beta);
+        if (std::isnan(rootds)) {
+            cerr << "rootds is nan\n";
+            cerr << count << '\t' << beta << '\n';
+            exit(1);
+        }
+        branchlength->SetRootShift(rootds);
+        branchlength->Update();
+    }
+
+    void CollectRootOmegaSuffStat()  {
+        rootomegasuffstat.Clear();
+        for (int i=0; i<Nbranch; i++)   {
+            const dSOmegaPathSuffStat& ss = dsompathsuffstatarray->GetVal(i);
+            double omega = branchomega->GetVal(i);
+            double length = branchlength->GetVal(i);
+            if (std::isnan(length)) {
+                cerr << "in collect root domss : length is nan\n";
+                exit(1);
+            }
+            if (std::isnan(omega)) {
+                cerr << "in collect root domss : omega is nan\n";
+                exit(1);
+            }
+            rootomegasuffstat.PoissonSuffStat::AddSuffStat(ss.GetNonSynCount(), ss.GetNonSynBeta()*length*omega);
+        }
+    }
+
+    void GibbsResampleRootOmega()    {
+        double count = rootomegasuffstat.GetCount();
+        double beta = rootomegasuffstat.GetBeta() / rootomega;
+        rootomega = Random::GammaSample(1.0 + count, 1.0 + beta);
+        if (std::isnan(rootomega)) {
+            cerr << "rootomega is nan\n";
+            cerr << count << '\t' << beta << '\n';
+            exit(1);
+        }
+        branchomega->SetRootShift(rootomega);
+        branchomega->Update();
     }
 
     // Nucleotide rates
@@ -321,7 +370,7 @@ class BrownianClockModel: public ProbModel {
     void CollectNucPathSuffStat() {
         TouchMatrices();
         nucpathsuffstat.Clear();
-        nucpathsuffstat.AddSuffStat(*codonmatrix, pathsuffstat);
+        nucpathsuffstat.AddSuffStat(*codonmatrixarray, *rootcodonmatrix, *pathsuffstatarray);
     }
 
     //! \brief return log prob of current substitution mapping, as a function of
@@ -333,14 +382,6 @@ class BrownianClockModel: public ProbModel {
     //! nucmatrix. Both nucpathsuffstat and nucmatrix are assumed to be updated.
     double NucRatesSuffStatLogProb() const {
         return nucpathsuffstat.GetLogProb(*nucmatrix, *GetCodonStateSpace());
-    }
-
-    // Paths
-
-    //! collect generic sufficient statistics from substitution mappings
-    void CollectPathSuffStat() {
-        pathsuffstat.Clear();
-        pathsuffstat.AddSuffStat(*phyloprocess);
     }
 
     //-------------------
@@ -357,7 +398,8 @@ class BrownianClockModel: public ProbModel {
         if (from->isRoot())   {
             return 0;
         }
-        double suffstatlogprob = lengthpathsuffstatarray->GetVal(from->GetBranch()->GetIndex()).GetLogProb(branchlength->GetVal(from->GetBranch()->GetIndex()));
+        int index = from->GetBranch()->GetIndex();
+        double suffstatlogprob = dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
         return suffstatlogprob;
     }
 
@@ -370,7 +412,7 @@ class BrownianClockModel: public ProbModel {
     }
 
     double GetNodeLogPrior(const Link* from) const  {
-        return lognoderate->GetNodeLogProb(from);
+        return logds->GetNodeLogProb(from) + logomega->GetNodeLogProb(from);
     }
 
     double GetNodeLogProb(const Link* from) const   {
@@ -379,6 +421,7 @@ class BrownianClockModel: public ProbModel {
 
     void NodeUpdate(const Link* from) {
         branchlength->LocalNodeUpdate(from);
+        branchomega->LocalNodeUpdate(from);
     }
 
     //-------------------
@@ -387,8 +430,11 @@ class BrownianClockModel: public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
+        cerr << "resample sub\n";
         ResampleSub(1.0);
+        cerr << "move param\n";
         MoveParameters(30);
+        cerr << "move ok\n";
         return 1.0;
     }
 
@@ -403,25 +449,44 @@ class BrownianClockModel: public ProbModel {
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
 
-            CollectLengthSuffStat();
-            MoveRootRate();
-            MoveTimes();
-            MoveRates();
-            GibbsResampleTau();
-
+            cerr << "collect\n";
             CollectPathSuffStat();
-            MoveOmega();
+            CollectdSOmegaPathSuffStat();
 
+            cerr << "times\n";
+            MoveTimes();
+
+            cerr << "collect\n";
+            CollectdSOmegaPathSuffStat();
+            MoveRootdS();
+            cerr << "collect\n";
+            CollectdSOmegaPathSuffStat();
+            MovedS();
+            GibbsResampleTaudS();
+
+            cerr << "collect\n";
+            CollectdSOmegaPathSuffStat();
+            MoveRootOmega();
+            cerr << "collect\n";
+            CollectdSOmegaPathSuffStat();
+            MoveOmega();
+            GibbsResampleTauOmega();
+
+            cerr << "touch\n";
             TouchMatrices();
+            cerr << "nuc\n";
             MoveNucRates();
+            cerr << "nuc ok\n";
+
+            cerr << rootds << '\t' << rootomega << '\n';
         }
     }
 
     // Times and Rates
 
-    void MoveRootRate() {
-        CollectRootRateSuffStat();
-        GibbsResampleRootRate();
+    void MoveRootdS() {
+        CollectRootdSSuffStat();
+        GibbsResampleRootdS();
     }
 
     void MoveTimes()    {
@@ -458,38 +523,77 @@ class BrownianClockModel: public ProbModel {
         return ((double) accepted);
     }
 
-    void MoveRates()    {
-        RecursiveMoveRates(1.0, GetRoot());
+    void MovedS()    {
+        RecursiveMovedS(1.0, GetRoot());
     }
 
-    void RecursiveMoveRates(double tuning, const Link* from)    {
-        LocalMoveRate(tuning, from);
+    void RecursiveMovedS(double tuning, const Link* from)    {
+        LocalMovedS(tuning, from);
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveMoveRates(tuning, link->Out());
+            RecursiveMovedS(tuning, link->Out());
         }
-        LocalMoveRate(tuning, from);
+        LocalMovedS(tuning, from);
     }
 
-    double LocalMoveRate(double tuning, const Link* from)   {
+    double LocalMovedS(double tuning, const Link* from)   {
         double logprob1 = GetNodeLogProb(from);
         double bk = chronogram->GetVal(from->GetNode()->GetIndex());
-        double loghastings = lognoderate->LocalProposeMove(from->GetNode()->GetIndex(), tuning);
+        double loghastings = logds->LocalProposeMove(from->GetNode()->GetIndex(), tuning);
         NodeUpdate(from);
         double logprob2 = GetNodeLogProb(from);
 
         double deltalogprob = logprob2 - logprob1 + loghastings;
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (!accepted)   {
-            (*lognoderate)[from->GetNode()->GetIndex()] = bk;
+            (*logds)[from->GetNode()->GetIndex()] = bk;
             NodeUpdate(from);
         }
         return ((double) accepted);
     }
 
-    void GibbsResampleTau()  {
-        double s2 = lognoderate->GetSumOfContrasts();
-        tau = Random::Gamma(alphatau + 0.5*Nbranch, betatau + 0.5*s2);
-        lognoderate->SetTau(tau);
+    void GibbsResampleTaudS()  {
+        double s2 = logds->GetSumOfContrasts();
+        tauds = Random::Gamma(1.0 + 0.5*Nbranch, 1.0 + 0.5*s2);
+        logds->SetTau(tauds);
+    }
+
+    void MoveOmega()    {
+        RecursiveMoveOmega(1.0, GetRoot());
+    }
+
+    void MoveRootOmega() {
+        CollectRootOmegaSuffStat();
+        GibbsResampleRootOmega();
+    }
+
+    void RecursiveMoveOmega(double tuning, const Link* from)    {
+        LocalMoveOmega(tuning, from);
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveMoveOmega(tuning, link->Out());
+        }
+        LocalMoveOmega(tuning, from);
+    }
+
+    double LocalMoveOmega(double tuning, const Link* from)   {
+        double logprob1 = GetNodeLogProb(from);
+        double bk = chronogram->GetVal(from->GetNode()->GetIndex());
+        double loghastings = logomega->LocalProposeMove(from->GetNode()->GetIndex(), tuning);
+        NodeUpdate(from);
+        double logprob2 = GetNodeLogProb(from);
+
+        double deltalogprob = logprob2 - logprob1 + loghastings;
+        int accepted = (log(Random::Uniform()) < deltalogprob);
+        if (!accepted)   {
+            (*logomega)[from->GetNode()->GetIndex()] = bk;
+            NodeUpdate(from);
+        }
+        return ((double) accepted);
+    }
+
+    void GibbsResampleTauOmega()  {
+        double s2 = logomega->GetSumOfContrasts();
+        tauom = Random::Gamma(1.0 + 0.5*Nbranch, 1.0 + 0.5*s2);
+        logomega->SetTau(tauom);
     }
 
     // Nucleotide rates
@@ -514,20 +618,6 @@ class BrownianClockModel: public ProbModel {
         TouchMatrices();
     }
 
-    // Omega
-
-    //! Gibbs resample omega (based on sufficient statistics of current
-    //! substitution mapping)
-    void MoveOmega() {
-        omegapathsuffstat.Clear();
-        omegapathsuffstat.AddSuffStat(*codonmatrix, pathsuffstat);
-        double alpha = 1.0 / omegahyperinvshape;
-        double beta = alpha / omegahypermean;
-        omega = Random::GammaSample(alpha + omegapathsuffstat.GetCount(),
-                                    beta + omegapathsuffstat.GetBeta());
-        TouchCodonMatrix();
-    }
-
     //-------------------
     // Traces and Monitors
     // ------------------
@@ -535,9 +625,11 @@ class BrownianClockModel: public ProbModel {
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\t";
         os << "length\t";
-        os << "tau\t";
-        os << "rootrate\t";
-        os << "omega\t";
+        os << "meanomega\t";
+        os << "tauds\t";
+        os << "rootds\t";
+        os << "tauom\t";
+        os << "rootom\t";
         os << "statent\t";
         os << "rrent\n";
     }
@@ -546,9 +638,11 @@ class BrownianClockModel: public ProbModel {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
-        os << tau << '\t';
-        os << rootrate << '\t';
-        os << omega << '\t';
+        os << branchomega->GetMean() << '\t';
+        os << tauds << '\t';
+        os << rootds << '\t';
+        os << tauom << '\t';
+        os << rootomega << '\t';
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
@@ -556,22 +650,26 @@ class BrownianClockModel: public ProbModel {
     void Monitor(ostream &os) const override {}
 
     void ToStream(ostream &os) const override {
-        os << omega << '\t';
         os << nucstat << '\t';
         os << nucrelrate << '\t';
         os << *chronogram << '\t';
-        os << tau << '\t';
-        os << rootrate << '\t';
-        os << *lognoderate << '\t';
+        os << tauds << '\t';
+        os << rootds << '\t';
+        os << *logds << '\t';
+        os << tauom << '\t';
+        os << rootomega << '\t';
+        os << *logomega << '\n';
     }
 
     void FromStream(istream &is) override {
-        is >> omega;
         is >> nucstat;
         is >> nucrelrate;
         is >> *chronogram;
-        is >> tau;
-        is >> rootrate;
-        is >> *lognoderate;
+        is >> tauds;
+        is >> rootds;
+        is >> *logds;
+        is >> tauom;
+        is >> rootomega;
+        is >> *logomega;
     }
 };
