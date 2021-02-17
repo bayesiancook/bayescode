@@ -19,6 +19,8 @@ copy of the GNU General Public License along with Coevol. If not, see
 #ifndef LINALG_H
 #define LINALG_H
 
+#include <vector>
+
 class LinAlg {
   public:
     // diagonalize a reversible rate matrix
@@ -39,16 +41,20 @@ class LinAlg {
     static int DiagonalizeSymmetricMatrix(double **u, int dim, int nmax, double epsilon,
                                           double *eigenval, double **eigenvect);
 
+    static int DiagonalizeSymmetricMatrix(const std::vector<std::vector<double>>& u, int dim, int nmax, double epsilon,
+                                          std::vector<double>& eigenval, std::vector<std::vector<double>>& eigenvect);
+
     // computes inverse of matrix given as an input (a)
     // by Gauss elimination
     // store inverse in invu
     // does not corrupt matrix a
     // if invu not specified, just returns the logdet
-    static double Gauss(double **a, int dim, double **invu = 0);
+    static double Gauss(const std::vector<std::vector<double>>& a, int dim, std::vector<std::vector<double>>& invu);
 
   private:
     static void QR(double **u, int dim, double **ql, double **r);
     static void HouseHolder(double **u, int dim, double **a, double **ql);
+    static void HouseHolder(const std::vector<std::vector<double>>& u, int dim, double **a, double **ql);
 };
 
 #endif
