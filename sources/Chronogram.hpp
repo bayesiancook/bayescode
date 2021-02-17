@@ -32,7 +32,10 @@ class Chronogram : public SimpleNodeArray<double>   {
                 max = tmp;
             }
         }
-        double age = max + Random::GammaSample(1.0, 1.0);
+        double age = max;
+        if (!from->isLeaf())    {
+           age += Random::GammaSample(1.0, 1.0);
+        }
         (*this)[from->GetNode()->GetIndex()] = age;
         return age;
     }
@@ -54,6 +57,10 @@ class Chronogram : public SimpleNodeArray<double>   {
     */
 
     double LocalProposeMove(const Link* from, double tuning)  {
+        if (from->isLeaf()) {
+            cerr << "error in chronogram: move proposed on leaf node\n";
+            exit(1);
+        }
         double t = GetVal(from->GetNode()->GetIndex());
         double max = GetVal(from->Out()->GetNode()->GetIndex());
         double min = 0;
