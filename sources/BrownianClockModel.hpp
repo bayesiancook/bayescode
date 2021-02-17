@@ -313,8 +313,6 @@ class BrownianClockModel: public ProbModel {
     void GibbsResampleRootdS()    {
         double count = rootdssuffstat.GetCount();
         double beta = rootdssuffstat.GetBeta() / rootds;
-        cerr << "gibbs resample before \n";
-        cerr << rootdssuffstat.GetBeta() << '\t' << rootds << '\n';
         rootds = Random::GammaSample(1.0 + count, 1.0 + beta);
         if (std::isnan(rootds)) {
             cerr << "rootds is nan\n";
@@ -430,11 +428,8 @@ class BrownianClockModel: public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
-        cerr << "resample sub\n";
         ResampleSub(1.0);
-        cerr << "move param\n";
         MoveParameters(30);
-        cerr << "move ok\n";
         return 1.0;
     }
 
@@ -449,36 +444,26 @@ class BrownianClockModel: public ProbModel {
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
 
-            cerr << "collect\n";
             CollectPathSuffStat();
             CollectdSOmegaPathSuffStat();
 
-            cerr << "times\n";
             MoveTimes();
 
-            cerr << "collect\n";
             CollectdSOmegaPathSuffStat();
             MoveRootdS();
-            cerr << "collect\n";
             CollectdSOmegaPathSuffStat();
             MovedS();
             GibbsResampleTaudS();
 
-            cerr << "collect\n";
             CollectdSOmegaPathSuffStat();
             MoveRootOmega();
-            cerr << "collect\n";
             CollectdSOmegaPathSuffStat();
             MoveOmega();
             GibbsResampleTauOmega();
 
-            cerr << "touch\n";
             TouchMatrices();
-            cerr << "nuc\n";
             MoveNucRates();
-            cerr << "nuc ok\n";
-
-            cerr << rootds << '\t' << rootomega << '\n';
+            cerr << "root dS : " << rootds << '\t' << "root omega : " << rootomega << '\n';
         }
     }
 
@@ -494,13 +479,13 @@ class BrownianClockModel: public ProbModel {
     }
 
     void RecursiveMoveTimes(double tuning, const Link* from)    {
-        if (! from->isRoot())   {
+        if ((! from->isRoot()) && (! from->isLeaf()))  {
             LocalMoveTime(tuning, from);
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             RecursiveMoveTimes(tuning, link->Out());
         }
-        if (! from->isRoot())   {
+        if ((! from->isRoot()) && (! from->isLeaf()))  {
             LocalMoveTime(tuning, from);
         }
     }
@@ -537,7 +522,7 @@ class BrownianClockModel: public ProbModel {
 
     double LocalMovedS(double tuning, const Link* from)   {
         double logprob1 = GetNodeLogProb(from);
-        double bk = chronogram->GetVal(from->GetNode()->GetIndex());
+        double bk = logds->GetVal(from->GetNode()->GetIndex());
         double loghastings = logds->LocalProposeMove(from->GetNode()->GetIndex(), tuning);
         NodeUpdate(from);
         double logprob2 = GetNodeLogProb(from);
@@ -576,7 +561,7 @@ class BrownianClockModel: public ProbModel {
 
     double LocalMoveOmega(double tuning, const Link* from)   {
         double logprob1 = GetNodeLogProb(from);
-        double bk = chronogram->GetVal(from->GetNode()->GetIndex());
+        double bk = logomega->GetVal(from->GetNode()->GetIndex());
         double loghastings = logomega->LocalProposeMove(from->GetNode()->GetIndex(), tuning);
         NodeUpdate(from);
         double logprob2 = GetNodeLogProb(from);
