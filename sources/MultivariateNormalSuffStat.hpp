@@ -13,7 +13,7 @@ class MultivariateNormalSuffStat : public SuffStat  {
         return covmat.GetDim();
     }
 
-    void Reset()    {
+    void Clear()    {
         for (int i=0; i<GetDim(); i++)  {
             for (int j=0; j<GetDim(); j++)  {
                 covmat.setval(i,j,0);

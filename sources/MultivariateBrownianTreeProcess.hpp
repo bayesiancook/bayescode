@@ -187,6 +187,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 
         if (! from->isRoot())   {
             vector<double> contrast(GetDim(), 0);
+            GetContrast(from, contrast);
             for (int i=0; i<GetDim(); i++)  {
                 for (int j=0; j<GetDim(); j++)  {
                     covmat.add(i, j, contrast[i]*contrast[j]);

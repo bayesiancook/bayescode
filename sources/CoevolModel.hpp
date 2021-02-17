@@ -69,8 +69,7 @@ class CoevolModel: public ProbModel {
 
     PathSuffStatNodeArray* pathsuffstatarray;
     dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
-    PoissonSuffStat rootdssuffstat;
-    OmegaPathSuffStat rootomegasuffstat;
+    MultivariateNormalSuffStat* browniansuffstat;
 
 
   public:
@@ -183,6 +182,8 @@ class CoevolModel: public ProbModel {
 
         pathsuffstatarray = new PathSuffStatNodeArray(*tree);
         dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+
+        browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
 
         cerr << "allocate ok\n";
     }
@@ -391,7 +392,7 @@ class CoevolModel: public ProbModel {
             CollectdSOmegaPathSuffStat();
             MoveTimes();
             MoveBrownianProcess();
-            // MoveSigma();
+            MoveSigma();
 
             CollectNucPathSuffStat();
             TouchMatrices();
@@ -410,6 +411,12 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<L+Ncont; i++)   {
             process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
         }
+    }
+
+    void MoveSigma()    {
+        browniansuffstat->Clear();
+        process->AddSuffStat(*browniansuffstat);
+        sigma->GibbsResample(*browniansuffstat);
     }
 
     void MoveNucRates() {
