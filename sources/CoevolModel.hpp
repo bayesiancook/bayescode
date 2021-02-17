@@ -387,130 +387,32 @@ class CoevolModel: public ProbModel {
         for (int rep = 0; rep < nrep; rep++) {
 
             CollectPathSuffStat();
-            CollectdSOmegaPathSuffStat();
 
+            CollectdSOmegaPathSuffStat();
             MoveTimes();
-
-            CollectdSOmegaPathSuffStat();
             MoveBrownianProcess();
+            // MoveSigma();
 
+            CollectNucPathSuffStat();
             TouchMatrices();
             MoveNucRates();
+            TouchMatrices();
         }
     }
 
     // Times and Rates
 
     void MoveTimes()    {
-        RecursiveMoveTimes(1.0, GetRoot());
-    }
-
-    void RecursiveMoveTimes(double tuning, const Link* from)    {
-        if ((! from->isRoot()) && (! from->isLeaf()))  {
-            LocalMoveTime(tuning, from);
-        }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveMoveTimes(tuning, link->Out());
-        }
-        if ((! from->isRoot()) && (! from->isLeaf()))  {
-            LocalMoveTime(tuning, from);
-        }
-    }
-
-    // only changes the dS
-    // so, just get the 
-    double LocalMoveTime(double tuning, const Link* from) {
-        double logprob1 = NodeLogProb(from);
-        double bk = chronogram->GetVal(from->GetNode()->GetIndex());
-        double loghastings = chronogram->LocalProposeMove(from, tuning);
-        NodeUpdate(from);
-        double logprob2 = NodeLogProb(from);
-
-        double deltalogprob = logprob2 - logprob1 + loghastings;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (!accepted)   {
-            (*chronogram)[from->GetNode()->GetIndex()] = bk;
-            NodeUpdate(from);
-        }
-        return ((double) accepted);
+        chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
     }
 
     void MoveBrownianProcess()  {
         for (int i=0; i<L+Ncont; i++)   {
-            process->SingleNodeMove(i, 1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
         }
     }
 
-    /*
-    void MoveBrownianProcess()  {
-        for (int i=0; i<L+Ncont; i++)   {
-            MoveBrownianProcess(i, 1.0);
-            MoveBrownianProcess(i, 0.1);
-        }
-        for (int i=0; i<L+Ncont; i++)   {
-            MoveRootVal(i, 1.0);
-            MoveRootVal(i, 0.1);
-        }
-    }
-
-    void MoveBrownianProcess(int index, double tuning = 1)    {
-        RecursiveMoveBrownianProcess(index, tuning, GetRoot());
-    }
-
-    void RecursiveMoveBrownianProcess(int index, double tuning, const Link* from)    {
-        if (! from->isRoot())   {
-            LocalMoveBrownianProcess(index, tuning, from);
-        }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveMoveBrownianProcess(index, tuning, link->Out());
-        }
-        if (! from->isRoot())   {
-            LocalMoveBrownianProcess(index, tuning, from);
-        }
-    }
-
-    double LocalMoveBrownianProcess(int index, double tuning, const Link* from) {
-        double logprob1 = NodeLogProb(from);
-        double bk = process->GetVal(from->GetNode()->GetIndex())[index];
-        double loghastings = process->LocalProposeMove(from->GetNode()->GetIndex(), index, tuning);
-        NodeUpdate(from);
-        double logprob2 = NodeLogProb(from);
-
-        double deltalogprob = logprob2 - logprob1 + loghastings;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (!accepted)   {
-            (*process)[from->GetNode()->GetIndex()][index] = bk;
-            NodeUpdate(from);
-        }
-        return ((double) accepted);
-    }
-
-    double MoveRootVal(int index, double tuning)	{
-        double logprob1 = NodeLogProb(GetRoot());
-        double loghastings = 0;
-        double delta = tuning*(Random::Uniform() - 0.5);
-        rootval[index] += delta;
-        process->Shift(index, -delta);
-        NodeUpdate(GetRoot());
-        double logprob2 = NodeLogProb(GetRoot());
-
-        double deltalogprob = logprob2 - logprob1 + loghastings;
-        int accepted = (log(Random::Uniform()) < deltalogprob);
-        if (!accepted)   {
-            rootval[index] -= delta;
-            process->Shift(index, delta);
-            NodeUpdate(GetRoot());
-        }
-        return ((double) accepted);
-    }
-    */
-
-    // Nucleotide rates
-
-    //! MH moves on nucleotide rate parameters (nucrelrate and nucstat: using
-    //! ProfileMove)
     void MoveNucRates() {
-        CollectNucPathSuffStat();
 
         ProfileMove(nucrelrate, 0.1, 1, 3, &CoevolModel::NucRatesLogProb,
                     &CoevolModel::TouchNucMatrix, this);
@@ -524,7 +426,7 @@ class CoevolModel: public ProbModel {
         ProfileMove(nucstat, 0.01, 1, 3, &CoevolModel::NucRatesLogProb,
                     &CoevolModel::TouchNucMatrix, this);
 
-        TouchMatrices();
+        // TouchMatrices();
     }
 
     //-------------------
@@ -543,9 +445,6 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << "s_" << i << "_" << i << '\t';
         }
-        for (int i=0; i<process->GetDim(); i++) {
-            os << "root_" << i << '\t';
-        }
         os << "statent\t";
         os << "rrent\n";
     }
@@ -561,7 +460,7 @@ class CoevolModel: public ProbModel {
             }
         }
         for (int i=0; i<process->GetDim(); i++) {
-            os << (*sigma)(i,i);
+            os << (*sigma)(i,i) << '\t';
         }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';

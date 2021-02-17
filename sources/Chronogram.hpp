@@ -82,6 +82,38 @@ class Chronogram : public SimpleNodeArray<double>   {
         (*this)[from->GetNode()->GetIndex()] = t;
         return 0;
     }
+
+    template<class Update, class LogProb> void MoveTimes(Update update, LogProb logprob)    {
+        RecursiveMoveTimes(1.0, GetRoot(), update, logprob);
+    }
+
+    template<class Update, class LogProb> void RecursiveMoveTimes(double tuning, const Link* from, Update update, LogProb logprob)    {
+        if ((! from->isRoot()) && (! from->isLeaf()))  {
+            LocalMoveTime(tuning, from, update, logprob);
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveMoveTimes(tuning, link->Out(), update, logprob);
+        }
+        if ((! from->isRoot()) && (! from->isLeaf()))  {
+            LocalMoveTime(tuning, from, update, logprob);
+        }
+    }
+
+    template<class Update, class LogProb> double LocalMoveTime(double tuning, const Link* from, Update update, LogProb logprob) {
+        double logprob1 = logprob(from);
+        double bk = GetVal(from->GetNode()->GetIndex());
+        double loghastings = LocalProposeMove(from, tuning);
+        update(from);
+        double logprob2 = logprob(from);
+
+        double deltalogprob = logprob2 - logprob1 + loghastings;
+        int accepted = (log(Random::Uniform()) < deltalogprob);
+        if (!accepted)   {
+            (*this)[from->GetNode()->GetIndex()] = bk;
+            update(from);
+        }
+        return ((double) accepted);
+    }
 };
 
 
