@@ -1,14 +1,14 @@
 CC=mpic++
 CPPFLAGS= -std=c++11 -Wall -O3
 LDFLAGS= -O3
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp 
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CovMatrix.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= brownclock globom codonm2a readaamutselsparse readaamutselddp aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= coevol brownclock globom codonm2a readaamutselsparse readaamutselddp aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -41,6 +41,10 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 # Targets
+
+coevol$(EXEEXT): $(PROGSDIR)/coevol$(EXEEXT)
+$(PROGSDIR)/coevol$(EXEEXT): Coevol.o $(OBJS)
+	$(CC) Coevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 brownclock$(EXEEXT): $(PROGSDIR)/brownclock$(EXEEXT)
 $(PROGSDIR)/brownclock$(EXEEXT): BrownianClock.o $(OBJS)
