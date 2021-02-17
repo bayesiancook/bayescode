@@ -11,10 +11,12 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 
     public:
 
-    MultivariateBrownianTreeProcess(const NodeSelector<double>& intimetree, const CovMatrix& insigma) :
+    MultivariateBrownianTreeProcess(const NodeSelector<double>& intimetree, const CovMatrix& insigma, const vector<double>& inrootmean, const vector<double>& inrootvar) :
         SimpleNodeArray<vector<double>>(intimetree.GetTree()),
         timetree(intimetree),
         sigma(insigma),
+        rootmean(inrootmean),
+        rootvar(inrootvar),
         clamp(intimetree.GetNnode(), vector<bool>(insigma.GetDim(),false))  {
             Assign(GetRoot());
             Sample();
@@ -33,14 +35,14 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         return sigma.GetDim();
     }
 
-    void SetAndClamp(const ContinuousData& data, const vector<double>& rootval, int index, int fromindex)  {
+    void SetAndClamp(const ContinuousData& data, int index, int fromindex)  {
         int k = 0;
         int n = 0;
-        RecursiveSetAndClamp(GetRoot(), data, rootval, index, fromindex, k, n);
+        RecursiveSetAndClamp(GetRoot(), data, index, fromindex, k, n);
 		cerr << data.GetCharacterName(fromindex) << " : " << n-k << " out of " << n << " missing\n";
     }
 
-    void RecursiveSetAndClamp(const Link* from, const ContinuousData& data, const vector<double>& rootval, int index, int fromindex, int& k, int& n)   {
+    void RecursiveSetAndClamp(const Link* from, const ContinuousData& data, int index, int fromindex, int& k, int& n)   {
 
 		if(from->isLeaf()){
 			n++;
@@ -49,7 +51,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 				double tmp = data.GetState(tax, fromindex);
 				if (tmp != -1)	{
 					k++;
-                    (*this)[from->GetNode()->GetIndex()][index] = log(tmp) - rootval[index];
+                    (*this)[from->GetNode()->GetIndex()][index] = log(tmp);
                     clamp[from->GetNode()->GetIndex()][index] = true;
 				}
 			}
@@ -58,31 +60,17 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 			}
 		}
 		for (const Link* link=from->Next(); link!=from; link=link->Next())	{
-			RecursiveSetAndClamp(link->Out(), data, rootval, index, fromindex, k, n);
+			RecursiveSetAndClamp(link->Out(), data, index, fromindex, k, n);
 		}
 	}
 
     void Shift(int index, double delta) {
         for (int i=0; i<GetNnode(); i++)   {
-            if (i != GetRoot()->GetNode()->GetIndex())  {
-                if (! clamp[i][index])  {
-                    (*this)[i][index] += delta;
-                }
+            if (! clamp[i][index])  {
+                (*this)[i][index] += delta;
             }
         }
     }
-
-    /*
-    void Shift(const vector<double>& d)    {
-        for (int i=0; i<GetNnode(); i++)   {
-            for (int j=0; j<GetDim(); j++)  {
-                if (! clamp[i][j])    {
-                    (*this)[i][j] += d[j];
-                }
-            }
-        }
-    }
-    */
 
     void GetContrast(const Link* from, vector<double>& contrast) const {
             double dt = timetree.GetVal(from->Out()->GetNode()->GetIndex()) - timetree.GetVal(from->GetNode()->GetIndex());
@@ -111,7 +99,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             vector<double>& val = (*this)[from->GetNode()->GetIndex()];
             for (int i=0; i<GetDim(); i++)  {
                 if (! cl[i])    {
-                    val[i] = 0;
+                    val[i] = sqrt(rootvar[i]) * Random::sNormal() + rootmean[i];
                 }
             }
         }
@@ -162,7 +150,13 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         // log P(X) = log P(Y) - 0.5 * GetDim() * log(dt)
 
         if (from->isRoot()) {
-            return 0;
+            const vector<double>& val = GetVal(from->GetNode()->GetIndex());
+            double total = 0;
+            for (int i=0; i<GetDim(); i++)  {
+                double delta = val[i] - rootmean[i];
+                total -= 0.5 * (log(2*Pi*rootvar[i]) + delta*delta/rootvar[i]);
+            }
+            return total;
         }
 
         double dt = timetree.GetVal(from->Out()->GetNode()->GetIndex()) - timetree.GetVal(from->GetNode()->GetIndex());
@@ -233,10 +227,46 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         return 0;
     }
 
+    template<class Update, class LogProb> void SingleNodeMove(int index, double tuning, Update update, LogProb logprob)   {
+        RecursiveSingleNodeMove(index, tuning, GetRoot(), update, logprob);
+    }
+
+    template<class Update, class LogProb> void RecursiveSingleNodeMove(int index, double tuning, const Link* from, Update update, LogProb logprob)    {
+
+        if (! clamp[from->GetNode()->GetIndex()][index])    {
+            LocalSingleNodeMove(index, tuning, from, update, logprob);
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveSingleNodeMove(index, tuning, link->Out(), update, logprob);
+        }
+        if (! clamp[from->GetNode()->GetIndex()][index])    {
+            LocalSingleNodeMove(index, tuning, from, update, logprob);
+        }
+    }
+
+    template<class Update, class LogProb> double LocalSingleNodeMove(int index, double tuning, const Link* from, Update update, LogProb logprob) {
+        double logprob1 = logprob(from);
+        double loghastings = 0;
+        double delta = tuning * (Random::Uniform() - 0.5);
+        (*this)[from->GetNode()->GetIndex()][index] += delta;
+        update(from);
+        double logprob2 = logprob(from);
+
+        double deltalogprob = logprob2 - logprob1 + loghastings;
+        int accepted = (log(Random::Uniform()) < deltalogprob);
+        if (!accepted)   {
+            (*this)[from->GetNode()->GetIndex()][index] -= delta;
+            update(from);
+        }
+        return ((double) accepted);
+    }
+
     private:
 
     const NodeSelector<double>& timetree;
     const CovMatrix& sigma;
+    const vector<double>& rootmean;
+    const vector<double>& rootvar;
     vector<vector<bool>> clamp;
 };
 
@@ -244,10 +274,9 @@ class MVBranchExpoLengthArray : public SimpleBranchArray<double>    {
 
     public:
 
-    MVBranchExpoLengthArray(const NodeSelector<vector<double>>& innodetree, const vector<double>& inrootval, const NodeSelector<double>& inchrono, int inidx) :
+    MVBranchExpoLengthArray(const NodeSelector<vector<double>>& innodetree, const NodeSelector<double>& inchrono, int inidx) :
         SimpleBranchArray<double>(innodetree.GetTree()),
         nodetree(innodetree),
-        rootval(inrootval),
         chrono(inchrono),
         idx(inidx)  {
             Update();
@@ -283,8 +312,8 @@ class MVBranchExpoLengthArray : public SimpleBranchArray<double>    {
 
     void LocalUpdate(const Link* from)  {
         if (!from->isRoot()) {
-            double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx] + rootval[idx];
-            double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx] + rootval[idx];
+            double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx];
+            double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx];
             double mean = (exp(up) - exp(down)) / (up - down);
             double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
             if (dt <= 0)    {
@@ -304,7 +333,6 @@ class MVBranchExpoLengthArray : public SimpleBranchArray<double>    {
 
     private:
     const NodeSelector<vector<double>>& nodetree;
-    const vector<double>& rootval;
     const NodeSelector<double>& chrono;
     int idx;
 };
@@ -313,10 +341,9 @@ class MVBranchExpoMeanArray : public SimpleBranchArray<double>    {
 
     public:
 
-    MVBranchExpoMeanArray(const NodeSelector<vector<double>>& innodetree, const vector<double>& inrootval, int inidx) :
+    MVBranchExpoMeanArray(const NodeSelector<vector<double>>& innodetree, int inidx) :
         SimpleBranchArray<double>(innodetree.GetTree()),
         nodetree(innodetree),
-        rootval(inrootval),
         idx(inidx)  {
             Update();
     }
@@ -355,8 +382,8 @@ class MVBranchExpoMeanArray : public SimpleBranchArray<double>    {
 
     void LocalUpdate(const Link* from)  {
         if (!from->isRoot()) {
-            double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx] + rootval[idx];
-            double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx] + rootval[idx];
+            double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx];
+            double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx];
             double mean = (exp(up) - exp(down)) / (up - down);
             (*this)[from->GetBranch()->GetIndex()] = mean;
         }
@@ -371,7 +398,6 @@ class MVBranchExpoMeanArray : public SimpleBranchArray<double>    {
 
     private:
     const NodeSelector<vector<double>>& nodetree;
-    const vector<double>& rootval;
     int idx;
 };
 

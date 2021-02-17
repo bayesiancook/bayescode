@@ -12,14 +12,12 @@ class CoevolChain : public Chain {
   private:
     // Chain parameters
     string modeltype;
-    string datafile, contdatafile, treefile;
+    string datafile, contdatafile, treefile, rootfile;
 
   public:
-    //! constructor for a new chain: datafile, treefile, saving frequency, final
-    //! chain size, chain name and overwrite flag -- calls New
-    CoevolChain(string indatafile, string incontdatafile, string intreefile, int inevery, int inuntil, string inname,
+    CoevolChain(string indatafile, string incontdatafile, string intreefile, string inrootfile, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("BROWNIANCLOCK"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile) {
+        : modeltype("BROWNIANCLOCK"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -35,7 +33,7 @@ class CoevolChain : public Chain {
     }
 
     void New(int force) override {
-        model = new CoevolModel(datafile, contdatafile, treefile);
+        model = new CoevolModel(datafile, contdatafile, treefile, rootfile);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -51,7 +49,7 @@ class CoevolChain : public Chain {
             exit(1);
         }
         is >> modeltype;
-        is >> datafile >> contdatafile >> treefile;
+        is >> datafile >> contdatafile >> treefile >> rootfile;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -61,7 +59,7 @@ class CoevolChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "BROWNIANCLOCK") {
-            model = new CoevolModel(datafile, contdatafile, treefile);
+            model = new CoevolModel(datafile, contdatafile, treefile, rootfile);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -77,7 +75,7 @@ class CoevolChain : public Chain {
     void Save() override {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
-        param_os << datafile << '\t' << contdatafile << '\t' << treefile << '\n';
+        param_os << datafile << '\t' << contdatafile << '\t' << treefile << '\t' << rootfile << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -105,6 +103,7 @@ int main(int argc, char *argv[]) {
         string datafile = "";
         string contdatafile = "";
         string treefile = "";
+        string rootfile = "";
         name = "";
         int force = 1;
         int every = 1;
@@ -128,6 +127,9 @@ int main(int argc, char *argv[]) {
                 } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
+                } else if (s == "-r")   {
+                    i++;
+                    rootfile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
                 } else if ((s == "-x") || (s == "-extract")) {
@@ -145,7 +147,7 @@ int main(int argc, char *argv[]) {
                 }
                 i++;
             }
-            if ((datafile == "") || (treefile == "") || (name == "")) {
+            if ((datafile == "") || (treefile == "") || (rootfile == "") || (name == "")) {
                 throw(0);
             }
         } catch (...) {
@@ -154,7 +156,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new CoevolChain(datafile, contdatafile, treefile, every, until, name, force);
+        chain = new CoevolChain(datafile, contdatafile, treefile, rootfile, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

@@ -38,7 +38,8 @@ class CoevolModel: public ProbModel {
     vector<double> kappa;
     InverseWishart* sigma;
 
-    vector<double> rootval;
+    vector<double> rootmean;
+    vector<double> rootvar;
 
     MultivariateBrownianTreeProcess* process;
     MVBranchExpoLengthArray* branchlength;
@@ -77,7 +78,7 @@ class CoevolModel: public ProbModel {
     // Construction and allocation
     // ------------------
 
-    CoevolModel(string datafile, string contdatafile, string treefile) {
+    CoevolModel(string datafile, string contdatafile, string treefile, string rootfile) {
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -107,6 +108,19 @@ class CoevolModel: public ProbModel {
         tree = tmptree;
 
         Nbranch = tree->GetNbranch();
+
+        ifstream is(rootfile.c_str());
+        int dim;
+        is >> dim;
+        if (dim != Ncont + L)   {
+            cerr << "error in root file: non matching dimension\n";
+            exit(1);
+        }
+        rootmean.assign(dim,0);
+        rootvar.assign(dim,0);
+        for (int i=0; i<dim; i++)   {
+            is >> rootmean[i] >> rootvar[i];
+        }
     }
 
     CoevolModel(const CodonSequenceAlignment* incodondata, const ContinuousData* incontdata, const Tree* intree) {
@@ -134,16 +148,13 @@ class CoevolModel: public ProbModel {
         df = 0;
         sigma = new InverseWishart(kappa, df);
 
-        rootval.assign(Ncont+L, 0);
-        rootval[0] = -5.0;
-        rootval[1] = -1.0;
-        process = new MultivariateBrownianTreeProcess(*chronogram, *sigma);
+        process = new MultivariateBrownianTreeProcess(*chronogram, *sigma, rootmean, rootvar);
         for (int i=0; i<Ncont; i++)	{
-            process->SetAndClamp(*contdata, rootval, L+i, i);
+            process->SetAndClamp(*contdata, L+i, i);
         }
 
-        branchlength = new MVBranchExpoLengthArray(*process, rootval, *chronogram, dSindex);
-        branchomega = new MVBranchExpoMeanArray(*process, rootval, omindex);
+        branchlength = new MVBranchExpoLengthArray(*process, *chronogram, dSindex);
+        branchomega = new MVBranchExpoMeanArray(*process, omindex);
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
@@ -236,7 +247,6 @@ class CoevolModel: public ProbModel {
         total += ChronoLogPrior();
         total += KappaLogPrior();
         total += SigmaLogPrior();
-        total += RootValLogPrior();
         total += BrownianProcessLogPrior();
         total += NucRatesLogPrior();
         return total;
@@ -261,10 +271,6 @@ class CoevolModel: public ProbModel {
 
     double SigmaLogPrior() const    {
         return sigma->GetLogProb();
-    }
-
-    double RootValLogPrior() const  {
-        return 0;
     }
 
     double BrownianProcessLogPrior() const    {
@@ -324,6 +330,7 @@ class CoevolModel: public ProbModel {
         return total;
     }
 
+    /*
     double dSOmegaSuffStatLogProb() const    {
         return RecursivedSOmegaSuffStatLogProb(GetRoot());
     }
@@ -342,6 +349,7 @@ class CoevolModel: public ProbModel {
     double dSOmegaLogProb() const    {
         return ChronoLogPrior() + BrownianProcessLogPrior() + RootValLogPrior() + dSOmegaSuffStatLogProb();
     }
+    */
 
     double NodeLogPrior(const Link* from) const  {
         return process->GetNodeLogProb(from);
@@ -429,6 +437,13 @@ class CoevolModel: public ProbModel {
 
     void MoveBrownianProcess()  {
         for (int i=0; i<L+Ncont; i++)   {
+            process->SingleNodeMove(i, 1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        }
+    }
+
+    /*
+    void MoveBrownianProcess()  {
+        for (int i=0; i<L+Ncont; i++)   {
             MoveBrownianProcess(i, 1.0);
             MoveBrownianProcess(i, 0.1);
         }
@@ -488,6 +503,7 @@ class CoevolModel: public ProbModel {
         }
         return ((double) accepted);
     }
+    */
 
     // Nucleotide rates
 
@@ -547,9 +563,6 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << (*sigma)(i,i);
         }
-        for (int i=0; i<process->GetDim(); i++) {
-            os << rootval[i] << '\t';
-        }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
@@ -562,7 +575,6 @@ class CoevolModel: public ProbModel {
         os << *chronogram << '\t';
         os << *sigma << '\t';
         os << *process << '\t';
-        os << rootval << '\t';
     }
 
     void FromStream(istream &is) override {
@@ -571,6 +583,5 @@ class CoevolModel: public ProbModel {
         is >> *chronogram;
         is >> *sigma;
         is >> *process;
-        is >> rootval;
     }
 };
