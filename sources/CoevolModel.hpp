@@ -82,7 +82,7 @@ class CoevolModel: public ProbModel {
     // Construction and allocation
     // ------------------
 
-    CoevolModel(string datafile, string contdatafile, string treefile, string rootfile) {
+    CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, GeneticCodeType codetype) {
     // CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile) {
 
         /*
@@ -96,7 +96,7 @@ class CoevolModel: public ProbModel {
         */
 
         data = new FileSequenceAlignment(datafile);
-        codondata = new CodonSequenceAlignment(data, true);
+        codondata = new CodonSequenceAlignment(data, true, codetype);
 
         Nsite = codondata->GetNsite();  // # columns
         Ntaxa = codondata->GetNtaxa();
