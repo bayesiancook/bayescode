@@ -23,6 +23,11 @@ class CoevolModel: public ProbModel {
     const CodonSequenceAlignment *codondata;
     const ContinuousData* contdata;
 
+    /*
+    string suffstatfile;
+    int mappingapprox;
+    */
+
     int Nsite;
     int Ntaxa;
     int Nbranch;
@@ -78,6 +83,17 @@ class CoevolModel: public ProbModel {
     // ------------------
 
     CoevolModel(string datafile, string contdatafile, string treefile, string rootfile) {
+    // CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile) {
+
+        /*
+        suffstatfile = insuffstatfile;
+        if (suffstatfile != "None)  {
+            mappingapprox = 1;
+        }
+        else    {
+            mappingapprox = 0;
+        }
+        */
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -97,7 +113,7 @@ class CoevolModel: public ProbModel {
 		}
         L = 2;
         dSindex = 0;
-        omindex = 0;
+        omindex = 1;
 
         // get tree from file (newick format)
         Tree* tmptree = new Tree(treefile);
@@ -144,6 +160,7 @@ class CoevolModel: public ProbModel {
         chronogram = new Chronogram(*tree);
 
         kappa.assign(Ncont+L, 1.0);
+
         df = 0;
         sigma = new InverseWishart(kappa, df);
 
@@ -185,6 +202,12 @@ class CoevolModel: public ProbModel {
 
         browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
 
+        /*
+        if (mappingapprox)  {
+            ifstream is(suffstatfile.c_str());
+            is >> *dsompathsuffstatarray;
+        }
+        */
         cerr << "allocate ok\n";
     }
 
@@ -267,7 +290,11 @@ class CoevolModel: public ProbModel {
     }
 
     double KappaLogPrior() const    {
-        return 0;
+        double total = 0;
+        for (int i=0; i<sigma->GetDim(); i++)   {
+            total -= kappa[i] / 10;
+        }
+        return total;
     }
 
     double SigmaLogPrior() const    {
@@ -293,8 +320,21 @@ class CoevolModel: public ProbModel {
 
     void CollectdSOmegaPathSuffStat() {
         dsompathsuffstatarray->Clear();
-        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
+        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray, *branchlength, *branchomega);
     }
+
+    /*
+    void PrintPathSuffStat(const Link* from)    {
+
+        if (! from->isRoot())   {
+            cerr << branchlength->GetVal(from->GetBranch()->GetIndex()) << '\t';
+            cerr << dsompathsuffstatarray->GetVal(from->GetBranch()->GetIndex()).GetTotalTime() << '\n';
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            PrintPathSuffStat(link->Out());
+        }
+    }
+    */
 
     const NucPathSuffStat &GetNucPathSuffStat() const { return nucpathsuffstat; }
 
@@ -319,8 +359,7 @@ class CoevolModel: public ProbModel {
             return 0;
         }
         int index = from->GetBranch()->GetIndex();
-        double suffstatlogprob = dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
-        return suffstatlogprob;
+        return dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
     }
 
     double NodeSuffStatLogProb(const Link* from) const {
@@ -330,27 +369,6 @@ class CoevolModel: public ProbModel {
         }
         return total;
     }
-
-    /*
-    double dSOmegaSuffStatLogProb() const    {
-        return RecursivedSOmegaSuffStatLogProb(GetRoot());
-    }
-
-    double RecursivedSOmegaSuffStatLogProb(const Link* from) const {
-        double total = 0;
-        if (! from->isRoot())   {
-            total += BranchSuffStatLogProb(from);
-        }
-        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-            total += RecursivedSOmegaSuffStatLogProb(link->Out());
-        }
-        return total;
-    }
-
-    double dSOmegaLogProb() const    {
-        return ChronoLogPrior() + BrownianProcessLogPrior() + RootValLogPrior() + dSOmegaSuffStatLogProb();
-    }
-    */
 
     double NodeLogPrior(const Link* from) const  {
         return process->GetNodeLogProb(from);
@@ -363,6 +381,14 @@ class CoevolModel: public ProbModel {
     void NodeUpdate(const Link* from) {
         branchlength->LocalNodeUpdate(from);
         branchomega->LocalNodeUpdate(from);
+    }
+
+    double KappaSuffStatLogProb() const {
+        return sigma->GetLogProb();
+    }
+
+    double KappaLogProb() const {
+        return KappaLogPrior() + KappaSuffStatLogProb();
     }
 
     //-------------------
@@ -385,18 +411,21 @@ class CoevolModel: public ProbModel {
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
+
         for (int rep = 0; rep < nrep; rep++) {
 
             CollectPathSuffStat();
+            CollectNucPathSuffStat();
+            MoveNucRates();
+            TouchMatrices();
 
             CollectdSOmegaPathSuffStat();
-            MoveTimes();
-            MoveBrownianProcess();
-            MoveSigma();
-
-            CollectNucPathSuffStat();
-            TouchMatrices();
-            MoveNucRates();
+            for (int rep=0; rep<5; rep++)   {
+                MoveTimes();
+                MoveBrownianProcess();
+                MoveSigma();
+                MoveKappa();
+            }
             TouchMatrices();
         }
     }
@@ -409,6 +438,7 @@ class CoevolModel: public ProbModel {
 
     void MoveBrownianProcess()  {
         for (int i=0; i<L+Ncont; i++)   {
+            process->SingleNodeMove(i, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
         }
     }
@@ -417,6 +447,26 @@ class CoevolModel: public ProbModel {
         browniansuffstat->Clear();
         process->AddSuffStat(*browniansuffstat);
         sigma->GibbsResample(*browniansuffstat);
+    }
+
+    void MoveKappa()    {
+        int nrep = 10;
+        double tuning = 1.0;
+        for (int rep=0; rep<nrep; rep++)    {
+            for (int i=0; i<sigma->GetDim(); i++)   {
+                double logprob1 = KappaLogProb();
+                double m = tuning * (Random::Uniform() - 0.5);
+                double e = exp(m);
+                kappa[i] *= e;
+                double logprob2 = KappaLogProb();
+                double loghastings = m;
+                double deltalogprob = logprob2 - logprob1 + loghastings;
+                int accept = (log(Random::Uniform()) < deltalogprob);
+                if (! accept)   {
+                    kappa[i] /= e;
+                }
+            }
+        }
     }
 
     void MoveNucRates() {
@@ -452,6 +502,9 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << "s_" << i << "_" << i << '\t';
         }
+        for (int i=0; i<process->GetDim(); i++) {
+            os << "k_" << i << '\t';
+        }
         os << "statent\t";
         os << "rrent\n";
     }
@@ -469,8 +522,19 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << (*sigma)(i,i) << '\t';
         }
+        for (int i=0; i<process->GetDim(); i++) {
+            os << kappa[i] << '\t';
+        }
         os << Random::GetEntropy(nucstat) << '\t';
         os << Random::GetEntropy(nucrelrate) << '\n';
+    }
+
+    void WriteMapping(ostream& os) const    {
+        os << *dsompathsuffstatarray;
+    }
+
+    void ReadMapping(istream& is) {
+        is >> *dsompathsuffstatarray;
     }
 
     void Monitor(ostream &os) const override {}
@@ -479,6 +543,7 @@ class CoevolModel: public ProbModel {
         os << nucstat << '\t';
         os << nucrelrate << '\t';
         os << *chronogram << '\t';
+        os << kappa << '\t';
         os << *sigma << '\t';
         os << *process << '\t';
     }
@@ -487,6 +552,7 @@ class CoevolModel: public ProbModel {
         is >> nucstat;
         is >> nucrelrate;
         is >> *chronogram;
+        is >> kappa;
         is >> *sigma;
         is >> *process;
     }

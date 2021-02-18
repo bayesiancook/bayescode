@@ -15,23 +15,20 @@ class dSOmegaPathSuffStat : public SuffStat {
         bsyn = bnonsyn = 0;
     }
 
-    void AddSuffStat(const OmegaCodonSubMatrix &codonsubmatrix, const PathSuffStat &pathsuffstat) {
+    void AddSuffStat(const OmegaCodonSubMatrix &codonsubmatrix, const PathSuffStat &pathsuffstat, double branchlength, double omega) {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
         const std::map<pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
-        double totaltime = 0;
         double tmpbsyn = 0;
         double tmpbnonsyn = 0;
-        int count = 0;
         for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
             double totsynrate = 0;
             double totnonsynrate = 0;
             int a = i->first;
-            count++;
             for (int b = 0; b < ncodon; b++) {
                 if (b != a) {
                     if (codonsubmatrix(a, b) != 0) {
@@ -46,24 +43,13 @@ class dSOmegaPathSuffStat : public SuffStat {
             }
             tmpbsyn += i->second * totsynrate;
             tmpbnonsyn += i->second * totnonsynrate;
-            totaltime += i->second;
         }
-        if (totaltime <= 0) {
-            cerr << "error: total time is not positive\n";
-            cerr << totaltime << '\n';
-            cerr << codonsubmatrix.GetOmega() << '\n';
-            cerr << tmpbsyn << '\t' << tmpbnonsyn << '\n';
-            cerr << count << '\n';
-            exit(1);
-        }
-        tmpbsyn /= totaltime;
-        tmpbnonsyn /= totaltime * codonsubmatrix.GetOmega();
-
+        tmpbsyn /= branchlength;
+        tmpbnonsyn /= branchlength*omega;
         bsyn += tmpbsyn;
         bnonsyn += tmpbnonsyn;
 
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
-             i != paircount.end(); i++) {
+        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 nnonsyn += i->second;
             }
@@ -124,7 +110,8 @@ class dSOmegaPathSuffStat : public SuffStat {
 
     //! get a PoissonSuffStat from MPI buffer and then add it to this object
     void Add(const MPIBuffer &buffer) {
-        int tmp;
+        double tmp;
+        // int tmp;
         buffer >> tmp;
         nsyn += tmp;
         buffer >> tmp;
@@ -137,13 +124,28 @@ class dSOmegaPathSuffStat : public SuffStat {
         bnonsyn += temp;
     }
 
+    void ToStream(ostream& os) const { os << nsyn << nnonsyn << bsyn << bnonsyn; }
+    void FromStream(istream& is) { is >> nsyn >> nnonsyn >> bsyn >> bnonsyn; }
+
     private:
 
-    int nsyn;
-    int nnonsyn;
+    // int nsyn;
+    // int nnonsyn;
+    double nsyn;
+    double nnonsyn;
     double bsyn;
     double bnonsyn;
 };
+
+ostream& operator<<(ostream& os, const dSOmegaPathSuffStat& suffstat)    {
+    suffstat.ToStream(os);
+    return os;
+}
+
+istream& operator>>(istream& is, dSOmegaPathSuffStat& suffstat)    {
+    suffstat.FromStream(is);
+    return is;
+}
 
 class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffStat>    {
 
@@ -163,20 +165,24 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     //! compute omega suff stats and do a member-wise addition -- for Muse and
     //! Gaut codon matrices
     void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                     const NodeSelector<PathSuffStat> &pathsuffstatarray) {
-        RecursiveAddSuffStat(GetTree().GetRoot(), codonsubmatrixarray, pathsuffstatarray);
+                     const NodeSelector<PathSuffStat> &pathsuffstatarray,
+                     const BranchSelector<double>& branchlength, const BranchSelector<double>& branchomega) {
+        RecursiveAddSuffStat(GetTree().GetRoot(), codonsubmatrixarray, pathsuffstatarray, branchlength, branchomega);
     }
 
     void RecursiveAddSuffStat(const Link *from,
                               const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
-                              const NodeSelector<PathSuffStat> &pathsuffstatarray) {
+                              const NodeSelector<PathSuffStat> &pathsuffstatarray,
+                              const BranchSelector<double>& branchlength, const BranchSelector<double>& branchomega) {
         if (!from->isRoot()) {
             (*this)[from->GetBranch()->GetIndex()].AddSuffStat(
                 codonsubmatrixarray.GetVal(from->GetBranch()->GetIndex()),
-                pathsuffstatarray.GetVal(from->GetNode()->GetIndex()));
+                pathsuffstatarray.GetVal(from->GetNode()->GetIndex()),
+                branchlength.GetVal(from->GetBranch()->GetIndex()),
+                branchomega.GetVal(from->GetBranch()->GetIndex()));
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatarray);
+            RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatarray, branchlength, branchomega);
         }
     }
 
@@ -194,22 +200,38 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
-        for (int i = 0; i < GetNbranch(); i++) {
+        for (int i=0; i<GetNbranch(); i++) {
             buffer << GetVal(i);
         }
     }
 
     //! get array from MPI buffer
     void MPIGet(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
+        for (int i=0; i<GetNbranch(); i++) {
             buffer >> (*this)[i];
         }
     }
 
     //! get an array from MPI buffer and then add it to this array
     void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < GetNbranch(); i++) {
+        for (int i=0; i<GetNbranch(); i++) {
             (*this)[i] += buffer;
         }
     }
+
+    void ToStream(ostream& os) const {
+        for (int i=0; i<GetNbranch(); i++) {
+            os << GetVal(i) << '\t';
+        }
+        os << '\n';
+    }
+
+    void FromStream(istream& is)    {
+        for (int i=0; i<GetNbranch(); i++) {
+            is >> (*this)[i];
+        }
+    }
+
+
+
 };

@@ -142,13 +142,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 
     double GetLocalLogProb(const Link* from) const  {
 
-        // X_down ~ Normal(X_up, sigma*dt)
-        // X = (X_down - X_up)
-        // Y = (X_down - X_up)/sqrt(dt)
-        // P(Y)dY = p(X)dX
-        // p(X) = p(Y) dY/dX = p(Y) / sqrt(dt)^GetDim()
-        // log P(X) = log P(Y) - 0.5 * GetDim() * log(dt)
-
+        // Normal(rootmean, rootvar)
         if (from->isRoot()) {
             const vector<double>& val = GetVal(from->GetNode()->GetIndex());
             double total = 0;
@@ -159,16 +153,24 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             return total;
         }
 
+        // X_down ~ Normal(X_up, sigma*dt)
+        // X = (X_down - X_up)
+        // Y = (X_down - X_up)/sqrt(dt)
+        // P(Y)dY = p(X)dX
+        // p(X) = p(Y) dY/dX = p(Y) / sqrt(dt)^GetDim()
+        // log P(X) = log P(Y) - 0.5 * GetDim() * log(dt)
+
         double dt = timetree.GetVal(from->Out()->GetNode()->GetIndex()) - timetree.GetVal(from->GetNode()->GetIndex());
         double scaling = sqrt(dt);
-        vector<double> contrast(GetDim(), 0);
 
         const vector<double>& up = GetVal(from->GetNode()->GetIndex());
         const vector<double>& down = GetVal(from->Out()->GetNode()->GetIndex());
+
+        vector<double> contrast(GetDim(), 0);
         for (int i=0; i<GetDim(); i++)  {
             contrast[i] = (up[i] - down[i])/scaling;
         }
-        return sigma.logMultivariateNormalDensity(contrast) + 0.5*GetDim()*log(dt);
+        return sigma.logMultivariateNormalDensity(contrast) - 0.5*GetDim()*log(dt);
     }
 
     double GetNodeLogProb(const Link* from) const   {
@@ -221,13 +223,6 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         }
     }
 
-    double LocalProposeMove(int i, int j, double tuning)  {
-        if (! clamp[i][j])  {
-            (*this)[i][j] += tuning * (Random::Uniform() - 0.5);
-        }
-        return 0;
-    }
-
     template<class Update, class LogProb> void SingleNodeMove(int index, double tuning, Update update, LogProb logprob)   {
         RecursiveSingleNodeMove(index, tuning, GetRoot(), update, logprob);
     }
@@ -247,13 +242,12 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 
     template<class Update, class LogProb> double LocalSingleNodeMove(int index, double tuning, const Link* from, Update update, LogProb logprob) {
         double logprob1 = logprob(from);
-        double loghastings = 0;
         double delta = tuning * (Random::Uniform() - 0.5);
         (*this)[from->GetNode()->GetIndex()][index] += delta;
         update(from);
         double logprob2 = logprob(from);
 
-        double deltalogprob = logprob2 - logprob1 + loghastings;
+        double deltalogprob = logprob2 - logprob1;
         int accepted = (log(Random::Uniform()) < deltalogprob);
         if (!accepted)   {
             (*this)[from->GetNode()->GetIndex()][index] -= delta;
@@ -315,7 +309,8 @@ class MVBranchExpoLengthArray : public SimpleBranchArray<double>    {
         if (!from->isRoot()) {
             double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx];
             double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx];
-            double mean = (exp(up) - exp(down)) / (up - down);
+            double mean = 0.5 * (exp(up) + exp(down));
+            // double mean = (exp(up) - exp(down)) / (up - down);
             double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
             if (dt <= 0)    {
                 cerr << "error: negative time on chronogram\n";
@@ -385,7 +380,8 @@ class MVBranchExpoMeanArray : public SimpleBranchArray<double>    {
         if (!from->isRoot()) {
             double up = nodetree.GetVal(from->GetNode()->GetIndex())[idx];
             double down = nodetree.GetVal(from->Out()->GetNode()->GetIndex())[idx];
-            double mean = (exp(up) - exp(down)) / (up - down);
+            double mean = 0.5 * (exp(up) + exp(down));
+            // double mean = (exp(up) - exp(down)) / (up - down);
             (*this)[from->GetBranch()->GetIndex()] = mean;
         }
     }

@@ -289,7 +289,7 @@ class BrownianClockModel: public ProbModel {
 
     void CollectdSOmegaPathSuffStat() {
         dsompathsuffstatarray->Clear();
-        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray);
+        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray, *branchlength, *branchomega);
     }
 
     void CollectRootdSSuffStat()  {

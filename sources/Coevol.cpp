@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     // new chain
     else {
         string datafile = "";
-        string contdatafile = "";
+        string contdatafile = "None";
         string treefile = "";
         string rootfile = "";
         name = "";
