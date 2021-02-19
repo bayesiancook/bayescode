@@ -35,26 +35,25 @@ template<class T> class DistBranchArray   {
         return mean;
     }
 
-    /*
     const T& GetQuantile(int index, double q) const {
 		const list<T>& l = branchdist[index];
-		list<T>::const_iterator i = l.begin();
+		auto i = l.begin();
 		int n = ((int) (((double) l.size())*q));
 		for (int j=0; j<n; j++)	{
 			i++;
 		}
         return *i;
     }
-    */
 
     void TabulateMean(ostream& os) const	{
-        os << "#NodeName\tomega\n";
+        os << "#NodeName\tmean\tmedian\tmin95\tmax95\n";
         RecursiveTabulateMean(os, GetRoot());
     }
 
     void RecursiveTabulateMean(ostream& os, const Link* from) const {
         if (! from->isRoot())   {
-            os << from->GetNode()->GetName() << '\t' << GetMean(from->GetBranch()->GetIndex()) << '\n';
+            int index = from->GetBranch()->GetIndex();
+            os << from->GetNode()->GetName() << '\t' << GetMean(index) << '\t' << GetQuantile(index, 0.5) << '\t' << GetQuantile(index, 0.025) << '\t' << GetQuantile(index, 0.975) << '\n';
         }
         for (const Link* link=from->Next(); link!=from; link=link->Next())  {
             RecursiveTabulateMean(os, link->Out());

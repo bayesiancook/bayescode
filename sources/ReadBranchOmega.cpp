@@ -99,6 +99,7 @@ class BranchOmegaSample : public Sample {
         omegatree.MeanToStream(os);
 
         ofstream tos((name + ".postmeanomega.tsv").c_str());
+        omegatree.Sort();
         omegatree.TabulateMean(tos);
 
         cout << "posterior mean omega : " << meanomega << '\t' << sqrt(varomega) << '\n';
