@@ -1,5 +1,4 @@
 #pragma once
-
 #include "BranchArray.hpp"
 #include <list>
 
@@ -48,6 +47,20 @@ template<class T> class DistBranchArray   {
     }
     */
 
+    void TabulateMean(ostream& os) const	{
+        os << "#NodeName\tomega\n";
+        RecursiveTabulateMean(os, GetRoot());
+    }
+
+    void RecursiveTabulateMean(ostream& os, const Link* from) const {
+        if (! from->isRoot())   {
+            os << from->GetNode()->GetName() << '\t' << GetMean(from->GetBranch()->GetIndex()) << '\n';
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveTabulateMean(os, link->Out());
+        }
+    }
+
     void MeanToStream(ostream& os) const {
         RecursiveMeanToStream(os, GetRoot());
         os << ";\n";
@@ -66,6 +79,7 @@ template<class T> class DistBranchArray   {
                 }
             }
             os << ")";
+	    os << from->GetNode()->GetName();
         }
         if (! from->isRoot())    {
             os << ":";
