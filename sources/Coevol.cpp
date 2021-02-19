@@ -18,7 +18,7 @@ class CoevolChain : public Chain {
   public:
     CoevolChain(string indatafile, string incontdatafile, string intreefile, string inrootfile, GeneticCodeType incodetype, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("BROWNIANCLOCK"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), codetype(incodetype) {
+        : modeltype("COEVOLDNDS"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), codetype(incodetype) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -60,7 +60,7 @@ class CoevolChain : public Chain {
         }
         is >> every >> until >> size;
 
-        if (modeltype == "BROWNIANCLOCK") {
+        if (modeltype == "COEVOLDNDS") {
             model = new CoevolModel(datafile, contdatafile, treefile, rootfile, codetype);
         } else {
             cerr << "-- Error when opening file " << name

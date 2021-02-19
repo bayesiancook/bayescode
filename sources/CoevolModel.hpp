@@ -215,6 +215,10 @@ class CoevolModel: public ProbModel {
     // Accessors
     // ------------------
 
+    const Tree& GetTree() const {
+        return *tree;
+    }
+
     const Link* GetRoot() const {
         return tree->GetRoot();
     }
@@ -245,17 +249,18 @@ class CoevolModel: public ProbModel {
 
     void NoUpdate() {}
 
-    void Update() override {
+    void FastUpdate() {
         branchlength->Update();
         branchomega->Update();
-        TouchMatrices();
+    }
+
+    void Update() override {
+        FastUpdate();
         ResampleSub(1.0);
     }
 
     void PostPred(string name) override {
-        branchlength->Update();
-        branchomega->Update();
-        TouchMatrices();
+        FastUpdate();
         phyloprocess->PostPredSample(name);
     }
 
@@ -509,6 +514,18 @@ class CoevolModel: public ProbModel {
         os << "rrent\n";
     }
 
+    double GetMeanOmega() const	{
+        return branchomega->GetMean();
+    }
+
+    const BranchSelector<double>& GetOmegaTree() const  {
+        return *branchomega;
+    }
+
+    const MultivariateBrownianTreeProcess* GetProcess() const {
+        return process;
+    }
+
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
@@ -545,7 +562,7 @@ class CoevolModel: public ProbModel {
         os << *chronogram << '\t';
         os << kappa << '\t';
         os << *sigma << '\t';
-        os << *process << '\t';
+        os << *process << '\n';
     }
 
     void FromStream(istream &is) override {
