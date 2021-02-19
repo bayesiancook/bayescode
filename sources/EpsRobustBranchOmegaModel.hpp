@@ -1,16 +1,18 @@
+#include "WhiteNoise.hpp"
 #include "IIDGamma.hpp"
+#include "GammaSuffStat.hpp"
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrixArray.hpp"
 #include "CodonSuffStat.hpp"
 #include "GTRSubMatrix.hpp"
-#include "GammaSuffStat.hpp"
 #include "PhyloProcess.hpp"
 #include "ProbModel.hpp"
 #include "Product.hpp"
 #include "SimpleSubMatrixSelector.hpp"
+#include "EpsRobustIIDGamma.hpp"
 #include "Tree.hpp"
 
-class BranchOmegaModel : public ProbModel {
+class EpsRobustBranchOmegaModel : public ProbModel {
     // tree and data
     Tree *tree;
     FileSequenceAlignment *data;
@@ -56,7 +58,8 @@ class BranchOmegaModel : public ProbModel {
 
     double omegamean;
     double omegainvshape;
-    BranchIIDGamma *omegabrancharray;
+    double epsilon;
+    EpsRobustBranchIIDGamma *omegabrancharray;
 
     // a codon matrix (parameterized by nucmatrix and omega)
     MGOmegaCodonSubMatrixBranchArray *codonmatrixbrancharray;
@@ -67,7 +70,6 @@ class BranchOmegaModel : public ProbModel {
     // suffstats
     PathSuffStatNodeArray *pathsuffstatbrancharray;
     OmegaPathSuffStatBranchArray *omegapathsuffstatbrancharray;
-    GammaSuffStat omegahypersuffstat;
 
   public:
     //-------------------
@@ -78,7 +80,9 @@ class BranchOmegaModel : public ProbModel {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    BranchOmegaModel(string datafile, string treefile)  {
+    EpsRobustBranchOmegaModel(string datafile, string treefile, double inepsilon)  {
+
+        epsilon = inepsilon;
 
         blmode = 0;
         nucmode = 0;
@@ -135,7 +139,8 @@ class BranchOmegaModel : public ProbModel {
         omegainvshape = 0.3;
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
-        omegabrancharray = new BranchIIDGamma(*tree, alpha, beta);
+
+        omegabrancharray = new EpsRobustBranchIIDGamma(*tree, alpha, beta, epsilon);
 
         codonmatrixbrancharray = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, omegabrancharray);
         rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, 1.0);
@@ -357,14 +362,15 @@ class BranchOmegaModel : public ProbModel {
         return total;
     }
 
-    double OmegaHyperSuffStatLogProb() const {
+    void UpdateOmega()  {
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
-        return omegahypersuffstat.GetLogProb(alpha, beta);
+        omegabrancharray->SetShape(alpha);
+        omegabrancharray->SetScale(beta);
     }
 
     double OmegaHyperLogProb() const    {
-        return OmegaHyperLogPrior() + OmegaHyperSuffStatLogProb();
+        return OmegaHyperLogPrior() + OmegaLogPrior();
     }
 
     //-------------------
@@ -474,7 +480,7 @@ class BranchOmegaModel : public ProbModel {
 
             CollectPathSuffStat();
             CollectOmegaSuffStat();
-            ResampleOmega();
+            MoveOmega();
             MoveOmegaHyperParameters();
 
             if (!FixedNucRates()) {
@@ -506,9 +512,9 @@ class BranchOmegaModel : public ProbModel {
     void MoveLambda() {
         hyperlengthsuffstat.Clear();
         hyperlengthsuffstat.AddSuffStat(*branchlength);
-        ScalingMove(lambda, 1.0, 10, &BranchOmegaModel::LambdaHyperLogProb, &BranchOmegaModel::NoUpdate,
+        ScalingMove(lambda, 1.0, 10, &EpsRobustBranchOmegaModel::LambdaHyperLogProb, &EpsRobustBranchOmegaModel::NoUpdate,
                     this);
-        ScalingMove(lambda, 0.3, 10, &BranchOmegaModel::LambdaHyperLogProb, &BranchOmegaModel::NoUpdate,
+        ScalingMove(lambda, 0.3, 10, &EpsRobustBranchOmegaModel::LambdaHyperLogProb, &EpsRobustBranchOmegaModel::NoUpdate,
                     this);
         blhypermean->SetAllBranches(1.0 / lambda);
     }
@@ -520,17 +526,17 @@ class BranchOmegaModel : public ProbModel {
     void MoveNucRates() {
         CollectNucPathSuffStat();
 
-        ProfileMove(nucrelrate, 0.1, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.03, 3, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucrelrate, 0.01, 3, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.1, 1, 3, &EpsRobustBranchOmegaModel::NucRatesLogProb,
+                    &EpsRobustBranchOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.03, 3, 3, &EpsRobustBranchOmegaModel::NucRatesLogProb,
+                    &EpsRobustBranchOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucrelrate, 0.01, 3, 3, &EpsRobustBranchOmegaModel::NucRatesLogProb,
+                    &EpsRobustBranchOmegaModel::TouchNucMatrix, this);
 
-        ProfileMove(nucstat, 0.1, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
-        ProfileMove(nucstat, 0.01, 1, 3, &BranchOmegaModel::NucRatesLogProb,
-                    &BranchOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucstat, 0.1, 1, 3, &EpsRobustBranchOmegaModel::NucRatesLogProb,
+                    &EpsRobustBranchOmegaModel::TouchNucMatrix, this);
+        ProfileMove(nucstat, 0.01, 1, 3, &EpsRobustBranchOmegaModel::NucRatesLogProb,
+                    &EpsRobustBranchOmegaModel::TouchNucMatrix, this);
 
         TouchMatrices();
     }
@@ -550,26 +556,21 @@ class BranchOmegaModel : public ProbModel {
 
     //! Gibbs resample omega (based on sufficient statistics of current
     //! substitution mapping)
-    void ResampleOmega() {
-        omegabrancharray->GibbsResample(*omegapathsuffstatbrancharray);
+    void MoveOmega() {
+        omegabrancharray->Move(1.0, 10, *omegapathsuffstatbrancharray);
+        omegabrancharray->Move(0.1, 10, *omegapathsuffstatbrancharray);
         codonmatrixbrancharray->UpdateCodonMatrices();
     }
 
     void MoveOmegaHyperParameters() {
-        omegahypersuffstat.Clear();
-        omegahypersuffstat.AddSuffStat(*omegabrancharray);
-        ScalingMove(omegamean, 1.0, 10, &BranchOmegaModel::OmegaHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
-        ScalingMove(omegamean, 0.3, 10, &BranchOmegaModel::OmegaHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
-        ScalingMove(omegainvshape, 1.0, 10, &BranchOmegaModel::OmegaHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
-        ScalingMove(omegainvshape, 0.3, 10, &BranchOmegaModel::OmegaHyperLogProb,
-                    &BranchOmegaModel::NoUpdate, this);
-        double alpha = 1.0 / omegainvshape;
-        double beta = alpha / omegamean;
-        omegabrancharray->SetShape(alpha);
-        omegabrancharray->SetScale(beta);
+        ScalingMove(omegamean, 1.0, 10, &EpsRobustBranchOmegaModel::OmegaHyperLogProb,
+                    &EpsRobustBranchOmegaModel::UpdateOmega, this);
+        ScalingMove(omegamean, 0.3, 10, &EpsRobustBranchOmegaModel::OmegaHyperLogProb,
+                    &EpsRobustBranchOmegaModel::UpdateOmega, this);
+        ScalingMove(omegainvshape, 1.0, 10, &EpsRobustBranchOmegaModel::OmegaHyperLogProb,
+                    &EpsRobustBranchOmegaModel::UpdateOmega, this);
+        ScalingMove(omegainvshape, 0.3, 10, &EpsRobustBranchOmegaModel::OmegaHyperLogProb,
+                    &EpsRobustBranchOmegaModel::UpdateOmega, this);
     }
 
     //-------------------
@@ -608,7 +609,7 @@ class BranchOmegaModel : public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void TraceBranchOmega(ostream& os) const {
+    void TraceEpsRobustBranchOmega(ostream& os) const {
         for (int i=0; i<Nbranch; i++) {
             os << omegabrancharray->GetVal(i) << '\t';
         }

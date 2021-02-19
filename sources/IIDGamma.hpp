@@ -1,6 +1,5 @@
 
-#ifndef IIDGAMMA_H
-#define IIDGAMMA_H
+#pragma once
 
 #include "Array.hpp"
 #include "BranchArray.hpp"
@@ -250,4 +249,3 @@ class BranchIIDGamma : public SimpleBranchArray<double> {
     double scale;
 };
 
-#endif

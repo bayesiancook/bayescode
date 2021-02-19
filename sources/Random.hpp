@@ -72,12 +72,14 @@ class Random {
     static double NormalSample(double mean, double var);
     static double GammaSample(double alpha, double beta);
     static double BetaSample(double alpha, double beta);
+    static double CauchySample(double scale);
     static void DirichletSample(vector<double> &x, const vector<double> &center,
                                 double concentration = 1);
 
     static double logNormalDensity(double x, double mean, double var);
     static double logGammaDensity(double x, double alpha, double beta);
     static double logBetaDensity(double x, double alpha, double beta);
+    static double logCauchyDensity(double x, double scale);
     static double logDirichletDensity(const vector<double> &x, const vector<double> &center,
                                       double concentration = 1);
 

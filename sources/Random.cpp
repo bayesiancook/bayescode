@@ -639,6 +639,8 @@ double Random::logNormalDensity(double x, double mean, double var)  {
 
 double Random::GammaSample(double alpha, double beta) { return Gamma(alpha, beta); }
 
+double Random::CauchySample(double scale)   { return scale*tan(Pi*Uniform() / 2); }
+
 void Random::DirichletSample(vector<double> &x, const vector<double> &center,
                              double concentration) {
     if (x.size() != center.size()) {
@@ -670,6 +672,10 @@ double Random::logBetaDensity(double x, double alpha, double beta) {
 
 double Random::logGammaDensity(double x, double alpha, double beta) {
     return alpha * log(beta) - logGamma(alpha) + (alpha - 1) * log(x) - beta * x;
+}
+
+double Random::logCauchyDensity(double x, double scale) {
+    return - log(Pi) - log(scale) - log(1 + (x/scale)*(x/scale));
 }
 
 double Random::logDirichletDensity(const vector<double> &x, const vector<double> &center,
