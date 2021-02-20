@@ -14,10 +14,10 @@
 
 class EpsRobustBranchOmegaModel : public ProbModel {
     // tree and data
-    Tree *tree;
+    const Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
-    CodonSequenceAlignment *codondata;
+    const CodonSequenceAlignment *codondata;
 
     int Nsite;
     int Ntaxa;
@@ -25,6 +25,7 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
     int blmode;
     int nucmode;
+    int omegamode;
 
     // Branch lengths
 
@@ -86,6 +87,7 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
         blmode = 0;
         nucmode = 0;
+        omegamode = 0;
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true);
@@ -96,12 +98,37 @@ class EpsRobustBranchOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
-
+        Tree* tmptree = new Tree(treefile);
         // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        tmptree->RegisterWith(taxonset);
+        tmptree->SetIndices();
+        tree = tmptree;
 
-        tree->SetIndices();
+        Nbranch = tree->GetNbranch();
+    }
+
+
+    //! \brief constructor, parameterized by names of data and tree files
+    //!
+    //! Note: in itself, the constructor does not allocate the model;
+    //! It only reads the data and tree file and register them together.
+    EpsRobustBranchOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, double inepsilon) {
+
+        epsilon = inepsilon;
+
+        blmode = 0;
+        nucmode = 0;
+        omegamode = 0;
+
+	data = 0;
+        codondata = incodondata;
+
+        Nsite = codondata->GetNsite();  // # columns
+        Ntaxa = codondata->GetNtaxa();
+
+        taxonset = codondata->GetTaxonSet();
+
+        tree = intree;
         Nbranch = tree->GetNbranch();
     }
 
@@ -176,6 +203,18 @@ class EpsRobustBranchOmegaModel : public ProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode) {
         blmode = inblmode;
         nucmode = innucmode;
+    }
+
+    void SetOmegaMode(int inomegamode)  {
+        omegamode = inomegamode;
+    }
+
+    bool FixedOmega() const {
+        return (omegamode == 2);
+    }
+
+    void SetBranchOmega(const BranchSelector<double>& inomegabrancharray)   {
+        omegabrancharray->Copy(inomegabrancharray);
     }
 
     // Branch lengths
@@ -314,8 +353,10 @@ class EpsRobustBranchOmegaModel : public ProbModel {
         if (!FixedNucRates()) {
             total += NucRatesLogPrior();
         }
-        total += OmegaLogPrior();
-        total += OmegaHyperLogPrior();
+        if (!FixedOmega())    {
+            total += OmegaLogPrior();
+            total += OmegaHyperLogPrior();
+        }
         return total;
     }
 
@@ -479,9 +520,12 @@ class EpsRobustBranchOmegaModel : public ProbModel {
             }
 
             CollectPathSuffStat();
-            CollectOmegaSuffStat();
-            MoveOmega();
-            MoveOmegaHyperParameters();
+
+            if (!FixedOmega())  {
+                CollectOmegaSuffStat();
+                MoveOmega();
+                MoveOmegaHyperParameters();
+            }
 
             if (!FixedNucRates()) {
                 TouchMatrices();
@@ -614,6 +658,7 @@ class EpsRobustBranchOmegaModel : public ProbModel {
             os << omegabrancharray->GetVal(i) << '\t';
         }
         os << '\n';
+        os.flush();
     }
 
     const BranchSelector<double>& GetOmegaTree() const  {
