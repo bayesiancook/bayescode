@@ -78,10 +78,11 @@ class EpsRobustBranchIIDGamma : public SimpleBranchArray<double> {
 
     //! get log prob for a given branch
     double GetLogProb(int index) const { 
-        double total = 0;
-        total += log(1-epsilon) + Random::logGammaDensity(GetVal(index), shape, scale); 
-        total += log(epsilon) + Random::logCauchyDensity(GetVal(index), 1.0/scale);
-        return total;
+        double log1 = log(1-epsilon) + Random::logGammaDensity(GetVal(index), shape, scale); 
+        double log2 = log(epsilon) + Random::logCauchyDensity(GetVal(index), 1.0/scale);
+	double max = (log1 < log2) ? log1 : log2;
+	double tot = exp(log1 - max) + exp(log2 - max);
+        return log(tot) + max;
     }
 
     //! get sum over all entries (name is rather specialized... could change..)
