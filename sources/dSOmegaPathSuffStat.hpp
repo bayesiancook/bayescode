@@ -186,6 +186,12 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
     }
 
+    void Add(const dSOmegaPathSuffStatBranchArray& from)    {
+        for (int i=0; i<GetNbranch(); i++) {
+            (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const BranchSelector<double>& branchlength, const BranchSelector<double>& branchomega) const  {
         double total = 0;

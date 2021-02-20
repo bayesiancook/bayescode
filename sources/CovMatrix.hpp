@@ -40,16 +40,31 @@ class CovMatrix {
         return int(value.size());
     }
 
+    void Copy(const CovMatrix& from)    {
+        if (GetDim() != from.GetDim())  {
+            cerr << "error in CovMatrix::Copy\n";
+            exit(1);
+        }
+        for (int i=0; i<GetDim(); i++)  {
+            for (int j=0; j<GetDim(); j++)  {
+                value[i][j] = from(i,j);
+            }
+        }
+        diagflag = false;
+    }
+
 	double	operator()(int i, int j) const {
 		return value[i][j];
 	}
 
     void setval(int i, int j, double val)   {
         value[i][j] = val;
+        diagflag = false;
     }
 
     void add(int i, int j, double val)  {
         value[i][j] += val;
+        diagflag = false;
     }
 
 	CovMatrix& operator*=(double scal) {

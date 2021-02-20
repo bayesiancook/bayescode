@@ -420,6 +420,12 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
         }
     }
 
+    void Add(const Selector<OmegaPathSuffStat> &suffstatarray)  {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i].Add(suffstatarray.GetVal(i));
+        }
+    }
+
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const Array<double> *omegaarray) const {
         double total = 0;
@@ -525,10 +531,16 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
         }
     }
 
+    void Add(const BranchSelector<OmegaPathSuffStat> &suffstatarray)  {
+        for (int i=0; i<GetNbranch(); i++) {
+            (*this)[i].Add(suffstatarray.GetVal(i));
+        }
+    }
+
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const BranchArray<double> *omegaarray) const {
         double total = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
+        for (int i=0; i<GetNbranch(); i++) {
             total += GetVal(i).GetLogProb(omegaarray->GetVal(i));
         }
         return total;

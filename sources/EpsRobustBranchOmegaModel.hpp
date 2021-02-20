@@ -414,6 +414,10 @@ class EpsRobustBranchOmegaModel : public ProbModel {
         return OmegaHyperLogPrior() + OmegaLogPrior();
     }
 
+    const OmegaPathSuffStatBranchArray& GetOmegaPathSuffStatBranchArray() const {
+        return *omegapathsuffstatbrancharray;
+    }
+
     //-------------------
     // Suff Stat and suffstatlogprobs
     //-------------------

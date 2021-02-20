@@ -74,7 +74,7 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneEpsRobustBranchOmegaModel(string datafile, string intreefile, double inepsilon, int inmyid, int innprocs)
+    MultiGeneEpsRobustBranchOmegaModel(string indatafile, string intreefile, double inepsilon, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
@@ -84,8 +84,9 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
         blmode = 1;
         nucmode = 1;
 
-        AllocateAlignments(datafile);
+        datafile = indatafile;
         treefile = intreefile;
+        AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
@@ -1110,8 +1111,10 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
     }
 
     void SlaveSendOmegaSuffStat()   {
+        omegapathsuffstatbrancharray->Clear();
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->CollectOmegaSuffStat();
+            omegapathsuffstatbrancharray->Add(geneprocess[gene]->GetOmegaPathSuffStatBranchArray());
         }
         SlaveSendAdditive(*omegapathsuffstatbrancharray);
     }

@@ -28,6 +28,9 @@ class CoevolModel: public ProbModel {
     int mappingapprox;
     */
 
+    int nucmode;
+    int coevolmode;
+
     int Nsite;
     int Ntaxa;
     int Nbranch;
@@ -35,7 +38,6 @@ class CoevolModel: public ProbModel {
     int L;
     int dSindex;
     int omindex;
-
 
     Chronogram* chronogram;
 
@@ -85,6 +87,7 @@ class CoevolModel: public ProbModel {
     CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, GeneticCodeType codetype) {
     // CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile) {
 
+        coevolmode = 0;
         /*
         suffstatfile = insuffstatfile;
         if (suffstatfile != "None)  {
@@ -138,7 +141,9 @@ class CoevolModel: public ProbModel {
         }
     }
 
-    CoevolModel(const CodonSequenceAlignment* incodondata, const ContinuousData* incontdata, const Tree* intree) {
+    CoevolModel(const CodonSequenceAlignment* incodondata, const ContinuousData* incontdata, const Tree* intree, const vector<double>& inrootmean, const vector<double>& inrootvar) {
+
+        coevolmode = 2;
 
         codondata = incodondata;
         Nsite = codondata->GetNsite();
@@ -146,10 +151,27 @@ class CoevolModel: public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         contdata = incontdata;
-        Ncont = contdata->GetNsite();
+
+		if (contdata)   {
+			Ncont = contdata->GetNsite();
+		}
+		else	{
+			Ncont = 0;
+		}
+
+        L = 2;
+        dSindex = 0;
+        omindex = 1;
 
         tree = intree;
         Nbranch = tree->GetNbranch();
+
+        rootmean.assign(Ncont+L,0);
+        rootvar.assign(Ncont+L,0);
+        for (int i=0; i<Ncont+L; i++)   {
+            rootmean[i] = inrootmean[i];
+            rootvar[i] = inrootvar[i];
+        }
     }
 
     //! model allocation
@@ -160,7 +182,6 @@ class CoevolModel: public ProbModel {
         chronogram = new Chronogram(*tree);
 
         kappa.assign(Ncont+L, 1.0);
-
         df = 0;
         sigma = new InverseWishart(kappa, df);
 
@@ -211,9 +232,60 @@ class CoevolModel: public ProbModel {
         cerr << "allocate ok\n";
     }
 
+    void SetCoevolMode(int inmode)  {
+        coevolmode = inmode;
+    }
+
+    void SetNucMode(int innucmode)  {
+        nucmode = innucmode;
+    }
+
+    void SetCoevol(const NodeSelector<double>& inchronogram, const NodeSelector<vector<double> >& inprocess)   {
+        chronogram->Copy(inchronogram);
+        process->Copy(inprocess);
+        FastUpdate();
+    }
+
     //-------------------
     // Accessors
     // ------------------
+
+    // Nucleotide rates
+
+    //! whether nuc rates are fixed externally (e.g. when nuc rates are shared
+    //! across genes in a multi-gene context)
+    bool FixedNucRates() const { return nucmode == 2; }
+
+    //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
+    //! new value (multi-gene analyses)
+    void SetNucRates(const std::vector<double> &innucrelrate,
+                                    const std::vector<double> &innucstat) {
+        nucrelrate = innucrelrate;
+        nucstat = innucstat;
+        TouchMatrices();
+    }
+
+    //! get a copy of nucleotide rates into arrays given as arguments
+    void GetNucRates(std::vector<double> &innucrelrate,
+                                    std::vector<double> &innucstat) const {
+        innucrelrate = nucrelrate;
+        innucstat = nucstat;
+    }
+
+    //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
+    void SetNucRatesHyperParameters(const std::vector<double> &innucrelratehypercenter,
+                                                   double innucrelratehyperinvconc,
+                                                   const std::vector<double> &innucstathypercenter,
+                                                   double innucstathyperinvconc) {
+        nucrelratehypercenter = innucrelratehypercenter;
+        nucrelratehyperinvconc = innucrelratehyperinvconc;
+        nucstathypercenter = innucstathypercenter;
+        nucstathyperinvconc = innucstathyperinvconc;
+    }
+
+    const dSOmegaPathSuffStatBranchArray& GetdSOmegaPathSuffStatBranchArray() const {
+        return *dsompathsuffstatarray;
+    }
 
     const Tree& GetTree() const {
         return *tree;
@@ -273,11 +345,15 @@ class CoevolModel: public ProbModel {
     //! Note: up to some multiplicative constant
     double GetLogPrior() const {
         double total = 0;
-        total += ChronoLogPrior();
-        total += KappaLogPrior();
-        total += SigmaLogPrior();
-        total += BrownianProcessLogPrior();
-        total += NucRatesLogPrior();
+        if (coevolmode < 2) {
+            total += ChronoLogPrior();
+            total += KappaLogPrior();
+            total += SigmaLogPrior();
+            total += BrownianProcessLogPrior();
+        }
+        if (!FixedNucRates()) {
+            total += NucRatesLogPrior();
+        }
         return total;
     }
 
@@ -287,8 +363,6 @@ class CoevolModel: public ProbModel {
 
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
-
-    // Branch lengths
 
     double ChronoLogPrior() const   {
         return 0;
@@ -420,18 +494,22 @@ class CoevolModel: public ProbModel {
         for (int rep = 0; rep < nrep; rep++) {
 
             CollectPathSuffStat();
-            CollectNucPathSuffStat();
-            MoveNucRates();
-            TouchMatrices();
-
-            CollectdSOmegaPathSuffStat();
-            for (int rep=0; rep<5; rep++)   {
-                MoveTimes();
-                MoveBrownianProcess();
-                MoveSigma();
-                MoveKappa();
+            if (!FixedNucRates()) {
+                CollectNucPathSuffStat();
+                MoveNucRates();
+                TouchMatrices();
             }
-            TouchMatrices();
+
+            if (coevolmode < 2) {
+                CollectdSOmegaPathSuffStat();
+                for (int rep=0; rep<5; rep++)   {
+                    MoveTimes();
+                    MoveBrownianProcess();
+                    MoveSigma();
+                    MoveKappa();
+                }
+                TouchMatrices();
+            }
         }
     }
 

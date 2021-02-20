@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= epsrobustbranchom readepsrobustbranchom multigeneepsrobustbranchom branchom readbranchom coevol readcoevol brownclock globom codonm2a readaamutselsparse readaamutselddp aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
+ALL= epsrobustbranchom readepsrobustbranchom multigeneepsrobustbranchom branchom readbranchom coevol readcoevol multigenecoevol brownclock globom codonm2a readaamutselsparse readaamutselddp aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -65,6 +65,10 @@ $(PROGSDIR)/readbranchom$(EXEEXT): ReadBranchOmega.o $(OBJS)
 coevol$(EXEEXT): $(PROGSDIR)/coevol$(EXEEXT)
 $(PROGSDIR)/coevol$(EXEEXT): Coevol.o $(OBJS)
 	$(CC) Coevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigenecoevol$(EXEEXT): $(PROGSDIR)/multigenecoevol$(EXEEXT)
+$(PROGSDIR)/multigenecoevol$(EXEEXT): MultiGeneCoevol.o $(OBJS)
+	$(CC) MultiGeneCoevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readcoevol$(EXEEXT): $(PROGSDIR)/readcoevol$(EXEEXT)
 $(PROGSDIR)/readcoevol$(EXEEXT): ReadCoevol.o $(OBJS)
