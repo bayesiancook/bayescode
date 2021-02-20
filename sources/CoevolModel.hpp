@@ -132,6 +132,7 @@ class CoevolModel: public ProbModel {
         is >> dim;
         if (dim != Ncont + L)   {
             cerr << "error in root file: non matching dimension\n";
+            cerr << dim << '\t' << Ncont << '\t' << L << '\n';
             exit(1);
         }
         rootmean.assign(dim,0);
@@ -260,16 +261,16 @@ class CoevolModel: public ProbModel {
     //! new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate,
                                     const std::vector<double> &innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
+        copy(innucrelrate.begin(), innucrelrate.end(), nucrelrate.begin());
+        copy(innucstat.begin(), innucstat.end(), nucstat.begin());
         TouchMatrices();
     }
 
     //! get a copy of nucleotide rates into arrays given as arguments
     void GetNucRates(std::vector<double> &innucrelrate,
                                     std::vector<double> &innucstat) const {
-        innucrelrate = nucrelrate;
-        innucstat = nucstat;
+        copy(nucrelrate.begin(), nucrelrate.end(), innucrelrate.begin());
+        copy(nucstat.begin(), nucstat.end(), innucstat.begin());
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -277,9 +278,9 @@ class CoevolModel: public ProbModel {
                                                    double innucrelratehyperinvconc,
                                                    const std::vector<double> &innucstathypercenter,
                                                    double innucstathyperinvconc) {
-        nucrelratehypercenter = innucrelratehypercenter;
+        copy(innucrelratehypercenter.begin(), innucrelratehypercenter.end(), nucrelratehypercenter.begin()); 
         nucrelratehyperinvconc = innucrelratehyperinvconc;
-        nucstathypercenter = innucstathypercenter;
+        copy(innucstathypercenter.begin(), innucstathypercenter.end(), nucstathypercenter.begin()); 
         nucstathyperinvconc = innucstathyperinvconc;
     }
 
@@ -324,6 +325,7 @@ class CoevolModel: public ProbModel {
     void FastUpdate() {
         branchlength->Update();
         branchomega->Update();
+        TouchMatrices();
     }
 
     void Update() override {
@@ -490,27 +492,26 @@ class CoevolModel: public ProbModel {
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
-
         for (int rep = 0; rep < nrep; rep++) {
-
             CollectPathSuffStat();
             if (!FixedNucRates()) {
-                CollectNucPathSuffStat();
-                MoveNucRates();
-                TouchMatrices();
+                MoveNuc();
             }
-
             if (coevolmode < 2) {
-                CollectdSOmegaPathSuffStat();
-                for (int rep=0; rep<5; rep++)   {
-                    MoveTimes();
-                    MoveBrownianProcess();
-                    MoveSigma();
-                    MoveKappa();
-                }
-                TouchMatrices();
+                MoveCoevol();
             }
         }
+    }
+
+    void MoveCoevol()   {
+        CollectdSOmegaPathSuffStat();
+        for (int rep=0; rep<5; rep++)   {
+            MoveTimes();
+            MoveBrownianProcess();
+            MoveSigma();
+            MoveKappa();
+        }
+        TouchMatrices();
     }
 
     // Times and Rates
@@ -550,6 +551,12 @@ class CoevolModel: public ProbModel {
                 }
             }
         }
+    }
+
+    void MoveNuc() {
+        CollectNucPathSuffStat();
+        MoveNucRates();
+        TouchMatrices();
     }
 
     void MoveNucRates() {

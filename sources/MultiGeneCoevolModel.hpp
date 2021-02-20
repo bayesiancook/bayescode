@@ -89,6 +89,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         datafile = indatafile;
         treefile = intreefile;
         contdatafile = incontdatafile;
+        rootfile = inrootfile;
         codetype = incodetype;
 
         AllocateAlignments(datafile);
@@ -123,6 +124,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         is >> dim;
         if (dim != Ncont + L)   {
             cerr << "error in root file: non matching dimension\n";
+            cerr << dim << '\t' << Ncont << '\t' << L << '\n';
             exit(1);
         }
         rootmean.assign(dim,0);
@@ -157,6 +159,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         branchomega = new MVBranchExpoMeanArray(*process, omindex);
 
         dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+        browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
@@ -258,23 +261,18 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         FastUpdate();
 
         if (nprocs > 1) {
-
-            MasterSendCoevol();
-
             MasterSendNucRatesHyperParameters();
             if (nucmode == 2) {
                 MasterSendGlobalNucRates();
             } else {
                 MasterSendGeneNucRates();
             }
-
+            MasterSendCoevol();
             MasterReceiveLogProbs();
         }
     }
 
     void SlaveUpdate() override {
-
-        SlaveReceiveCoevol();
 
         SlaveReceiveNucRatesHyperParameters();
         if (nucmode == 2) {
@@ -282,7 +280,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         } else {
             SlaveReceiveGeneNucRates();
         }
-
+        SlaveReceiveCoevol();
         GeneUpdate();
         SlaveSendLogProbs();
     }
@@ -296,28 +294,24 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
     void MasterPostPred(string name) override {
         FastUpdate();
         if (nprocs > 1) {
-
-            MasterSendCoevol();
-
             MasterSendNucRatesHyperParameters();
             if (nucmode == 2) {
                 MasterSendGlobalNucRates();
             } else {
                 MasterSendGeneNucRates();
             }
+            MasterSendCoevol();
         }
     }
 
     void SlavePostPred(string name) override {
-
-        SlaveReceiveCoevol();
-
         SlaveReceiveNucRatesHyperParameters();
         if (nucmode == 2) {
             SlaveReceiveGlobalNucRates();
         } else {
             SlaveReceiveGeneNucRates();
         }
+        SlaveReceiveCoevol();
         GenePostPred(name);
     }
 
@@ -336,7 +330,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
     //-------------------
 
     void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL";
+        os << "#logprior\tlnL\t";
         os << "length\t";
         os << "meanomega\t";
         for (int i=0; i<process->GetDim(); i++) {
@@ -361,7 +355,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
 
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
-        os << GetLogLikelihood();
+        os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength() << '\t';
         os << branchomega->GetMean() << '\t';
 
@@ -664,13 +658,14 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            MoveGeneParameters(1.0);
+            GeneCollectPathSuffStat();
 
             // global nucrates, or gene nucrates hyperparameters
             if (nucmode == 2) {
                 SlaveSendNucPathSuffStat();
                 SlaveReceiveGlobalNucRates();
             } else if (nucmode == 1) {
+                GeneMoveNucRates();
                 SlaveSendNucRatesHyperSuffStat();
                 SlaveReceiveNucRatesHyperParameters();
             }
@@ -692,6 +687,19 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         }
     }
 
+    void GeneCollectPathSuffStat()  {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->CollectPathSuffStat();
+        }
+    }
+
+    void GeneMoveNucRates() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->MoveNuc();
+        }
+    }
+
+    /*
     void MoveGeneParameters(int nrep)   {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(nrep);
@@ -700,6 +708,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
             }
         }
     }
+    */
 
     // Nucleotide rates
 
@@ -812,7 +821,6 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
 
     void SlaveReceiveGlobalNucRates() {
         SlaveReceiveGlobal((*nucrelratearray)[0], (*nucstatarray)[0]);
-
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->SetNucRates((*nucrelratearray)[0], (*nucstatarray)[0]);
         }

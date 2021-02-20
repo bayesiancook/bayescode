@@ -202,7 +202,7 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     }
 
     //! return array size when put into an MPI buffer
-    unsigned int GetMPISize() const { return 2 * GetNbranch(); }
+    unsigned int GetMPISize() const { return GetVal(0).GetMPISize() * GetNbranch(); }
 
     //! put array into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
