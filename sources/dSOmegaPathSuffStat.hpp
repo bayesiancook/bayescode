@@ -19,7 +19,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbsyn = 0;
@@ -49,7 +49,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         bsyn += tmpbsyn;
         bnonsyn += tmpbnonsyn;
 
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
+        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 nnonsyn += i->second;
             }

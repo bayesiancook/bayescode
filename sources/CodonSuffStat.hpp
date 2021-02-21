@@ -52,8 +52,8 @@ class NucPathSuffStat : public SuffStat {
         const SubMatrix *nucmatrix = codonmatrix.GetNucMatrix();
 
         // root part
-        const std::map<int, int> &codonrootcount = codonpathsuffstat.GetRootCountMap();
-        for (std::map<int, int>::const_iterator i = codonrootcount.begin();
+        const std::map<int, double> &codonrootcount = codonpathsuffstat.GetRootCountMap();
+        for (std::map<int, double>::const_iterator i = codonrootcount.begin();
              i != codonrootcount.end(); i++) {
             int codon = i->first;
             rootcount[cod->GetCodonPosition(0, codon)] += i->second;
@@ -78,8 +78,8 @@ class NucPathSuffStat : public SuffStat {
             }
         }
 
-        const std::map<pair<int, int>, int> &codonpaircount = codonpathsuffstat.GetPairCountMap();
-        for (std::map<pair<int, int>, int>::const_iterator i = codonpaircount.begin();
+        const std::map<pair<int, int>, double> &codonpaircount = codonpathsuffstat.GetPairCountMap();
+        for (std::map<pair<int, int>, double>::const_iterator i = codonpaircount.begin();
              i != codonpaircount.end(); i++) {
             int cod1 = i->first.first;
             int cod2 = i->first.second;
@@ -282,7 +282,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbeta = 0;
@@ -304,7 +304,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         tmpbeta /= codonsubmatrix.GetOmega();
 
         int tmpcount = 0;
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
+        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 tmpcount += i->second;

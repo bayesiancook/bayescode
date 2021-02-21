@@ -62,9 +62,9 @@ class PathSuffStat : public SuffStat {
 
     void IncrementPairCount(int state1, int state2) { paircount[pair<int, int>(state1, state2)]++; }
 
-    void AddRootCount(int state, int in) { rootcount[state] += in; }
+    void AddRootCount(int state, double in) { rootcount[state] += in; }
 
-    void AddPairCount(int state1, int state2, int in) {
+    void AddPairCount(int state1, int state2, double in) {
         paircount[pair<int, int>(state1, state2)] += in;
     }
 
@@ -74,11 +74,11 @@ class PathSuffStat : public SuffStat {
     void AddSuffStat(const PhyloProcess &process) { process.AddPathSuffStat(*this); }
 
     void Add(const PathSuffStat &suffstat) {
-        for (std::map<int, int>::const_iterator i = suffstat.GetRootCountMap().begin();
+        for (std::map<int, double>::const_iterator i = suffstat.GetRootCountMap().begin();
              i != suffstat.GetRootCountMap().end(); i++) {
             AddRootCount(i->first, i->second);
         }
-        for (std::map<pair<int, int>, int>::const_iterator i = suffstat.GetPairCountMap().begin();
+        for (std::map<pair<int, int>, double>::const_iterator i = suffstat.GetPairCountMap().begin();
              i != suffstat.GetPairCountMap().end(); i++) {
             AddPairCount(i->first.first, i->first.second, i->second);
         }
@@ -93,16 +93,16 @@ class PathSuffStat : public SuffStat {
         return *this;
     }
 
-    int GetRootCount(int state) const {
-        std::map<int, int>::const_iterator i = rootcount.find(state);
+    double GetRootCount(int state) const {
+        std::map<int, double >::const_iterator i = rootcount.find(state);
         if (i == rootcount.end()) {
             return 0;
         }
         return i->second;
     }
 
-    int GetPairCount(int state1, int state2) const {
-        std::map<pair<int, int>, int>::const_iterator i =
+    double GetPairCount(int state1, int state2) const {
+        std::map<pair<int, int>, double >::const_iterator i =
             paircount.find(pair<int, int>(state1, state2));
         if (i == paircount.end()) {
             return 0;
@@ -122,14 +122,14 @@ class PathSuffStat : public SuffStat {
     double GetLogProb(const SubMatrix &mat) const {
         double total = 0;
         auto stat = mat.GetStationary();
-        for (std::map<int, int>::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
+        for (std::map<int, double >::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
             total += i->second * log(stat[i->first]);
         }
         for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
             total += i->second * mat(i->first, i->first);
         }
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
+        for (std::map<pair<int, int>, double >::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
             total += i->second * log(mat(i->first.first, i->first.second));
         }
@@ -138,10 +138,10 @@ class PathSuffStat : public SuffStat {
 
     //! const access to the ordered map giving the root count stat (sparse data
     //! structure)
-    const std::map<int, int> &GetRootCountMap() const { return rootcount; }
+    const std::map<int, double > &GetRootCountMap() const { return rootcount; }
     //! const access to the ordered map giving the pair count stat (sparse data
     //! structure)
-    const std::map<pair<int, int>, int> &GetPairCountMap() const { return paircount; }
+    const std::map<pair<int, int>, double > &GetPairCountMap() const { return paircount; }
     //! const access to the ordered map giving the waiting time stat (sparse data
     //! structure)
     const std::map<int, double> &GetWaitingTimeMap() const { return waitingtime; }
@@ -182,7 +182,7 @@ class PathSuffStat : public SuffStat {
     //! get a nucpath suffstat from MPI buffer and add it to this
     void Add(const MPIBuffer &buffer) {
         for (int i=0; i<Nstate; i++)    {
-            int tmp;
+            double tmp;
             buffer >> tmp;
             if (tmp)    {
                 AddRootCount(i,tmp);
@@ -191,7 +191,7 @@ class PathSuffStat : public SuffStat {
         for (int i=0; i<Nstate; i++)    {
             for (int j=0; j<Nstate; j++)    {
                 if (i != j) {
-                    int tmp;
+                    double tmp;
                     buffer >> tmp;
                     if (tmp)    {
                         AddPairCount(i,j,tmp);
@@ -211,8 +211,8 @@ class PathSuffStat : public SuffStat {
 
   private:
     int Nstate;
-    std::map<int, int> rootcount;
-    std::map<pair<int, int>, int> paircount;
+    std::map<int, double> rootcount;
+    std::map<pair<int, int>, double> paircount;
     std::map<int, double> waitingtime;
 };
 
