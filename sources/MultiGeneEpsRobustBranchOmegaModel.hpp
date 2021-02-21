@@ -241,6 +241,10 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
 
+        if (nucmode == 2)   {
+            UpdateNucMatrix();
+        }
+
         double alpha = 1.0 / omegainvshape;
         double beta = alpha / omegamean;
         omegabrancharray->SetShape(alpha);
@@ -718,11 +722,6 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            MasterReceiveOmegaSuffStat();
-            MoveOmega();
-            MoveOmegaHyperParameters();
-            MasterSendOmega();
-
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
                 MasterReceiveBranchLengthsSuffStat();
@@ -745,6 +744,11 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
                 MoveNucRatesHyperParameters();
                 MasterSendNucRatesHyperParameters();
             }
+
+            MasterReceiveOmegaSuffStat();
+            MoveOmega();
+            MoveOmegaHyperParameters();
+            MasterSendOmega();
         }
 
         // collect current state
@@ -765,28 +769,32 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
 
         for (int rep = 0; rep < nrep; rep++) {
 
-            MoveGeneParameters(1.0);
-
-            SlaveSendOmegaSuffStat();
-            SlaveReceiveOmega();
+            // MoveGeneParameters(1.0);
 
             // global branch lengths, or gene branch lengths hyperparameters
             if (blmode == 2) {
                 SlaveSendBranchLengthsSuffStat();
                 SlaveReceiveGlobalBranchLengths();
             } else if (blmode == 1) {
+                GeneMoveBranchLengths();
                 SlaveSendBranchLengthsHyperSuffStat();
                 SlaveReceiveBranchLengthsHyperParameters();
             }
+
+            GeneCollectPathSuffStat();
 
             // global nucrates, or gene nucrates hyperparameters
             if (nucmode == 2) {
                 SlaveSendNucPathSuffStat();
                 SlaveReceiveGlobalNucRates();
             } else if (nucmode == 1) {
+                GeneMoveNucRates();
                 SlaveSendNucRatesHyperSuffStat();
                 SlaveReceiveNucRatesHyperParameters();
             }
+
+            SlaveSendOmegaSuffStat();
+            SlaveReceiveOmega();
         }
 
         // collect current state
@@ -805,6 +813,25 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void GeneCollectPathSuffStat()  {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->CollectPathSuffStat();
+        }
+    }
+
+    void GeneMoveNucRates() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->MoveNucRates();
+        }
+    }
+
+    void GeneMoveBranchLengths() {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->MoveBranchLengths();
+        }
+    }
+
+    /*
     void MoveGeneParameters(int nrep)   {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->MoveParameters(nrep);
@@ -816,6 +843,7 @@ class MultiGeneEpsRobustBranchOmegaModel : public MultiGeneProbModel {
             }
         }
     }
+    */
 
     // Branch lengths
 

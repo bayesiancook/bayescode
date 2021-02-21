@@ -215,6 +215,7 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
     void SetBranchOmega(const BranchSelector<double>& inomegabrancharray)   {
         omegabrancharray->Copy(inomegabrancharray);
+        FastUpdate();
     }
 
     // Branch lengths
@@ -251,16 +252,16 @@ class EpsRobustBranchOmegaModel : public ProbModel {
     //! new value (multi-gene analyses)
     void SetNucRates(const std::vector<double> &innucrelrate,
                                     const std::vector<double> &innucstat) {
-        nucrelrate = innucrelrate;
-        nucstat = innucstat;
+        copy(innucrelrate.begin(), innucrelrate.end(), nucrelrate.begin());
+        copy(innucstat.begin(), innucstat.end(), nucstat.begin());
         TouchMatrices();
     }
 
     //! get a copy of nucleotide rates into arrays given as arguments
     void GetNucRates(std::vector<double> &innucrelrate,
                                     std::vector<double> &innucstat) const {
-        innucrelrate = nucrelrate;
-        innucstat = nucstat;
+        copy(nucrelrate.begin(), nucrelrate.end(), innucrelrate.begin());
+        copy(nucstat.begin(), nucstat.end(), innucstat.begin());
     }
 
     //! set nucleotide rates hyperparameters to a new value (multi-gene analyses)
@@ -268,9 +269,9 @@ class EpsRobustBranchOmegaModel : public ProbModel {
                                                    double innucrelratehyperinvconc,
                                                    const std::vector<double> &innucstathypercenter,
                                                    double innucstathyperinvconc) {
-        nucrelratehypercenter = innucrelratehypercenter;
+        copy(innucrelratehypercenter.begin(), innucrelratehypercenter.end(), nucrelratehypercenter.begin()); 
         nucrelratehyperinvconc = innucrelratehyperinvconc;
-        nucstathypercenter = innucstathypercenter;
+        copy(innucstathypercenter.begin(), innucstathypercenter.end(), nucstathypercenter.begin()); 
         nucstathyperinvconc = innucstathyperinvconc;
     }
 
@@ -525,15 +526,12 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
             CollectPathSuffStat();
 
-            if (!FixedOmega())  {
-                CollectOmegaSuffStat();
-                MoveOmega();
-                MoveOmegaHyperParameters();
+            if (!FixedNucRates()) {
+                MoveNucRates();
             }
 
-            if (!FixedNucRates()) {
-                TouchMatrices();
-                MoveNucRates();
+            if (!FixedOmega())  {
+                MoveOmega();
             }
         }
     }
@@ -591,6 +589,13 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
     // Omega
 
+    void MoveOmega()    {
+        CollectOmegaSuffStat();
+        MoveBranchOmega();
+        MoveOmegaHyperParameters();
+        TouchMatrices();
+    }
+
     //! collect generic sufficient statistics from substitution mappings
     void CollectPathSuffStat() {
         pathsuffstatbrancharray->Clear();
@@ -604,7 +609,7 @@ class EpsRobustBranchOmegaModel : public ProbModel {
 
     //! Gibbs resample omega (based on sufficient statistics of current
     //! substitution mapping)
-    void MoveOmega() {
+    void MoveBranchOmega() {
         omegabrancharray->Move(1.0, 10, *omegapathsuffstatbrancharray);
         omegabrancharray->Move(0.1, 10, *omegapathsuffstatbrancharray);
         codonmatrixbrancharray->UpdateCodonMatrices();

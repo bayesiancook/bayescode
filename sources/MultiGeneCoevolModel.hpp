@@ -254,6 +254,9 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         branchomega->Update();
         nucrelratearray->SetConcentration(1.0 / nucrelratehyperinvconc);
         nucstatarray->SetConcentration(1.0 / nucstathyperinvconc);
+        if (nucmode == 2)   {
+            UpdateNucMatrix();
+        }
     }
 
     void MasterUpdate() override {
