@@ -87,6 +87,21 @@ class CoevolChain : public Chain {
     //! return the model, with its derived type (unlike ProbModel::GetModel)
     CoevolModel *GetModel() { return static_cast<CoevolModel *>(model); }
 
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream pos((name + ".branchdsomsuffstat").c_str(), ios_base::app);
+        GetModel()->TracedSOmegaPathSuffStat(pos);
+        ofstream sos((name + ".branchsuffstat").c_str(), ios_base::app);
+        GetModel()->TraceRelativePathSuffStat(sos);
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        // ofstream pos((name + ".branchomega").c_str());
+        ofstream pos((name + ".branchdsomsuffstat").c_str());
+        ofstream sos((name + ".branchsuffstat").c_str());
+    }
+
     //! return model type
     string GetModelType() override { return modeltype; }
 };

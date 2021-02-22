@@ -168,7 +168,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         bnonsyn += temp;
     }
 
-    void ToStream(ostream& os) const { os << nsyn << nnonsyn << bsyn << bnonsyn; }
+    void ToStream(ostream& os) const { os << nsyn << '\t' << nnonsyn << '\t' << bsyn << '\t' << bnonsyn; }
     void FromStream(istream& is) { is >> nsyn >> nnonsyn >> bsyn >> bnonsyn; }
 
     private:

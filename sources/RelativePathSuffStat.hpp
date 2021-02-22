@@ -49,7 +49,13 @@ class RelativePathSuffStat {
 // class RelativePathSuffStat : public SuffStat {
   public:
 
-    RelativePathSuffStat(int inNstate = 0) : Nstate(inNstate) {}
+    RelativePathSuffStat(int inNstate) : Nstate(inNstate) {}
+
+    RelativePathSuffStat(const RelativePathSuffStat& from) : Nstate(from.Nstate)  {
+        Clear();
+        Add(from);
+    }
+
     ~RelativePathSuffStat() {}
 
     //! set suff stats to 0
@@ -170,7 +176,6 @@ class RelativePathSuffStat {
         }
         for (int i=0; i<Nstate; i++)    {
             buffer << GetWaitingTime(i);
-
         }
     }
 
@@ -209,6 +214,53 @@ class RelativePathSuffStat {
         }
     }
 
+    void ToStream(ostream& os) const { 
+        for (int i=0; i<Nstate; i++)    {
+            os << GetRootCount(i) << '\t';
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    os << GetPairCount(i,j) << '\t';
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            os << GetWaitingTime(i);
+            if (i < Nstate-1)   {
+                os << '\t';
+            }
+        }
+    }
+
+    void FromStream(istream& is) { 
+        Clear();
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                rootcount[i] = tmp;
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    double tmp;
+                    is >> tmp;
+                    if (tmp)    {
+                        paircount[pair<int,int>(i,j)] = tmp;
+                    }
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                waitingtime[i] = tmp;
+            }
+        }
+    }
 
   private:
     int Nstate;
@@ -217,6 +269,16 @@ class RelativePathSuffStat {
     std::map<int, double> waitingtime;
 };
 
+
+ostream& operator<<(ostream& os, const RelativePathSuffStat& suffstat)    {
+    suffstat.ToStream(os);
+    return os;
+}
+
+istream& operator>>(istream& is, RelativePathSuffStat& suffstat)    {
+    suffstat.FromStream(is);
+    return is;
+}
 /**
  * \brief An array of substitution path sufficient statistics
  *
@@ -227,7 +289,7 @@ class RelativePathSuffStat {
 
 class RelativePathSuffStatArray : public SimpleArray<RelativePathSuffStat> {
   public:
-    RelativePathSuffStatArray(int insize) : SimpleArray<RelativePathSuffStat>(insize) {}
+    RelativePathSuffStatArray(int insize, int Nstate) : SimpleArray<RelativePathSuffStat>(insize, RelativePathSuffStat(Nstate)) {}
     ~RelativePathSuffStatArray() {}
 
     //! set all suff stats to 0
@@ -264,7 +326,7 @@ class RelativePathSuffStatArray : public SimpleArray<RelativePathSuffStat> {
 
 class RelativePathSuffStatNodeArray : public SimpleNodeArray<RelativePathSuffStat> {
   public:
-    RelativePathSuffStatNodeArray(const Tree &intree) : SimpleNodeArray<RelativePathSuffStat>(intree) {}
+    RelativePathSuffStatNodeArray(const Tree &intree, int Nstate) : SimpleNodeArray<RelativePathSuffStat>(intree, RelativePathSuffStat(Nstate)) {}
     ~RelativePathSuffStatNodeArray() {}
 
     //! set all suff stats to 0

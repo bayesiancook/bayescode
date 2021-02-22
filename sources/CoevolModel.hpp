@@ -226,7 +226,7 @@ class CoevolModel: public ProbModel {
         pathsuffstatarray = new PathSuffStatNodeArray(*tree);
         relpathsuffstatarray = 0;
         if (relative)   {
-            relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree);
+            relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
         }
         dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
 
@@ -658,8 +658,16 @@ class CoevolModel: public ProbModel {
         os << Random::GetEntropy(nucrelrate) << '\n';
     }
 
-    void WriteMapping(ostream& os) const    {
+    void TracedSOmegaPathSuffStat(ostream& os) const    {
         os << *dsompathsuffstatarray;
+        os << '\n';
+        os.flush();
+    }
+
+    void TraceRelativePathSuffStat(ostream& os) const   {
+        os << *relpathsuffstatarray;
+        os << '\n';
+        os.flush();
     }
 
     void ReadMapping(istream& is) {
