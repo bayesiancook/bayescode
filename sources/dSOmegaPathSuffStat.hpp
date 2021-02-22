@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PathSuffStat.hpp"
+#include "RelativePathSuffStat.hpp"
 
 // in relative time
 class dSOmegaPathSuffStat : public SuffStat {
@@ -46,6 +47,49 @@ class dSOmegaPathSuffStat : public SuffStat {
         }
         tmpbsyn /= branchlength;
         tmpbnonsyn /= branchlength*omega;
+        bsyn += tmpbsyn;
+        bnonsyn += tmpbnonsyn;
+
+        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
+            if (!statespace->Synonymous(i->first.first, i->first.second)) {
+                nnonsyn += i->second;
+            }
+            else    {
+                nsyn += i->second;
+            }
+        }
+    }
+
+    void AddSuffStat(const OmegaCodonSubMatrix &codonsubmatrix, const RelativePathSuffStat &pathsuffstat, double omega) {
+        int ncodon = codonsubmatrix.GetNstate();
+        const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
+
+        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
+
+        double tmpbsyn = 0;
+        double tmpbnonsyn = 0;
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            double totsynrate = 0;
+            double totnonsynrate = 0;
+            int a = i->first;
+            for (int b = 0; b < ncodon; b++) {
+                if (b != a) {
+                    if (codonsubmatrix(a, b) != 0) {
+                        if (!statespace->Synonymous(a, b)) {
+                            totnonsynrate += codonsubmatrix(a, b);
+                        }
+                        else    {
+                            totsynrate += codonsubmatrix(a, b);
+                        }
+                    }
+                }
+            }
+            tmpbsyn += i->second * totsynrate;
+            tmpbnonsyn += i->second * totnonsynrate;
+        }
+        tmpbnonsyn /= omega;
         bsyn += tmpbsyn;
         bnonsyn += tmpbnonsyn;
 
@@ -183,6 +227,30 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatarray, branchlength, branchomega);
+        }
+    }
+
+    // RELATIVE version
+    //! compute omega suff stats and do a member-wise addition -- for Muse and
+    //! Gaut codon matrices
+    void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+                     const NodeSelector<RelativePathSuffStat> &pathsuffstatarray,
+                     const BranchSelector<double>& branchomega) {
+        RecursiveAddSuffStat(GetTree().GetRoot(), codonsubmatrixarray, pathsuffstatarray, branchomega);
+    }
+
+    void RecursiveAddSuffStat(const Link *from,
+                              const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+                              const NodeSelector<RelativePathSuffStat> &pathsuffstatarray,
+                              const BranchSelector<double>& branchomega) {
+        if (!from->isRoot()) {
+            (*this)[from->GetBranch()->GetIndex()].AddSuffStat(
+                codonsubmatrixarray.GetVal(from->GetBranch()->GetIndex()),
+                pathsuffstatarray.GetVal(from->GetNode()->GetIndex()),
+                branchomega.GetVal(from->GetBranch()->GetIndex()));
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatarray, branchomega);
         }
     }
 

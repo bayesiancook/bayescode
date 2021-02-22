@@ -12,6 +12,7 @@
 #include "Chronogram.hpp"
 #include "PoissonSuffStat.hpp"
 #include "CodonSuffStat.hpp"
+#include "RelativePathSuffStat.hpp"
 #include "dSOmegaPathSuffStat.hpp"
 #include "InverseWishart.hpp"
 
@@ -75,9 +76,11 @@ class CoevolModel: public ProbModel {
     PhyloProcess *phyloprocess;
 
     PathSuffStatNodeArray* pathsuffstatarray;
+    RelativePathSuffStatNodeArray* relpathsuffstatarray;
     dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
     MultivariateNormalSuffStat* browniansuffstat;
 
+    int relative;
 
   public:
     //-------------------
@@ -87,6 +90,7 @@ class CoevolModel: public ProbModel {
     CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, GeneticCodeType codetype) {
     // CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile) {
 
+        relative = 1;
         coevolmode = 0;
         /*
         suffstatfile = insuffstatfile;
@@ -220,6 +224,10 @@ class CoevolModel: public ProbModel {
         phyloprocess->Unfold();
 
         pathsuffstatarray = new PathSuffStatNodeArray(*tree);
+        relpathsuffstatarray = 0;
+        if (relative)   {
+            relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree);
+        }
         dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
 
         browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
@@ -397,11 +405,20 @@ class CoevolModel: public ProbModel {
     void CollectPathSuffStat() {
         pathsuffstatarray->Clear();
         pathsuffstatarray->AddSuffStat(*phyloprocess);
+        if (relative)   {
+            relpathsuffstatarray->Clear();
+            relpathsuffstatarray->AddSuffStat(*pathsuffstatarray, *branchlength);
+        }
     }
 
     void CollectdSOmegaPathSuffStat() {
         dsompathsuffstatarray->Clear();
-        dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray, *branchlength, *branchomega);
+        if (relative)   {
+            dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *relpathsuffstatarray, *branchomega);
+        }
+        else    {
+            dsompathsuffstatarray->AddSuffStat(*codonmatrixarray, *pathsuffstatarray, *branchlength, *branchomega);
+        }
     }
 
     /*
@@ -422,7 +439,12 @@ class CoevolModel: public ProbModel {
     void CollectNucPathSuffStat() {
         TouchMatrices();
         nucpathsuffstat.Clear();
-        nucpathsuffstat.AddSuffStat(*codonmatrixarray, *rootcodonmatrix, *pathsuffstatarray);
+        if (relative)   {
+            nucpathsuffstat.AddSuffStat(*codonmatrixarray, *rootcodonmatrix, *relpathsuffstatarray, *branchlength);
+        }
+        else    {
+            nucpathsuffstat.AddSuffStat(*codonmatrixarray, *rootcodonmatrix, *pathsuffstatarray);
+        }
     }
 
     //-------------------
@@ -488,12 +510,17 @@ class CoevolModel: public ProbModel {
     void ResampleSub(double frac) {
         TouchMatrices();
         phyloprocess->Move(frac);
+        if (relative)   {
+            CollectPathSuffStat();
+        }
     }
 
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            CollectPathSuffStat();
+            if (! relative) {
+                CollectPathSuffStat();
+            }
             if (!FixedNucRates()) {
                 MoveNuc();
             }
