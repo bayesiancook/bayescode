@@ -17,6 +17,7 @@ class CoevolSample : public Sample {
   private:
     string modeltype;
     string datafile, contdatafile, treefile, rootfile;
+    string suffstatfile, dsomsuffstatfile;
     GeneticCodeType codetype;
 
   public:
@@ -44,6 +45,7 @@ class CoevolSample : public Sample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> contdatafile >> treefile >> rootfile;
+        is >> suffstatfile >> dsomsuffstatfile;
         is >> codetype;
         int tmp;
         is >> tmp;
@@ -55,7 +57,7 @@ class CoevolSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "COEVOLDNDS") {
-            model = new CoevolModel(datafile, contdatafile, treefile, rootfile, codetype);
+            model = new CoevolModel(datafile, contdatafile, treefile, rootfile, suffstatfile, dsomsuffstatfile, codetype);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);

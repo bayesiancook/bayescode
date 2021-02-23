@@ -24,10 +24,9 @@ class CoevolModel: public ProbModel {
     const CodonSequenceAlignment *codondata;
     const ContinuousData* contdata;
 
-    /*
     string suffstatfile;
+    string dsomsuffstatfile;
     int mappingapprox;
-    */
 
     int nucmode;
     int coevolmode;
@@ -87,20 +86,20 @@ class CoevolModel: public ProbModel {
     // Construction and allocation
     // ------------------
 
-    CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, GeneticCodeType codetype) {
-    // CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile) {
+    CoevolModel(string datafile, string contdatafile, string treefile, string rootfile, string insuffstatfile, string indsomsuffstatfile, GeneticCodeType codetype) {
 
         relative = 1;
         coevolmode = 0;
-        /*
         suffstatfile = insuffstatfile;
-        if (suffstatfile != "None)  {
+        dsomsuffstatfile = indsomsuffstatfile;
+        if (dsomsuffstatfile != "None")  {
+            mappingapprox = 2;
+        } else if (suffstatfile != "None")  {
             mappingapprox = 1;
         }
         else    {
             mappingapprox = 0;
         }
-        */
 
         data = new FileSequenceAlignment(datafile);
         codondata = new CodonSequenceAlignment(data, true, codetype);
@@ -201,44 +200,46 @@ class CoevolModel: public ProbModel {
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
 
-        // Nucleotide rates
-
-        nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
-        nucrelratehyperinvconc = 1.0 / Nrr;
-
-        nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
-        nucstathyperinvconc = 1.0 / Nnuc;
-
-        nucrelrate.assign(Nrr, 0);
-        Random::DirichletSample(nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
-
-        nucstat.assign(Nnuc, 0);
-        Random::DirichletSample(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
-
-        nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
-
-        codonmatrixarray = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, branchomega);
-        rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, 1.0);
-
-        phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray, rootcodonmatrix);
-        phyloprocess->Unfold();
-
-        pathsuffstatarray = new PathSuffStatNodeArray(*tree);
-        relpathsuffstatarray = 0;
-        if (relative)   {
-            relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
-        }
-        dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
-
-        browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
-
-        /*
-        if (mappingapprox)  {
-            ifstream is(suffstatfile.c_str());
+        if (mappingapprox == 2) {
+            dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+            browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
+            ifstream is(dsomsuffstatfile.c_str());
             is >> *dsompathsuffstatarray;
         }
-        */
-        cerr << "allocate ok\n";
+
+        else    {
+
+            // Nucleotide rates
+
+            nucrelratehypercenter.assign(Nrr, 1.0 / Nrr);
+            nucrelratehyperinvconc = 1.0 / Nrr;
+
+            nucstathypercenter.assign(Nnuc, 1.0 / Nnuc);
+            nucstathyperinvconc = 1.0 / Nnuc;
+
+            nucrelrate.assign(Nrr, 0);
+            Random::DirichletSample(nucrelrate, nucrelratehypercenter, 1.0 / nucrelratehyperinvconc);
+
+            nucstat.assign(Nnuc, 0);
+            Random::DirichletSample(nucstat, nucstathypercenter, 1.0 / nucstathyperinvconc);
+
+            nucmatrix = new GTRSubMatrix(Nnuc, nucrelrate, nucstat, true);
+
+            codonmatrixarray = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, branchomega);
+            rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, 1.0);
+
+            phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray, rootcodonmatrix);
+            phyloprocess->Unfold();
+
+            pathsuffstatarray = new PathSuffStatNodeArray(*tree);
+            relpathsuffstatarray = 0;
+            if (relative)   {
+                relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
+            }
+            dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+            browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
+            cerr << "allocate ok\n";
+        }
     }
 
     void SetCoevolMode(int inmode)  {
@@ -333,12 +334,16 @@ class CoevolModel: public ProbModel {
     void FastUpdate() {
         branchlength->Update();
         branchomega->Update();
-        TouchMatrices();
+        if (mappingapprox < 2)  {
+            TouchMatrices();
+        }
     }
 
     void Update() override {
         FastUpdate();
-        ResampleSub(1.0);
+        if (!mappingapprox) {
+            ResampleSub(1.0);
+        }
     }
 
     void PostPred(string name) override {
@@ -361,15 +366,22 @@ class CoevolModel: public ProbModel {
             total += SigmaLogPrior();
             total += BrownianProcessLogPrior();
         }
-        if (!FixedNucRates()) {
-            total += NucRatesLogPrior();
+        if (mappingapprox < 2)  {
+            if (!FixedNucRates()) {
+                total += NucRatesLogPrior();
+            }
         }
         return total;
     }
 
     //! return current value of likelihood (pruning-style, i.e. integrated over
     //! all substitution histories)
-    double GetLogLikelihood() const { return phyloprocess->GetLogLikelihood(); }
+    double GetLogLikelihood() const { 
+        if (mappingapprox == 2) {
+            return dSOmPathSuffStatLogProb();
+        }
+        return phyloprocess->GetLogLikelihood(); 
+    }
 
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
@@ -421,19 +433,6 @@ class CoevolModel: public ProbModel {
         }
     }
 
-    /*
-    void PrintPathSuffStat(const Link* from)    {
-
-        if (! from->isRoot())   {
-            cerr << branchlength->GetVal(from->GetBranch()->GetIndex()) << '\t';
-            cerr << dsompathsuffstatarray->GetVal(from->GetBranch()->GetIndex()).GetTotalTime() << '\n';
-        }
-        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-            PrintPathSuffStat(link->Out());
-        }
-    }
-    */
-
     const NucPathSuffStat &GetNucPathSuffStat() const { return nucpathsuffstat; }
 
     void CollectNucPathSuffStat() {
@@ -456,6 +455,14 @@ class CoevolModel: public ProbModel {
     }
 
     double NucRatesLogProb() const { return NucRatesLogPrior() + NucRatesSuffStatLogProb(); }
+
+    double dSOmPathSuffStatLogProb() const {
+        double total = 0;
+        for (int index=0; index<tree->GetNbranch(); index++)    {
+            total += dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
+        }
+        return total;
+    }
 
     double BranchSuffStatLogProb(const Link*from) const  {
         if (from->isRoot())   {
@@ -500,7 +507,9 @@ class CoevolModel: public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
-        ResampleSub(1.0);
+        if (! mappingapprox)    {
+            ResampleSub(1.0);
+        }
         MoveParameters(30);
         return 1.0;
     }
@@ -518,11 +527,15 @@ class CoevolModel: public ProbModel {
     //! complete series of MCMC moves on all parameters (repeated nrep times)
     void MoveParameters(int nrep) {
         for (int rep = 0; rep < nrep; rep++) {
-            if (! relative) {
-                CollectPathSuffStat();
+            if (! mappingapprox)    {
+                if (! relative) {
+                    CollectPathSuffStat();
+                }
             }
-            if (!FixedNucRates()) {
-                MoveNuc();
+            if (mappingapprox < 2)  {
+                if (!FixedNucRates()) {
+                    MoveNuc();
+                }
             }
             if (coevolmode < 2) {
                 MoveCoevol();
@@ -531,14 +544,18 @@ class CoevolModel: public ProbModel {
     }
 
     void MoveCoevol()   {
-        CollectdSOmegaPathSuffStat();
+        if (mappingapprox < 2)  {
+            CollectdSOmegaPathSuffStat();
+        }
         for (int rep=0; rep<5; rep++)   {
             MoveTimes();
             MoveBrownianProcess();
             MoveSigma();
             MoveKappa();
         }
-        TouchMatrices();
+        if (mappingapprox < 2)  {
+            TouchMatrices();
+        }
     }
 
     // Times and Rates
@@ -622,8 +639,11 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << "k_" << i << '\t';
         }
-        os << "statent\t";
-        os << "rrent\n";
+        if (mappingapprox < 2)  {
+            os << "statent\t";
+            os << "rrent\t";
+        }
+        os << '\n';
     }
 
     double GetMeanOmega() const	{
@@ -654,31 +674,36 @@ class CoevolModel: public ProbModel {
         for (int i=0; i<process->GetDim(); i++) {
             os << kappa[i] << '\t';
         }
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
+        if (mappingapprox < 2)  {
+            os << Random::GetEntropy(nucstat) << '\t';
+            os << Random::GetEntropy(nucrelrate) << '\t';
+        }
+        os << '\n';
     }
 
     void TracedSOmegaPathSuffStat(ostream& os) const    {
-        os << *dsompathsuffstatarray;
-        os << '\n';
-        os.flush();
+        if (mappingapprox < 2)  {
+            os << *dsompathsuffstatarray;
+            os << '\n';
+            os.flush();
+        }
     }
 
     void TraceRelativePathSuffStat(ostream& os) const   {
-        os << *relpathsuffstatarray;
-        os << '\n';
-        os.flush();
-    }
-
-    void ReadMapping(istream& is) {
-        is >> *dsompathsuffstatarray;
+        if (! mappingapprox)  {
+            os << *relpathsuffstatarray;
+            os << '\n';
+            os.flush();
+        }
     }
 
     void Monitor(ostream &os) const override {}
 
     void ToStream(ostream &os) const override {
-        os << nucstat << '\t';
-        os << nucrelrate << '\t';
+        if (mappingapprox < 2)  {
+            os << nucstat << '\t';
+            os << nucrelrate << '\t';
+        }
         os << *chronogram << '\t';
         os << kappa << '\t';
         os << *sigma << '\t';
@@ -686,8 +711,10 @@ class CoevolModel: public ProbModel {
     }
 
     void FromStream(istream &is) override {
-        is >> nucstat;
-        is >> nucrelrate;
+        if (mappingapprox < 2)  {
+            is >> nucstat;
+            is >> nucrelrate;
+        }
         is >> *chronogram;
         is >> kappa;
         is >> *sigma;

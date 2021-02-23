@@ -13,12 +13,13 @@ class CoevolChain : public Chain {
     // Chain parameters
     string modeltype;
     string datafile, contdatafile, treefile, rootfile;
+    string suffstatfile, dsomsuffstatfile;
     GeneticCodeType codetype;
 
   public:
-    CoevolChain(string indatafile, string incontdatafile, string intreefile, string inrootfile, GeneticCodeType incodetype, int inevery, int inuntil, string inname,
+    CoevolChain(string indatafile, string incontdatafile, string intreefile, string inrootfile, string insuffstatfile, string indsomsuffstatfile, GeneticCodeType incodetype, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("COEVOLDNDS"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), codetype(incodetype) {
+        : modeltype("COEVOLDNDS"), datafile(indatafile), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), suffstatfile(insuffstatfile), dsomsuffstatfile(indsomsuffstatfile), codetype(incodetype) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -34,7 +35,7 @@ class CoevolChain : public Chain {
     }
 
     void New(int force) override {
-        model = new CoevolModel(datafile, contdatafile, treefile, rootfile, codetype);
+        model = new CoevolModel(datafile, contdatafile, treefile, rootfile, suffstatfile, dsomsuffstatfile, codetype);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -51,6 +52,7 @@ class CoevolChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> contdatafile >> treefile >> rootfile;
+        is >> suffstatfile >> dsomsuffstatfile;
         is >> codetype;
         int tmp;
         is >> tmp;
@@ -61,7 +63,7 @@ class CoevolChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "COEVOLDNDS") {
-            model = new CoevolModel(datafile, contdatafile, treefile, rootfile, codetype);
+            model = new CoevolModel(datafile, contdatafile, treefile, rootfile, suffstatfile, dsomsuffstatfile, codetype);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -78,6 +80,7 @@ class CoevolChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << contdatafile << '\t' << treefile << '\t' << rootfile << '\n';
+        param_os << suffstatfile << '\t' << dsomsuffstatfile << '\n';
         param_os << codetype << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -122,6 +125,8 @@ int main(int argc, char *argv[]) {
         string contdatafile = "None";
         string treefile = "";
         string rootfile = "";
+        string suffstatfile = "None";
+        string dsomsuffstatfile = "None";
         GeneticCodeType codetype = Universal;
         name = "";
         int force = 1;
@@ -140,6 +145,12 @@ int main(int argc, char *argv[]) {
                 if (s == "-d") {
                     i++;
                     datafile = argv[i];
+                } else if (s == "-dsomss")  {
+                    i++;
+                    dsomsuffstatfile = argv[i];
+                } else if (s == "-ss")  {
+                    i++;
+                    suffstatfile = argv[i];
                 } else if (s == "-c")   {
                     i++;
                     contdatafile = argv[i];
@@ -179,7 +190,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new CoevolChain(datafile, contdatafile, treefile, rootfile, codetype, every, until, name, force);
+        chain = new CoevolChain(datafile, contdatafile, treefile, rootfile, suffstatfile, dsomsuffstatfile, codetype, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

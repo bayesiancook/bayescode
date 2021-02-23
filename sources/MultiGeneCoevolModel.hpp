@@ -233,7 +233,7 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
             }
             else    {
                 for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                    geneprocess[gene] = new CoevolModel(GetLocalGeneName(gene), contdatafile, treefile, rootfile, codetype);
+                    geneprocess[gene] = new CoevolModel(GetLocalGeneName(gene), contdatafile, treefile, rootfile, "None", "None", codetype);
                 }
             }
 
