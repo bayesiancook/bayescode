@@ -101,11 +101,9 @@ void Tree::ToStreamWithBranchIndex(ostream &os, const Link *from) const {
 
 Tree::Tree() {
     root = nullptr;
-    taxset = nullptr;
 }
 
 Tree::Tree(const Tree *from) {
-    taxset = nullptr;
     root = new Link(from->root);
     root->InsertOut(root);
     RecursiveClone(from->root, root);
