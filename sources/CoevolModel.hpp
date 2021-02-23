@@ -228,18 +228,29 @@ class CoevolModel: public ProbModel {
             codonmatrixarray = new MGOmegaCodonSubMatrixBranchArray(GetCodonStateSpace(), nucmatrix, branchomega);
             rootcodonmatrix = new MGOmegaCodonSubMatrix(GetCodonStateSpace(), nucmatrix, 1.0);
 
-            phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray, rootcodonmatrix);
-            phyloprocess->Unfold();
-
-            pathsuffstatarray = new PathSuffStatNodeArray(*tree);
-            relpathsuffstatarray = 0;
-            if (relative)   {
-                relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
+            if (mappingapprox)  {
+                relpathsuffstatarray = 0;
+                if (relative)   {
+                    relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
+                    ifstream is(suffstatfile.c_str());
+                    is >> *relpathsuffstatarray;
+                }
+                dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+                browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
             }
-            dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
-            browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
-            cerr << "allocate ok\n";
+            else    {
+                phyloprocess = new PhyloProcess(tree, codondata, branchlength, 0, codonmatrixarray, rootcodonmatrix);
+                phyloprocess->Unfold();
+                pathsuffstatarray = new PathSuffStatNodeArray(*tree);
+                relpathsuffstatarray = 0;
+                if (relative)   {
+                    relpathsuffstatarray = new RelativePathSuffStatNodeArray(*tree, codondata->GetNstate());
+                }
+                dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+                browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
+            }
         }
+        cerr << "allocate ok\n";
     }
 
     void SetCoevolMode(int inmode)  {
@@ -341,14 +352,16 @@ class CoevolModel: public ProbModel {
 
     void Update() override {
         FastUpdate();
-        if (!mappingapprox) {
+        if (! mappingapprox) {
             ResampleSub(1.0);
         }
     }
 
     void PostPred(string name) override {
         FastUpdate();
-        phyloprocess->PostPredSample(name);
+        if (! mappingapprox)    {
+            phyloprocess->PostPredSample(name);
+        }
     }
 
     //-------------------
@@ -379,6 +392,9 @@ class CoevolModel: public ProbModel {
     double GetLogLikelihood() const { 
         if (mappingapprox == 2) {
             return dSOmPathSuffStatLogProb();
+        }
+        if (mappingapprox == 1) {
+            return RelativePathSuffStatLogProb();
         }
         return phyloprocess->GetLogLikelihood(); 
     }
@@ -421,6 +437,10 @@ class CoevolModel: public ProbModel {
             relpathsuffstatarray->Clear();
             relpathsuffstatarray->AddSuffStat(*pathsuffstatarray, *branchlength);
         }
+    }
+
+    double RelativePathSuffStatLogProb() const {
+        return relpathsuffstatarray->GetLogProb(*codonmatrixarray, *rootcodonmatrix, *branchlength);
     }
 
     void CollectdSOmegaPathSuffStat() {
