@@ -98,7 +98,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneSingleOmegaModel(string datafile, string intreefile, int inmyid, int innprocs)
+    MultiGeneSingleOmegaModel(string indatafile, string intreefile, int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
           nucstatsuffstat(Nnuc) {
@@ -107,8 +107,9 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         nucmode = 1;
         omegamode = 1;
 
-        AllocateAlignments(datafile);
+        datafile = indatafile;
         treefile = intreefile;
+        AllocateAlignments(datafile);
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
