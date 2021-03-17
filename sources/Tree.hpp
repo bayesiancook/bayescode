@@ -220,9 +220,6 @@ class Tree {
         SetIndices(GetRoot(), Nlink, Nnode, Nbranch);
     }
 
-    //! const access to the set of taxa (tips of the tree)
-    const TaxonSet *GetTaxonSet() const { return taxset; }
-
     //! const access to the root link
     Link *GetRoot() const /*override*/ { return root; }
 
@@ -695,7 +692,6 @@ class Tree {
     // data fields
     // just 2 pointers, to the root and to a list of taxa
     Link *root;
-    const TaxonSet *taxset;
     int Nlink;
     int Nbranch;
     int Nnode;

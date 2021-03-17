@@ -1,6 +1,5 @@
 
-#ifndef PATHSUFFSTAT_H
-#define PATHSUFFSTAT_H
+#pragma once
 
 #include <map>
 #include "Array.hpp"
@@ -9,8 +8,8 @@
 #include "NodeArray.hpp"
 #include "SubMatrix.hpp"
 #include "SuffStat.hpp"
-// #include "BranchSitePath.hpp"
 #include "PhyloProcess.hpp"
+#include "PathSuffStat.hpp"
 
 /**
  * \brief A general sufficient statistic for substitution histories, as a
@@ -28,16 +27,16 @@
  * (waiting time stat) -- all this, across all substitution histories included
  * in S.
  *
- * PathSuffStat implements this idea, by providing methods for gathering
+ * RelativePathSuffStat implements this idea, by providing methods for gathering
  * sufficient statistics across substitution histories (see also
- * BranchSitePath::AddPathSuffStat), adding them across sites and/or branches,
+ * BranchSitePath::AddRelativePathSuffStat), adding them across sites and/or branches,
  * and calculating the log p(S | Q) for any matrix Q
  *
  * These path suffstats can be used for any Markovian substitution process (any
  * Q). In some cases (i.e. for Muse and Gaut codon models), they can be
  * furthered simplified, as a function of the nucleotide rate parameters or the
  * omega parameter of the Q matrix, leading to even more compact suff stats (see
- * OmegaPathSuffStat and NucPathSuffStat).
+ * OmegaRelativePathSuffStat and NucRelativePathSuffStat).
  *
  * In terms of implementation, these suffstats are encoded as sparse data
  * structures (since a very small subset of all possible pairs of codons will
@@ -46,10 +45,18 @@
  * time and in terms of RAM usage).
  */
 
-class PathSuffStat : public SuffStat {
+class RelativePathSuffStat {
+// class RelativePathSuffStat : public SuffStat {
   public:
-    PathSuffStat(int inNstate = 0) : Nstate(inNstate) {}
-    ~PathSuffStat() {}
+
+    RelativePathSuffStat(int inNstate) : Nstate(inNstate) {}
+
+    RelativePathSuffStat(const RelativePathSuffStat& from) : Nstate(from.Nstate)  {
+        Clear();
+        Add(from);
+    }
+
+    ~RelativePathSuffStat() {}
 
     //! set suff stats to 0
     void Clear() {
@@ -58,37 +65,37 @@ class PathSuffStat : public SuffStat {
         waitingtime.clear();
     }
 
-    void IncrementRootCount(int state) { rootcount[state]++; }
-
-    void IncrementPairCount(int state1, int state2) { paircount[pair<int, int>(state1, state2)]++; }
-
-    void AddRootCount(int state, double in) { rootcount[state] += in; }
-
-    void AddPairCount(int state1, int state2, double in) {
-        paircount[pair<int, int>(state1, state2)] += in;
-    }
-
-    void AddWaitingTime(int state, double in) { waitingtime[state] += in; }
-
-    //! add path sufficient statistics from PhyloProcess (site-homogeneous case)
-    void AddSuffStat(const PhyloProcess &process) { process.AddPathSuffStat(*this); }
-
-    void Add(const PathSuffStat &suffstat) {
+    void Add(const PathSuffStat &suffstat, double length) {
         for (std::map<int, double>::const_iterator i = suffstat.GetRootCountMap().begin();
              i != suffstat.GetRootCountMap().end(); i++) {
-            AddRootCount(i->first, i->second);
+            rootcount[i->first] += i->second;
         }
         for (std::map<pair<int, int>, double>::const_iterator i = suffstat.GetPairCountMap().begin();
              i != suffstat.GetPairCountMap().end(); i++) {
-            AddPairCount(i->first.first, i->first.second, i->second);
+            paircount[pair<int,int>(i->first.first, i->first.second)] += i->second;
         }
         for (std::map<int, double>::const_iterator i = suffstat.GetWaitingTimeMap().begin();
              i != suffstat.GetWaitingTimeMap().end(); i++) {
-            AddWaitingTime(i->first, i->second);
+            waitingtime[i->first] += i->second / length;
         }
     }
 
-    PathSuffStat &operator+=(const PathSuffStat &from) {
+    void Add(const RelativePathSuffStat &suffstat)  {
+        for (std::map<int, double>::const_iterator i = suffstat.GetRootCountMap().begin();
+             i != suffstat.GetRootCountMap().end(); i++) {
+            rootcount[i->first] += i->second;
+        }
+        for (std::map<pair<int, int>, double>::const_iterator i = suffstat.GetPairCountMap().begin();
+             i != suffstat.GetPairCountMap().end(); i++) {
+            paircount[pair<int,int>(i->first.first, i->first.second)] += i->second;
+        }
+        for (std::map<int, double>::const_iterator i = suffstat.GetWaitingTimeMap().begin();
+             i != suffstat.GetWaitingTimeMap().end(); i++) {
+            waitingtime[i->first] += i->second;
+        }
+    }
+
+    RelativePathSuffStat &operator+=(const RelativePathSuffStat &from) {
         Add(from);
         return *this;
     }
@@ -119,7 +126,7 @@ class PathSuffStat : public SuffStat {
     }
 
     //! return log p(S | Q) as a function of the Q matrix given as the argument
-    double GetLogProb(const SubMatrix &mat) const {
+    double GetLogProb(const SubMatrix &mat, double length) const {
         double total = 0;
         auto stat = mat.GetStationary();
         for (std::map<int, double >::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
@@ -127,7 +134,7 @@ class PathSuffStat : public SuffStat {
         }
         for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
-            total += i->second * mat(i->first, i->first);
+            total += length * i->second * mat(i->first, i->first);
         }
         for (std::map<pair<int, int>, double >::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
@@ -149,7 +156,7 @@ class PathSuffStat : public SuffStat {
     //! return size of object, when put into an MPI buffer
     unsigned int GetMPISize() const {
         if (! Nstate)   {
-            cerr << "error in PathSuffStat::GetMPISize: Nstate not initialized\n";
+            cerr << "error in RelativePathSuffStat::GetMPISize: Nstate not initialized\n";
             exit(1);
         }
         return 2*Nstate + Nstate*(Nstate-1);
@@ -169,7 +176,6 @@ class PathSuffStat : public SuffStat {
         }
         for (int i=0; i<Nstate; i++)    {
             buffer << GetWaitingTime(i);
-
         }
     }
 
@@ -185,7 +191,7 @@ class PathSuffStat : public SuffStat {
             double tmp;
             buffer >> tmp;
             if (tmp)    {
-                AddRootCount(i,tmp);
+                rootcount[i] += tmp;
             }
         }
         for (int i=0; i<Nstate; i++)    {
@@ -194,7 +200,7 @@ class PathSuffStat : public SuffStat {
                     double tmp;
                     buffer >> tmp;
                     if (tmp)    {
-                        AddPairCount(i,j,tmp);
+                        paircount[pair<int,int>(i,j)] += tmp;
                     }
                 }
             }
@@ -203,11 +209,58 @@ class PathSuffStat : public SuffStat {
             double tmp;
             buffer >> tmp;
             if (tmp)    {
-                AddWaitingTime(i,tmp);
+                waitingtime[i] += tmp;
             }
         }
     }
 
+    void ToStream(ostream& os) const { 
+        for (int i=0; i<Nstate; i++)    {
+            os << GetRootCount(i) << '\t';
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    os << GetPairCount(i,j) << '\t';
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            os << GetWaitingTime(i);
+            if (i < Nstate-1)   {
+                os << '\t';
+            }
+        }
+    }
+
+    void FromStream(istream& is) { 
+        Clear();
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                rootcount[i] = tmp;
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    double tmp;
+                    is >> tmp;
+                    if (tmp)    {
+                        paircount[pair<int,int>(i,j)] = tmp;
+                    }
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                waitingtime[i] = tmp;
+            }
+        }
+    }
 
   private:
     int Nstate;
@@ -216,6 +269,16 @@ class PathSuffStat : public SuffStat {
     std::map<int, double> waitingtime;
 };
 
+
+ostream& operator<<(ostream& os, const RelativePathSuffStat& suffstat)    {
+    suffstat.ToStream(os);
+    return os;
+}
+
+istream& operator>>(istream& is, RelativePathSuffStat& suffstat)    {
+    suffstat.FromStream(is);
+    return is;
+}
 /**
  * \brief An array of substitution path sufficient statistics
  *
@@ -224,10 +287,10 @@ class PathSuffStat : public SuffStat {
  * matrix Q_i
  */
 
-class PathSuffStatArray : public SimpleArray<PathSuffStat> {
+class RelativePathSuffStatArray : public SimpleArray<RelativePathSuffStat> {
   public:
-    PathSuffStatArray(int insize) : SimpleArray<PathSuffStat>(insize) {}
-    ~PathSuffStatArray() {}
+    RelativePathSuffStatArray(int insize, int Nstate) : SimpleArray<RelativePathSuffStat>(insize, RelativePathSuffStat(Nstate)) {}
+    ~RelativePathSuffStatArray() {}
 
     //! set all suff stats to 0
     void Clear() {
@@ -236,28 +299,14 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
         }
     }
 
-    //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
-    void AddSuffStat(const PhyloProcess &process) { process.AddPathSuffStat(*this); }
-
     //! return total log prob (summed over all items), given an array of rate
     //! matrices
-    double GetLogProb(const Selector<SubMatrix> &matrixarray) const {
+    double GetLogProb(const Selector<SubMatrix> &matrixarray, const Selector<double>& lengtharray) const {
         double total = 0;
         for (int i = 0; i < GetSize(); i++) {
-            total += GetVal(i).GetLogProb(matrixarray.GetVal(i));
+            total += GetVal(i).GetLogProb(matrixarray.GetVal(i), lengtharray.GetVal(i));
         }
         return total;
-    }
-
-    //! \brief add suffstatarray given as argument to this array based on the
-    //! allocations provided as the second argument (mixture models)
-    //!
-    //! specifically, for each i=0..GetSize()-1, (*this)[alloc[i]] +=
-    //! suffstatarray[i]
-    void Add(const Selector<PathSuffStat> &suffstatarray, const Selector<int> &alloc) {
-        for (int i = 0; i < suffstatarray.GetSize(); i++) {
-            (*this)[alloc.GetVal(i)] += suffstatarray.GetVal(i);
-        }
     }
 
     //! get array from MPI buffer and add it to this array (member-wise addition)
@@ -275,10 +324,10 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
  * each branch has a different rate matrix Q_j
  */
 
-class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
+class RelativePathSuffStatNodeArray : public SimpleNodeArray<RelativePathSuffStat> {
   public:
-    PathSuffStatNodeArray(const Tree &intree) : SimpleNodeArray<PathSuffStat>(intree) {}
-    ~PathSuffStatNodeArray() {}
+    RelativePathSuffStatNodeArray(const Tree &intree, int Nstate) : SimpleNodeArray<RelativePathSuffStat>(intree, RelativePathSuffStat(Nstate)) {}
+    ~RelativePathSuffStatNodeArray() {}
 
     //! set all suff stats to 0
     void Clear() {
@@ -288,27 +337,42 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
     }
 
     //! add path sufficient statistics from PhyloProcess (site-heterogeneous case)
-    void AddSuffStat(const PhyloProcess &process) { process.AddPathSuffStat(*this); }
+    void AddSuffStat(const NodeSelector<PathSuffStat>& pathsuffstatarray, const BranchSelector<double>& lengtharray)    {
+        RecursiveAddSuffStat(GetTree().GetRoot(), pathsuffstatarray, lengtharray);
+    }
+
+    void RecursiveAddSuffStat(const Link* from, const NodeSelector<PathSuffStat>& pathsuffstatarray, const BranchSelector<double>& lengtharray) {
+
+        if (from->isRoot()) {
+            (*this)[from->GetNode()->GetIndex()].Add(pathsuffstatarray.GetVal(from->GetNode()->GetIndex()), 0);
+        }
+        else    {
+            (*this)[from->GetNode()->GetIndex()].Add(pathsuffstatarray.GetVal(from->GetNode()->GetIndex()), lengtharray.GetVal(from->GetBranch()->GetIndex()));
+        }
+        for (const Link *link=from->Next(); link!=from; link=link->Next()) {
+            RecursiveAddSuffStat(link->Out(), pathsuffstatarray, lengtharray);
+        }
+    }
 
     //! return total log prob (summed over all items), given an array of rate
     //! matrices
     double GetLogProb(const BranchSelector<SubMatrix> &matrixarray,
-                      const SubMatrix &rootmatrix) const {
-        double ret = RecursiveGetLogProb(GetTree().GetRoot(), matrixarray, rootmatrix);
+                      const SubMatrix &rootmatrix, const BranchSelector<double>& lengtharray) const {
+        double ret = RecursiveGetLogProb(GetTree().GetRoot(), matrixarray, rootmatrix, lengtharray);
         return ret;
     }
 
     double RecursiveGetLogProb(const Link *from, const BranchSelector<SubMatrix> &matrixarray,
-                               const SubMatrix &rootmatrix) const {
+                               const SubMatrix &rootmatrix, const BranchSelector<double>& lengtharray) const {
         double total = 0;
         if (from->isRoot()) {
-            total += GetVal(from->GetNode()->GetIndex()).GetLogProb(rootmatrix);
+            total += GetVal(from->GetNode()->GetIndex()).GetLogProb(rootmatrix, 0);
         } else {
             total += GetVal(from->GetNode()->GetIndex())
-                         .GetLogProb(matrixarray.GetVal(from->GetBranch()->GetIndex()));
+                         .GetLogProb(matrixarray.GetVal(from->GetBranch()->GetIndex()), lengtharray.GetVal(from->GetBranch()->GetIndex()));
         }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            total += RecursiveGetLogProb(link->Out(), matrixarray, rootmatrix);
+        for (const Link *link=from->Next(); link!=from; link=link->Next()) {
+            total += RecursiveGetLogProb(link->Out(), matrixarray, rootmatrix, lengtharray);
         }
         return total;
     }
@@ -321,110 +385,3 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
     }
 };
 
-/**
- * \brief A bi-dimensional array of substitution path sufficient statistics
- *
- * This class provides an interface for dealing with cases where
- * each site/condition pair has a different rate matrix Q_i
- * (essentially, the DiffSelModel).
- */
-
-class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
-  public:
-    PathSuffStatBidimArray(int inncol, int innrow, int Nstate = 0)
-        : SimpleBidimArray<PathSuffStat>(inncol, innrow, PathSuffStat(Nstate)) {}
-    ~PathSuffStatBidimArray() {}
-
-    //! set all suff stats to 0
-    void Clear() {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) {
-                (*this)(i, j).Clear();
-            }
-        }
-    }
-
-    //! add path sufficient statistics from PhyloProcess (site- and
-    //! condition-heterogeneous case)
-    void AddSuffStat(const PhyloProcess &process, const BranchAllocationSystem &branchalloc) {
-        process.AddPathSuffStat(*this, branchalloc);
-    }
-
-    //! reduce path suffstats based on bidim allocations
-    void Add(const PathSuffStatBidimArray& suffstatarray)	{
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) {
-                (*this)(i,j) += suffstatarray.GetVal(i,j);
-            }
-        }
-    }
-
-    //! reduce path suffstats based on bidim allocations
-    void Add(const PathSuffStatArray& suffstatarray, const Selector<int>& rowalloc, const Selector<int>& colalloc)   {
-        for (int i = 0; i < suffstatarray.GetSize(); i++)   {
-            (*this)(rowalloc.GetVal(i), colalloc.GetVal(i)) += suffstatarray.GetVal(i);
-        }
-    }
-
-    //! return total log prob (summed over all items), given a bi-dimensional
-    //! array of rate matrices
-    double GetLogProb(const BidimSelector<SubMatrix> &matrixarray) const {
-        double total = 0;
-        for (int j = 0; j < this->GetNcol(); j++) {
-            total += GetLogProb(j, matrixarray);
-        }
-        return total;
-    }
-
-    void GetRowLogProbs(vector<double>& logprobvector, const BidimSelector<SubMatrix> &matrixarray) const {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            double total = 0;
-            for (int j = 0; j < this->GetNcol(); j++) {
-                total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
-            }
-            logprobvector[i] = total;
-        }
-    }
-
-    double GetRowLogProb(int i, const BidimSelector<SubMatrix> &matrixarray) const {
-        double total = 0;
-        for (int j = 0; j < this->GetNcol(); j++) {
-            total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
-        }
-        return total;
-    }
-
-    //! return log prob summed over a given column
-    double GetLogProb(int j, const BidimSelector<SubMatrix> &matrixarray) const {
-        double total = 0;
-        for (int i = 0; i < this->GetNrow(); i++) {
-            total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
-        }
-        return total;
-    }
-
-    //! return log prob summed over a given column (and only for items for which
-    //! flag is non 0)
-    double GetLogProb(int j, const vector<int> &flag,
-                      const BidimSelector<SubMatrix> &matrixarray) const {
-        double total = 0;
-        for (int i = 0; i < this->GetNrow(); i++) {
-            if (flag[i]) {
-                total += GetVal(i, j).GetLogProb(matrixarray.GetVal(i, j));
-            }
-        }
-        return total;
-    }
-    //
-    //! get array from MPI buffer and add it to this array (member-wise addition)
-    void Add(const MPIBuffer &buffer) {
-        for (int i = 0; i < this->GetNrow(); i++) {
-            for (int j = 0; j < this->GetNcol(); j++) {
-                (*this)(i,j) += buffer;
-            }
-        }
-    }
-
-};
-
-#endif

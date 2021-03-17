@@ -7,6 +7,7 @@
 #include "CodonSubMatrixBranchArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
+#include "RelativePathSuffStat.hpp"
 #include "PoissonSuffStat.hpp"
 
 /**
@@ -52,8 +53,8 @@ class NucPathSuffStat : public SuffStat {
         const SubMatrix *nucmatrix = codonmatrix.GetNucMatrix();
 
         // root part
-        const std::map<int, int> &codonrootcount = codonpathsuffstat.GetRootCountMap();
-        for (std::map<int, int>::const_iterator i = codonrootcount.begin();
+        const std::map<int, double> &codonrootcount = codonpathsuffstat.GetRootCountMap();
+        for (std::map<int, double>::const_iterator i = codonrootcount.begin();
              i != codonrootcount.end(); i++) {
             int codon = i->first;
             rootcount[cod->GetCodonPosition(0, codon)] += i->second;
@@ -78,8 +79,8 @@ class NucPathSuffStat : public SuffStat {
             }
         }
 
-        const std::map<pair<int, int>, int> &codonpaircount = codonpathsuffstat.GetPairCountMap();
-        for (std::map<pair<int, int>, int>::const_iterator i = codonpaircount.begin();
+        const std::map<pair<int, int>, double> &codonpaircount = codonpathsuffstat.GetPairCountMap();
+        for (std::map<pair<int, int>, double>::const_iterator i = codonpaircount.begin();
              i != codonpaircount.end(); i++) {
             int cod1 = i->first.first;
             int cod2 = i->first.second;
@@ -139,6 +140,88 @@ class NucPathSuffStat : public SuffStat {
         }
     }
 
+    // RELATIVE
+    //! \brief compute the 4x4 path suff stat out of 61x61 codonpathsuffstat
+    //
+    //! Note that the resulting 4x4 nuc path suff stat depends on other aspects of
+    //! the codon matrix (e.g. the value of omega)
+    void AddSuffStat(const NucCodonSubMatrix &codonmatrix, const RelativePathSuffStat &codonpathsuffstat, double length) {
+        const CodonStateSpace *cod = codonmatrix.GetCodonStateSpace();
+        const SubMatrix *nucmatrix = codonmatrix.GetNucMatrix();
+
+        // root part
+        const std::map<int, double> &codonrootcount = codonpathsuffstat.GetRootCountMap();
+        for (std::map<int, double>::const_iterator i = codonrootcount.begin();
+             i != codonrootcount.end(); i++) {
+            int codon = i->first;
+            rootcount[cod->GetCodonPosition(0, codon)] += i->second;
+            rootcount[cod->GetCodonPosition(1, codon)] += i->second;
+            rootcount[cod->GetCodonPosition(2, codon)] += i->second;
+        }
+
+        const std::map<int, double> &waitingtime = codonpathsuffstat.GetWaitingTimeMap();
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            int codon = i->first;
+            for (int c2 = 0; c2 < cod->GetNstate(); c2++) {
+                if (c2 != codon) {
+                    int pos = cod->GetDifferingPosition(codon, c2);
+                    if (pos < 3) {
+                        int n1 = cod->GetCodonPosition(pos, codon);
+                        int n2 = cod->GetCodonPosition(pos, c2);
+                        pairbeta[n1][n2] +=
+                            length * i->second * codonmatrix(codon, c2) / (*nucmatrix)(n1, n2);
+                    }
+                }
+            }
+        }
+
+        const std::map<pair<int, int>, double> &codonpaircount = codonpathsuffstat.GetPairCountMap();
+        for (std::map<pair<int, int>, double>::const_iterator i = codonpaircount.begin();
+             i != codonpaircount.end(); i++) {
+            int cod1 = i->first.first;
+            int cod2 = i->first.second;
+            int pos = cod->GetDifferingPosition(cod1, cod2);
+            if (pos == 3) {
+                cerr << "error in codon conj path suffstat\n";
+                exit(1);
+            }
+            int n1 = cod->GetCodonPosition(pos, cod1);
+            int n2 = cod->GetCodonPosition(pos, cod2);
+            paircount[n1][n2] += i->second;
+        }
+    }
+
+    void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
+                     const MGOmegaCodonSubMatrix &rootcodonmatrix,
+                     const NodeSelector<RelativePathSuffStat>& codonpathsuffstatnodearray, const BranchSelector<double>& branchlengtharray) {
+        RecursiveAddSuffStat(codonmatrixtree.GetTree().GetRoot(), codonmatrixtree, rootcodonmatrix,
+                             codonpathsuffstatnodearray, branchlengtharray);
+    }
+
+    void RecursiveAddSuffStat(const Link *from,
+                              const BranchSelector<MGOmegaCodonSubMatrix> &codonmatrixtree,
+                              const MGOmegaCodonSubMatrix &rootcodonmatrix,
+                              const NodeSelector<RelativePathSuffStat>& codonpathsuffstatnodearray,
+                              const BranchSelector<double>& branchlengtharray) {
+
+        if (from->isRoot()) {
+            AddSuffStat(rootcodonmatrix,
+                        codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()), 0);
+        } else {
+            AddSuffStat(codonmatrixtree.GetVal(from->GetBranch()->GetIndex()),
+                        codonpathsuffstatnodearray.GetVal(from->GetNode()->GetIndex()),
+                        branchlengtharray.GetVal(from->GetBranch()->GetIndex()));
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveAddSuffStat(link->Out(), codonmatrixtree, rootcodonmatrix,
+                                 codonpathsuffstatnodearray, branchlengtharray);
+        }
+    }
+
+    //! \brief return the log probability as a function of a nucleotide matrix
+    //!
+    //! The codon state space is given as an argument (the nucleotide matrix or
     //! \brief return the log probability as a function of a nucleotide matrix
     //!
     //! The codon state space is given as an argument (the nucleotide matrix or
@@ -282,7 +365,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, int> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbeta = 0;
@@ -304,7 +387,7 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         tmpbeta /= codonsubmatrix.GetOmega();
 
         int tmpcount = 0;
-        for (std::map<pair<int, int>, int>::const_iterator i = paircount.begin();
+        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin();
              i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 tmpcount += i->second;
@@ -420,6 +503,12 @@ class OmegaPathSuffStatArray : public SimpleArray<OmegaPathSuffStat>,
         }
     }
 
+    void Add(const Selector<OmegaPathSuffStat> &suffstatarray)  {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i].Add(suffstatarray.GetVal(i));
+        }
+    }
+
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const Array<double> *omegaarray) const {
         double total = 0;
@@ -525,10 +614,16 @@ class OmegaPathSuffStatBranchArray : public SimpleBranchArray<OmegaPathSuffStat>
         }
     }
 
+    void Add(const BranchSelector<OmegaPathSuffStat> &suffstatarray)  {
+        for (int i=0; i<GetNbranch(); i++) {
+            (*this)[i].Add(suffstatarray.GetVal(i));
+        }
+    }
+
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const BranchArray<double> *omegaarray) const {
         double total = 0;
-        for (int i = 0; i < GetNbranch(); i++) {
+        for (int i=0; i<GetNbranch(); i++) {
             total += GetVal(i).GetLogProb(omegaarray->GetVal(i));
         }
         return total;

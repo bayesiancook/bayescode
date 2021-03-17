@@ -1,6 +1,9 @@
 #ifndef WHITENOISE_H
 #define WHITENOISE_H
 
+#include "BranchArray.hpp"
+#include "PoissonSuffStat.hpp"
+
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
  * branch-specific means but same shape parameter
