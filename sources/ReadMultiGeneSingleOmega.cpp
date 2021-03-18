@@ -107,6 +107,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
     void MasterReaddSOmegaPathSuffStat() {
         vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
         cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';
@@ -114,6 +115,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             GetModel()->MasterUpdate();
         }
         cerr << '\n';
+
         GetModel()->MasterReceiveGeneArray(array);
         ofstream os((name + ".genebranchdsomsuffstat").c_str());
         // os << GetModel()->GetNgene() << '\n';
@@ -129,19 +131,39 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // gos << "1\n";
         gos << globdsomss << '\n';
         cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+
+        GetModel()->MasterReceiveGeneArray(gcconsarray);
+        ofstream gcos((name + ".genebranchgcconsdsomsuffstat").c_str());
+        // gcos << GetModel()->GetNgene() << '\n';
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            gcos << gcconsarray[i] << '\n';
+        }
+        cerr << "GC-cons gene dsom path suffstats in " << name << ".genebranchgcconsdsomsuffstat\n";
+        GCConsdSOmegaPathSuffStatBranchArray gcconsglobdsomss(GetModel()->GetTree());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            gcconsglobdsomss.Add(gcconsarray[i]);
+        }
+        ofstream gcgos((name + ".meanbranchgcconsdsomsuffstat").c_str());
+        // gos << "1\n";
+        gcgos << gcconsglobdsomss << '\n';
+        cerr << "global GC-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat\n";
     }
 
     void SlaveReaddSOmegaPathSuffStat() {
         vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetLocalNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetLocalNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
         for (int i = 0; i < size; i++) {
             GetNextPoint();
             GetModel()->SlaveUpdate();
             GetModel()->SlaveAdddSOmegaPathSuffStat(array);
+            GetModel()->SlaveAddGCConsdSOmegaPathSuffStat(gcconsarray);
         }
         for (int i=0; i<GetModel()->GetLocalNgene(); i++) {
             array[i].Normalize(1.0/size);
+            gcconsarray[i].Normalize(1.0/size);
         }
         GetModel()->SlaveSendGeneArray(array);
+        GetModel()->SlaveSendGeneArray(gcconsarray);
     }
 
 };

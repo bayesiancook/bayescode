@@ -9,6 +9,7 @@
 #include "Tree.hpp"
 
 #include "dSOmegaPathSuffStat.hpp"
+#include "GCConsdSOmegaPathSuffStat.hpp"
 
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
@@ -607,6 +608,13 @@ class SingleOmegaModel : public ProbModel {
     // ------------------
 
     void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatBranchArray& into) const {
+        PathSuffStatNodeArray pathsuffstatarray(*tree);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
+    }
+
+    void AddGCConsdSOmegaPathSuffStat(GCConsdSOmegaPathSuffStatBranchArray& into) const {
         PathSuffStatNodeArray pathsuffstatarray(*tree);
         pathsuffstatarray.Clear();
         pathsuffstatarray.AddSuffStat(*phyloprocess);
