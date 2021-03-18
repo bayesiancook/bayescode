@@ -47,8 +47,8 @@ class FastCoevolModel: public ProbModel {
 
         dsomsuffstatfile = indsomsuffstatfile;
 
-	contdata = new FileContinuousData(contdatafile);
-	Ncont = contdata->GetNsite();
+        contdata = new FileContinuousData(contdatafile);
+        Ncont = contdata->GetNsite();
         Ntaxa = contdata->GetNtaxa();
         taxonset = contdata->GetTaxonSet();
 
@@ -309,19 +309,19 @@ class FastCoevolModel: public ProbModel {
     // ------------------
 
     void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\t";
-        os << "length\t";
-        os << "meanomega\t";
+        os << "#logprior\tlnL";
+        os << "\tlength";
+        os << "\tmeanomega";
         for (int i=0; i<process->GetDim(); i++) {
             for (int j=i+1; j<process->GetDim(); j++)   {
-                os << "s_" << i << "_" << j << '\t';
+                os << "\ts_" << i << "_" << j;
             }
         }
         for (int i=0; i<process->GetDim(); i++) {
-            os << "s_" << i << "_" << i << '\t';
+            os << "\ts_" << i << "_" << i;
         }
         for (int i=0; i<process->GetDim(); i++) {
-            os << "k_" << i << '\t';
+            os << "\tk_" << i;
         }
         os << '\n';
     }
@@ -341,18 +341,18 @@ class FastCoevolModel: public ProbModel {
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
-        os << branchomega->GetMean() << '\t';
+        os << branchlength->GetTotalLength();
+        os << '\t' << branchomega->GetMean();
         for (int i=0; i<process->GetDim(); i++) {
             for (int j=i+1; j<process->GetDim(); j++)   {
-                os << (*sigma)(i,j) << '\t';
+                os << '\t' << (*sigma)(i,j);
             }
         }
         for (int i=0; i<process->GetDim(); i++) {
-            os << (*sigma)(i,i) << '\t';
+            os << '\t' << (*sigma)(i,i);
         }
         for (int i=0; i<process->GetDim(); i++) {
-            os << kappa[i] << '\t';
+            os << '\t' << kappa[i];
         }
         os << '\n';
     }
