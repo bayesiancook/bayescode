@@ -19,7 +19,16 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
         bsyn = bnonsyn = 0;
     }
 
-    bool gccons(int a, int b)   {
+    bool gccons(int c, int d, const CodonStateSpace& statespace)   {
+        int nuc = statespace.GetDifferingPosition(c,d);
+        if (nuc == -1) {
+            return false;
+        }
+        if (nuc == 3)   {
+            return false;
+        }
+        int a = statespace.GetCodonPosition(c,nuc);
+        int b = statespace.GetCodonPosition(d,nuc);
         return ((a == 0) && (b == 3)) || ((a == 3) && (b == 0)) || ((a == 1) && (b == 2)) || ((a == 2) && (b == 1));
     }
 
@@ -38,7 +47,7 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
             double totnonsynrate = 0;
             int a = i->first;
             for (int b = 0; b < ncodon; b++) {
-                if (gccons(a,b))    {
+                if (gccons(a, b, *statespace))    {
                     if (codonsubmatrix(a, b) != 0) {
                         if (!statespace->Synonymous(a, b)) {
                             totnonsynrate += codonsubmatrix(a, b);
@@ -58,7 +67,7 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
         bnonsyn += tmpbnonsyn;
 
         for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
-            if (gccons(i->first.first, i->first.second))    {
+            if (gccons(i->first.first, i->first.second, *statespace))    {
                 if (!statespace->Synonymous(i->first.first, i->first.second)) {
                     nnonsyn += i->second;
                 }
@@ -84,7 +93,7 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
             double totnonsynrate = 0;
             int a = i->first;
             for (int b = 0; b < ncodon; b++) {
-                if (gccons(a,b))    {
+                if (gccons(a, b, *statespace))    {
                     if (codonsubmatrix(a, b) != 0) {
                         if (!statespace->Synonymous(a, b)) {
                             totnonsynrate += codonsubmatrix(a, b);
@@ -103,7 +112,7 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
         bnonsyn += tmpbnonsyn;
 
         for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
-            if (gccons(i->first.first, i->first.second))    {
+            if (gccons(i->first.first, i->first.second, *statespace))    {
                 if (!statespace->Synonymous(i->first.first, i->first.second)) {
                     nnonsyn += i->second;
                 }
