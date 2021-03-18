@@ -116,7 +116,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         cerr << '\n';
         GetModel()->MasterReceiveGeneArray(array);
         ofstream os((name + ".genebranchdsomsuffstat").c_str());
-        os << GetModel()->GetNgene() << '\n';
+        // os << GetModel()->GetNgene() << '\n';
         for (int i=0; i<GetModel()->GetNgene(); i++) {
             os << array[i] << '\n';
         }
@@ -126,7 +126,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             globdsomss.Add(array[i]);
         }
         ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
-        gos << "1\n";
+        // gos << "1\n";
         gos << globdsomss << '\n';
         cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
     }
