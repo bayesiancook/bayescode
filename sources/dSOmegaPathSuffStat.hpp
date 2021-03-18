@@ -2,6 +2,7 @@
 
 #include "PathSuffStat.hpp"
 #include "RelativePathSuffStat.hpp"
+#include "CodonSubMatrix.hpp"
 
 // in relative time
 class dSOmegaPathSuffStat : public SuffStat {
