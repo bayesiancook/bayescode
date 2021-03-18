@@ -128,6 +128,18 @@ class FastCoevolModel: public ProbModel {
         return *tree;
     }
 
+    int GetNcont() const    {
+        return Ncont;
+    }
+
+    int GetDim() const  {
+        return sigma->GetDim();
+    }
+
+    const CovMatrix& GetCovMatrix() const   {
+        return *sigma;
+    }
+
     const Link* GetRoot() const {
         return tree->GetRoot();
     }
@@ -308,6 +320,14 @@ class FastCoevolModel: public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    void PrintEntries(ostream& os) const   {
+        os << "dS\n";
+        os << "dN/dS\n";
+        for (int i=0; i<GetNcont(); i++)    {
+            os << contdata->GetCharacterName(i) << '\n';
+        }
+    }
+
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL";
         os << "\tlength";
@@ -324,14 +344,6 @@ class FastCoevolModel: public ProbModel {
             os << "\tk_" << i;
         }
         os << '\n';
-    }
-
-    double GetMeanOmega() const	{
-        return branchomega->GetMean();
-    }
-
-    const BranchSelector<double>& GetOmegaTree() const  {
-        return *branchomega;
     }
 
     const MultivariateBrownianTreeProcess* GetProcess() const {
