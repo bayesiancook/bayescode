@@ -3,13 +3,16 @@
 #include "PathSuffStat.hpp"
 #include "RelativePathSuffStat.hpp"
 #include "CodonSubMatrix.hpp"
+// #include "GeneBranchArray,hpp"
 
 // in relative time
 class dSOmegaPathSuffStat : public SuffStat {
 
     public:
 
-    dSOmegaPathSuffStat() {}
+    dSOmegaPathSuffStat() {
+        Clear();
+    }
     ~dSOmegaPathSuffStat() {}
 
     void Clear()    {
@@ -144,6 +147,13 @@ class dSOmegaPathSuffStat : public SuffStat {
         return *this;
     }
 
+    void Normalize(double factor)   {
+        nsyn *= factor;
+        nnonsyn *= factor;
+        bsyn *= factor;
+        bnonsyn *= factor;
+    }
+        
     //! return size when put into an MPI buffer
     unsigned int GetMPISize() const { return 4; }
 
@@ -195,15 +205,31 @@ istream& operator>>(istream& is, dSOmegaPathSuffStat& suffstat)    {
 class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffStat>    {
 
   public:
+
     //! constructor (param: tree)
     dSOmegaPathSuffStatBranchArray(const Tree &intree)
-        : SimpleBranchArray<dSOmegaPathSuffStat>(intree) {}
+        : SimpleBranchArray<dSOmegaPathSuffStat>(intree) {
+            Clear();
+    }
+
+    //! copy constructor
+    dSOmegaPathSuffStatBranchArray(const dSOmegaPathSuffStatBranchArray& from) :
+        SimpleBranchArray<dSOmegaPathSuffStat>(from.GetTree()) {
+            Clear();
+    }
+
     ~dSOmegaPathSuffStatBranchArray() {}
 
     //! set all suff stats to 0
     void Clear() {
         for (int i = 0; i < GetNbranch(); i++) {
             (*this)[i].Clear();
+        }
+    }
+
+    void Normalize(double factor)   {
+        for (int i = 0; i < GetNbranch(); i++) {
+            (*this)[i].Normalize(factor);
         }
     }
 
@@ -228,6 +254,31 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             RecursiveAddSuffStat(link->Out(), codonsubmatrixarray, pathsuffstatarray, branchlength, branchomega);
+        }
+    }
+
+    //! compute omega suff stats and do a member-wise addition -- for Muse and
+    //! Gaut codon matrices
+    //! site-homogeneous version
+    void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix,
+                     const NodeSelector<PathSuffStat> &pathsuffstatarray,
+                     const BranchSelector<double>& branchlength, double omega)  {
+        RecursiveAddSuffStat(GetTree().GetRoot(), codonsubmatrix, pathsuffstatarray, branchlength, omega);
+    }
+
+    void RecursiveAddSuffStat(const Link *from,
+                              const MGOmegaCodonSubMatrix& codonsubmatrix,
+                              const NodeSelector<PathSuffStat> &pathsuffstatarray,
+                              const BranchSelector<double>& branchlength, double omega) {
+        if (!from->isRoot()) {
+            (*this)[from->GetBranch()->GetIndex()].AddSuffStat(
+                codonsubmatrix,
+                pathsuffstatarray.GetVal(from->GetNode()->GetIndex()),
+                branchlength.GetVal(from->GetBranch()->GetIndex()),
+                omega);
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveAddSuffStat(link->Out(), codonsubmatrix, pathsuffstatarray, branchlength, omega);
         }
     }
 
@@ -306,7 +357,5 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
             is >> (*this)[i];
         }
     }
-
-
-
 };
+

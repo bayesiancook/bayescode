@@ -131,6 +131,8 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    const Tree& GetTree() const {return *tree;}
+
     void Allocate() {
 
         // Branch lengths
@@ -1175,5 +1177,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         MasterReceiveAdditive(GeneLogPrior);
         lnL = 0;
         MasterReceiveAdditive(lnL);
+    }
+
+    void SlaveAdddSOmegaPathSuffStat(vector<dSOmegaPathSuffStatBranchArray>& array)   {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AdddSOmegaPathSuffStat(array[gene]);
+        }
     }
 };

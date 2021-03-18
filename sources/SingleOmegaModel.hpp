@@ -8,6 +8,8 @@
 #include "ProbModel.hpp"
 #include "Tree.hpp"
 
+#include "dSOmegaPathSuffStat.hpp"
+
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
  * model
@@ -603,6 +605,24 @@ class SingleOmegaModel : public ProbModel {
     //-------------------
     // Traces and Monitors
     // ------------------
+
+    void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatBranchArray& into) const {
+        PathSuffStatNodeArray pathsuffstatarray(*tree);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
+    }
+
+    /*
+    void TracedSOmegaPathSuffStat(ostream& os) const    {
+        PathSuffStatNodeArray pathsuffstatarray(*tree);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        dSOmegaPathSuffStatBranchArray dsompathsuffstatarray;
+        dsompathsuffstatarray.AddSuffStat(*codonmatrix, *pathsuffstatarray, *branchlength, omega);
+        os << dsompathsuffstatarray;
+    }
+    */
 
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";

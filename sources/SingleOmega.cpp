@@ -83,6 +83,19 @@ class SingleOmegaChain : public Chain {
         model->ToStream(param_os);
     }
 
+    /*
+    void SavePoint() override {
+        Chain::SavePoint();
+        ofstream pos((name + ".branchdsomsuffstat").c_str(), ios_base::app);
+        GetModel()->TracePostProb(pos);
+    }
+
+    void MakeFiles(int force) override {
+        Chain::MakeFiles(force);
+        ofstream dsomos((name + ".branchdsomsuffstat").c_str());
+    }
+    */
+
     //! return the model, with its derived type (unlike ProbModel::GetModel)
     SingleOmegaModel *GetModel() { return static_cast<SingleOmegaModel *>(model); }
 

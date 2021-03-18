@@ -104,6 +104,38 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             GetNextPoint();
         }
     }
+
+    void MasterReaddSOmegaPathSuffStat() {
+        vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->MasterUpdate();
+        }
+        cerr << '\n';
+        GetModel()->MasterReceiveGeneArray(array);
+        ofstream os((name + "meanbranchdsomsuffstat").c_str());
+        os << GetModel()->GetNgene() << '\n';
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            os << array[i] << '\n';
+        }
+        cerr << "dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+    }
+
+    void SlaveReaddSOmegaPathSuffStat() {
+        vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetLocalNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            GetModel()->SlaveUpdate();
+            GetModel()->SlaveAdddSOmegaPathSuffStat(array);
+        }
+        for (int i=0; i<GetModel()->GetLocalNgene(); i++) {
+            array[i].Normalize(1.0/size);
+        }
+        GetModel()->SlaveSendGeneArray(array);
+    }
+
 };
 
 int main(int argc, char *argv[]) {
@@ -119,6 +151,7 @@ int main(int argc, char *argv[]) {
     int until = -1;
     string name;
     int ppred = 0;
+    int dsom = 0;
 
     try {
         if (argc == 1) {
@@ -154,6 +187,8 @@ int main(int argc, char *argv[]) {
                 } else {
                     i--;
                 }
+            } else if (s == "-dsomss")    {
+                dsom = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -179,6 +214,13 @@ int main(int argc, char *argv[]) {
             sample->MasterPostPred();
         } else {
             sample->SlavePostPred();
+        }
+    } else if (dsom)    {
+        if (! myid) {
+            sample->MasterReaddSOmegaPathSuffStat();
+        }
+        else    {
+            sample->SlaveReaddSOmegaPathSuffStat();
         }
     } else {
         if (!myid) {

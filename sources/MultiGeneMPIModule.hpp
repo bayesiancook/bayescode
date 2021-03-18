@@ -218,6 +218,59 @@ class MultiGeneMPIModule {
         }
     }
 
+
+    template <class T>
+    void SlaveSendGeneArray(const vector<T> &v) const   {
+        int ngene = GetLocalNgene();
+        MPIBuffer buffer(ngene * MPISize(v[0]));
+        for (int gene = 0; gene < ngene; gene++) {
+            buffer << v[gene];
+        }
+        MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
+    }
+
+    template <class T>
+    void MasterReceiveGeneArray(vector<T> &v) {
+        int thusfar = 0;
+        for (int proc = 1; proc < GetNprocs(); proc++) {
+            int ngene = GetSlaveNgene(proc);
+            MPIBuffer buffer(ngene * MPISize(v[0]));
+            MPI_Status stat;
+            MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
+                     &stat);
+            for (int gene = 0; gene < ngene; gene++) {
+                buffer >> v[thusfar];
+                thusfar++;
+            }
+        }
+    }
+
+    template <class T, class U>
+    void SlaveSendGeneArray(const vector<T> &v, const vector<U> &w) const {
+        int ngene = GetLocalNgene();
+        MPIBuffer buffer(ngene * (MPISize(v[0]) + MPISize(w[0])));
+        for (int gene = 0; gene < ngene; gene++) {
+            buffer << v[gene] << w[gene];
+        }
+        MPI_Send(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, 0, TAG1, MPI_COMM_WORLD);
+    }
+
+    template <class T, class U>
+    void MasterReceiveGeneArray(vector<T> &v, vector<U> &w) {
+        int thusfar = 0;
+        for (int proc = 1; proc < GetNprocs(); proc++) {
+            int ngene = GetSlaveNgene(proc);
+            MPIBuffer buffer(ngene * (MPISize(v[0]) + MPISize(w[0])));
+            MPI_Status stat;
+            MPI_Recv(buffer.GetBuffer(), buffer.GetSize(), MPI_DOUBLE, proc, TAG1, MPI_COMM_WORLD,
+                     &stat);
+            for (int gene = 0; gene < ngene; gene++) {
+                buffer >> v[thusfar] >> w[thusfar];
+                thusfar++;
+            }
+        }
+    }
+
   protected:
     int myid;
     int nprocs;
