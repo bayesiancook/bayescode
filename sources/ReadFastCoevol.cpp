@@ -3,7 +3,7 @@
 #include <fstream>
 #include "Sample.hpp"
 #include "FastCoevolModel.hpp"
-#include "DistBranchArray.hpp"
+#include "DistBranchNodeArray.hpp"
 #include "MeanCovMatrix.hpp"
 using namespace std;
 
@@ -79,6 +79,9 @@ class FastCoevolSample : public Sample {
     void Read() {
         cerr << size << " points to read\n";
 
+        DistBranchNodeArray meansynrate(GetModel()->GetTree());
+        DistBranchNodeArray meanomega(GetModel()->GetTree());
+
 		int dim = GetModel()->GetCovMatrix().GetDim();
 		MeanCovMatrix  mat(dim);
 
@@ -86,9 +89,22 @@ class FastCoevolSample : public Sample {
             cerr << '.';
             GetNextPoint();
             GetModel()->Update();
+            meansynrate.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 0);
+            meanomega.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
 			mat.Add(GetModel()->GetCovMatrix());
         }
         cerr << '\n';
+    
+        meansynrate.Sort();
+        ofstream sos((name + ".postmeands.tre").c_str());
+        meansynrate.MedianToStream(sos);
+        cerr << "postmean dS tree in " << name << ".postmeands.tre\n"; 
+
+        meanomega.Sort();
+        ofstream omos((name + ".postmeanomega.tre").c_str());
+        meanomega.MedianToStream(omos);
+        cerr << "postmean omega tree in " << name << ".postmeanomega.tre\n"; 
+
 		mat.Normalize();
 		ofstream mos((name + ".cov").c_str());
 		mos << "entries are in the following order:\n";

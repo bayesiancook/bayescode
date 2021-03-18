@@ -140,6 +140,10 @@ class FastCoevolModel: public ProbModel {
         return *sigma;
     }
 
+    const Chronogram& GetChronogram() const   {
+        return *chronogram;
+    }
+
     const Link* GetRoot() const {
         return tree->GetRoot();
     }
@@ -346,8 +350,8 @@ class FastCoevolModel: public ProbModel {
         os << '\n';
     }
 
-    const MultivariateBrownianTreeProcess* GetProcess() const {
-        return process;
+    const MultivariateBrownianTreeProcess& GetProcess() const {
+        return *process;
     }
 
     void Trace(ostream &os) const override {
