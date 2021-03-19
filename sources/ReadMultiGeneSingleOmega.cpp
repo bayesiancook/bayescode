@@ -123,22 +123,31 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             os << array[i] << '\n';
         }
         cerr << "gene dsom path suffstats in " << name << ".genebranchdsomsuffstat\n";
+
         dSOmegaPathSuffStatBranchArray globdsomss(GetModel()->GetTree());
-        SimpleBranchArray<double> meanofratios(GetModel()->GetTree(), 0);
-        int totnsite = 0;
+
+        SimpleBranchArray<double> totS(GetModel()->GetTree(), 0);
+        SimpleBranchArray<double> totN(GetModel()->GetTree(), 0);
         for (int i=0; i<GetModel()->GetNgene(); i++) {
             int nsite = GetModel()->GetLocalGeneNsite(i);
             globdsomss.Add(array[i]);
-            SimpleBranchArray<double> tmp(GetModel()->GetTree(), 0);
-            array[i].GetdNdS(tmp);
+            SimpleBranchArray<double> tmpS(GetModel()->GetTree(), 0);
+            SimpleBranchArray<double> tmpN(GetModel()->GetTree(), 0);
+            array[i].GetdS(tmpS);
+            array[i].GetdN(tmpN);
             for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
-                meanofratios[i] += nsite * tmp[i];
+                totS[i] += nsite * tmpS[i];
+                totN[i] += nsite * tmpN[i];
             }
-            totnsite += nsite;
-            
         }
+        SimpleBranchArray<double> meanofratios(GetModel()->GetTree(), 0);
         for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
-            meanofratios[i] /= totnsite;
+            if (totS[i])    {
+                meanofratios[i] = totN[i] / totS[i];
+            }
+            else    {
+                meanofratios[i] = 0;
+            }
         }
         SimpleBranchArray<double> ratioofmeans(GetModel()->GetTree(), 0);
         globdsomss.GetdNdS(ratioofmeans);
