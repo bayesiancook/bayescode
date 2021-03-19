@@ -131,19 +131,19 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             globdsomss.Add(array[i]);
             SimpleBranchArray<double> tmp(GetModel()->GetTree(), 0);
             array[i].GetdNdS(tmp);
-            for (int i=0; i<GetModel()->GetNbranch(); i++)  {
+            for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
                 meanofratios[i] += nsite * tmp[i];
             }
             totnsite += nsite;
             
         }
-        for (int i=0; i<GetModel()->GetNbranch(); i++)  {
-            ratioofmeans[i] /= totnsite;
+        for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
+            meanofratios[i] /= totnsite;
         }
         SimpleBranchArray<double> ratioofmeans(GetModel()->GetTree(), 0);
         globdsomss.GetdNdS(meanofratios);
         ofstream compos((name + ".compdNdS").c_str());
-        for (int i=0; i<GetModel()->GetNbranch(); i++)  {
+        for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
             compos << ratioofmeans[i] << '\t' << meanofratios[i] << '\n';
         }
 
