@@ -147,6 +147,7 @@ class CoevolModel: public ProbModel {
 
     CoevolModel(const CodonSequenceAlignment* incodondata, const ContinuousData* incontdata, const Tree* intree, const vector<double>& inrootmean, const vector<double>& inrootvar) {
 
+        mappingapprox = 0;
         coevolmode = 2;
 
         codondata = incodondata;
