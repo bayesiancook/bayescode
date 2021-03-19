@@ -124,9 +124,29 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
         cerr << "gene dsom path suffstats in " << name << ".genebranchdsomsuffstat\n";
         dSOmegaPathSuffStatBranchArray globdsomss(GetModel()->GetTree());
+        SimpleBranchArray<double> meanofratios(GetModel()->GetTree(), 0);
+        int totnsite = 0;
         for (int i=0; i<GetModel()->GetNgene(); i++) {
+            int nsite = GetModel()->GetLocalGeneNsite(i);
             globdsomss.Add(array[i]);
+            SimpleBranchArray<double> tmp(GetModel()->GetTree(), 0);
+            array[i].GetdNdS(tmp);
+            for (int i=0; i<GetModel()->GetNbranch(); i++)  {
+                meanofratios[i] += nsite * tmp[i];
+            }
+            totnsite += nsite;
+            
         }
+        for (int i=0; i<GetModel()->GetNbranch(); i++)  {
+            ratioofmeans[i] /= totnsite;
+        }
+        SimpleBranchArray<double> ratioofmeans(GetModel()->GetTree(), 0);
+        globdsomss.GetdNdS(meanofratios);
+        ofstream compos((name + ".compdNdS").c_str());
+        for (int i=0; i<GetModel()->GetNbranch(); i++)  {
+            compos << ratioofmeans[i] << '\t' << meanofratios[i] << '\n';
+        }
+
         ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
         // gos << "1\n";
         gos << globdsomss << '\n';

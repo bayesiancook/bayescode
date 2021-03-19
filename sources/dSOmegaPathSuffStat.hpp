@@ -147,6 +147,10 @@ class dSOmegaPathSuffStat : public SuffStat {
         return *this;
     }
 
+    double GetdNdS() const    {
+        return (nnonsyn / bnonsyn) / (nsyn / bsyn);
+    }
+
     void Normalize(double factor)   {
         nsyn *= factor;
         nnonsyn *= factor;
@@ -309,6 +313,13 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     void Add(const dSOmegaPathSuffStatBranchArray& from)    {
         for (int i=0; i<GetNbranch(); i++) {
             (*this)[i].Add(from.GetVal(i));
+        }
+    }
+
+    void GetdNdS(BranchArray<double>& into) const    {
+    // void GetdNdS(vector<double>& into) const    {
+        for (int i=0; i<GetNbranch(); i++)   {
+            into[i] = GetVal(i).GetdNdS();
         }
     }
 
