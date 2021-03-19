@@ -27,8 +27,8 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
         if (nuc == 3)   {
             return false;
         }
-        int a = statespace.GetCodonPosition(c,nuc);
-        int b = statespace.GetCodonPosition(d,nuc);
+        int a = statespace.GetCodonPosition(nuc,c);
+        int b = statespace.GetCodonPosition(nuc,d);
         return ((a == 0) && (b == 3)) || ((a == 3) && (b == 0)) || ((a == 1) && (b == 2)) || ((a == 2) && (b == 1));
     }
 
