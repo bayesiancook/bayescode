@@ -148,6 +148,9 @@ class dSOmegaPathSuffStat : public SuffStat {
     }
 
     double GetdNdS() const    {
+        if ((!bsyn) || (!bnonsyn) || (!nsyn))    {
+            return 0;
+        }
         return (nnonsyn / bnonsyn) / (nsyn / bsyn);
     }
 
