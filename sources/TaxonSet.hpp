@@ -32,6 +32,7 @@ class TaxonSet {
     //! constructor, based on a vector of taxon names
     TaxonSet(const std::vector<std::string> &names);
     //! constructor, based on a vector of taxon names
+    TaxonSet(std::string filename);
     TaxonSet(const TaxonSet &from);
     //! default constructor
     ~TaxonSet() = default;

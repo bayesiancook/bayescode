@@ -22,6 +22,20 @@ TaxonSet::TaxonSet(const std::vector<string> &names) : Ntaxa(names.size()), taxl
     }
 }
 
+TaxonSet::TaxonSet(std::string filename)    {
+    ifstream is(filename);
+    if (!is)    {
+        cerr << "error in taxonset: non existing file\n";
+        exit(1);
+    }
+    is >> Ntaxa;
+    taxlist.assign(Ntaxa, "");
+    for (int i=0; i<Ntaxa; i++) {
+        is >> taxlist[i];
+        taxmap[taxlist[i]] = i+1;
+    }
+}
+
 TaxonSet::TaxonSet(const TaxonSet &from)
     : Ntaxa(from.GetNtaxa()), taxmap(from.taxmap), taxlist(from.taxlist) {}
 
