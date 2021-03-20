@@ -110,12 +110,6 @@ class FastCoevolModel: public ProbModel {
         cerr << "allocate ok\n";
     }
 
-    void SetCoevol(const NodeSelector<double>& inchronogram, const NodeSelector<vector<double> >& inprocess)   {
-        chronogram->Copy(inchronogram);
-        process->Copy(inprocess);
-        Update();
-    }
-
     //-------------------
     // Accessors
     // ------------------
