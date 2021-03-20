@@ -3,6 +3,7 @@
 #include "PathSuffStat.hpp"
 #include "RelativePathSuffStat.hpp"
 #include "CodonSubMatrix.hpp"
+#include "PoissonSuffStat.hpp"
 // #include "GeneBranchArray,hpp"
 
 // in relative time
@@ -116,6 +117,14 @@ class dSOmegaPathSuffStat : public SuffStat {
         nnonsyn += from.nnonsyn;
         bsyn += from.bsyn;
         bnonsyn += from.bnonsyn;
+    }
+
+    void TodSSuffStat(PoissonSuffStat& suffstat, double omega) const  {
+        suffstat.AddSuffStat(nsyn + nnonsyn, bsyn + omega*bnonsyn);
+    }
+
+    void ToOmSuffStat(PoissonSuffStat& suffstat, double l) const  {
+        suffstat.AddSuffStat(nnonsyn, l*bnonsyn);
     }
 
     int GetCount() const {
@@ -245,6 +254,18 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     void Clear() {
         for (int i = 0; i < GetNbranch(); i++) {
             (*this)[i].Clear();
+        }
+    }
+
+    void TodSSuffStat(BranchArray<PoissonSuffStat>& suffstat, const BranchSelector<double>& omega) const {
+        for (int i = 0; i < GetNbranch(); i++) {
+            GetVal(i).TodSSuffStat(suffstat[i], omega.GetVal(i));
+        }
+    }
+
+    void ToOmSuffStat(BranchArray<PoissonSuffStat>& suffstat, const BranchSelector<double>& l) const {
+        for (int i = 0; i < GetNbranch(); i++) {
+            GetVal(i).ToOmSuffStat(suffstat[i], l.GetVal(i));
         }
     }
 

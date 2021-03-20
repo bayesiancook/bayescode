@@ -6,7 +6,8 @@ template<class T> class DistBranchArray   {
 
     public:
 
-    DistBranchArray(const Tree& intree) : tree(intree), branchdist(intree.GetNbranch(), list<T>()), counter(0)  {}
+    DistBranchArray(const Tree& intree) : tree(intree), branchdist(intree.GetNbranch(), list<T>()), counter(0)  {
+    }
 
     virtual const Tree &GetTree() const { return tree; }
     const Link* GetRoot() const { return tree.GetRoot(); }
@@ -45,18 +46,31 @@ template<class T> class DistBranchArray   {
         return *i;
     }
 
-    void TabulateMean(ostream& os) const	{
-        os << "#NodeName\tmean\tmedian\tmin95\tmax95\n";
-        RecursiveTabulateMean(os, GetRoot());
+    void TabulateMean(ostream& os, bool nodename = true, bool leafonly = false) const	{
+        if (nodename || leafonly)   {
+            os << "#NodeName\tmean\tmedian\tmin95\tmax95\n";
+        }
+        else    {
+            os << "#tax1\ttax2\t\tmean\tmedian\tmin95\tmax95\n";
+        }
+        RecursiveTabulateMean(os, GetRoot(), nodename, leafonly);
     }
 
-    void RecursiveTabulateMean(ostream& os, const Link* from) const {
-        if (! from->isRoot())   {
+    void RecursiveTabulateMean(ostream& os, const Link* from, bool nodename, bool leafonly) const {
+        if ((! from->isRoot()) && ((! leafonly) || (from->isLeaf())) )   {
             int index = from->GetBranch()->GetIndex();
-            os << from->GetNode()->GetName() << '\t' << GetMean(index) << '\t' << GetQuantile(index, 0.5) << '\t' << GetQuantile(index, 0.025) << '\t' << GetQuantile(index, 0.975) << '\n';
+            if (nodename || leafonly)   {
+                os << from->GetNode()->GetName();
+            }
+            else    {
+                os << GetTree().GetLeftMost(from);
+                os << '\t';
+                os << GetTree().GetRightMost(from);
+            }
+            os << '\t' << GetMean(index) << '\t' << GetQuantile(index, 0.5) << '\t' << GetQuantile(index, 0.025) << '\t' << GetQuantile(index, 0.975) << '\n';
         }
         for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-            RecursiveTabulateMean(os, link->Out());
+            RecursiveTabulateMean(os, link->Out(), nodename, leafonly);
         }
     }
 
