@@ -1,3 +1,4 @@
+
 #include <cmath>
 #include <fstream>
 #include "MultiGeneSample.hpp"
@@ -125,12 +126,15 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         cerr << "gene dsom path suffstats in " << name << ".genebranchdsomsuffstat\n";
 
         dSOmegaPathSuffStatBranchArray globdsomss(GetModel()->GetTree());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            globdsomss.Add(array[i]);
+        }
 
+        /*
         SimpleBranchArray<double> totS(GetModel()->GetTree(), 0);
         SimpleBranchArray<double> totN(GetModel()->GetTree(), 0);
         for (int i=0; i<GetModel()->GetNgene(); i++) {
             int nsite = GetModel()->GetLocalGeneNsite(i);
-            globdsomss.Add(array[i]);
             SimpleBranchArray<double> tmpS(GetModel()->GetTree(), 0);
             SimpleBranchArray<double> tmpN(GetModel()->GetTree(), 0);
             array[i].GetdS(tmpS);
@@ -155,11 +159,18 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         for (int i=0; i<GetModel()->GetTree().GetNbranch(); i++)  {
             compos << ratioofmeans[i] << '\t' << meanofratios[i] << '\n';
         }
+        */
 
         ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
         // gos << "1\n";
         gos << globdsomss << '\n';
         cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+
+        /*
+        ofstream tgos((name + ".meanbranchdnds.tre").c_str());
+        globdsomss.WritedNdSTree(tgos);
+        cerr << "empirical dN/dS in newick format in " << name << ".meanbranchdnds.tre\n";
+        */
 
         GetModel()->MasterReceiveGeneArray(gcconsarray);
         ofstream gcos((name + ".genebranchgcconsdsomsuffstat").c_str());
@@ -176,6 +187,12 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         // gos << "1\n";
         gcgos << gcconsglobdsomss << '\n';
         cerr << "global GC-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat\n";
+
+        /*
+        ofstream tgcgos((name + ".meanbranchgcconsdnds.tre").c_str());
+        globgcconsdsomss.WritedNdSTree(tgcgos);
+        cerr << "empirical dN/dS in newick format in " << name << ".meanbranchgcconsdnds.tre\n";
+        */
     }
 
     void SlaveReaddSOmegaPathSuffStat() {
