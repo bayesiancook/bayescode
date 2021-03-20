@@ -619,6 +619,8 @@ class Tree {
     void ToStreamWithBranchIndex(std::ostream &os, const Link *from) const;
     double ToStreamSimplified(std::ostream &os, const Link *from) const;
 
+  public:
+
     const Link *GetLeftMostLink(const Link *from) const {
         if (from->isLeaf()) {
             return from;
@@ -655,6 +657,7 @@ class Tree {
         return GetRightMost(link->Out());
     }
 
+  private: 
     static void Simplify() { simplify = true; }
 
     void PrintTab(std::ostream &os) const { RecursivePrintTab(os, GetRoot()); }
