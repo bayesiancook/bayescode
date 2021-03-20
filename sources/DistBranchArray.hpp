@@ -101,37 +101,35 @@ template<class T> class DistBranchArray   {
     }
 
     void NodeMeanToStream(ostream& os) const {
-        RecursiveMeanToStream(os, GetRoot());
+        RecursiveNodeMeanToStream(os, GetRoot());
         os << ";\n";
     }
 
     void RecursiveNodeMeanToStream(ostream& os, const Link* from) const {
         if (from->isLeaf()) {
             os << from->GetNode()->GetName();
-            double tmp = GetMean(from->GetBranch()->GetIndex());
-            os << "_" << tmp;
+            os << "_" << GetMean(from->GetBranch()->GetIndex());
         }
         else    {
             os << "(";
-            double m = 0;
-            int c = 0;
             for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-                RecursiveMeanToStream(os,link->Out());
-                os << "_";
-                double tmp = GetMean(from->GetBranch()->GetIndex());
-                os << tmp;
-                m += tmp;
-                c++;
+                RecursiveNodeMeanToStream(os,link->Out());
                 if (link->Next() != from)   {
                     os << ",";
                 }
             }
             os << ")";
-            os << from->GetNode()->GetName();
+            if (! from->isRoot())   {
+                os << GetMean(from->GetBranch()->GetIndex());
+            }
+            else    {
+                os << GetMean(from->Next()->GetBranch()->GetIndex());
+            }
+
         }
         if (! from->isRoot())    {
             os << ":";
-            os << GetMean(from->GetBranch()->GetIndex());
+            os << from->GetBranch()->GetName();
         }
     }
 

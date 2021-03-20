@@ -16,11 +16,6 @@ int main(int argc, char* argv[])    {
     Tree tree(treefile);
     tree.SetIndices();
 
-    tree.ToStream(cerr);
-    cerr << '\n';
-
-    cerr << "create\n";
-    DistBranchArray<double> val(tree);
 
     ifstream is(infile.c_str());
     cerr << "burnin\n";
@@ -32,22 +27,28 @@ int main(int argc, char* argv[])    {
     cerr << '\n';
 
     cerr << "reading\n";
+    dSOmegaPathSuffStatBranchArray dsomss(tree);
     for (int i=0; i<until-burnin; i++)  {
         cerr << '.';
-        dSOmegaPathSuffStatBranchArray dsomss(tree);
-        is >> dsomss;
-        SimpleBranchArray<double> tmp(tree);
-        dsomss.GetdNdS(tmp);
-        val.Add(tmp);
+        dSOmegaPathSuffStatBranchArray tmp(tree);
+        is >> tmp;
+        dsomss.Add(tmp);
     }
     cerr << '\n';
 
-    cerr << "sort\n";
-    val.Sort();
+    DistBranchArray<double> val(tree);
+    SimpleBranchArray<double> tmp(tree);
+    dsomss.GetdNdS(tmp);
+    val.Add(tmp);
+    // val.Sort();
 
-    ofstream os(outfile.c_str());
-    cerr << "tabulate\n";
+    ofstream os((outfile + ".tab").c_str());
     val.TabulateMean(os, 0, 1);
-    cerr << "ok\n";
+
+    ofstream tos((outfile + ".tre").c_str());
+    val.NodeMeanToStream(tos);
+
+    cerr << "tabulated leaf values in " << outfile << ".tab\n";
+    cerr << "newick tree in " << outfile << ".tre\n";
 }
 
