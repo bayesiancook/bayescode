@@ -103,6 +103,14 @@ target_link_libraries(nodeomega ${BASE_LIBS})
 add_executable(readnodeomega "src/ReadDatedNodeOmega.cpp")
 target_link_libraries(readnodeomega ${BASE_LIBS})
 
+# Brownian Ne and omega, site mutsel (branchOmegaNeSiteMutsel)
+add_executable(branchOmegaNeSiteMutsel "src/BranchOmegaNeSiteMutSel.cpp")
+target_link_libraries(branchOmegaNeSiteMutsel bayescode_lib tree_lib)
+
+# Read Brownian Ne and omega, site mutsel (branchOmegaNeSiteMutsel)
+add_executable(readbranchOmegaNeSiteMutsel "src/ReadBranchOmegaNeSiteMutSel.cpp")
+target_link_libraries(readbranchOmegaNeSiteMutsel bayescode_lib tree_lib)
+
 if (TINY)
     message("-- INFO: Compiling uniquely mutselomega, nodetraits, nodemutsel and nodeomega.")
 else ()
