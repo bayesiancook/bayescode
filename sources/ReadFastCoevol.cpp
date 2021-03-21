@@ -19,6 +19,7 @@ class FastCoevolSample : public Sample {
     string modeltype;
     string contdatafile, treefile, rootfile;
     string dsomsuffstatfile;
+    int wndsmode, wnommode;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -46,6 +47,7 @@ class FastCoevolSample : public Sample {
         is >> modeltype;
         is >> contdatafile >> treefile >> rootfile;
         is >> dsomsuffstatfile;
+        is >> wndsmode >> wnommode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -56,7 +58,7 @@ class FastCoevolSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "FASTCOEVOLDNDS") {
-            model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile);
+            model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);

@@ -7,8 +7,12 @@
 #include "Chronogram.hpp"
 #include "dSOmegaPathSuffStat.hpp"
 #include "InverseWishart.hpp"
+#include "ChronoWhiteNoise.hpp"
 
 class FastCoevolModel: public ProbModel {
+
+    int wndsmode;
+    int wnommode;
 
     const Tree *tree;
     const TaxonSet *taxonset;
@@ -35,6 +39,14 @@ class FastCoevolModel: public ProbModel {
     MVBranchExpoLengthArray* branchlength;
     MVBranchExpoMeanArray* branchomega;
 
+    double nuds;
+    ChronoGammaWhiteNoise* wnds;
+    PoissonSuffStatBranchArray* wndssuffstatbrancharray;
+
+    double nuom;
+    ChronoGammaWhiteNoise* wnom;
+    PoissonSuffStatBranchArray* wnomsuffstatbrancharray;
+
     dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
     MultivariateNormalSuffStat* browniansuffstat;
 
@@ -43,7 +55,10 @@ class FastCoevolModel: public ProbModel {
     // Construction and allocation
     // ------------------
 
-    FastCoevolModel(string contdatafile, string treefile, string rootfile, string indsomsuffstatfile)   {
+    FastCoevolModel(string contdatafile, string treefile, string rootfile, string indsomsuffstatfile, int inwndsmode, int inwnommode)   {
+
+        wndsmode = inwndsmode;
+        wnommode = inwnommode;
 
         dsomsuffstatfile = indsomsuffstatfile;
 
@@ -102,8 +117,20 @@ class FastCoevolModel: public ProbModel {
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
 
-        dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
+        nuds = nuom = 1.0;
+        wnds = wnom = 0;
+        if (wndsmode)   {
+            wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 3);
+            wndssuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
+        }
+        if (wnommode)   {
+            wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 3);
+            wnomsuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
+        }
+
         browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
+
+        dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
         ifstream is(dsomsuffstatfile.c_str());
         is >> *dsompathsuffstatarray;
 
@@ -147,6 +174,12 @@ class FastCoevolModel: public ProbModel {
     void Update() override {
         branchlength->Update();
         branchomega->Update();
+        if (wndsmode)   {
+            wnds->SetShape(1.0 / nuds);
+        }
+        if (wnommode)  {
+            wnom->SetShape(1.0 / nuom);
+        }
     }
 
     void PostPred(string name) override {
@@ -168,6 +201,14 @@ class FastCoevolModel: public ProbModel {
         total += KappaLogPrior();
         total += SigmaLogPrior();
         total += BrownianProcessLogPrior();
+        if (wndsmode)   {
+            total += WNdSHyperLogPrior();
+            total += WNdSLogPrior();
+        }
+        if (wnommode)   {
+            total += WNOmHyperLogPrior();
+            total += WNOmLogPrior();
+        }
         return total;
     }
 
@@ -200,6 +241,22 @@ class FastCoevolModel: public ProbModel {
         return process->GetLogProb();
     }
 
+    double WNdSHyperLogPrior() const    {
+        return -nuds/100;
+    }
+
+    double WNdSLogPrior() const {
+        return wnds->GetLogProb();
+    }
+
+    double WNOmHyperLogPrior() const    {
+        return -nuom/100;
+    }
+
+    double WNOmLogPrior() const {
+        return wnom->GetLogProb();
+    }
+
     //-------------------
     //  Log probs for MH moves
     //-------------------
@@ -207,7 +264,15 @@ class FastCoevolModel: public ProbModel {
     double dSOmPathSuffStatLogProb() const {
         double total = 0;
         for (int index=0; index<tree->GetNbranch(); index++)    {
-            total += dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
+            double bl = branchlength->GetVal(index);
+            if (wndsmode)   {
+                bl *= wnds->GetVal(index);
+            }
+            double om = branchomega->GetVal(index);
+            if (wnommode)   {
+                om *= wnom->GetVal(index);
+            }
+            total += dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om);
         }
         return total;
     }
@@ -217,7 +282,15 @@ class FastCoevolModel: public ProbModel {
             return 0;
         }
         int index = from->GetBranch()->GetIndex();
-        return dsompathsuffstatarray->GetVal(index).GetLogProb(branchlength->GetVal(index), branchomega->GetVal(index));
+        double bl = branchlength->GetVal(index);
+        if (wndsmode)   {
+            bl*= wnds->GetVal(index);
+        }
+        double om = branchomega->GetVal(index);
+        if (wnommode)   {
+            om *= wnom->GetVal(index);
+        }
+        return dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om);
     }
 
     double NodeSuffStatLogProb(const Link* from) const {
@@ -228,12 +301,60 @@ class FastCoevolModel: public ProbModel {
         return total;
     }
 
+    double BranchSuffStatLogProbdSIntegrated(const Link*from) const  {
+        if (from->isRoot())   {
+            return 0;
+        }
+        int index = from->GetBranch()->GetIndex();
+        double om = branchomega->GetVal(index);
+        if (wnommode)   {
+            om *= wnom->GetVal(index);
+        }
+        return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nuds);
+    }
+
+    double NodeSuffStatLogProbdSIntegrated(const Link* from) const {
+        double total = BranchSuffStatLogProbdSIntegrated(from);
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            total += BranchSuffStatLogProbdSIntegrated(link->Out());
+        }
+        return total;
+    }
+
+    double BranchSuffStatLogProbOmIntegrated(const Link*from) const  {
+        if (from->isRoot())   {
+            return 0;
+        }
+        int index = from->GetBranch()->GetIndex();
+        double bl = branchlength->GetVal(index);
+        if (wndsmode)   {
+            bl*= wnds->GetVal(index);
+        }
+        return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nuom);
+    }
+
+    double NodeSuffStatLogProbOmIntegrated(const Link* from) const {
+        double total = BranchSuffStatLogProbOmIntegrated(from);
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            total += BranchSuffStatLogProbOmIntegrated(link->Out());
+        }
+        return total;
+    }
+
     double NodeLogPrior(const Link* from) const  {
         return process->GetNodeLogProb(from);
     }
 
     double NodeLogProb(const Link* from) const   {
         return NodeLogPrior(from) + NodeSuffStatLogProb(from);
+    }
+
+    double NodeLogProbdSIntegrated(const Link* from) const   {
+        return NodeLogPrior(from) + NodeSuffStatLogProbdSIntegrated(from);
+    }
+
+    double NodeLogProbOmIntegrated(const Link* from) const   {
+        return NodeLogPrior(from) + NodeSuffStatLogProbOmIntegrated(from);
     }
 
     void NodeUpdate(const Link* from) {
@@ -247,6 +368,22 @@ class FastCoevolModel: public ProbModel {
 
     double KappaLogProb() const {
         return KappaLogPrior() + KappaSuffStatLogProb();
+    }
+
+    void NudSUpdate()   {
+        wnds->SetShape(1.0 / nuds);
+    }
+
+    void NuOmUpdate()   {
+        wnom->SetShape(1.0 / nuom);
+    }
+
+    double NudSHyperLogProb() const {
+        return WNdSHyperLogPrior() + WNdSLogPrior();
+    }
+
+    double NuOmHyperLogProb() const {
+        return WNOmHyperLogPrior() + WNOmLogPrior();
     }
 
     //-------------------
@@ -270,6 +407,12 @@ class FastCoevolModel: public ProbModel {
         for (int rep=0; rep<5; rep++)   {
             MoveTimes();
             MoveBrownianProcess();
+            if (wndsmode)   {
+                MoveNudS();
+            }
+            if (wnommode)   {
+                MoveNuOm();
+            }
             MoveSigma();
             MoveKappa();
         }
@@ -278,13 +421,40 @@ class FastCoevolModel: public ProbModel {
     // Times and Rates
 
     void MoveTimes()    {
-        chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        if (wndsmode)   {
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            ResampleWNdS();
+        }
+        else    {
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        }
     }
 
     void MoveBrownianProcess()  {
-        for (int i=0; i<L+Ncont; i++)   {
-            process->SingleNodeMove(i, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
-            process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+
+        if (wndsmode)   {
+            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            ResampleWNdS();
+        }
+        else    {
+            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        }
+
+        if (wnommode)   {
+            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
+            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
+            ResampleWNOm();
+        }
+        else    {
+            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        }
+
+        for (int i=L; i<L+Ncont; i++)   {
+            process->SingleNodeMove(i, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
+            process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
         }
     }
 
@@ -314,6 +484,28 @@ class FastCoevolModel: public ProbModel {
         }
     }
 
+    void MoveNudS()  {
+        ScalingMove(nuds, 1.0, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+        ScalingMove(nuds, 0.3, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+    }
+
+    void MoveNuOm()  {
+        ScalingMove(nuom, 1.0, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+        ScalingMove(nuom, 0.3, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+    }
+
+    void ResampleWNdS() {
+        wndssuffstatbrancharray->Clear();
+        dsompathsuffstatarray->AddWNdSSuffStat(*wndssuffstatbrancharray, *branchlength, *branchomega, *wnom);
+        wnds->GibbsResample(*wndssuffstatbrancharray);
+    }
+
+    void ResampleWNOm() {
+        wnomsuffstatbrancharray->Clear();
+        dsompathsuffstatarray->AddWNOmSuffStat(*wnomsuffstatbrancharray, *branchlength, *branchomega, *wnds);
+        wnom->GibbsResample(*wnomsuffstatbrancharray);
+    }
+
     //-------------------
     // Traces and Monitors
     // ------------------
@@ -330,6 +522,12 @@ class FastCoevolModel: public ProbModel {
         os << "#logprior\tlnL";
         os << "\tlength";
         os << "\tmeanomega";
+        if (wndsmode)   {
+            os << "\tnuds";
+        }
+        if (wnommode)   {
+            os << "\tnuom";
+        }
         for (int i=0; i<process->GetDim(); i++) {
             for (int j=i+1; j<process->GetDim(); j++)   {
                 os << "\ts_" << i << "_" << j;
@@ -353,6 +551,12 @@ class FastCoevolModel: public ProbModel {
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength();
         os << '\t' << branchomega->GetMean();
+        if (wndsmode)   {
+            os << '\t' << nuds;
+        }
+        if (wnommode)   {
+            os << '\t' << nuom;
+        }
         for (int i=0; i<process->GetDim(); i++) {
             for (int j=i+1; j<process->GetDim(); j++)   {
                 os << '\t' << (*sigma)(i,j);
@@ -370,10 +574,19 @@ class FastCoevolModel: public ProbModel {
     void Monitor(ostream &os) const override {}
 
     void ToStream(ostream &os) const override {
-        os << *chronogram << '\t';
-        os << kappa << '\t';
-        os << *sigma << '\t';
-        os << *process << '\n';
+        os << *chronogram;
+        os << '\t' << kappa;
+        os << '\t' << *sigma;
+        os << '\t' << *process;
+        if (wndsmode)   {
+            os << '\t' << nuds ;
+            os << '\t' << *wnds;
+        }
+        if (wnommode)   {
+            os << '\t' << nuom;
+            os << '\t' << *wnom;
+        }
+        os << '\n';
     }
 
     void FromStream(istream &is) override {
@@ -381,5 +594,13 @@ class FastCoevolModel: public ProbModel {
         is >> kappa;
         is >> *sigma;
         is >> *process;
+        if (wndsmode)   {
+            is >> nuds;
+            is >> *wnds;
+        }
+        if (wnommode)   {
+            is >> nuom;
+            is >> *wnom;
+        }
     }
 };

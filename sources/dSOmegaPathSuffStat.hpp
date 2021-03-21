@@ -112,6 +112,22 @@ class dSOmegaPathSuffStat : public SuffStat {
         return (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega) - l*(bsyn + bnonsyn*omega);
     }
 
+    double GetLogProbdSIntegrated(double l, double omega, double dt, double nu) const   {
+        //double alpha = dt / nu;
+        double alpha = 1.0 / nu;
+        double alphapost = alpha + nsyn + nnonsyn;
+        double betapost = alpha + l*(bsyn + bnonsyn*omega);
+        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega);
+    }
+
+    double GetLogProbOmIntegrated(double l, double omega, double dt, double nu) const   {
+        // double alpha = dt / nu;
+        double alpha = 1.0 / nu;
+        double alphapost = alpha + nnonsyn;
+        double betapost = alpha + l*bnonsyn*omega;
+        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega) - l*bsyn;
+    }
+
     void Add(const dSOmegaPathSuffStat &from) {
         nsyn += from.nsyn;
         nnonsyn += from.nnonsyn;
@@ -125,6 +141,14 @@ class dSOmegaPathSuffStat : public SuffStat {
 
     void ToOmSuffStat(PoissonSuffStat& suffstat, double l) const  {
         suffstat.AddSuffStat(nnonsyn, l*bnonsyn);
+    }
+
+    void AddWNdSSuffStat(PoissonSuffStat& suffstat, double l, double omega) const   {
+        suffstat.AddSuffStat(nsyn + nnonsyn, l*(bsyn + bnonsyn*omega));
+    }
+
+    void AddWNOmSuffStat(PoissonSuffStat& suffstat, double l, double omega) const   {
+        suffstat.AddSuffStat(nnonsyn, l*omega*bnonsyn);
     }
 
     int GetCount() const {
@@ -266,6 +290,18 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     void ToOmSuffStat(BranchArray<PoissonSuffStat>& suffstat, const BranchSelector<double>& l) const {
         for (int i = 0; i < GetNbranch(); i++) {
             GetVal(i).ToOmSuffStat(suffstat[i], l.GetVal(i));
+        }
+    }
+
+    void AddWNdSSuffStat(BranchArray<PoissonSuffStat>& suffstat, const BranchSelector<double>& length, const BranchSelector<double>& omega, const BranchSelector<double>& wnom) const {
+        for (int i = 0; i < GetNbranch(); i++) {
+            GetVal(i).AddWNdSSuffStat(suffstat[i], length.GetVal(i), omega.GetVal(i)*wnom.GetVal(i));
+        }
+    }
+
+    void AddWNOmSuffStat(BranchArray<PoissonSuffStat>& suffstat, const BranchSelector<double>& length, const BranchSelector<double>& omega, const BranchSelector<double>& wnds) const {
+        for (int i = 0; i < GetNbranch(); i++) {
+            GetVal(i).AddWNOmSuffStat(suffstat[i], length.GetVal(i)*wnds.GetVal(i), omega.GetVal(i));
         }
     }
 

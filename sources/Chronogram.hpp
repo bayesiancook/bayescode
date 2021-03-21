@@ -46,6 +46,13 @@ class Chronogram : public SimpleNodeArray<double>   {
         }
     }
 
+    double GetDeltaTime(const Link* from) const {
+        if (from->isRoot()) {
+            return 0;
+        }
+        return GetVal(from->Out()->GetNode()->GetIndex()) - GetVal(from->GetNode()->GetIndex());
+    }
+
     /*
     //! get total log prob summed over all branches
     double GetLogProb() {

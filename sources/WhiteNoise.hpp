@@ -16,8 +16,11 @@
 class GammaWhiteNoise : public SimpleBranchArray<double> {
   public:
 
-    // mode 0 : ugam
-    // mode 1 : wn
+    // mode 0   : ugam
+    // mode 1/2 : wn of mean 1 and variance per unit of time = 1/shape
+    // mode 1   : realized branch variable: integral of wn over time interval = blmean
+    // mode 2   : realized branch variable: mean     of wn over time interval = blmean
+
     GammaWhiteNoise(const Tree &intree, const BranchSelector<double> &inblmean, double inshape, int inmode = 0)
         : SimpleBranchArray<double>(intree), blmean(inblmean), shape(inshape) {
         mode = inmode;
@@ -35,14 +38,20 @@ class GammaWhiteNoise : public SimpleBranchArray<double> {
     void SetShape(double inshape) { shape = inshape; }
 
     double GetAlpha(int i) const {
-        if (mode)   {
+        if (mode == 2)  {
+            return shape*blmean.GetVal(i);
+        }
+        if (mode == 1)   {
             return shape*blmean.GetVal(i);
         }
         return shape;
     }
 
     double GetBeta(int i) const {
-        if (mode)   {
+        if (mode == 2)  {
+            return shape*blmean.GetVal(i);
+        }
+        if (mode == 1)   {
             return shape;
         }
         return shape / blmean.GetVal(i);

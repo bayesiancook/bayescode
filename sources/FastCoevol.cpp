@@ -14,11 +14,12 @@ class FastCoevolChain : public Chain {
     string modeltype;
     string contdatafile, treefile, rootfile;
     string dsomsuffstatfile;
+    int wndsmode, wnommode;
 
   public:
-    FastCoevolChain(string incontdatafile, string intreefile, string inrootfile, string indsomsuffstatfile, int inevery, int inuntil, string inname,
+    FastCoevolChain(string incontdatafile, string intreefile, string inrootfile, string indsomsuffstatfile, int inwndsmode, int inwnommode, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("FASTCOEVOLDNDS"), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), dsomsuffstatfile(indsomsuffstatfile) {
+        : modeltype("FASTCOEVOLDNDS"), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), dsomsuffstatfile(indsomsuffstatfile), wndsmode(inwndsmode), wnommode(inwnommode) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -34,7 +35,7 @@ class FastCoevolChain : public Chain {
     }
 
     void New(int force) override {
-        model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile);
+        model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -52,6 +53,7 @@ class FastCoevolChain : public Chain {
         is >> modeltype;
         is >> contdatafile >> treefile >> rootfile;
         is >> dsomsuffstatfile;
+        is >> wndsmode >> wnommode;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -61,7 +63,7 @@ class FastCoevolChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "FASTCOEVOLDNDS") {
-            model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile);
+            model = new FastCoevolModel(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -79,6 +81,7 @@ class FastCoevolChain : public Chain {
         param_os << GetModelType() << '\n';
         param_os << contdatafile << '\t' << treefile << '\t' << rootfile << '\n';
         param_os << dsomsuffstatfile << '\n';
+        param_os << wndsmode << '\t' << wnommode << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -111,6 +114,8 @@ int main(int argc, char *argv[]) {
         int force = 1;
         int every = 1;
         int until = -1;
+        int wndsmode = 0;
+        int wnommode = 0;
 
         try {
             if (argc == 1) {
@@ -133,6 +138,12 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-r")   {
                     i++;
                     rootfile = argv[i];
+                } else if (s == "-wn")  {
+                    wndsmode = wnommode = 1;
+                } else if (s == "-wnds")    {
+                    wndsmode = 1;
+                } else if (s == "-wnom")    {
+                    wnommode = 1;
                 } else if (s == "-f") {
                     force = 1;
                 } else if ((s == "-x") || (s == "-extract")) {
@@ -159,7 +170,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new FastCoevolChain(contdatafile, treefile, rootfile, dsomsuffstatfile, every, until, name, force);
+        chain = new FastCoevolChain(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";
