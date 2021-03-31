@@ -197,9 +197,11 @@ branchOmegaNe: tiny
 	@rm -rf _branchOmegaNe
 	@mkdir _branchOmegaNe
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel run =======================================\e[0m"
-	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _branchOmegaNe/branchomegamutsel_gal4
+	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 20 _branchOmegaNe/branchomegamutsel_gal4
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
 	bin/readbranchOmegaNeSiteMutsel --ss _branchOmegaNe/branchomegamutsel_gal4
+	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
+	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_gal4
 
 .PHONY: dated
 dated: tiny
