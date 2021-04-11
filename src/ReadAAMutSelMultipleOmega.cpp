@@ -14,6 +14,10 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
+    ValueArg<string> confidence_interval{
+        "c", "confidence_interval", "Confidence interval for omega", false, "", "string", cmd};
+    SwitchArg omega_knot{
+        "", "omega_0", "Confidence interval for omega_0 (predicted) instead of omega", cmd};
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
     ValueArg<double> omega_pp{
@@ -25,12 +29,12 @@ int main(int argc, char *argv[]) {
     ReadAAMutSelDSBDPOmegaArgParse read_args(cmd);
     cmd.parse(argc, argv);
 
-    std::string chain_name = read_args.GetChainName();
+    string chain_name = read_args.GetChainName();
     int burnin = read_args.GetBurnIn();
     int every = read_args.GetEvery();
     int size = read_args.GetSize();
 
-    std::ifstream is{chain_name + ".param"};
+    ifstream is{chain_name + ".param"};
     ChainDriver::fake_read(is);  // We're not interested in the ChainDriver of the param file
     AAMutSelMultipleOmegaModel model(is);
     ChainReader cr{model, chain_name + ".chain"};
@@ -42,17 +46,17 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < size; i++) {
             cerr << '.';
             cr.skip(every);
-            model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
+            model.PostPred("ppred_" + chain_name + "_" + to_string(i) + ".ali");
         }
         cerr << '\n';
     } else if (read_args.ss.getValue()) {
-        std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
+        vector<vector<double>> sitestat(model.GetNsite(), {0});
 
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             for (int i = 0; i < model.GetNsite(); i++) {
-                std::vector<double> const &profile = model.GetProfile(i);
+                vector<double> const &profile = model.GetProfile(i);
                 if (sitestat[i].size() != profile.size()) {
                     sitestat[i].resize(profile.size(), 0);
                 };
@@ -73,9 +77,52 @@ int main(int argc, char *argv[]) {
         }
         cerr << "mean site-specific profiles in " << chain_name << ".siteprofiles\n";
         cerr << '\n';
+    } else if (!read_args.confidence_interval.getValue().empty()) {
+        double ci = stod(read_args.confidence_interval.getValue());
+        vector<vector<double>> omega(model.GetNsite());
+        vector<double> gene_omega{};
+        double upper = max(ci, 1.0 - ci);
+        double lower = min(ci, 1.0 - ci);
+
+        for (int step = 0; step < size; step++) {
+            cerr << '.';
+            cr.skip(every);
+            double mean{};
+            for (int site = 0; site < model.GetNsite(); site++) {
+                double val = read_args.omega_knot.getValue() ? model.GetPredictedSiteOmegaKnot(site)
+                                                             : model.GetSiteOmega(site);
+                omega[site].push_back(val);
+                mean += val;
+            }
+            gene_omega.push_back(mean / model.GetNsite());
+        }
+        cerr << '\n';
+
+        string filename{chain_name + ".ci" + read_args.confidence_interval.getValue() + ".tsv"};
+        ofstream os(filename.c_str());
+        os << "#site\tomega_lower\tgene_omega\tomega_upper\n";
+
+        double mean = accumulate(gene_omega.begin(), gene_omega.end(), 0.0) / size;
+        sort(gene_omega.begin(), gene_omega.end());
+        auto pt_up = static_cast<size_t>(upper * gene_omega.size());
+        if (pt_up >= gene_omega.size()) { pt_up = gene_omega.size() - 1; }
+        double up = gene_omega.at(pt_up);
+        double down = gene_omega.at(static_cast<size_t>(lower * gene_omega.size()));
+        os << "#Mean\t" << down << '\t' << mean << '\t' << up << '\n';
+
+        for (int i = 0; i < model.GetNsite(); i++) {
+            mean = accumulate(omega[i].begin(), omega[i].end(), 0.0) / size;
+            sort(omega[i].begin(), omega[i].end());
+            pt_up = static_cast<size_t>(upper * omega[i].size());
+            if (pt_up >= omega[i].size()) { pt_up = omega[i].size() - 1; }
+            up = omega[i].at(pt_up);
+            down = omega[i].at(static_cast<size_t>(lower * omega[i].size()));
+            os << i + 1 << '\t' << down << '\t' << mean << '\t' << up << '\n';
+        }
+        cerr << '\n';
     } else {
-        std::vector<double> omegappgto(model.GetNsite(), 0);
-        std::vector<double> omega(model.GetNsite(), 0);
+        vector<double> omegappgto(model.GetNsite(), 0);
+        vector<double> omega(model.GetNsite(), 0);
 
         for (int step = 0; step < size; step++) {
             cerr << '.';
