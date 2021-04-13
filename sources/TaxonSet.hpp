@@ -60,6 +60,7 @@ inline int TaxonSet::GetTaxonIndex(std::string intaxon) const {
     std::map<std::string, int>::const_iterator i = taxmap.find(intaxon);
     if (i == taxmap.end()) {
         std::cerr << "error in TaxonSet: taxon not found\n";
+        std::cerr << "(" << intaxon << ")" << '\n';
         exit(1);
     }
     return i->second - 1;
