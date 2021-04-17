@@ -35,6 +35,31 @@ void ToNewick(ostream& os, const BranchSelector<double>& ds, const BranchSelecto
     os << ";\n";
 }
 
+void RecursiveBranchToNewick(ostream& os, const Link* from, const BranchSelector<double>& v)    {
+    if (from->isLeaf()) {
+        os << from->GetNode()->GetName();
+    }
+    else    {
+        os << "(";
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveBranchToNewick(os, link->Out(), v);
+            if (link->Next() != from)   {
+                os << ",";
+            }
+        }
+        os << ")";
+    }
+    if (! from->isRoot())	{
+        os << ":";
+        os << v.GetVal(from->GetBranch()->GetIndex());
+    }
+}
+
+void BranchToNewick(ostream& os, const BranchSelector<double>& v)   {
+    RecursiveBranchToNewick(os, v.GetTree().GetRoot(), v);
+    os << ";\n";
+}
+
 int main(int argc, char* argv[])    {
 
     string suffstatfile = argv[1];
@@ -56,10 +81,23 @@ int main(int argc, char* argv[])    {
     ToNewick(tos, ds, dnds);
     cerr << "newick tree in " << outfile << ".tre\n";
 
-    /*
-    ofstream os((outfile + ".tab").c_str());
-    val.TabulateMean(os, 0, 1);
-    cerr << "tabulated leaf values in " << outfile << ".tab\n";
-    */
+    SimpleBranchArray<double> dscount(tree);
+    dsomss.GetSynCount(dscount);
+    SimpleBranchArray<double> dsbeta(tree);
+    dsomss.GetSynBeta(dsbeta);
+    SimpleBranchArray<double> dncount(tree);
+    dsomss.GetNonSynCount(dncount);
+    SimpleBranchArray<double> dnbeta(tree);
+    dsomss.GetNonSynBeta(dnbeta);
+
+    ofstream dScos((outfile + ".counts_dS.dnd").c_str());
+    BranchToNewick(dScos, dscount);
+    ofstream dSbos((outfile + ".counts_dS_norm.dnd").c_str());
+    BranchToNewick(dSbos, dsbeta);
+    ofstream dNcos((outfile + ".counts_dN.dnd").c_str());
+    BranchToNewick(dNcos, dncount);
+    ofstream dNbos((outfile + ".counts_dN_norm.dnd").c_str());
+    BranchToNewick(dNbos, dnbeta);
+    cerr << "suffstats in " << outfile << ".counts_dX[_norm].dnd\n";
 }
 

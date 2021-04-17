@@ -135,6 +135,13 @@ class dSOmegaPathSuffStat : public SuffStat {
         bnonsyn += from.bnonsyn;
     }
 
+    void Add(double syncount, double synbeta, double nonsyncount, double nonsynbeta)    {
+        nsyn += syncount;
+        nnonsyn += nonsyncount;
+        bsyn += synbeta;
+        bnonsyn += nonsynbeta;
+    }
+
     void TodSSuffStat(PoissonSuffStat& suffstat, double omega) const  {
         suffstat.AddSuffStat(nsyn + nnonsyn, bsyn + omega*bnonsyn);
     }
@@ -151,15 +158,15 @@ class dSOmegaPathSuffStat : public SuffStat {
         suffstat.AddSuffStat(nnonsyn, l*omega*bnonsyn);
     }
 
-    int GetCount() const {
+    double GetCount() const {
         return nsyn + nnonsyn;
     }
 
-    int GetSynCount() const {
+    double GetSynCount() const {
         return nsyn;
     }
 
-    int GetNonSynCount() const  {
+    double GetNonSynCount() const  {
         return nnonsyn;
     }
 
@@ -390,6 +397,12 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
     }
 
+    void Add(const Tree& syncount, const Tree& synbeta, const Tree& nonsyncount, const Tree& nonsynbeta)    {
+        for (int i=0; i<GetNbranch(); i++) {
+            (*this)[i].Add(syncount.GetBranchLength(i), synbeta.GetBranchLength(i), nonsyncount.GetBranchLength(i), nonsynbeta.GetBranchLength(i));
+        }
+    }
+
     void GetdNdS(BranchArray<double>& into) const    {
         for (int i=0; i<GetNbranch(); i++)   {
             into[i] = GetVal(i).GetdNdS();
@@ -405,6 +418,30 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     void GetdN(BranchArray<double>& into) const    {
         for (int i=0; i<GetNbranch(); i++)   {
             into[i] = GetVal(i).GetdN();
+        }
+    }
+
+    void GetSynCount(BranchArray<double>& into) const    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            into[i] = GetVal(i).GetSynCount();
+        }
+    }
+
+    void GetSynBeta(BranchArray<double>& into) const    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            into[i] = GetVal(i).GetSynBeta();
+        }
+    }
+
+    void GetNonSynCount(BranchArray<double>& into) const    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            into[i] = GetVal(i).GetNonSynCount();
+        }
+    }
+
+    void GetNonSynBeta(BranchArray<double>& into) const    {
+        for (int i=0; i<GetNbranch(); i++)  {
+            into[i] = GetVal(i).GetNonSynBeta();
         }
     }
 

@@ -242,6 +242,11 @@ class Tree {
     //! return total number of tips
     unsigned int GetSize() const { return GetSize(GetRoot()); }
 
+    // interprets the (string) name field of the branch pointed to by given link
+    // as a branch length (as a float, or double) -- not safe
+    double GetBranchLength(const Link *link) const { return atof(GetBranchName(link).c_str()); }
+    double GetBranchLength(int index) const { return atof(GetBranchName(index).c_str()); }
+
   private:
     // return const pointer to node with given index
     const Node *GetNode(int index) const {
@@ -271,10 +276,6 @@ class Tree {
         }
         return i->second;
     }
-
-    // interprets the (string) name field of the branch pointed to by given link
-    // as a branch length (as a float, or double) -- not safe
-    double GetBranchLength(const Link *link) const { return atof(GetBranchName(link).c_str()); }
 
     // recursively calculates the maximum height (or depth) from the given link
     // down to all of its downstream tips
@@ -339,6 +340,15 @@ class Tree {
     std::string GetNodeName(const Link *link) const /*override*/ {
         return link->GetNode()->GetName();
     }
+
+    std::string GetBranchName(int index) const  {
+        return GetBranch(index)->GetName();
+    }
+
+    std::string GetNodeName(int index) const    {
+        return GetNode(index)->GetName();
+    }
+
 
     void EraseInternalNodeName();
     void EraseInternalNodeName(Link *from);
