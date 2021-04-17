@@ -320,13 +320,17 @@ class SingleOmegaModel : public ProbModel {
     //! pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
-    //! \brief global update function (includes the stochastic mapping of
-    //! character history)
-    void Update() override {
+    void FastUpdate() {
         if (blmode == 0) {
             blhypermean->SetAllBranches(1.0 / lambda);
         }
         TouchMatrices();
+    }
+
+    //! \brief global update function (includes the stochastic mapping of
+    //! character history)
+    void Update() override {
+        FastUpdate();
         ResampleSub(1.0);
     }
 
@@ -337,10 +341,7 @@ class SingleOmegaModel : public ProbModel {
     //! \brief post pred function (does the update of all fields before doing the
     //! simulation)
     void PostPred(string name) override {
-        if (blmode == 0) {
-            blhypermean->SetAllBranches(1.0 / lambda);
-        }
-        TouchMatrices();
+        FastUpdate();
         phyloprocess->PostPredSample(name);
     }
 
@@ -619,6 +620,17 @@ class SingleOmegaModel : public ProbModel {
         pathsuffstatarray.Clear();
         pathsuffstatarray.AddSuffStat(*phyloprocess);
         into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
+    }
+
+    // relative to AT
+    void AddNucRates(vector<vector<double>>& q) const {
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                if (i!=j)   {
+                    q[i][j] += (*nucmatrix)(i,j) / (*nucmatrix)(0,3);
+                }
+            }
+        }
     }
 
     /*

@@ -1190,4 +1190,25 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->AddGCConsdSOmegaPathSuffStat(array[gene]);
         }
     }
+
+    int rrindex(int i, int j) const {
+        return (i < j) ? (2 * Nnuc - i - 1) * i / 2 + j - i - 1
+                       : (2 * Nnuc - j - 1) * j / 2 + i - j - 1;
+    }
+
+    void AddNucRates(vector<vector<vector<double>>>& rates, vector<vector<double>>& stats) {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            const vector<double>& rr = nucrelratearray->GetVal(gene);
+            const vector<double>& stat = nucstatarray->GetVal(gene);
+            for (int i=0; i<Nnuc; i++)  {
+                stats[gene][i] += stat[i];
+                for (int j=0; j<Nnuc; j++)  {
+                    if (i != j) {
+                        double rate = rr[rrindex(i,j)] * stat[j] / rr[2] / stat[3];
+                        rates[gene][i][j] += rate;
+                    }
+                }
+            }
+        }
+    }
 };

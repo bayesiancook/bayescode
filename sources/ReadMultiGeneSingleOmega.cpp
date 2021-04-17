@@ -106,6 +106,75 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
     }
 
+    void MasterReadNucRates() {
+        cerr << size << " points to read\n";
+
+        vector<vector<vector<double>>> meannucrates(GetNgene(), vector<vector<double>>(Nnuc, vector<double>(Nnuc, 0)));
+        vector<vector<double>> meanstat(GetNgene(), vector<double>(Nnuc, 0));
+        vector<double> meanom(GetNgene(), 0);
+
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->AddNucRates(meannucrates, meanstat);
+            const vector<double> &om = GetModel()->GetOmegaArray();
+            for (int gene = 0; gene < GetNgene(); gene++) {
+                meanom[gene] += om[gene];
+            }
+        }
+        cerr << '\n';
+        for (int gene = 0; gene < GetNgene(); gene++) {
+            meanom[gene] /= size;
+            for (int i=0; i<Nnuc; i++)  {
+                for (int j=0; j<Nnuc; j++)  {
+                    meannucrates[gene][i][j] /= size;
+                }
+            }
+            for (int i=0; i<Nnuc; i++)  {
+                meanstat[gene][i] /= size;
+            }
+        }
+
+        ofstream os((name + ".postmeangenenucrates").c_str());
+        os << "#gene";
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                if (i != j) {
+                    os << '\t' << DNAletters[i] << DNAletters[j];
+                }
+            }
+        }
+        for (int i=0; i<Nnuc; i++)  {
+            os << '\t' << "pi" << DNAletters[i];
+        }
+        os << "\t%GC";
+        os << "\tomega";
+        os << '\n';
+        for (int gene = 0; gene < GetNgene(); gene++) {
+            os << GetModel()->GetLocalGeneName(gene);
+            for (int i=0; i<Nnuc; i++)  {
+                for (int j=0; j<Nnuc; j++)  {
+                    if (i != j) {
+                        os << '\t' << meannucrates[gene][i][j];
+                    }
+                }
+            }
+            for (int i=0; i<Nnuc; i++)  {
+                os << '\t' << meanstat[gene][i];
+            }
+            os << '\t' << meanstat[gene][1] + meanstat[gene][2];
+            os << '\t' << meanom[gene];
+            os << '\n';
+        }
+        cerr << "posterior mean nuc rates across genes in " << name << ".postmeangenenucrates\n";
+    }
+
+    void SlaveReadNucRates() {
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+        }
+    }
+
     void MasterReaddSOmegaPathSuffStat() {
         vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
         vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
@@ -193,6 +262,7 @@ int main(int argc, char *argv[]) {
     string name;
     int ppred = 0;
     int dsom = 0;
+    int nuc = 0;
 
     try {
         if (argc == 1) {
@@ -230,6 +300,8 @@ int main(int argc, char *argv[]) {
                 }
             } else if (s == "-dsomss")    {
                 dsom = 1;
+            } else if (s == "-nuc") {
+                nuc = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -255,6 +327,13 @@ int main(int argc, char *argv[]) {
             sample->MasterPostPred();
         } else {
             sample->SlavePostPred();
+        }
+    } else if (nuc) {
+        if (! myid) {
+            sample->MasterReadNucRates();
+        }
+        else    {
+            sample->SlaveReadNucRates();
         }
     } else if (dsom)    {
         if (! myid) {
