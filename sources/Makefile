@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
+ALL= testbranchdnds getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 # ALL= readbranchdnds fastbranchom fastcoevol readfastcoevol readbranchtree epsrobustbranchom readepsrobustbranchom multigeneepsrobustbranchom branchom readbranchom coevol readcoevol multigenecoevol globom codonm2a readaamutselsparse readaamutselddp aamutselsparsem9 multigeneaamutselsparsem9 codonm9 multigenecodonm9 codonm8 multigeneaamutselsparse aamutselsparse aamutselgdp aamutseldp fastempselac selempfreq fastselac multigeneaamutselm2 aamutselm2 discselac multigenediscselac empselac selac multigeneselac globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp diffsel readdiffsel multigenediffsel diffseldsparse readdiffseldsparse multigenediffseldsparse readmultigenediffseldsparse multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom ppredtest multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -50,6 +50,10 @@ $(PROGSDIR)/readbranchtree$(EXEEXT): ReadMeanBranchTree.o $(OBJS)
 readbranchdnds$(EXEEXT): $(PROGSDIR)/readbranchdnds$(EXEEXT)
 $(PROGSDIR)/readbranchdnds$(EXEEXT): ReadBranchdNdS.o $(OBJS)
 	$(CC) ReadBranchdNdS.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+testbranchdnds$(EXEEXT): $(PROGSDIR)/testbranchdnds$(EXEEXT)
+$(PROGSDIR)/testbranchdnds$(EXEEXT): TestBranchdNdS.o $(OBJS)
+	$(CC) TestBranchdNdS.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 getbranchdnds$(EXEEXT): $(PROGSDIR)/getbranchdnds$(EXEEXT)
 $(PROGSDIR)/getbranchdnds$(EXEEXT): TabulateBranchdNdS.o $(OBJS)

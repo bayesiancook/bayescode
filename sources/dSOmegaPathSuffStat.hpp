@@ -128,11 +128,11 @@ class dSOmegaPathSuffStat : public SuffStat {
         return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega) - l*bsyn;
     }
 
-    void Add(const dSOmegaPathSuffStat &from) {
+    void Add(const dSOmegaPathSuffStat &from, double omega = 1.0) {
         nsyn += from.nsyn;
         nnonsyn += from.nnonsyn;
         bsyn += from.bsyn;
-        bnonsyn += from.bnonsyn;
+        bnonsyn += omega*from.bnonsyn;
     }
 
     void Add(double syncount, double synbeta, double nonsyncount, double nonsynbeta)    {
@@ -391,9 +391,9 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
     }
 
-    void Add(const dSOmegaPathSuffStatBranchArray& from)    {
+    void Add(const dSOmegaPathSuffStatBranchArray& from, double omega = 1)    {
         for (int i=0; i<GetNbranch(); i++) {
-            (*this)[i].Add(from.GetVal(i));
+            (*this)[i].Add(from.GetVal(i), omega);
         }
     }
 
@@ -407,6 +407,30 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         for (int i=0; i<GetNbranch(); i++)   {
             into[i] = GetVal(i).GetdNdS();
         }
+    }
+
+    double GetTotaldS() const {
+        double M = 0;
+        double L = 0;
+        for (int i=0; i<GetNbranch(); i++)   {
+            M += GetVal(i).GetSynCount();
+            L += GetVal(i).GetSynBeta();
+        }
+        return M/L;
+    }
+
+    double GetTotaldN() const {
+        double M = 0;
+        double L = 0;
+        for (int i=0; i<GetNbranch(); i++)   {
+            M += GetVal(i).GetNonSynCount();
+            L += GetVal(i).GetNonSynBeta();
+        }
+        return M/L;
+    }
+
+    double GetMeandNdS() const  {
+        return GetTotaldN() / GetTotaldS();
     }
 
     void GetdS(BranchArray<double>& into) const    {
@@ -443,6 +467,34 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         for (int i=0; i<GetNbranch(); i++)  {
             into[i] = GetVal(i).GetNonSynBeta();
         }
+    }
+
+    double GetMaxZS(const BranchSelector<double>& dS) const {
+        double max = 0;
+        for (int i=0; i<GetNbranch(); i++)  {
+            double obs = GetVal(i).GetSynCount();
+            double exp = GetVal(i).GetSynBeta()*dS.GetVal(i);
+            double y = (obs - exp) / (sqrt(exp) + 1);
+            double z = fabs(y);
+            if (max < z)    {
+                max = z;
+            }
+        }
+        return max;
+    }
+
+    double GetMaxZN(const BranchSelector<double>& dS, const BranchSelector<double>& beta, double omega) const {
+        double max = 0;
+        for (int i=0; i<GetNbranch(); i++)  {
+            double obs = GetVal(i).GetNonSynCount();
+            double exp = GetVal(i).GetNonSynBeta()*dS.GetVal(i)*beta.GetVal(i)*omega;
+            double y = (obs - exp) / (sqrt(exp) + 1);
+            double z = fabs(y);
+            if (max < z)    {
+                max = z;
+            }
+        }
+        return max;
     }
 
     //! return total log prob over array, given an array of omega_i's of same size
