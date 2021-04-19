@@ -60,6 +60,26 @@ void BranchToNewick(ostream& os, const BranchSelector<double>& v)   {
     os << ";\n";
 }
 
+void RecursiveTabulate(ostream& os, const Link* from, const BranchSelector<double>& v, bool leaf)  {
+    if (leaf)   {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << v.GetVal(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    else    {
+        if (! from->isRoot())   {
+            os << v.GetTree().GetLeftMost(from) << '\t' << v.GetTree().GetRightMost(from) << '\t' << v.GetVal(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulate(os, link->Out(), v, leaf);
+    }
+}
+
+void Tabulate(ostream& os, const BranchSelector<double>& v, bool leaf) {
+    RecursiveTabulate(os, v.GetTree().GetRoot(), v, leaf);
+}
+
 int main(int argc, char* argv[])    {
 
     string suffstatfile = argv[1];
@@ -70,16 +90,32 @@ int main(int argc, char* argv[])    {
     tree.SetIndices();
 
     dSOmegaPathSuffStatBranchArray dsomss(tree);
+    dSOmegaPathSuffStatBranchArray tmpdsomss(tree);
     ifstream is(suffstatfile.c_str());
-    is >> dsomss;
+    string s;
+    int count = 0;
+    while (getline(is,s))	{
+        istringstream iss(s);
+        iss >> tmpdsomss;
+        dsomss.Add(tmpdsomss);
+        count++;
+    }
+    cerr << "number of lines read : " << count << '\n';
     SimpleBranchArray<double> dnds(tree);
     dsomss.GetdNdS(dnds);
     SimpleBranchArray<double> ds(tree);
     dsomss.GetdS(ds);
 
-    ofstream tos((outfile + ".tre").c_str());
+    ofstream tos((outfile + ".dsom.tre").c_str());
     ToNewick(tos, ds, dnds);
     cerr << "newick tree in " << outfile << ".tre\n";
+
+    ofstream tabos((outfile+ ".alldsom.tab").c_str());
+    Tabulate(tabos, dnds, false);
+    ofstream ltabos((outfile+ ".leafdsom.tab").c_str());
+    Tabulate(ltabos, dnds, true);
+    cerr << "tabulated branch dN/dS values in : " << outfile << ".dsom.tab\n";
+    cerr << "for terminal branches only       : " << outfile << ".leafdsom.tab\n";
 
     SimpleBranchArray<double> dscount(tree);
     dsomss.GetSynCount(dscount);
