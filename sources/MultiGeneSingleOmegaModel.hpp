@@ -94,6 +94,11 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     double GeneLogPrior;
 
   public:
+
+    int GetBLMode() const   {
+        return blmode;
+    }
+
     //-------------------
     // Construction and allocation
     //-------------------
