@@ -80,6 +80,23 @@ void Tabulate(ostream& os, const BranchSelector<double>& v, bool leaf) {
     RecursiveTabulate(os, v.GetTree().GetRoot(), v, leaf);
 }
 
+void RecursiveTabulateAll(ostream& os, const Link* from, const vector<dSOmegaPathSuffStatBranchArray>& array)    {
+    if (from->isLeaf()) {
+        os << from->GetNode()->GetName();
+        for (size_t i=0; i<array.size(); i++)   {
+           os << '\t' << array[i].GetVal(from->GetBranch()->GetIndex()).GetdS();
+        }
+        os << '\n';
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulateAll(os, link->Out(), array);
+    }
+}
+
+void TabulateAll(ostream& os, const vector<dSOmegaPathSuffStatBranchArray>& array) {
+    RecursiveTabulateAll(os, array[0].GetTree().GetRoot(), array);
+}
+
 int main(int argc, char* argv[])    {
 
     string suffstatfile = argv[1];
@@ -109,6 +126,9 @@ int main(int argc, char* argv[])    {
         genedsomss[i].Add(tmp);
     }
 
+    ofstream alltabos((outfile + ".allgenes.leafdsom.tab").c_str());
+    TabulateAll(alltabos, genedsomss);
+
     // get gene omega's
     vector<double> omega(Ngene, 0);
     for (int i=0; i<Ngene; i++) {
@@ -128,6 +148,7 @@ int main(int argc, char* argv[])    {
     weighteddsomss.GetdS(ds);
 
     ofstream zos((outfile + ".z").c_str());
+    zos << "#\tgene\tomega\tZscore_dS\tZscore_dN/dS\n";
     dSOmegaPathSuffStatBranchArray totdsomss(tree);
     int nincluded = 0;
     for (int i=0; i<Ngene; i++) {
@@ -162,26 +183,5 @@ int main(int argc, char* argv[])    {
 
     ofstream ssos((outfile + ".branchdsomsuffstat").c_str());
     ssos << totdsomss << '\n';
-
-    /*
-    SimpleBranchArray<double> dscount(tree);
-    dsomss.GetSynCount(dscount);
-    SimpleBranchArray<double> dsbeta(tree);
-    dsomss.GetSynBeta(dsbeta);
-    SimpleBranchArray<double> dncount(tree);
-    dsomss.GetNonSynCount(dncount);
-    SimpleBranchArray<double> dnbeta(tree);
-    dsomss.GetNonSynBeta(dnbeta);
-
-    ofstream dScos((outfile + ".counts_dS.dnd").c_str());
-    BranchToNewick(dScos, dscount);
-    ofstream dSbos((outfile + ".counts_dS_norm.dnd").c_str());
-    BranchToNewick(dSbos, dsbeta);
-    ofstream dNcos((outfile + ".counts_dN.dnd").c_str());
-    BranchToNewick(dNcos, dncount);
-    ofstream dNbos((outfile + ".counts_dN_norm.dnd").c_str());
-    BranchToNewick(dNbos, dnbeta);
-    cerr << "suffstats in " << outfile << ".counts_dX[_norm].dnd\n";
-    */
 }
 
