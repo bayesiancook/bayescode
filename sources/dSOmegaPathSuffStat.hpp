@@ -140,6 +140,11 @@ class dSOmegaPathSuffStat : public SuffStat {
         nnonsyn += nonsyncount;
         bsyn += synbeta;
         bnonsyn += nonsynbeta;
+        if ((syncount < 0) || (synbeta < 0) || (nonsyncount < 0) || (nonsynbeta < 0))	{
+            cerr << "error in dsompath: adding negative suff stats\n";
+            cerr << syncount << '\t' << synbeta << '\t' << nonsyncount << '\t' << nonsynbeta << '\n';
+            exit(1);
+        }
     }
 
     void TodSSuffStat(PoissonSuffStat& suffstat, double omega) const  {
