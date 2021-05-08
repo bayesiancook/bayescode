@@ -249,6 +249,36 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         nucmode = innucmode;
     }
 
+    const Tree& GetTree() const {
+        return *tree;
+    }
+
+    const MultivariateBrownianTreeProcess& GetProcess() const {
+        return *process;
+    }
+
+    int GetNcont() const    {
+        return Ncont;
+    }
+
+    int GetDim() const  {
+        return sigma->GetDim();
+    }
+
+    const CovMatrix& GetCovMatrix() const   {
+        return *sigma;
+    }
+
+    const Chronogram& GetChronogram() const   {
+        return *chronogram;
+    }
+
+    const Link* GetRoot() const {
+        return tree->GetRoot();
+    }
+
+    void NoUpdate() {}
+
     void FastUpdate() {
         branchlength->Update();
         branchomega->Update();
@@ -331,6 +361,14 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
     //-------------------
     // Traces and Monitors
     //-------------------
+
+    void PrintEntries(ostream& os) const   {
+        os << "dS\n";
+        os << "dN/dS\n";
+        for (int i=0; i<GetNcont(); i++)    {
+            os << contdata->GetCharacterName(i) << '\n';
+        }
+    }
 
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\t";
@@ -476,8 +514,6 @@ class MultiGeneCoevolModel : public MultiGeneProbModel {
         nucmatrix->CopyStationary((*nucstatarray)[0]);
         nucmatrix->CorruptMatrix();
     }
-
-    void NoUpdate() {}
 
     //-------------------
     // Log Prior and Likelihood

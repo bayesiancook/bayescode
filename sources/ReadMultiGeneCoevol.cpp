@@ -1,0 +1,277 @@
+
+#include <cmath>
+#include <fstream>
+#include "MultiGeneSample.hpp"
+#include "MultiGeneCoevolModel.hpp"
+#include "DistBranchNodeArray.hpp"
+#include "MeanCovMatrix.hpp"
+using namespace std;
+
+MPI_Datatype Propagate_arg;
+
+class MultiGeneCoevolSample : public MultiGeneSample {
+  private:
+    string modeltype, datafile, contdatafile, treefile, rootfile;
+    GeneticCodeType codetype;
+    int nucmode;
+
+  public:
+    string GetModelType() { return modeltype; }
+
+    const MultiGeneCoevolModel *GetModel() const { return (MultiGeneCoevolModel *)model; }
+    MultiGeneCoevolModel *GetModel() { return (MultiGeneCoevolModel *)model; }
+
+    MultiGeneCoevolSample(string filename, int inburnin, int inevery, int inuntil, int myid,
+                               int nprocs)
+        : MultiGeneSample(filename, inburnin, inevery, inuntil, myid, nprocs) {
+        Open();
+    }
+
+    void Open() {
+        // open <name>.param
+        ifstream is((name + ".param").c_str());
+
+        // check that file exists
+        if (!is) {
+            cerr << "error : cannot find file : " << name << ".param\n";
+            exit(1);
+        }
+
+        // read model type, and other standard fields
+        is >> modeltype;
+        is >> datafile >> contdatafile >> treefile >> rootfile;
+        is >> codetype;
+        is >> nucmode;
+        int check;
+        is >> check;
+        if (check) {
+            cerr << "-- Error when reading model\n";
+            exit(1);
+        }
+        is >> chainevery >> chainuntil >> chainsize;
+
+        // make a new model depending on the type obtained from the file
+        if (modeltype == "MULTIGENECOEVOLOMEGA") {
+            model = new MultiGeneCoevolModel(datafile, contdatafile, treefile, rootfile, codetype, myid, nprocs);
+            GetModel()->SetNucMode(nucmode);
+        } else {
+            cerr << "error when opening file " << name << '\n';
+            cerr << modeltype << '\n';
+            exit(1);
+        }
+
+        GetModel()->Allocate();
+        // read model (i.e. chain's last point) from <name>.param
+        model->FromStream(is);
+        // open <name>.chain, and prepare stream and stream iterator
+        OpenChainFile();
+        // now, size is defined (it is the total number of points with which this
+        // Sample object will make all its various posterior averages) all these
+        // points can be accessed to (only once) by repeated calls to GetNextPoint()
+    }
+
+    void MasterRead() {
+        cerr << size << " points to read\n";
+
+        DistBranchNodeArray meansynrate(GetModel()->GetTree());
+        DistBranchNodeArray meanomega(GetModel()->GetTree());
+
+        int dim = GetModel()->GetCovMatrix().GetDim();
+        MeanCovMatrix  mat(dim);
+
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->FastUpdate();
+            meansynrate.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 0);
+            meanomega.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
+			mat.Add(GetModel()->GetCovMatrix());
+        }
+        cerr << '\n';
+
+        meansynrate.Sort();
+        ofstream sos((name + ".postmeands.tre").c_str());
+        meansynrate.MedianToStream(sos);
+        cerr << "postmean dS tree in " << name << ".postmeands.tre\n"; 
+
+        meanomega.Sort();
+        ofstream omos((name + ".postmeanomega.tre").c_str());
+        meanomega.MedianToStream(omos);
+        cerr << "postmean omega tree in " << name << ".postmeanomega.tre\n"; 
+
+        mat.Normalize();
+        ofstream mos((name + ".cov").c_str());
+        mos << "entries are in the following order:\n";
+        GetModel()->PrintEntries(mos);
+        mos << '\n';
+        // mat.SetLatex(tex);
+        mos << mat;
+        cerr << "covariance matrix in " << name << ".cov\n";
+        cerr << '\n';
+    }
+
+    void SlaveRead() {
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+        }
+    }
+
+    /*
+    void MasterReaddSOmegaPathSuffStat() {
+        vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->MasterUpdate();
+        }
+        cerr << '\n';
+
+        GetModel()->MasterReceiveGeneArray(array);
+        ofstream os((name + ".genebranchdsomsuffstat").c_str());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            os << array[i] << '\n';
+        }
+        cerr << "gene dsom path suffstats in " << name << ".genebranchdsomsuffstat\n";
+
+        dSOmegaPathSuffStatBranchArray globdsomss(GetModel()->GetTree());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            globdsomss.Add(array[i]);
+        }
+
+        ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
+        gos << globdsomss << '\n';
+        cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+
+        GetModel()->MasterReceiveGeneArray(gcconsarray);
+        ofstream gcos((name + ".genebranchgcconsdsomsuffstat").c_str());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            gcos << gcconsarray[i] << '\n';
+        }
+        cerr << "GC-cons gene dsom path suffstats in " << name << ".genebranchgcconsdsomsuffstat\n";
+        GCConsdSOmegaPathSuffStatBranchArray gcconsglobdsomss(GetModel()->GetTree());
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            gcconsglobdsomss.Add(gcconsarray[i]);
+        }
+        ofstream gcgos((name + ".meanbranchgcconsdsomsuffstat").c_str());
+        gcgos << gcconsglobdsomss << '\n';
+        cerr << "global GC-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat\n";
+    }
+
+    void SlaveReaddSOmegaPathSuffStat() {
+        vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetLocalNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetLocalNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            GetModel()->SlaveUpdate();
+            GetModel()->SlaveAdddSOmegaPathSuffStat(array);
+            GetModel()->SlaveAddGCConsdSOmegaPathSuffStat(gcconsarray);
+        }
+        for (int i=0; i<GetModel()->GetLocalNgene(); i++) {
+            array[i].Normalize(1.0/size);
+            gcconsarray[i].Normalize(1.0/size);
+        }
+        GetModel()->SlaveSendGeneArray(array);
+        GetModel()->SlaveSendGeneArray(gcconsarray);
+    }
+    */
+
+};
+
+int main(int argc, char *argv[]) {
+    int myid = 0;
+    int nprocs = 0;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+
+    int burnin = 0;
+    int every = 1;
+    int until = -1;
+    string name;
+    int ppred = 0;
+    int dsom = 0;
+
+    try {
+        if (argc == 1) {
+            throw(0);
+        }
+
+        int i = 1;
+        while (i < argc) {
+            string s = argv[i];
+            if (s == "-ppred") {
+                ppred = 1;
+            } else if ((s == "-x") || (s == "-extract")) {
+                i++;
+                if (i == argc) throw(0);
+                s = argv[i];
+                if (!IsInt(s)) {
+                    throw(0);
+                }
+                burnin = atoi(argv[i]);
+                i++;
+                if (i == argc) throw(0);
+                s = argv[i];
+                if (IsInt(s)) {
+                    every = atoi(argv[i]);
+                    i++;
+                    if (i == argc) throw(0);
+                    s = argv[i];
+                    if (IsInt(s)) {
+                        until = atoi(argv[i]);
+                    } else {
+                        i--;
+                    }
+                } else {
+                    i--;
+                }
+            } else if (s == "-dsomss")    {
+                dsom = 1;
+            } else {
+                if (i != (argc - 1)) {
+                    throw(0);
+                }
+                name = argv[i];
+            }
+            i++;
+        }
+        if (name == "") {
+            throw(0);
+        }
+    } catch (...) {
+        cerr << "readglobom [-x <burnin> <every> <until>] <chainname> \n";
+        cerr << '\n';
+        exit(1);
+    }
+
+    MultiGeneCoevolSample *sample =
+        new MultiGeneCoevolSample(name, burnin, every, until, myid, nprocs);
+
+    if (ppred) {
+        if (!myid) {
+            sample->MasterPostPred();
+        } else {
+            sample->SlavePostPred();
+        }
+    } else if (dsom)    {
+        /*
+        if (! myid) {
+            sample->MasterReaddSOmegaPathSuffStat();
+        }
+        else    {
+            sample->SlaveReaddSOmegaPathSuffStat();
+        }
+        */
+    } else {
+        if (!myid) {
+            sample->MasterRead();
+        } else {
+            sample->SlaveRead();
+        }
+    }
+
+    MPI_Finalize();
+}
