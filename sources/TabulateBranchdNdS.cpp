@@ -131,5 +131,12 @@ int main(int argc, char* argv[])    {
     cerr << "tabulated branch dN/dS values in : " << basename << ".dsom.tab\n";
     cerr << "for terminal branches only       : " << basename << ".leafdsom.tab\n";
 
+    ofstream stabos((basename + ".allds.tab").c_str());
+    Tabulate(stabos, ds, false);
+    ofstream sltabos((basename + ".leafds.tab").c_str());
+    Tabulate(sltabos, ds, true);
+    cerr << "tabulated branch dS values in : " << basename << ".ds.tab\n";
+    cerr << "for terminal branches only       : " << basename << ".leafds.tab\n";
+
 }
 
