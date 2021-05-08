@@ -84,7 +84,7 @@ class MultiGeneCoevolChain : public MultiGeneChain {
 
         if (modeltype == "MULTIGENECOEVOLOMEGA") {
             model = new MultiGeneCoevolModel(datafile, contdatafile, treefile, rootfile, codetype, myid, nprocs);
-	    GetModel()->SetNucMode(nucmode);
+            GetModel()->SetNucMode(nucmode);
         } else {
             cerr << "error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
