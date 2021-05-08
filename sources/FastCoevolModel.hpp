@@ -149,6 +149,10 @@ class FastCoevolModel: public ProbModel {
         return *tree;
     }
 
+    const MultivariateBrownianTreeProcess& GetProcess() const {
+        return *process;
+    }
+
     int GetNcont() const    {
         return Ncont;
     }
@@ -540,10 +544,6 @@ class FastCoevolModel: public ProbModel {
             os << "\tk_" << i;
         }
         os << '\n';
-    }
-
-    const MultivariateBrownianTreeProcess& GetProcess() const {
-        return *process;
     }
 
     void Trace(ostream &os) const override {
