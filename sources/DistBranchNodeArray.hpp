@@ -118,6 +118,31 @@ class DistBranchNodeArray   {
         }
     }
 
+    void BranchTreeToStream(ostream& os) const {
+        RecursiveBranchTreeToStream(os, GetRoot());
+        os << ";\n";
+    }
+
+    void RecursiveBranchTreeToStream(ostream& os, const Link* from) const {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName();
+        }
+        else    {
+            os << "(";
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                RecursiveBranchTreeToStream(os,link->Out());
+                if (link->Next() != from)   {
+                    os << ",";
+                }
+            }
+            os << ")";
+        }
+        if (! from->isRoot())    {
+            os << ":";
+            os << GetBranchMean(from->GetBranch()->GetIndex());
+        }
+    }
+
     private:
 
     const Tree& tree;

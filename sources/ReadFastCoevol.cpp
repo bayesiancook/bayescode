@@ -107,6 +107,10 @@ class FastCoevolSample : public Sample {
         meanomega.MedianToStream(omos);
         cerr << "postmean omega tree in " << name << ".postmeanomega.tre\n"; 
 
+        ofstream cos((name + ".postmeanchrono.tre").c_str());
+        meanomega.BranchTreeToStream(cos);
+        cerr << "postmean chronogram in " << name << ".postmeanchrono.tre\n"; 
+
 		mat.Normalize();
 		ofstream mos((name + ".cov").c_str());
 		mos << "entries are in the following order:\n";
