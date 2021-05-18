@@ -1190,6 +1190,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    void SlaveAddGCCodonPathSuffStat(vector<GCCodonPathSuffStatBranchArray>& array)   {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AddGCCodonPathSuffStat(array[gene]);
+        }
+    }
+
     void SlaveAddGCConsdSOmegaPathSuffStat(vector<GCConsdSOmegaPathSuffStatBranchArray>& array)   {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->AddGCConsdSOmegaPathSuffStat(array[gene]);
