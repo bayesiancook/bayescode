@@ -40,6 +40,39 @@ class Chronogram : public SimpleNodeArray<double>   {
         return age;
     }
 
+    void SetAgesFromTree()  {
+        double rootage = RecursiveSetAgesFromTree(GetRoot());
+        cerr << "root age : " << rootage << '\n';
+        Rescale(1.0 / rootage);
+    }
+
+    double RecursiveSetAgesFromTree(const Link* from) {
+        double ret = 0;
+        if (from->isLeaf()) {
+            (*this)[from->GetNode()->GetIndex()] = 0;
+            ret = 0;
+        }
+        else    {
+            double max = 0;
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                double tmp = RecursiveSetAgesFromTree(link->Out());
+                tmp += tree.GetBranchLength(link);
+                if (max < tmp)  {
+                    max = tmp;
+                }
+                else    {
+                    if (fabs(max-tmp) > 1e-5)   {
+                        cerr << "error: not a chronogram\n";
+                        exit(1);
+                    }
+                }
+            }
+            (*this)[from->GetNode()->GetIndex()] = max;
+            ret = max;
+        }
+        return ret;
+    }
+
     void Rescale(double f)  {
         for (int i=0; i<GetNnode(); i++)    {
             (*this)[i] *= f;

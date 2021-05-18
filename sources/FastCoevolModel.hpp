@@ -101,10 +101,19 @@ class FastCoevolModel: public ProbModel {
         cerr << "allocate\n";
 
         chronogram = new Chronogram(*tree);
+        // chronogram->SetAgesFromTree();
 
         kappa.assign(Ncont+L, 1.0);
         df = 0;
         sigma = new InverseWishart(kappa, df);
+        /*
+        for (int i=0; i<Ncont+L; i++)   {
+            for (int j=0; j<Ncont+L; j++)   {
+                sigma->setval(i,j,0);
+            }
+            sigma->setval(i,i,0.1);
+        }
+        */
 
         process = new MultivariateBrownianTreeProcess(*chronogram, *sigma, rootmean, rootvar);
         for (int i=0; i<Ncont; i++)	{

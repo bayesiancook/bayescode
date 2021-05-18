@@ -128,6 +128,54 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         }
     }
 
+    /*
+    void SampleFromFixedRoot()   {
+        RecursiveSampleFromFixedRoot(GetRoot());
+    }
+
+    void RecursiveSampleFromFixedRoot(const Link* from)  {
+        LocalSampleFromFixedRoot(from);
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveSampleFromFixedRoot(link->Out());
+        }
+    }
+
+    void LocalSampleFromFixedRoot(const Link* from) {
+        if (from->isRoot()) {
+            const vector<bool>& cl = clamp[from->GetNode()->GetIndex()];
+            vector<double>& val = (*this)[from->GetNode()->GetIndex()];
+            for (int i=0; i<GetDim(); i++)  {
+                if (! cl[i])    {
+                    val[i] = rootmean[i];
+                }
+            }
+        }
+        else    {
+            double dt = timetree.GetVal(from->Out()->GetNode()->GetIndex()) - timetree.GetVal(from->GetNode()->GetIndex());
+            if (dt <= 0)    {
+                cerr << "error: negative time interval\n";
+                exit(1);
+            }
+            double scaling = sqrt(dt);
+
+            const vector<double>& initval = (*this)[from->Out()->GetNode()->GetIndex()];
+            vector<double>& finalval = (*this)[from->GetNode()->GetIndex()];
+            const vector<bool>& cl = clamp[from->GetNode()->GetIndex()];
+
+            // draw multivariate normal from sigma
+            vector<double> contrast(GetDim(), 0);
+            sigma.MultivariateNormalSample(contrast);
+
+            // not conditional on clamped entries
+            for (int i=0; i<GetDim(); i++)  {
+                if (! cl[i])    {
+                    finalval[i] = initval[i] + scaling*contrast[i];
+                }
+            }
+        }
+    }
+    */
+
     double GetLogProb() const {
         return RecursiveGetLogProb(GetRoot());
     }
