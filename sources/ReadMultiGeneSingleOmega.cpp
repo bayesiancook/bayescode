@@ -205,6 +205,22 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
     }
 
+    void WriteGCLeafTab(ostream& os, const BranchSelector<double>& gctree) {
+        RecursiveWriteGCLeafTab(GetModel()->GetTree().GetRoot(), os, gctree);
+    }
+
+    void RecursiveWriteGCLeafTab(const Link* from, ostream& os, const BranchSelector<double>& gctree)  {
+
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << gctree.GetVal(from->GetBranch()->GetIndex()) << '\n';
+        }
+        else    {
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                RecursiveWriteGCLeafTab(link->Out(), os, gctree);
+            }
+        }
+    }
+
     void MasterReaddSOmegaPathSuffStat() {
         vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
         vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetNgene(), GCConsdSOmegaPathSuffStatBranchArray(GetModel()->GetTree()));
@@ -262,6 +278,10 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         ofstream gcnucos((name + ".meanbranchgc.tre").c_str());
         WritedSGCTree(gcnucos, dstree, gctree);
         cerr << "empirical GC in newick format in " << name << ".meanbranchgc.tre\n";
+
+        ofstream tabgcnucos((name + ".leafbranchgc.tab").c_str());
+        WriteGCLeafTab(tabgcnucos, gctree);
+        cerr << "empirical GC tabulated for terminal branches in " << name << ".leafbranchgc.tab\n";
 
     }
 
