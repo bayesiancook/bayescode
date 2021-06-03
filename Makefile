@@ -48,7 +48,7 @@ clean:
 	@rm -rf bin
 	@rm -rf bin_coverage
 	@rm -rf _test
-	@rm -rf _build
+	@rm -rf bin/
 	@rm -rf _aamutsel
 	@rm -rf _mutseldm5
 	@rm -rf _mutselomega
@@ -193,15 +193,15 @@ DM5: bin
 
 .PHONY: branchOmegaNe
 branchOmegaNe: tiny
-	@cd _build ; make --no-print-directory -j8 branchOmegaNeSiteMutsel readbranchOmegaNeSiteMutsel
+	@cd bin ; make --no-print-directory -j8 branchOmegaNeSiteMutsel readbranchOmegaNeSiteMutsel
 	@rm -rf _branchOmegaNe
 	@mkdir _branchOmegaNe
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel run =======================================\e[0m"
-	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 20 _branchOmegaNe/branchomegamutsel_gal4
+	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.PopSize.nhx --node_popsize_tag "PopulationSize" -u 20 _branchOmegaNe/branchomegamutsel_bglobin
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
-	bin/readbranchOmegaNeSiteMutsel --ss _branchOmegaNe/branchomegamutsel_gal4
+	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_bglobin
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
-	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_gal4
+	bin/readbranchOmegaNeSiteMutsel --ss _branchOmegaNe/branchomegamutsel_bglobin
 
 .PHONY: dated
 dated: tiny
