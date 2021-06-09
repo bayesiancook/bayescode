@@ -197,11 +197,17 @@ branchOmegaNe: tiny
 	@rm -rf _branchOmegaNe
 	@mkdir _branchOmegaNe
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel run =======================================\e[0m"
-	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.PopSize.nhx --node_popsize_tag "PopulationSize" -u 20 _branchOmegaNe/branchomegamutsel_bglobin
+	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.Omega.nhx --node_omega_tag "Omega" -u 5 _branchOmegaNe/branchomegamutsel_bglobin_node_omega
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
-	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_bglobin
+	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_bglobin_node_omega
+	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel run =======================================\e[0m"
+	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.Omega.nhx --global_omega --clamp_pop_size -u 5 _branchOmegaNe/branchomegamutsel_bglobin_global_omega
 	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
-	bin/readbranchOmegaNeSiteMutsel --ss _branchOmegaNe/branchomegamutsel_bglobin
+	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_bglobin_global_omega
+	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel run =======================================\e[0m"
+	bin/branchOmegaNeSiteMutsel --ncat 3 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.Omega.nhx --clamp_pop_size -u 5 _branchOmegaNe/branchomegamutsel_bglobin_clamp_pop_size
+	@echo "\n\e[35m\e[1m== branch Omega, Ne - Site MutSel read ======================================\e[0m"
+	bin/readbranchOmegaNeSiteMutsel --newick _branchOmegaNe/branchomegamutsel_bglobin_clamp_pop_size
 
 .PHONY: dated
 dated: tiny
