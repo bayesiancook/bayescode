@@ -114,7 +114,7 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
         datafile = indatafile;
         treefile = intreefile;
-        AllocateAlignments(datafile);
+        AllocateAlignments(datafile, "");
 
         refcodondata = new CodonSequenceAlignment(refdata, true);
         taxonset = refdata->GetTaxonSet();
