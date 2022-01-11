@@ -100,7 +100,7 @@ _build/readnodemutsel --burnin 50 --ss --profiles run_nodemutsel_gal4.profiles r
 
 To obtain the tree (_Ne_, μ, life-history traits) from the chain `run_nodemutsel_gal4`, discarding the first 50 points:
 ```bash
-_build/readnodemutsel --ss --newick run_nodemutsel_gal4
+_build/readnodemutsel --burnin 50 --newick run_nodemutsel_gal4
 ```
 
 ### Authors
