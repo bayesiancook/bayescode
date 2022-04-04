@@ -14,6 +14,7 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
+    SwitchArg nuc{"n", "nuc", "Computes the mean nucleotide matrix", cmd};
     ValueArg<string> confidence_interval{
         "c", "confidence_interval", "Confidence interval for omega", false, "", "string", cmd};
     SwitchArg omega_knot{
@@ -118,6 +119,34 @@ int main(int argc, char *argv[]) {
             up = omega[i].at(pt_up);
             down = omega[i].at(static_cast<size_t>(lower * omega[i].size()));
             os << i + 1 << '\t' << down << '\t' << mean << '\t' << up << '\n';
+        }
+        cerr << '\n';
+    } else if (read_args.nuc.getValue()) {
+        vector<vector<double>> rates(Nnuc * Nnuc);
+        for (int step = 0; step < size; step++) {
+            cerr << '.';
+            cr.skip(every);
+            for (int i = 0; i < Nnuc; i++) {
+                for (int j = 0; j < Nnuc; j++) {
+                    if (i != j) {
+                        int r = i * j + j;
+                        rates[r].push_back(model.GetNucRate(i, j));
+                    }
+                }
+            }
+        }
+        cerr << '\n';
+        string filename{chain_name + ".nucmatrix.tsv"};
+        ofstream os(filename.c_str());
+        os << "Name\tRate\n";
+        for (int i = 0; i < Nnuc; i++) {
+            for (int j = 0; j < Nnuc; j++) {
+                if (i != j) {
+                    int r = i * j + j;
+                    double q_mean = accumulate(rates.at(r).begin(), rates.at(r).end(), 0.0) / size;
+                    os << "q_" << DNAletters[i] << "_" << DNAletters[j] << "\t" << q_mean << '\n';
+                }
+            }
         }
         cerr << '\n';
     } else {

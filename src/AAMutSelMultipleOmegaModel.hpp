@@ -1361,6 +1361,13 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // Traces and Monitors
     // ------------------
 
+    //! return mutation rate between nucleotides from the mutation matrix
+    double GetNucRate(int i, int j) const {
+        nucmatrix->UpdateMatrix();
+        return nucmatrix->RelativeRate(i, j);
+    }
+
+
     //! return number of occupied components in first-level mixture (mixture of
     //! amino-acid fitness profiles)
     int GetNcluster() const {
