@@ -3,7 +3,7 @@
 Bayescode is an ongoing project with several ramifications.
 
 ### Site-specific adaptive evolution
-If you want to use the Mutation-Selection framework for detecting site-specific adaptive evolution, please use the branch `dev` containing the code and instructions at: https://github.com/bayesiancook/bayescode/tree/dev
+If you want to use the Mutation-Selection framework for detecting site-specific adaptive evolution, please use the following fork of BayesCode: https://github.com/ThibaultLatrille/bayescode. 
 
 
 - Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot, A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes, _Molecular Biology and Evolution_, Volume 38, Issue 3, March 2021, Pages 1199–1208, https://doi.org/10.1093/molbev/msaa265
