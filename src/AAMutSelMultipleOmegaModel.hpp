@@ -442,6 +442,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         delta_omegahypermean = 1.0;
         delta_omegahyperinvshape = 1.0;
         delta_omega_array = new IIDGamma(omegaNcat, delta_omegahypermean, delta_omegahyperinvshape);
+        if (omegamode == 3 and omegaNcat == 1) { (*delta_omega_array)[0] = 1.0; }
         if (clamp_delta_omega_array) {
             for (int omegacat = 0; omegacat < omegaNcat; omegacat++) {
                 (*delta_omega_array)[omegacat] = opened_delta_omega_array[omegacat];
@@ -1360,6 +1361,13 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     // Traces and Monitors
     // ------------------
 
+    //! return mutation rate between nucleotides from the mutation matrix
+    double GetNucRate(int i, int j) const {
+        nucmatrix->UpdateMatrix();
+        return nucmatrix->RelativeRate(i, j);
+    }
+
+
     //! return number of occupied components in first-level mixture (mixture of
     //! amino-acid fitness profiles)
     int GetNcluster() const {
@@ -1420,11 +1428,14 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return predicted omega induced by the mutation-selection balance
     double GetPredictedOmegaKnot() const {
         double mean = 0;
-        for (int i = 0; i < GetNsite(); i++) {
-            mean += sitecodonsubmatrixarray->GetVal(i).GetPredictedDNDS();
-        }
+        for (int i = 0; i < GetNsite(); i++) { mean += GetPredictedSiteOmegaKnot(i); }
         mean /= GetNsite();
         return mean;
+    }
+
+    //! return predicted omega at a given site induced by the mutation-selection balance
+    double GetPredictedSiteOmegaKnot(int site) const {
+        return sitecodonsubmatrixarray->GetVal(site).GetPredictedDNDS();
     }
 
     //! return effective dnds taking into the mutation-selection balance and omega
