@@ -111,7 +111,8 @@ int main(int argc, char *argv[]) {
         cerr << '\n';
 
         ofstream os(read_args.GetProfilesName().c_str());
-        os << model->GetNsite() << '\n';
+        os << "site\tA\tC\tD\tE\tF\tG\tH\tI\tK\tL\tM\tN\tP\tQ\tR\tS\tT\tV\tW\tY\n";
+
         for (int i = 0; i < model->GetNsite(); i++) {
             os << i + 1;
             for (auto &aa : sitestat[i]) {
