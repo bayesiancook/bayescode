@@ -25,7 +25,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<std::pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbsyn = 0;
@@ -55,7 +55,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         bsyn += tmpbsyn;
         bnonsyn += tmpbnonsyn;
 
-        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
+        for (std::map<std::pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 nnonsyn += i->second;
             }
@@ -69,7 +69,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         int ncodon = codonsubmatrix.GetNstate();
         const CodonStateSpace *statespace = codonsubmatrix.GetCodonStateSpace();
 
-        const std::map<pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
+        const std::map<std::pair<int, int>, double> &paircount = pathsuffstat.GetPairCountMap();
         const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
 
         double tmpbsyn = 0;
@@ -98,7 +98,7 @@ class dSOmegaPathSuffStat : public SuffStat {
         bsyn += tmpbsyn;
         bnonsyn += tmpbnonsyn;
 
-        for (std::map<pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
+        for (std::map<std::pair<int, int>, double>::const_iterator i = paircount.begin(); i != paircount.end(); i++) {
             if (!statespace->Synonymous(i->first.first, i->first.second)) {
                 nnonsyn += i->second;
             }
@@ -489,6 +489,50 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         for (int i=0; i<GetNbranch(); i++) {
             is >> (*this)[i];
         }
+    }
+
+    void RecursiveBranchToNewick(ostream& os, const Link* from, int index) {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName();
+        }
+        else    {
+            os << "(";
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                RecursiveBranchToNewick(os, link->Out(), index);
+                if (link->Next() != from)   {
+                    os << ",";
+                }
+            }
+            os << ")";
+        }
+        if (! from->isRoot())	{
+            os << ":";
+            switch(index)    {
+                case 0:
+                os << GetVal(from->GetBranch()->GetIndex()).GetSynCount();
+                break;
+                case 1:
+                os << GetVal(from->GetBranch()->GetIndex()).GetSynBeta();
+                break;
+                case 2:
+                os << GetVal(from->GetBranch()->GetIndex()).GetNonSynCount();
+                break;
+                case 3:
+                os << GetVal(from->GetBranch()->GetIndex()).GetNonSynBeta();
+                break;
+            }
+        }
+    }
+
+    void BranchToNewick(ostream& os)    {
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 0);
+        os << ";\n";
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 1);
+        os << ";\n";
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 2);
+        os << ";\n";
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 3);
+        os << ";\n";
     }
 };
 

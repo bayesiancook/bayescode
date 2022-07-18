@@ -3,6 +3,7 @@
 #include <fstream>
 #include "MultiGeneSample.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
+#include "BranchToNewick.hpp"
 using namespace std;
 
 MPI_Datatype Propagate_arg;
@@ -132,6 +133,9 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
         gos << globdsomss << '\n';
         cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+        ofstream tgos((name + ".meanbranchdsomsuffstat.tre").c_str());
+        globdsomss.BranchToNewick(tgos);
+        cerr << "newick format: global dsom path suffstats in " << name << ".meanbranchdsomsuffstat.tre\n";
 
         /*
         ofstream tgos((name + ".meanbranchdnds.tre").c_str());
