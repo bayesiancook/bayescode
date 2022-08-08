@@ -6,6 +6,7 @@ tmp*
 *_bin
 *.json
 _build*
+bin*
 _test/
 _aamutsel/
 _mutselomega/

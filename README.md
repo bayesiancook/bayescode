@@ -29,9 +29,9 @@ Then, to build BayesCode simply run:
 make
 ```
 
-To check that everything ran well, look into the `_build`  folder to see if executables are present:
+To check that everything ran well, look into the `bin`  folder to see if executables are present:
 ```bash
-ls _build
+ls bin
 ```
 
 This should display a list of files. If you see the following files, then BayesCode was correctly built:
@@ -79,19 +79,19 @@ The `datà` folder in the BayesCode root folder contains examples of data files
 
 To get the help of the program and the possible options, type:
 ```bash
-_build/nodemutsel --help
+bin/nodemutsel --help
 ```
 
 Basic usage for BayesCode is (from the BayesCode root folder):
 ```bash
-_build/nodemutsel -t <path to tree file> -a <path to alignment file> [options...] <name of run>
+bin/nodemutsel -t <path to tree file> -a <path to alignment file> [options...] <name of run>
 ```
 The name of the run is a string which is used to create files to store the results of the run.
 Note that the name of the run must be at the very end of the command.
 
 To restart a chain that was aborted, you just need to give the name of the chain:
 ```bash
-_build/nodemutsel <name of run>
+bin/nodemutsel <name of run>
 ```
 
 ## Site-specific adaptive evolution
@@ -102,24 +102,24 @@ If you want to use the Mutation-Selection framework for detecting site-specific 
 
 Mutation-selection codon models are obtained by running `mutselomega` for 2000 points of MCMC with the options:
 ```bash
-_build/mutselomega --omegashift 0.0 --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --until 2000 run_mutsel_bglobin
+bin/mutselomega --omegashift 0.0 --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --until 2000 run_mutsel_bglobin
 ```
 
 The gene-specific mutation matrix (μ) is obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) with the options:
 ```bash
-_build/readmutselomega --every 1 --until 2000 --burnin 1000 --nuc run_mutsel_bglobin
+bin/readmutselomega --every 1 --until 2000 --burnin 1000 --nuc run_mutsel_bglobin
 ```
 
 The site-specific predicted rate of evolution (ω<sub>0</sub><sup>(i)</sup> : a scalar between 0 and 1 for each site) are obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_mutsel_bglobin.ci0.025.tsv` with the options:
 ```bash
-_build/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 --omega_0 run_mutsel_bglobin
+bin/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 --omega_0 run_mutsel_bglobin
 ```
 This will output the mean posterior ω<sub>0</sub><sup>(i)</sup> over the MCMC as well as the 95% (1 - 0.025*2) credible interval.
 The value of confidence_interval used as input is considered for each side of the distribution, hence a factor 2 for the credible interval.
 
 The collection of site-specific fitness profiles (F<sup>(i)</sup>: 20x1 vector for each site) are then obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_mutsel_bglobin.siteprofiles` with the options:
 ```bash
-_build/readmutselomega --every 1 --until 2000 --burnin 1000 --ss run_mutsel_bglobin
+bin/readmutselomega --every 1 --until 2000 --burnin 1000 --ss run_mutsel_bglobin
 ```
 
 A python script `fitness_to_selcoeff.py` (requirements: numpy and pandas) is available in the folder `utils` to compute selection coefficients (S) from a list of codon transitions.\
@@ -136,12 +136,12 @@ python3 utils/fitness_to_selcoeff.py --help
 
 Classical (ω-based) codon models are obtained by running `mutselomega` for 2000 points of MCMC with the options:
 ```bash
-_build/mutselomega --omegashift 0.0 --freeomega --omegancat 30 --flatfitness -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_classical_bglobin
+bin/mutselomega --omegashift 0.0 --freeomega --omegancat 30 --flatfitness -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_classical_bglobin
 ```
 
 The site-specific predicted rate of evolution (ω<sup>(i)</sup> : a positif scalar) is obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_classical_bglobin.ci0.025.tsv` with the options:
 ```bash
-_build/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 run_classical_bglobin
+bin/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 run_classical_bglobin
 ```
 This will output the mean posterior ω<sup>(i)</sup> over the MCMC as well as the 95% (1 - 0.025*2) credible interval.
 The value of confidence_interval used as input is considered for each side of the distribution, hence a factor 2 for the credible interval.
@@ -159,14 +159,14 @@ If you want to use the Mutation-Selection framework for inferring long-term chan
 
 For example, to run a BayesCode chain called `run_nodemutsel_placentalia` on example placental mammals data (from the `data` folder), until 100 points have been written to disc (from the BayesCode root folder):
 ```bash
-_build/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx -u 100 run_nodemutsel_placentalia
+bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx -u 100 run_nodemutsel_placentalia
 ```
 
 **I. Including life-history traits (LHT)**
 
 To include life-history traits (optional), use the option `--traits` with the path to the file containing the traits (in log-space) in tsv format:
 ```bash
-_build/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --traitsfile data/placentalia/plac.log.lht -u 100 run_nodemutsel_placentalia
+bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --traitsfile data/placentalia/plac.log.lht -u 100 run_nodemutsel_placentalia
 ```
 
 The file containing the traits (in log-space) must have the following (tab-delimited) format:
@@ -187,7 +187,7 @@ python3 utils/traits_coevol_to_mutsel.py --input data/placentalia/plac.lht --out
 
 To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, life-history traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
 ```bash
-_build/readnodemutsel --burnin 50 --until 100 --newick run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 50 --until 100 --newick run_nodemutsel_placentalia
 ```
 This command will generate a tree in newick extended format (.nhx) for each trait in the natural-space.
 
@@ -200,7 +200,7 @@ python3 utils/plot_tree.py --input run_nodemutsel_placentalia
 
 To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, life-history traits) from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
 ```bash
-_build/readnodemutsel --burnin 50 --until 100 --cov run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 50 --until 100 --cov run_nodemutsel_placentalia
 ```
 This command will generate the file `run_nodemutsel_placentalia.cov` containing the covariance matrices.
 
@@ -212,7 +212,7 @@ A pp close to 1 means a strong statistical support for a positive correlation, a
 
 To obtain the fitness profiles in the file `run_nodemutsel_placentalia.profiles` from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
 ```bash
-_build/readnodemutsel --burnin 50 --until 100 --ss run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 50 --until 100 --ss run_nodemutsel_placentalia
 ```
 
 Moreover, the repository at https://github.com/ThibaultLatrille/MutationSelectionDrift is meant to provide the necessary scripts and data to reproduce the figures shown in the manuscript and gives the tools to produce your own experiment on your dataset.
