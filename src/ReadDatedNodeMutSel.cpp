@@ -11,11 +11,6 @@
 using namespace std;
 using namespace TCLAP;
 
-std::string double2str(double val) {
-    std::ostringstream so;
-    so << std::scientific << val;
-    return so.str();
-}
 
 class ReadNodeMutSelArgParse : public ReadArgParse {
   public:
@@ -27,6 +22,8 @@ class ReadNodeMutSelArgParse : public ReadArgParse {
 
     SwitchArg ss{
         "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
+
+    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix", cmd};
 
     SwitchArg newick{"t", "newick",
         "Computes the mean posterior node-specific entries of the multivariate Brownian process",
@@ -41,31 +38,6 @@ class ReadNodeMutSelArgParse : public ReadArgParse {
     }
 };
 
-void export_tree(ExportTree export_tree, string name, string const &path,
-    vector<vector<double>> &values, bool log_value = true) {
-    if (log_value) { name = "Log" + name; }
-    for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(export_tree.GetTree().nb_nodes());
-         node++) {
-        auto value_array = values[node];
-        if (!log_value) {
-            for (auto &v : value_array) { v = exp(v); }
-        }
-        if (!value_array.empty()) {
-            sort(value_array.begin(), value_array.end());
-            auto up = static_cast<size_t>(0.95 * value_array.size());
-            if (up >= values.size()) { up = value_array.size() - 1; }
-            auto down = static_cast<size_t>(0.05 * value_array.size());
-            export_tree.set_tag(node, name + "_min", double2str(value_array.at(down)));
-            export_tree.set_tag(node, name + "_max", double2str(value_array.at(up)));
-            export_tree.set_tag(node, name, double2str(mean(value_array)));
-        }
-    }
-    string nhxname = path + "." + name + ".nhx";
-    ofstream nhx(nhxname);
-    nhx << export_tree.as_string() << endl;
-    nhx.close();
-    cerr << "Tree for " << name << " in " << nhxname << "\n";
-}
 
 int main(int argc, char *argv[]) {
     CmdLine cmd{"DatedMutSel", ' ', "0.1"};
@@ -123,11 +95,48 @@ int main(int argc, char *argv[]) {
         }
         cerr << "mean site-specific profiles in " << read_args.GetProfilesName() << "\n";
         cerr << '\n';
+    } else if (read_args.cov.getValue()) {
+        ofstream os(read_args.GetChainName() + ".cov");
+        os << "entries are in the following order:" << endl;
+
+        for (int dim = 0; dim < model->GetDimension(); dim++) {
+            os << model->GetDimensionName(dim) << endl;
+        }
+
+        EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix cov_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        for (int step = 0; step < size; step++) {
+            cerr << '.';
+            cr.skip(every);
+            EMatrix cov_matrix_chain = model->GetPrecisionMatrix().inverse();
+            cov_matrix += cov_matrix_chain;
+            for (int i = 0; i < model->GetDimension(); i++) {
+                for (int j = 0; j < model->GetDimension(); j++) {
+                    if (cov_matrix_chain.coeffRef(i, j) > 0) { posterior_prob.coeffRef(i, j) += 1; }
+                }
+            }
+        }
+        posterior_prob /= size;
+        cov_matrix /= size;
+
+        export_matrix(os, model->GetDimension(), cov_matrix, "covariances");
+        EMatrix cor_matrix = cov_matrix;
+        for (int i = 0; i < model->GetDimension(); i++) {
+            for (int j = 0; j < model->GetDimension(); j++) {
+                cor_matrix.coeffRef(i, j) =
+                    cov_matrix.coeffRef(i, j) /
+                    sqrt(cov_matrix.coeffRef(i, i) * cov_matrix.coeffRef(j, j));
+            }
+        }
+        export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
+        export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
+
+        cerr << "matrices in " << read_args.GetChainName() << ".cov" << endl;
     } else if (read_args.newick.getValue()) {
         vector<vector<vector<double>>> dim_node_traces(model->GetDimension());
         vector<vector<double>> branch_times(model->GetTree().nb_nodes());
-        vector<vector<double>> log10_branch_length(model->GetTree().nb_nodes());
-        vector<vector<double>> log10_leaves_theta(model->GetTree().nb_nodes());
+        vector<vector<double>> branch_length(model->GetTree().nb_nodes());
+        vector<vector<double>> leaves_theta(model->GetTree().nb_nodes());
         vector<vector<double>> contrast_pop_size(model->GetTree().nb_nodes());
 
         for (int dim{0}; dim < model->GetDimension(); dim++) {
@@ -146,11 +155,11 @@ int main(int argc, char *argv[]) {
                     assert(branch_time >= 0);
                     assert(branch_time <= 1);
                     branch_times[node].push_back(branch_time);
-                    log10_branch_length[node].push_back(log10(model->GetBranchLength(node)));
+                    branch_length[node].push_back(model->GetBranchLength(node));
                     contrast_pop_size[node].push_back(model->GetContrast(node, dim_pop_size));
                 }
                 if (model->PolymorphismAware() and model->GetTree().is_leaf(node)) {
-                    log10_leaves_theta[node].push_back(log10(model->GetTheta(node)));
+                    leaves_theta[node].push_back(model->GetTheta(node));
                 }
                 for (int dim{0}; dim < model->GetDimension(); dim++) {
                     dim_node_traces[dim][node].push_back(model->GetBrownianEntry(node, dim));
@@ -169,18 +178,14 @@ int main(int argc, char *argv[]) {
 
         export_tree(base_export_tree, "ContrastPopulationSize", read_args.GetChainName(),
             contrast_pop_size);
-        export_tree(
-            base_export_tree, "Log10BranchLength", read_args.GetChainName(), log10_branch_length);
+        export_tree(base_export_tree, "BranchLength", read_args.GetChainName(), branch_length);
         export_tree(base_export_tree, "BranchTime", read_args.GetChainName(), branch_times);
         if (model->PolymorphismAware()) {
-            export_tree(
-                base_export_tree, "Log10Theta", read_args.GetChainName(), log10_leaves_theta);
+            export_tree(base_export_tree, "Theta", read_args.GetChainName(), leaves_theta);
         }
         for (int dim{0}; dim < model->GetDimension(); dim++) {
             export_tree(base_export_tree, model->GetDimensionName(dim), read_args.GetChainName(),
-                dim_node_traces[dim], true);
-            export_tree(base_export_tree, model->GetDimensionName(dim), read_args.GetChainName(),
-                dim_node_traces[dim], false);
+                dim_node_traces[dim]);
         }
     } else {
         stats_posterior<DatedNodeMutSelModel>(*model, cr, every, size);

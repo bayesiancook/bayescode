@@ -257,6 +257,10 @@ class DatedNodeOmegaModel : public ChainComponent {
         return branchlength->GetVal(tree->branch_index(node));
     };
 
+    //! return precision matrix
+    PrecisionMatrix GetPrecisionMatrix() const { return *precision_matrix; };
+
+
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
     double GetBrownianEntry(Tree::NodeIndex node, int dim) const {
@@ -273,7 +277,7 @@ class DatedNodeOmegaModel : public ChainComponent {
             return "MutationRatePerTime";
         } else {
             assert(taxon_traits != nullptr);
-            return "Traits" + taxon_traits->GetHeader(dim);
+            return taxon_traits->GetHeader(dim);
         }
     }
 

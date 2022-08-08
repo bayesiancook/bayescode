@@ -66,3 +66,30 @@ class ExportTree {
 
     std::string as_string() const { return recursive_string(tree.root()) + "; "; }
 };
+
+std::string double2str(double val) {
+    std::ostringstream so;
+    so << std::scientific << val;
+    return so.str();
+}
+void export_tree(ExportTree export_tree, string const &name, string const &path,
+    std::vector<std::vector<double>> &values) {
+    for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(export_tree.GetTree().nb_nodes());
+         node++) {
+        auto value_array = values[node];
+        if (!value_array.empty()) {
+            sort(value_array.begin(), value_array.end());
+            auto up = static_cast<size_t>(0.95 * value_array.size());
+            if (up >= values.size()) { up = value_array.size() - 1; }
+            auto down = static_cast<size_t>(0.05 * value_array.size());
+            export_tree.set_tag(node, name + "_min", double2str(value_array.at(down)));
+            export_tree.set_tag(node, name + "_max", double2str(value_array.at(up)));
+            export_tree.set_tag(node, name, double2str(mean(value_array)));
+        }
+    }
+    string nhxname = path + "." + name + ".nhx";
+    std::ofstream nhx(nhxname);
+    nhx << export_tree.as_string() << std::endl;
+    nhx.close();
+    std::cerr << "Tree for " << name << " in " << nhxname << "\n";
+}

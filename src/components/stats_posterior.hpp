@@ -66,3 +66,26 @@ void recompute_trace(
     }
     std::cerr << '\n';
 }
+
+string padding(string const &old_str, size_t n_zero) {
+    auto new_str = std::string(n_zero - std::min(n_zero, old_str.length()), '0') + old_str;
+    return new_str;
+}
+double round_off(double val, int n_decimal) {
+    return round(val * pow(10, n_decimal)) / pow(10, n_decimal);
+}
+
+void export_matrix(
+    std::ofstream &os, int dimensions, EMatrix &matrix, string const &name, bool diag = true) {
+    os << std::endl << name << std::endl << std::endl;
+    for (int i = 0; i < dimensions; i++) {
+        for (int j = 0; j < dimensions; j++) {
+            if (i == j && !diag) {
+                os << std::setw(7) << std::setfill(' ') << '-';
+            } else {
+                os << std::setw(7) << std::setfill(' ') << round_off(matrix.coeffRef(i, j), 3);
+            }
+        }
+        os << std::endl;
+    }
+}
