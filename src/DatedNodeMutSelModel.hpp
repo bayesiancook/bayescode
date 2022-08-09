@@ -690,8 +690,8 @@ class DatedNodeMutSelModel : public ChainComponent {
 
     //! return the value of the multivariate brownian process for a given node and a given dimension
     //! of the process
-    double GetBrownianEntry(Tree::NodeIndex node, int dim) const {
-        return node_multivariate->GetVal(node)(dim);
+    double GetExpBrownianEntry(Tree::NodeIndex node, int dim) const {
+        return exp(node_multivariate->GetVal(node)(dim));
     }
 
     //! return number of dimensions of the multivariate brownian process
@@ -773,12 +773,13 @@ class DatedNodeMutSelModel : public ChainComponent {
     //! Chronogram and the BranchProcess (rates).
     //!
     //! Used when the model is restarted or for the posterior predictif.
-    void UpdateBranches() {
+    void UpdateBranches(bool scale = false) {
         chronogram->Update();
         branchpopsize->Update();
         branchmutrates->Update();
         if (PolymorphismAware()) { branchgentimes->Update(); }
         branchlength->Update();
+        if (scale) {chronogram->Scale();}
     }
 
     //! \brief Update the chronogram (branch time) and branch lengths around the focal node.

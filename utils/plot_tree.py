@@ -2,7 +2,6 @@
 import argparse
 from glob import glob
 from itertools import chain
-import numpy as np
 import pandas as pd
 from ete3 import Tree
 import matplotlib
@@ -42,7 +41,7 @@ def label_transform(s):
 
 
 def get_annot(n, f):
-    return np.exp(float(getattr(n, f)))
+    return float(getattr(n, f))
 
 
 def plot_tree(path, feature, font_size=14, line_type="-", vt_line_width=0.5, hz_line_width=0.2):
@@ -95,7 +94,7 @@ def plot_tree(path, feature, font_size=14, line_type="-", vt_line_width=0.5, hz_
             ax.text(x, y, node_name, va='center', size=font_size, name="Latin Modern Mono")
             rows.append(row)
         else:
-            y = np.mean([node_pos[n2] for n2 in n.children])
+            y = sum([node_pos[n2] for n2 in n.children]) / len(n.children)
             node_pos[n] = y
 
             if feature in n.features:

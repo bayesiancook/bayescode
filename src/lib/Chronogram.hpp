@@ -58,6 +58,9 @@ class Chronogram : public SimpleBranchArray<double> {
     //! branch update (node and its parent) of the branch array
     void UpdateBranch(Tree::NodeIndex parent, Tree::NodeIndex node);
 
+    //! scale the tree by the root age
+    void Scale();
+
   private:
     const NodeAges& nodeages;
 };

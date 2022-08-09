@@ -263,8 +263,8 @@ class DatedNodeOmegaModel : public ChainComponent {
 
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
-    double GetBrownianEntry(Tree::NodeIndex node, int dim) const {
-        return node_multivariate->GetVal(node)(dim);
+    double GetExpBrownianEntry(Tree::NodeIndex node, int dim) const {
+        return exp(node_multivariate->GetVal(node)(dim));
     }
 
     //! return number of dimensions of the multivariate brownian process
@@ -325,11 +325,12 @@ class DatedNodeOmegaModel : public ChainComponent {
     //! Chronogram and the BranchProcess (rates).
     //!
     //! Used when the model is restarted or for the posterior predictif.
-    void UpdateBranches() {
+    void UpdateBranches(bool scale = false) {
         chronogram->Update();
         branchomega->Update();
         branchrates->Update();
         branchlength->Update();
+        if (scale) {chronogram->Scale();}
     }
 
     //! \brief Update the chronogram (branch time) and branch lengths around the focal node.

@@ -10,8 +10,11 @@ NodeAges::NodeAges(const Tree &intree, const string &fossilsfile)
     if (fossilsfile != "Null") {
         // for line in file
         ifstream input_stream{fossilsfile};
-        if (!input_stream) { cerr << "Fossils file " << fossilsfile << " doesn't exist" << endl; }
-
+        if (!input_stream) {
+            cerr << "Fossils file " << fossilsfile << " doesn't exist" << endl;
+        } else {
+            cout << "Opening Fossils file " << fossilsfile << "." << endl;
+        }
         string line;
         // skip the header of the file
         getline(input_stream, line);
@@ -56,6 +59,11 @@ NodeAges::NodeAges(const Tree &intree, const string &fossilsfile)
             getline(line_stream, word, sep);
             clamped_upper_bound[node_clamped] = stod(word);
             assert(clamped_upper_bound[node_clamped] >= clamped_ages[node_clamped]);
+            string name =
+                node_clamped == GetTree().root() ? "Root" : GetTree().node_name(node_clamped);
+            cout << "Node " << name << " clamped to " << clamped_ages[node_clamped]
+                 << " with bounds [" << clamped_lower_bound[node_clamped] << ", "
+                 << clamped_upper_bound[node_clamped] << "]." << endl;
         }
         if (node_clamped_set.count(GetTree().root()) == 0) {
             double max_root_age = 0.0;
@@ -225,4 +233,12 @@ void Chronogram::UpdateBranch(Tree::NodeIndex parent, Tree::NodeIndex node) {
     (*this)[GetTree().branch_index(node)] =
         (nodeages.GetVal(parent) - nodeages.GetVal(node)) / nodeages.GetVal(GetTree().root());
     assert((*this)[GetTree().branch_index(node)] > 0);
+}
+
+void Chronogram::Scale() {
+    for (auto const &node : GetTree().root_to_leaves_iter()) {
+        if (!GetTree().is_root(node)) {
+            (*this)[GetTree().branch_index(node)] *= nodeages.GetVal(GetTree().root());
+        }
+    }
 }

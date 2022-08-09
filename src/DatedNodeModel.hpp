@@ -129,8 +129,8 @@ class DatedNodeModel : public ChainComponent {
 
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
-    double GetBrownianEntry(Tree::NodeIndex node, int dim) const {
-        return node_multivariate->GetVal(node)(dim);
+    double GetExpBrownianEntry(Tree::NodeIndex node, int dim) const {
+        return exp(node_multivariate->GetVal(node)(dim));
     }
 
     //! return number of dimensions of the multivariate brownian process
@@ -151,7 +151,10 @@ class DatedNodeModel : public ChainComponent {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update() { chronogram->Update(); }
+    void Update(bool scale = false) {
+        chronogram->Update();
+        if (scale) { chronogram->Scale(); }
+    }
 
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const { return PrecisionMatrixLogProb() + node_multivariate->GetLogProb(); }

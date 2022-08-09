@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
         export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
 
-        cerr << "matrices in " << read_args.GetChainName() << ".cov" << endl;
+        cerr << endl << "matrices in " << read_args.GetChainName() << ".cov" << endl;
     } else if (read_args.newick.getValue()) {
         vector<vector<vector<double>>> dim_node_traces(model->GetDimension());
         vector<vector<double>> branch_times(model->GetTree().nb_nodes());
@@ -93,17 +93,16 @@ int main(int argc, char *argv[]) {
             cerr << '.';
             cr.skip(every);
 
-            model->Update();
+            model->Update(true);
             for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
                  node++) {
                 if (!model->GetTree().is_root(node)) {
                     double branch_time = model->GetBranchTime(node);
                     assert(branch_time >= 0);
-                    assert(branch_time <= 1);
                     branch_times[node].push_back(branch_time);
                 }
                 for (int dim{0}; dim < model->GetDimension(); dim++) {
-                    dim_node_traces[dim][node].push_back(model->GetBrownianEntry(node, dim));
+                    dim_node_traces[dim][node].push_back(model->GetExpBrownianEntry(node, dim));
                 }
             }
         }
