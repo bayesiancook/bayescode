@@ -30,6 +30,11 @@ release:
 	@mkdir bin
 	@cd bin ; cmake ..
 	@make --no-print-directory
+	@rm -rf bin/CMakeCache.txt
+	@rm -rf bin/cmake_install.cmake
+	@rm -rf bin/CMakeFiles
+	@rm -rf bin/Makefile
+	@rm -rf bin/*.a
 
 .PHONY: clean
 clean:

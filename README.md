@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
 
 If you do not want to compile BayesCode, the precompiled binaries for `nodemutsel`, `readnodemutsel`, `mutselomega`
-and `readmutselomega` are available [here](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0).
+and `readmutselomega` are available [here](https://github.com/ThibaultLatrille/bayescode/releases).
 You can then skip the next section.
 
 ## How to download and build
@@ -166,18 +166,18 @@ bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.n
 
 To include life-history traits (optional), use the option `--traits` with the path to the file containing the traits (in log-space) in tsv format:
 ```bash
-bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --traitsfile data/placentalia/plac.log.lht -u 100 run_nodemutsel_placentalia
+bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --traitsfile data/placentalia/plac.log.lht -u 2000 run_nodemutsel_placentalia
 ```
 
 The file containing the traits (in log-space) must have the following (tab-delimited) format:
-```
-TaxonName	Maturity	Mass	Longevity
-Bos	6.47	13.52	3.21
-Rousettus	5.55	4.71	2.91
-Spermophilus	5.92	5.60	2.10
-Artibeus	NaN	3.98	2.95
-...
-```
+
+| TaxonName    | Maturity |  Mass | Longevity |
+|--------------|:--------:|------:|----------:|
+| Bos          |   6.47   | 13.52 |      3.21 |
+| Rousettus    |   5.55   |  4.71 |      2.91 |
+| Spermophilus |   5.92   |  5.60 |      2.10 |
+| Artibeus     |   NaN    |  3.98 |      2.95 |
+
 A python script `traits_coevol_to_mutsel.py` (requirements: numpy and pandas) is available in the folder `utils` to convert the traits file from the Coevol format (in natural-space, see [github.com/bayesiancook/coevo](https://github.com/bayesiancook/coevol) for the format definition) to the format used by the Mutation-Selection (in log-space):
 ```bash
 python3 utils/traits_coevol_to_mutsel.py --input data/placentalia/plac.lht --output data/placentalia/plac.log.lht
@@ -185,9 +185,9 @@ python3 utils/traits_coevol_to_mutsel.py --input data/placentalia/plac.lht --out
 
 **II. Read annotated trees**
 
-To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, life-history traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
+To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, life-history traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
-bin/readnodemutsel --burnin 50 --until 100 --newick run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 1000 --until 2000 --newick run_nodemutsel_placentalia
 ```
 This command will generate a tree in newick extended format (.nhx) for each trait in the natural-space.
 
@@ -198,9 +198,9 @@ python3 utils/plot_tree.py --input run_nodemutsel_placentalia
 
 **III. Read covariance matrix**
 
-To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, life-history traits) from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
+To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, life-history traits) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
-bin/readnodemutsel --burnin 50 --until 100 --cov run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 1000 --until 2000 --cov run_nodemutsel_placentalia
 ```
 This command will generate the file `run_nodemutsel_placentalia.cov` containing the covariance matrices.
 
@@ -210,9 +210,9 @@ A pp close to 1 means a strong statistical support for a positive correlation, a
 
 **IV. Fitness profiles**
 
-To obtain the fitness profiles in the file `run_nodemutsel_placentalia.profiles` from the chain `run_nodemutsel_placentalia`, discarding the first 50 points:
+To obtain the fitness profiles in the file `run_nodemutsel_placentalia.profiles` from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
-bin/readnodemutsel --burnin 50 --until 100 --ss run_nodemutsel_placentalia
+bin/readnodemutsel --burnin 1000 --until 2000 --ss run_nodemutsel_placentalia
 ```
 
 Moreover, the repository at https://github.com/ThibaultLatrille/MutationSelectionDrift is meant to provide the necessary scripts and data to reproduce the figures shown in the manuscript and gives the tools to produce your own experiment on your dataset.
