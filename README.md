@@ -221,7 +221,7 @@ The columns are:
 - _UpperBound_: the upper bound (oldest) for the fossil calibration, can be `inf` to indicate that the calibration is not available for that node.
 
 A python script `calibs_coevol_to_mutsel.py` (requirements: ete3 and pandas) is available in the folder `utils` to convert the traits file from the _CoEvol_ format (using the most recent ancestor between two extent taxa, see [github.com/bayesiancook/coevo](https://github.com/bayesiancook/coevol) for the format definition) to the format used by _BayesCode_ (requires a name for internal nodes):
-```bash
+
 ```bash
 python3 utils/calibs_coevol_to_mutsel.py --input data/placentalia/plac.calibs --tree data/placentalia/plac.calibs --output data/placentalia/plac.calibs.tsv
 ```
