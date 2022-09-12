@@ -1,14 +1,33 @@
 # BayesCode
-
 [![Build Status](https://travis-ci.org/bayesiancook/bayescode.svg?branch=dev)](https://travis-ci.org/bayesiancook/bayescode)
 [![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
 
-If you do not want to compile _BayesCode_, the precompiled binaries for `nodemutsel`, `readnodemutsel`, `mutselomega`
-and `readmutselomega` are available [here](https://github.com/ThibaultLatrille/bayescode/releases).
-You can then skip the next section.
+## Contents
+- [Installation](#installation)
+- [Format your data](#format-your-data)
+- [Run BayesCode](#run-bayescode)
+- [Site-specific adaptive evolution](#site-specific-adaptive-evolution)
+  1. Mutation-selection codon models (ω<sub>0</sub>)
+  2. Classical codon models (ω)
+  3. Mutation-selection codon models with a multiplicative factor (ω<sub>∗</sub>)
+  4. Options for `mutselomega` and `readmutselomega`
+- [Inferring long-term effective population size](#inferring-long-term-effective-population-size)
+  1. Including life-history traits
+  2. Including fossil calibration
+  3. Read annotated trees
+  4. Read covariance matrix
+  5. Fitness profiles
+  6. Options for `nodemutsel` and `readnodemutsel`
+- [Citations](#citations)
+- [Authors](#authors) 
 
-## How to download and build
+## Installation
 
+### Download pre-compiled binaries
+If you do not want to compile _BayesCode_, the precompiled binaries for `nodemutsel`, `readnodemutsel`, `mutselomega` and `readmutselomega` are available at [https://github.com/ThibaultLatrille/bayescode/releases](https://github.com/ThibaultLatrille/bayescode/releases).
+You can then skip the next section and go to the section [Format your data](#format-your-data).
+
+### Download code and compile
 To get _BayesCode_ from a machine connected to the internet, type in a terminal:
 ```bash
 git clone https://github.com/ThibaultLatrille/bayescode
@@ -47,7 +66,7 @@ make clean
 make release
 ```
 
-## How to format your data
+## Format your data
 
 _BayesCode_ requires a tree and an alignment file to run.
 
@@ -72,9 +91,9 @@ python3 fasta_to_ali.py --input ENSG00000000457_SCYL3_NT.fasta --output ENSG0000
 ```
 
 Your tree file must follow the newick format.
-The tree does not need to have branch lenghts.
+The tree does not need to have branch lengths.
 In addition, the leaves of the tree should have the same names as the sequences in your alignment file.
-For example, the following file would be a valid tree file for _BayesCode_ matching the alignment file above :
+For example, the following file would be a valid tree file for _BayesCode_ matching the alignment file above:
 
 ```newick
 ((((((((S0,S1),(S2,S3)),(S4,S5),(S6,S7))),(S8,S9),(S10,S11)),(S12,S13),(S14,S15))))
@@ -82,7 +101,7 @@ For example, the following file would be a valid tree file for _BayesCode_ match
 
 The `datà` folder in the _BayesCode_ root folder contains examples of data files usable with _BayesCode_.
 
-## How to run BayesCode
+## Run BayesCode
 
 To get the help of the program and the possible options, type:
 ```bash
@@ -101,15 +120,51 @@ To restart a chain that was aborted, you just need to give the name of the chain
 bin/nodemutsel <name of run>
 ```
 
+The global options are:
+```
+-a <string>,  --alignment <string>
+ (required) File path to alignment (PHYLIP format).
+
+-t <string>,  --tree <string>
+ (required) File path to the tree (NHX format).
+
+--force
+ Overwrite existing output files.
+
+--until <int> (default: -1)
+ Maximum number of (saved) iterations (-1 means unlimited).
+
+--every <int> (default: 1)
+ Number of MCMC iterations between two saved point in the trace.
+```
+
+To read a chain, you need to give the name of the chain to the sister program `read`:
+```bash
+bin/readnodemutsel --burnin 1000 --until 2000 --every 1 --trace <name of run>
+```
+The global options for `read` are:
+```
+--burnin <int>
+ Number of MCMC iterations for the burn-in.
+
+--until <int>
+ Maximum number of (saved) iterations (-1 means unlimited).
+
+--every <int>
+ Number of MCMC iterations between two saved point in the trace.
+ 
+--trace (default: false)
+ Recompute the trace.
+```
 ## Site-specific adaptive evolution
 
 If you want to use the Mutation-Selection framework for detecting site-specific adaptive evolution, use the program `mutselomega` to run the MCMC and `readmutselomega` to read the trace.
 
-**I. Mutation-selection codon models**
+### I. Mutation-selection codon models (ω<sub>0</sub>)
 
 Mutation-selection codon models are obtained by running `mutselomega` for 2000 points of MCMC with the options:
 ```bash
-bin/mutselomega --omegashift 0.0 --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --until 2000 run_mutsel_bglobin
+bin/mutselomega --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --until 2000 run_mutsel_bglobin
 ```
 
 The gene-specific mutation matrix (μ) is obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) with the options:
@@ -117,7 +172,7 @@ The gene-specific mutation matrix (μ) is obtained by running `readmutselomega`,
 bin/readmutselomega --every 1 --until 2000 --burnin 1000 --nuc run_mutsel_bglobin
 ```
 
-The site-specific predicted rate of evolution (ω<sub>0</sub><sup>(i)</sup> : a scalar between 0 and 1 for each site) are obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_mutsel_bglobin.ci0.025.tsv` with the options:
+The site-specific predicted rate of evolution (ω<sub>0</sub><sup>(i)</sup>: a scalar between 0 and 1 for each site) are obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_mutsel_bglobin.ci0.025.tsv` with the options:
 ```bash
 bin/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 --omega_0 run_mutsel_bglobin
 ```
@@ -139,26 +194,92 @@ Help for the script is also available:
 python3 utils/fitness_to_selcoeff.py --help
 ```
 
-**II. Classical (ω-based) codon models**
+### II. Classical codon models (ω)
 
-Classical (ω-based) codon models are obtained by running `mutselomega` for 2000 points of MCMC with the options:
+Classical codon models (multiplicative factor ω for non-synonymous substitutions) are obtained by running `mutselomega` for 2000 points of MCMC with the options:
 ```bash
-bin/mutselomega --omegashift 0.0 --freeomega --omegancat 30 --flatfitness -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_classical_bglobin
+bin/mutselomega --freeomega --omegancat 30 --flatfitness -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_classical_bglobin
 ```
 
-The site-specific predicted rate of evolution (ω<sup>(i)</sup> : a positif scalar) is obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_classical_bglobin.ci0.025.tsv` with the options:
+The site-specific predicted rate of evolution (ω<sup>(i)</sup>: a positif scalar) is obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_classical_bglobin.ci0.025.tsv` with the options:
 ```bash
 bin/readmutselomega --every 1 --until 2000 --burnin 1000 --confidence_interval 0.025 run_classical_bglobin
 ```
 This will output the mean posterior ω<sup>(i)</sup> over the MCMC as well as the 95% (1 - 0.025*2) credible interval.
-The value of confidence_interval used as input is considered for each side of the distribution, hence a factor 2 for the credible interval.
+The value of `confidence_interval` used as input is considered for each side of the distribution, hence a factor 2 for the credible interval.
 
-If you use this program, please cite:\
-Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot,\
-A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes,\
-_Molecular Biology and Evolution_,
-Volume 38, Issue 3, March 2021, Pages 1199–1208,\
-https://doi.org/10.1093/molbev/msaa265
+### III. Mutation-selection codon models with a multiplicative factor (ω<sub>∗</sub>)
+
+Mutation-selection codon models with a ω<sub>∗</sub> multiplicative factor (MutSel-M3, see [https://doi.org/10.1093/molbev/msaa265](https://doi.org/10.1093/molbev/msaa265)) are obtained by running `mutselomega` for 2000 points of MCMC with the options:
+```bash
+bin/mutselomega --freeomega --omegancat 3 --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_mutselM3_bglobin
+```
+
+The site-specific posterior probabilities in favor of a value greater than 1 (p(ω<sub>∗</sub> > 1)) are obtained by running `readmutselomega`, reading 1000 points of MCMC (first 1000 are considered as burn-in) and written in the file `run_classical_bglobin.omegappgt1.0` as a .tsv file with the options:
+```bash
+bin/readmutselomega --every 1 --until 2000 --burnin 1000 --omega_threshold 1.0 run_mutselM3_bglobin
+```
+
+### IV. Options for `mutselomega` and `readmutselomega`
+
+The options for `mutselomega` are:
+```
+--ncat <int> (default: 30)
+ Number of components for the amino-acid fitness profiles (truncation
+ of the stick-breaking process).
+
+--profiles <string> (default: None)
+ File path the fitness profiles (tsv or csv), thus considered fixed.
+ Each line must contains the fitness of each of the 20 amino-acid, thus
+ summing to one. If same number of profiles as the codon alignment,
+ site allocations are considered fixed. If smaller than the alignment
+ size, site allocations are computed and `ncat` is given by the number
+ of profiles in the file.
+   
+--flatfitness (default: false)
+ Fitness profiles are flattened (and `ncat` equals to 1). This option
+ is not compatible with the option `profiles`.
+    
+--freeomega (default: false)
+ ω is allowed to vary (default ω is 1.0). Combined with the
+ option `flatfitness`, we obtain the classical, ω-based codon model
+ (Muse & Gaut). Without the option `flatfitness`, we obtain the
+ mutation-selection codon model with a multiplicative factor (ω⁎).
+
+--omegancat <int> (default: 1)
+ Number of components for ω (finite mixture).
+      
+--omegaarray <string> (default: None)
+ File path to ω values (one ω per line), thus considered
+ fixed. `freeomega` is overridden to false and `omegancat` equals to the
+ number of ω in the file.
+
+--omegashift <double> (default: 0.0)
+ Additive shift applied to all ω (0.0 for the general case).
+```
+
+You can use one of these options with `readmutselomega` to compute a specific posterior statistic:
+```
+--ss (default: false)
+ Computes the mean posterior site-specific amino-acid equilibrium
+ frequencies (amino-acid fitness profiles).
+
+--omega_threshold <double> (default: 1.0)
+ Threshold to compute the mean posterior probability that ω⁎ (or ω
+ if option `flatfitness` is used in `mutselomega`) is greater than a
+ given value.
+
+--confidence_interval <string> (default: None)
+ Posterior credible interval for ω (per site and at the gene level).
+
+--omega_0 (default: false)
+ Posterior credible interval for ω0 predicted at the
+ mutation-selection equilibrium from the fitness profiles (instead of
+ ω). To use combined with the option `confidence_interval`.
+
+--nuc (default: false)
+ Mean posterior nucleotide matrix.
+```
 
 ## Inferring long-term effective population size
 
@@ -169,7 +290,7 @@ For example, to run a _BayesCode_ chain called `run_nodemutsel_placentalia` on e
 bin/nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx -u 100 run_nodemutsel_placentalia
 ```
 
-**I. Including life-history traits (optional)**
+### I. Including life-history traits (optional)
 
 To include life-history traits (optional), use the option `--traits` with the path to the file containing the traits (in log-space) in tsv format:
 ```bash
@@ -198,7 +319,7 @@ A python script `traits_coevol_to_mutsel.py` (requirements: numpy and pandas) is
 python3 utils/traits_coevol_to_mutsel.py --input data/placentalia/plac.lht --output data/placentalia/plac.log.lht
 ```
 
-**II. Including fossil calibration (optional)**
+### II. Including fossil calibration (optional)
 
 To include fossil calibrations (optional), use the option `--fossils` with the path to the file containing the calibrations in tsv format:
 ```bash
@@ -227,7 +348,7 @@ python3 utils/calibs_coevol_to_mutsel.py --input data/placentalia/plac.calibs --
 ```
 If the tree provided does not include name for internal nodes, the script will give them names and re-write the tree in the same file.
 
-**III. Read annotated trees**
+### III. Read annotated trees
 
 To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, life-history traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
@@ -240,7 +361,7 @@ A python script `plot_tree.py` (requirements: matplotlib, ete3, numpy and pandas
 python3 utils/plot_tree.py --input run_nodemutsel_placentalia
 ```
 
-**IV. Read covariance matrix**
+### IV. Read covariance matrix
 
 To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, life-history traits) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
@@ -252,22 +373,80 @@ The entries of the matrices are in the order specified in the header.
 The posterior probabilities of a positive correlation (pp) are particularly important.
 A pp close to 1 means a strong statistical support for a positive correlation, and a pp close to 0 a supported negative correlation (the posterior probabilities for a negative correlation are given by 1 − pp).
 
-**V. Fitness profiles**
+### V. Fitness profiles
 
 To obtain the fitness profiles in the file `run_nodemutsel_placentalia.profiles` from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
 bin/readnodemutsel --burnin 1000 --until 2000 --ss run_nodemutsel_placentalia
 ```
 
-If you use this program, please cite:\
+### VI. Options for `nodemutsel` and `readnodemutsel`
+
+The options for `nodemutsel` are:
+```
+--ncat <int> (default: 30)
+ Number of components for the amino-acid fitness profiles (truncation
+ of the stick-breaking process).
+ 
+--fossils <string> (default: None)
+ File path to the fossils calibration in tsv format with columns
+ `NodeName`, `Age, `LowerBound` and `UpperBound`.
+
+--profiles <string> (default: None)
+ File path the fitness profiles (tsv or csv), thus considered fixed.
+ Each line must contains the fitness of each of the 20 amino-acid, thus
+ summing to one. If same number of profiles as the codon alignment,
+ site allocations are considered fixed. If smaller than the alignment
+ size, site allocations are computed and `ncat` is given by the number
+ of profiles in the file.
+
+--traitsfile <string> (default: None)
+ File path to the life-history trait (in log-space) in tsv format. The
+ First column is `TaxonName` (taxon matching the name in the alignment)
+ and the next columns are traits.
+```
+
+You can use one of these options with `readnodemutsel` to compute a specific posterior statistic:
+```
+--newick (default: false)
+ Computes the mean posterior node-specific entries of the multivariate
+ Brownian process. Each entry of the multivariate Brownian process is
+ written in a newick extended (.nhx) format file.
+
+--cov (default: false)
+ Computes the mean posterior covariance matrix.
+
+--ss (default: false)
+ Computes the mean posterior site-specific amino-acid equilibrium
+ frequencies (amino-acid fitness profiles).
+ 
+--profiles <string> (default: None)
+ Change the profiles filename if desired, otherwise given by
+ {chain_name}.siteprofiles as default.
+```
+
+
+
+## Citations
+
+- If you use `mutselomega` (ω<sub>∗</sub>, ω<sub>0</sub>, ω), please cite:
+
+Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot,\
+A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes,\
+_Molecular Biology and Evolution_,
+Volume 38, Issue 3, March 2021, Pages 1199–1208,\
+https://doi.org/10.1093/molbev/msaa265
+
+- If you use `nodemutsel` (_N<sub>e</sub>_, _μ_), please cite:
+
 Thibault Latrille, Vincent Lanore, Nicolas Lartillot,\
 Inferring Long-Term Effective Population Size with Mutation–Selection Models,\
 _Molecular Biology and Evolution_,
 Volume 38, Issue 10, October 2021, Pages 4573–4587,\
 https://doi.org/10.1093/molbev/msab160
 
-Moreover, the repository at https://github.com/ThibaultLatrille/MutationSelectionDrift is meant to provide the necessary scripts and data to reproduce the figures shown in the manuscript (please use [_BayesCode v1.0_](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0)).
+The repository at https://github.com/ThibaultLatrille/MutationSelectionDrift is meant to provide the necessary scripts and data to reproduce the figures shown in the manuscript (please use [_BayesCode v1.0_](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0)).
 
-### Authors
+## Authors
 
-Nicolas Lartillot (https://github.com/bayesiancook), Thibault Latrille (https://github.com/ThibaultLatrille), Vincent Lanore (https://github.com/vlanore) and Philippe Veber (https://github.com/pveber)
+Nicolas Lartillot (https://github.com/bayesiancook), Thibault Latrille (https://github.com/ThibaultLatrille), Vincent Lanore (https://github.com/vlanore), Philippe Veber (https://github.com/pveber) and Nicolas Rodrigue.

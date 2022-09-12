@@ -142,29 +142,28 @@ mutselomega: bin
 	@cd bin ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
-
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/flat_bglobin
-	bin/readmutselomega -b 10 _mutselomega/flat_bglobin
-	bin/mutselomega _mutselomega/flat_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --fitness_profiles data/bglobin/bglobin.prefs --deltaomegaarray data/bglobin/deltaomegaarray.csv -u 30 _mutselomega/clamped_bglobin
-	bin/readmutselomega -b 10 _mutselomega/clamped_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --ncat 30 -u 30 _mutselomega/mutsel_bglobin
+	bin/mutselomega _mutselomega/mutsel_bglobin
+	bin/readmutselomega -b 10 --ss _mutselomega/mutsel_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --profiles _mutselomega/mutsel_bglobin.siteprofiles --omegaarray data/bglobin/omegaarray.csv -u 30 _mutselomega/clamped_bglobin
 	bin/mutselomega _mutselomega/clamped_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --deltaomegaarray data/bglobin/deltaomegaarray.csv --ncat 10 -u 30 _mutselomega/clamped_bglobin
 	bin/readmutselomega -b 10 _mutselomega/clamped_bglobin
-	bin/mutselomega _mutselomega/clamped_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/bglobin
-	bin/readmutselomega -b 10 _mutselomega/bglobin
-	bin/mutselomega _mutselomega/bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/MGM3_bglobin
+	bin/mutselomega _mutselomega/MGM3_bglobin
+	bin/readmutselomega -b 10 _mutselomega/MGM3_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/mutselM3_bglobin
+	bin/mutselomega _mutselomega/mutselM3_bglobin
+	bin/readmutselomega -b 10 _mutselomega/mutselM3_bglobin
 
 .PHONY: DM5
 DM5: bin
 	@cd bin ; make --no-print-directory -j8 mutseldm5 readmutseldm5
 	@rm -rf _mutseldm5
 	@mkdir _mutseldm5
-	bin/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 0.0 --freeomega --omegancat 10 --flatfitness --fixp0 --p0 0.0 -u 30 --hypermean_threshold 0.0 --hyperinvshape_threshold 10.0 _mutseldm5/flat_bglobin
-	bin/readmutseldm5 _mutseldm5/flat_bglobin
-	bin/mutseldm5 _mutseldm5/flat_bglobin
-	bin/readmutseldm5 --ss _mutseldm5/flat_bglobin
+	bin/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 0.0 --freeomega --omegancat 10 --flatfitness --fixp0 --p0 0.0 -u 30 --hypermean_threshold 0.0 --hyperinvshape_threshold 10.0 _mutseldm5/MGM3_bglobin
+	bin/readmutseldm5 _mutseldm5/MGM3_bglobin
+	bin/mutseldm5 _mutseldm5/MGM3_bglobin
+	bin/readmutseldm5 --ss _mutseldm5/MGM3_bglobin
 	bin/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 1.0 --freeomega --omegancat 10 --ncat 30 -u 30 _mutseldm5/bglobin
 	bin/readmutseldm5 _mutseldm5/bglobin
 	bin/mutseldm5 _mutseldm5/bglobin

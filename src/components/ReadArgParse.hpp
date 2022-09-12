@@ -14,18 +14,18 @@ class ReadArgParse {
     explicit ReadArgParse(TCLAP::CmdLine& cmd) : cmd{cmd} {}
 
     TCLAP::ValueArg<int> every{
-        "e", "every", "Number of iterations between two traces", false, 1, "int", cmd};
+        "e", "every", "Number of MCMC iterations between two saved point in the trace.", false, 1, "int", cmd};
     TCLAP::ValueArg<int> until_input{"u", "until",
-        "Maximum number of (saved) iterations (-1 means unlimited)", false, -1, "int", cmd};
+        "Maximum number of (saved) iterations (-1 means unlimited).", false, -1, "int", cmd};
     TCLAP::ValueArg<int> burnin_input{
-        "b", "burnin", "Number of iterations for burnin", false, 0, "int", cmd};
+        "b", "burnin", "Number of MCMC iterations for the burn-in.", false, 0, "int", cmd};
     TCLAP::SwitchArg ppred{"p", "ppred",
         "For each point of the chain (after burn-in), produces a data replicate simulated "
         "from the posterior predictive distribution",
         cmd};
     TCLAP::SwitchArg trace{"", "trace", "Recompute the trace.", cmd};
     TCLAP::UnlabeledValueArg<std::string> chain_name{
-        "chain_name", "Chain name (output file prefix)", true, "chain", "string", cmd};
+        "chain_name", "Chain name (output file prefix).", true, "chain", "string", cmd};
 
     std::string GetChainName() { return chain_name.getValue(); }
 

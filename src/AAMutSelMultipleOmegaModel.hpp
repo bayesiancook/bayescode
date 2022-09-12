@@ -121,8 +121,10 @@ std::tuple<std::vector<std::vector<double>>, std::vector<size_t>> open_preferenc
         }
 
         bool push = true;
-        assert(std::abs(std::accumulate(fitness_profil.begin(), fitness_profil.end(), 0.0) - 1.0) <
-               1e-5);
+        if (std::abs(std::accumulate(fitness_profil.begin(), fitness_profil.end(), 0.0) - 1.0) >
+            1e-5) {
+            std::cerr << "Fitness profile doesn't sum to 1 for line:\n" << line << std::endl;
+        };
         for (size_t i = 0; i < fitness_profiles.size(); i++) {
             if (distance(fitness_profiles[i], fitness_profil) < 1e-5) {
                 push = false;
@@ -361,7 +363,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         std::cout << "Number of sites: " << Nsite << std::endl;
         std::cout << "Number of profile categories (cut-off for infinite mixture): " << Ncat
                   << '\n';
-        std::cout << "Number of omega categories (finite mixture) : " << omegaNcat << '\n';
+        std::cout << "Number of omega categories (finite mixture): " << omegaNcat << '\n';
         std::cout << "Additive shift in omega: " << omega_shift << '\n';
 
         taxonset = codondata->GetTaxonSet();
@@ -555,6 +557,8 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     CodonStateSpace *GetCodonStateSpace() const {
         return (CodonStateSpace *)codondata->GetStateSpace();
     }
+
+    bool FlatFitness() const { return flatfitness; }
 
     //! return number of aligned sites
     int GetNsite() const { return Nsite; }

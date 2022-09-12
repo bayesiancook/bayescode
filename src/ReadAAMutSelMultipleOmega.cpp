@@ -14,15 +14,23 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
-    SwitchArg nuc{"n", "nuc", "Computes the mean nucleotide matrix", cmd};
-    ValueArg<string> confidence_interval{
-        "c", "confidence_interval", "Confidence interval for omega", false, "", "string", cmd};
-    SwitchArg omega_knot{
-        "", "omega_0", "Confidence interval for omega_0 (predicted) instead of omega", cmd};
-    SwitchArg ss{
-        "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
-    ValueArg<double> omega_pp{
-        "", "omega_threshold", "the threshold for omega", false, 1.0, "double", cmd};
+    SwitchArg nuc{"n", "nuc", "Mean posterior nucleotide matrix.", cmd};
+    ValueArg<string> confidence_interval{"c", "confidence_interval",
+        "Posterior credible interval for ω (per site and at the gene level).", false, "", "string",
+        cmd};
+    SwitchArg omega_knot{"", "omega_0",
+        "Posterior credible interval for ω0 predicted at the mutation-selection "
+        "equilibrium from the fitness profiles (instead of ω). "
+        "To use combined with the option `confidence_interval`.",
+        cmd};
+    SwitchArg ss{"s", "ss",
+        "Computes the mean posterior site-specific amino-acid equilibrium frequencies"
+        "(amino-acid fitness profiles).",
+        cmd};
+    ValueArg<double> omega_pp{"", "omega_threshold",
+        "Threshold to compute the mean posterior probability that ω⁎ "
+        "(or ω if option `flatfitness` is used in `mutselomega`) is greater than a given value.",
+        false, 1.0, "double", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -167,6 +175,12 @@ int main(int argc, char *argv[]) {
 
         string filename{chain_name + ".omegappgt" + to_string(read_args.omega_pp.getValue())};
         ofstream os(filename.c_str());
+        if (model.FlatFitness()) {
+            os << "#site\tp(ω>" << read_args.omega_pp.getValue() << ")\tω\n";
+        } else {
+            os << "#site\tp(ω*>" << read_args.omega_pp.getValue() << ")\tω*\n";
+        }
+
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1 << '\t' << omegappgto[i] / size << '\t' << omega[i] / size << '\n';
         }

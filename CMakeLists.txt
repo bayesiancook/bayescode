@@ -118,11 +118,11 @@ target_link_libraries(mutselomega ${BASE_LIBS})
 add_executable(readmutselomega "src/ReadAAMutSelMultipleOmega.cpp")
 target_link_libraries(readmutselomega ${BASE_LIBS})
 
-# Mutation-Selection (mutselomega)
+# Mutation-Selection (mutseldm5)
 add_executable(mutseldm5 "src/AAMutSelDM5.cpp")
 target_link_libraries(mutseldm5 ${BASE_LIBS})
 
-# Read Mutation-Selection (readmutselomega)
+# Read Mutation-Selection (readmutseldm5)
 add_executable(readmutseldm5 "src/ReadAAMutSelDM5.cpp")
 target_link_libraries(readmutseldm5 ${BASE_LIBS})
 
