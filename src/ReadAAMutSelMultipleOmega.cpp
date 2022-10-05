@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < Nnuc; i++) {
                 for (int j = 0; j < Nnuc; j++) {
                     if (i != j) {
-                        int r = i * j + j;
+                        int r = i * Nnuc + j;
                         rates[r].push_back(model.GetNucRate(i, j));
                     }
                 }
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < Nnuc; i++) {
             for (int j = 0; j < Nnuc; j++) {
                 if (i != j) {
-                    int r = i * j + j;
+                    int r = i * Nnuc + j;
                     double q_mean = accumulate(rates.at(r).begin(), rates.at(r).end(), 0.0) / size;
                     os << "q_" << DNAletters[i] << "_" << DNAletters[j] << "\t" << q_mean << '\n';
                 }
