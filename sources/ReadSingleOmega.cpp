@@ -70,6 +70,29 @@ class SingleOmegaSample : public Sample {
         // points can be accessed to (only once) by repeated calls to GetNextPoint()
     }
 
+    void ReadSiteSuffStat() {
+        cerr << size << " points to read\n";
+
+        dSOmegaPathSuffStatArray array(GetModel()->GetNsite());
+        array.Clear();
+
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AdddSOmegaPathSuffStat(array);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        ofstream os((name + ".sitedsomss").c_str());
+        os << "site\tMs\tMn\tLs\tLn\tom\n";
+        for (int i=0; i<array.GetSize(); i++)   {
+            os << i << '\t' << array[i] << '\n';
+            // os << i << '\t' << array[i] << '\t' << array[i].GetdNdS(0.1) << '\n';
+        }
+        cout << "site dsom suffstat written in : " << name << ".sitedsomss\n";
+    }
+
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
@@ -99,6 +122,7 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int ppred = 0;
+    int sitess = 0;
 
     string name;
 
@@ -125,6 +149,8 @@ int main(int argc, char *argv[]) {
                 until = atoi(argv[i]);
             } else if (s == "-ppred") {
                 ppred = 1;
+            } else if (s == "-sitesuffstat")    {
+                sitess = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -145,6 +171,8 @@ int main(int argc, char *argv[]) {
     SingleOmegaSample *sample = new SingleOmegaSample(name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
+    } else if (sitess)  {
+        sample->ReadSiteSuffStat();
     } else {
         sample->Read();
     }

@@ -140,6 +140,10 @@ class SingleOmegaModel : public ProbModel {
         Nbranch = tree->GetNbranch();
     }
 
+    int GetNsite() const    {
+        return Nsite;
+    }
+
     //! model allocation
     void Allocate() {
 
@@ -606,6 +610,14 @@ class SingleOmegaModel : public ProbModel {
     //-------------------
     // Traces and Monitors
     // ------------------
+
+    void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatArray& into) const {
+        PathSuffStatArray pathsuffstatarray(Nsite);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        double totlength = branchlength->GetTotalLength();
+        into.AddSuffStat(*codonmatrix, pathsuffstatarray, totlength, omega);
+    }
 
     void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatBranchArray& into) const {
         PathSuffStatNodeArray pathsuffstatarray(*tree);

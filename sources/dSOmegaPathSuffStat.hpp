@@ -187,11 +187,11 @@ class dSOmegaPathSuffStat : public SuffStat {
         return *this;
     }
 
-    double GetdNdS() const    {
+    double GetdNdS(double pseudocount = 0) const    {
         if ((!bsyn) || (!bnonsyn) || (!nsyn))    {
             return 0;
         }
-        return (nnonsyn / bnonsyn) / (nsyn / bsyn);
+        return ((nnonsyn+pseudocount) / bnonsyn) / ((nsyn+pseudocount) / bsyn);
     }
 
     double GetdS() const    {
@@ -533,6 +533,113 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         os << ";\n";
         RecursiveBranchToNewick(os, GetTree().GetRoot(), 3);
         os << ";\n";
+    }
+};
+
+class dSOmegaPathSuffStatArray : public SimpleArray<dSOmegaPathSuffStat>    {
+
+  public:
+
+    dSOmegaPathSuffStatArray(int insize)
+        : SimpleArray<dSOmegaPathSuffStat>(insize) {
+            Clear();
+    }
+
+    //! copy constructor
+    dSOmegaPathSuffStatArray(const dSOmegaPathSuffStatArray& from) :
+        SimpleArray<dSOmegaPathSuffStat>(from.GetSize())    {
+            Clear();
+    }
+
+    ~dSOmegaPathSuffStatArray() {}
+
+    //! set all suff stats to 0
+    void Clear() {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i].Clear();
+        }
+    }
+
+    void TodSSuffStat(Array<PoissonSuffStat>& suffstat, const Selector<double>& omega) const {
+        for (int i = 0; i < GetSize(); i++) {
+            GetVal(i).TodSSuffStat(suffstat[i], omega.GetVal(i));
+        }
+    }
+
+    void ToOmSuffStat(Array<PoissonSuffStat>& suffstat, const Selector<double>& l) const {
+        for (int i = 0; i < GetSize(); i++) {
+            GetVal(i).ToOmSuffStat(suffstat[i], l.GetVal(i));
+        }
+    }
+
+    void Normalize(double factor)   {
+        for (int i = 0; i < GetSize(); i++) {
+            (*this)[i].Normalize(factor);
+        }
+    }
+
+    /*
+    void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+                     const Selector<PathSuffStat> &pathsuffstatarray,
+                     double length, const Selector<double>& omega) {
+
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].AddSuffStat(
+                codonsubmatrixarray.GetVal(i),
+                pathsuffstatarray.GetVal(i),
+                length,
+                omega.GetVal(i));
+        }
+    }
+    */
+
+    void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix,
+                     const Selector<PathSuffStat> &pathsuffstatarray,
+                     double length, double omega)   {
+
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].AddSuffStat(
+                codonsubmatrix,
+                pathsuffstatarray.GetVal(i),
+                length, omega);
+        }
+    }
+
+    //! return array size when put into an MPI buffer
+    unsigned int GetMPISize() const { return GetVal(0).GetMPISize() * GetSize(); }
+
+    //! put array into MPI buffer
+    void MPIPut(MPIBuffer &buffer) const {
+        for (int i=0; i<GetSize(); i++) {
+            buffer << GetVal(i);
+        }
+    }
+
+    //! get array from MPI buffer
+    void MPIGet(const MPIBuffer &buffer) {
+        for (int i=0; i<GetSize(); i++) {
+            buffer >> (*this)[i];
+        }
+    }
+
+    //! get an array from MPI buffer and then add it to this array
+    void Add(const MPIBuffer &buffer) {
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i] += buffer;
+        }
+    }
+
+    void ToStream(ostream& os) const {
+        for (int i=0; i<GetSize(); i++) {
+            os << GetVal(i) << '\t';
+        }
+        os << '\n';
+    }
+
+    void FromStream(istream& is)    {
+        for (int i=0; i<GetSize(); i++) {
+            is >> (*this)[i];
+        }
     }
 };
 
