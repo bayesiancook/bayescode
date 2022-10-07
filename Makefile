@@ -36,13 +36,12 @@ release:
 	@rm -rf bin/Makefile
 	@rm -rf bin/*.a
 
-.PHONY: nompi
-nompi:
+.PHONY: tiny
+tiny:
 	@rm -rf bin
 	@mkdir bin
-	@cd bin ; cmake -DNO_MPI=ON ..
-	@make --no-print-directory run-unit-tests
-	@make --no-print-directory run-app-tests
+	@cd bin ; cmake -DTINY=ON ..
+	@make --no-print-directory
 
 .PHONY: clean
 clean:
