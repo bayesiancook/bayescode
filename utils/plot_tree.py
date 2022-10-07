@@ -1,4 +1,4 @@
-#!python3
+#!/usr/bin/env python3
 import argparse
 from glob import glob
 from itertools import chain
