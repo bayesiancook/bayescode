@@ -1,12 +1,9 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
 project(bayescode CXX)
 
-# MPI
-find_package(MPI REQUIRED)
-include_directories(${MPI_INCLUDE_PATH})
-
 # Compilation options
 option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
+option(NO_MPI "Not-compiling MPI using g++ " OFF) #OFF by default
 option(DEBUG_MODE "Debug mode (with asserts and such) " OFF) #OFF by default
 set(ALWAYSON_CXX_FLAGS "--std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors ")
 if(COVERAGE_MODE)
@@ -20,6 +17,15 @@ else()
     message("-- INFO: Compiling in release mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
 endif(COVERAGE_MODE)
 unset(COVERAGE_MODE CACHE)
+
+if(NO_MPI)
+    message("-- INFO: Compiling without MPI.")
+else()
+    message("-- INFO: Compiling with MPI.")
+    # MPI
+    find_package(MPI REQUIRED)
+    include_directories(${MPI_INCLUDE_PATH})
+endif(NO_MPI)
 
 include_directories("src")
 include_directories("src/lib")
@@ -68,27 +74,27 @@ target_link_libraries(globom ${BASE_LIBS})
 
 # Node omega (nodeomega)
 add_executable(nodeomegamutsel "src/DatedNodeOmega.cpp")
-target_link_libraries(nodeomegamutsel bayescode_lib tree_lib)
+target_link_libraries(nodeomegamutsel ${BASE_LIBS})
 
 # Read Node Brownian (readnodetraitsmutsel)
 add_executable(readnodetraitsmutsel "src/ReadDatedNode.cpp")
-target_link_libraries(readnodetraitsmutsel bayescode_lib tree_lib)
+target_link_libraries(readnodetraitsmutsel ${BASE_LIBS})
 
 # Node Brownian (nodetraitsmutsel)
 add_executable(nodetraitsmutsel "src/DatedNode.cpp")
-target_link_libraries(nodetraitsmutsel bayescode_lib tree_lib)
+target_link_libraries(nodetraitsmutsel ${BASE_LIBS})
 
 # Read Node omega (readnodeomega)
 add_executable(readnodeomegamutsel "src/ReadDatedNodeOmega.cpp")
-target_link_libraries(readnodeomegamutsel bayescode_lib tree_lib)
+target_link_libraries(readnodeomegamutsel ${BASE_LIBS})
 
 # Node Ne mutsel (nodemutsel)
 add_executable(nodemutsel "src/DatedNodeMutSel.cpp")
-target_link_libraries(nodemutsel bayescode_lib tree_lib)
+target_link_libraries(nodemutsel ${BASE_LIBS})
 
 # Read Branch Ne chronogram (readdatedmutsel)
 add_executable(readnodemutsel "src/ReadDatedNodeMutSel.cpp")
-target_link_libraries(readnodemutsel bayescode_lib tree_lib)
+target_link_libraries(readnodemutsel ${BASE_LIBS})
 
 # Read single omega (readglobom)
 add_executable(readglobom "src/ReadSingleOmega.cpp")
@@ -143,11 +149,16 @@ target_link_libraries(diffseldsparse ${BASE_LIBS})
 # target_link_libraries(multigenecodonm2a ${BASE_LIBS} ${MPI_LIBRARIES})
 
 # tests
-add_executable(all_tests "src/all_tests.cpp")
-target_link_libraries(all_tests ${MPI_LIBRARIES})
-
 add_executable(tree_test "src/tree/test.cpp")
 target_link_libraries(tree_test tree_lib)
 
-add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
-target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
+if(NO_MPI)
+else()
+    # MPI
+    add_executable(mpi_par_test "src/mpi_components/test/mpi_test.cpp")
+    target_link_libraries(mpi_par_test ${MPI_LIBRARIES})
+
+    add_executable(all_tests "src/all_tests.cpp")
+    target_link_libraries(all_tests ${MPI_LIBRARIES})
+endif(NO_MPI)
+unset(NO_MPI CACHE)

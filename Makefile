@@ -36,6 +36,14 @@ release:
 	@rm -rf bin/Makefile
 	@rm -rf bin/*.a
 
+.PHONY: nompi
+nompi:
+	@rm -rf bin
+	@mkdir bin
+	@cd bin ; cmake -DNO_MPI=ON ..
+	@make --no-print-directory run-unit-tests
+	@make --no-print-directory run-app-tests
+
 .PHONY: clean
 clean:
 	@rm -rf bin
@@ -62,8 +70,10 @@ POINTS=2
 run-unit-tests: all
 	@echo "\n\e[35m\e[1m== Tree test ==================================================================\e[0m"
 	bin/tree_test
-	@echo "\n\n\e[35m\e[1m== All sequential tests =======================================================\e[0m"
-	bin/all_tests
+
+
+.PHONY: run-unit-tests-mpi
+run-unit-tests-mpi: all
 	@echo "\n\n\e[35m\e[1m== MPI par test ===============================================================\e[0m"
 	mpirun -np 3 bin/mpi_par_test
 
@@ -121,6 +131,7 @@ run-multigeneglobom-test: all
 .PHONY: testpr
 test:
 	@make --no-print-directory run-unit-tests
+	@make --no-print-directory run-unit-tests-mpi
 	@make --no-print-directory run-app-tests
 
 .PHONY: aamutsel
