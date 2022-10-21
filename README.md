@@ -109,7 +109,7 @@ For example, the following file would be a valid tree file for _BayesCode_ match
 ```
 
 ### 3. Example files
-The `datà` folder in the _BayesCode_ root folder contains examples of data files usable with _BayesCode_.
+The `data` folder in the _BayesCode_ root folder contains examples of data files usable with _BayesCode_.
 The whole folder can be downloaded here: [https://github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip](https://github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip).
 
 ## Run BayesCode
