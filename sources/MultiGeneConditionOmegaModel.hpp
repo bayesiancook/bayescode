@@ -1,22 +1,14 @@
 
-// this is a multigene version of singleomegamodel
+// Model introduced in Gobbo et al, 2020, Genome Biol Evol 12:2060-2073
 //
-// - branch lengths are shared across genes, and are iid Exponential of rate
-// lambda
-// - nucleotide relative exchangeabilities and stationaries are also shared
-// across genes (uniform Dirichlet)
-// - the array of gene-specific omega's are iid gamma with hyperparameters
-// omegahypermean and omegahyperinvshape
+// - branch lengths are either shared across genes, or shrunken, or independent
+// - same thing for nucleotide relative exchangeabilities acros genes
+// both are shrunken by default
 //
-// the sequence of MCMC moves is as follows:
-// - genes resample substitution histories, gather path suff stats and move
-// their omega's
-// - master receives the array of omega's across genes, moves their
-// hyperparameters and then broadcast the new value of these hyperparams
-// - master collects branch length suff stats across genes, moves branch lengths
-// and broadcasts their new value
-// - master collects nuc path suffstats across genes, moves nuc rates and
-// broadcasts their new value
+// - condition (or branch) specific modulators: v_j ~ iid gamma (mean=1, cond_invshape)
+// - gene specific modulators: w_i ~ iid gamma (mean, gene_invshape)
+// - condition-gene (or branch-gene) effects: omega_ij ~ gamma (mean = v_j * w_i, omega_invshape)
+//
 
 #include "ConditionOmegaModel.hpp"
 #include "MultiGeneProbModel.hpp"
@@ -71,7 +63,9 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     Tree *tree;
     CodonSequenceAlignment *refcodondata;
     const TaxonSet *taxonset;
+    std::vector<CodonSequenceAlignment*> alivector;
 
+    string datafile;
     string treefile;
 
     int Ntaxa;
@@ -146,7 +140,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     // Construction and allocation
     //-------------------
 
-    MultiGeneConditionOmegaModel(string datafile, string intreefile, int inNcond, int inNlevel, 
+    MultiGeneConditionOmegaModel(string indatafile, string intreefile, int inNcond, int inNlevel, 
                                  int inmyid, int innprocs)
         : MultiGeneProbModel(inmyid, innprocs),
           nucrelratesuffstat(Nrr),
@@ -158,8 +152,10 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
 
         ppredmode = 1;
 
-        AllocateAlignments(datafile);
+        datafile = indatafile;
         treefile = intreefile;
+        AllocateAlignments(datafile);
+
         Ncond = inNcond;
         Nlevel = inNlevel;
 
@@ -260,9 +256,50 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         } else {
             geneprocess.assign(GetLocalNgene(), (ConditionOmegaModel *)0);
 
-            for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                geneprocess[gene] =
+            ifstream is(datafile.c_str());
+            string tmp;
+            is >> tmp;
+            if (tmp == "ALI")   {
+                int ngene;
+                is >> ngene;
+                if (ngene != GetNgene())    {
+                    cerr << "error when reading alignments from cat file: non matching number of genes\n";
+                    exit(1);
+                }
+                alivector.assign(GetLocalNgene(), (CodonSequenceAlignment*) 0);
+                int index = 0;
+                for (int gene=0; gene<GetNgene(); gene++)   {
+                    string name;
+                    is >> name;
+                    FileSequenceAlignment tmp(is);
+                    if ((index < GetLocalNgene()) && (name == GeneName[index]))    {
+                        if (GetLocalGeneName(index) != name)    {
+                            cerr << "error: non matching gene name\n";
+                            exit(1);
+                        }
+                        if (alivector[index]) {
+                            cerr << "error: alignment already allocated\n";
+                            exit(1);
+                        }
+                        alivector[index] = new CodonSequenceAlignment(&tmp, true);
+                        index++;
+                    }
+                }
+                for (int gene = 0; gene < GetLocalNgene(); gene++) {
+                    if (! alivector[gene])  {
+                        cerr << "error: alignment not allocated\n";
+                        exit(1);
+                    }
+                    geneprocess[gene] = new ConditionOmegaModel(alivector[gene], tree, Ncond, Nlevel);
+                }
+            }
+            else    {
+                for (int gene = 0; gene < GetLocalNgene(); gene++) {
                     new ConditionOmegaModel(GetLocalGeneName(gene), treefile, Ncond, Nlevel);
+                }
+            }
+
+            for (int gene = 0; gene < GetLocalNgene(); gene++) {
                 geneprocess[gene]->SetAcrossGenesModes(blmode, nucmode);
                 geneprocess[gene]->Allocate();
             }

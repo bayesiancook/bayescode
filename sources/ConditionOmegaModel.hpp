@@ -56,10 +56,10 @@ class BranchMixtureSelector : public BranchSelector<T> {
 
 class ConditionOmegaModel : public ProbModel {
     // tree and data
-    Tree *tree;
+    const Tree *tree;
     FileSequenceAlignment *data;
     const TaxonSet *taxonset;
-    CodonSequenceAlignment *codondata;
+    const CodonSequenceAlignment *codondata;
 
     int Nsite;
     int Ntaxa;
@@ -158,12 +158,33 @@ class ConditionOmegaModel : public ProbModel {
         taxonset = codondata->GetTaxonSet();
 
         // get tree from file (newick format)
-        tree = new Tree(treefile);
-
+        Tree* tmptree = new Tree(treefile);
         // check whether tree and data fits together
-        tree->RegisterWith(taxonset);
+        tmptree->RegisterWith(taxonset);
+        tmptree->SetIndices();
+        tree = tmptree;
 
-        tree->SetIndices();
+        Nbranch = tree->GetNbranch();
+
+        // specifies which condition for which branch
+        branchalloc = new BranchAllocationSystem(*tree, Ncond);
+    }
+
+    ConditionOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree, int inNcond, int inNlevel) {
+
+        blmode = 0;
+        nucmode = 0;
+
+        codondata = incodondata;
+
+        Nsite = codondata->GetNsite();  // # columns
+        Ntaxa = codondata->GetNtaxa();
+        Ncond = inNcond;
+        Nlevel = inNlevel;
+
+        taxonset = codondata->GetTaxonSet();
+
+        tree = intree;
         Nbranch = tree->GetNbranch();
 
         // specifies which condition for which branch
