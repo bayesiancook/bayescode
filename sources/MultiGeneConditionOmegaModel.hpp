@@ -1181,7 +1181,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
                 MoveOmegaInvShape(0.3, 1);
             }
         }
-        // MoveCondVHyperParams(1.0,100);
+        MoveCondVHyperParams(1.0,100);
         MoveGeneWHyperParams(1.0, 100);
         meanomegabidimarray->Update();
     }
