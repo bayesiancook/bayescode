@@ -12,13 +12,12 @@ MPI_Datatype Propagate_arg;
  */
 
 class MultiGeneSingleOmegaChain : public MultiGeneChain {
-  private:
+  public:
     // Chain parameters
     string modeltype, datafile, treefile;
     int blmode, nucmode, omegamode;
     double omegahypermean, omegahyperinvshape;
 
-  public:
     MultiGeneSingleOmegaModel *GetModel() {
         return static_cast<MultiGeneSingleOmegaModel *>(model);
     }
@@ -143,7 +142,9 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
         }
         MultiGeneChain::MakeFiles(force);
         ofstream os((name + ".geneom").c_str());
-        ofstream los((name + ".geneds").c_str());
+        if (GetModel()->GetBLMode() != 2)    {
+            ofstream los((name + ".geneds").c_str());
+        }
     }
 
     void SavePoint() override {
@@ -151,8 +152,10 @@ class MultiGeneSingleOmegaChain : public MultiGeneChain {
         if (!myid) {
             ofstream os((name + ".geneom").c_str(), ios_base::app);
             GetModel()->TraceOmega(os);
-            ofstream los((name + ".geneds").c_str(), ios_base::app);
-            GetModel()->TraceGeneTreeLength(los);
+            if (GetModel()->GetBLMode() != 2)    {
+                ofstream los((name + ".geneds").c_str(), ios_base::app);
+                GetModel()->TraceGeneTreeLength(los);
+            }
         }
     }
 };

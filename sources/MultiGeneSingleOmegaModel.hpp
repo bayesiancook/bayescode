@@ -245,6 +245,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         omegamode = inomegamode;
     }
 
+    int GetBLMode() const   {
+        return blmode;
+    }
+
     void SetOmegaHyperParameters(double inomegahypermean, double inomegahyperinvshape)  {
         omegahypermean = inomegahypermean;
         omegahyperinvshape = inomegahyperinvshape;
@@ -560,6 +564,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     }
 
     void TraceGeneTreeLength(ostream &os) const {
+        if (blmode == 2)    {
+            cerr << "error: in trace gene length tree yet branch lengths are shared\n";
+            exit(1);
+        }
         for (int gene = 0; gene < Ngene; gene++) {
             os << branchlengtharray->GetVal(gene).GetTotalLength() << '\t';
         }
