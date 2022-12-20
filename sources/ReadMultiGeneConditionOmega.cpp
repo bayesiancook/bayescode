@@ -2,6 +2,7 @@
 #include <fstream>
 #include "MultiGeneSample.hpp"
 #include "MultiGeneConditionOmegaModel.hpp"
+#include "RecursiveNewick.hpp"
 using namespace std;
 
 MPI_Datatype Propagate_arg;
@@ -67,11 +68,17 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         cerr << size << " points to read\n";
         vector<vector<double>> pp(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
         vector<vector<double>> effect(GetModel()->GetNcond(),vector<double>(GetModel()->GetNgene(),0));
+
+        vector<double> condmean(GetModel()->GetNcond(), 0);
+
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
             GetModel()->FastUpdate();
+            double meangene = GetModel()->GetMeanGeneEffect();
             for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                double tmp = GetModel()->GetCondEffect(cond);
+                condmean[cond] += tmp * meangene;
                 for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
                     double temp = log(GetModel()->GetOmega(gene,cond) / GetModel()->GetMeanOmega(gene,cond));
                     if (temp > 0)   {
@@ -83,11 +90,30 @@ class MultiGeneConditionOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
 
+        for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+            condmean[cond] /= size;
+        }
+
         for (int gene=0; gene<GetModel()->GetNgene(); gene++)    {
             for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
                 effect[cond][gene] /= size;
                 pp[cond][gene] /= size;
             }
+        }
+
+        ofstream cos((name + ".postmeancondeffects").c_str());
+        if (GetModel()->PerBranch())    {
+            Tabulate(cos, GetModel()->GetTree(), condmean, false);
+        }
+        else    {
+            for (int cond=0; cond<GetModel()->GetNcond(); cond++)    {
+                cos << cond << '\t' << condmean[cond] << '\n';
+            }
+        }
+
+        if (GetModel()->PerBranch())    {
+            ofstream cos((name + ".postmeanleafbrancheffects").c_str());
+            Tabulate(cos, GetModel()->GetTree(), condmean, true);
         }
 
         ofstream os((name + ".postmeaneffects").c_str());

@@ -185,6 +185,22 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
         }
     }
 
+    bool PerBranch() const  {
+        return Ncond == Nbranch;
+    }
+
+    int GetNtaxa() const    {
+        return Ntaxa;
+    }
+
+    string GetTaxonName(int index) const    {
+        return taxonset->GetTaxon(index);
+    }
+
+    const Tree* GetTree() const {
+        return tree;
+    }
+
     void Allocate() {
 
         lambda = 10;
@@ -328,8 +344,6 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
     }
 
     int GetNbranch() const { return tree->GetNbranch(); }
-
-    const Tree *GetTree() const { return tree; }
 
     int GetNcond() const { return Ncond; }
 
@@ -728,6 +742,32 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
             exit(1);
         }
         return meanomegabidimarray->GetVal(gene).GetVal(cond);
+    }
+
+    double GetGeneEffect(int gene) const    {
+        return genewarray->GetVal(gene);
+    }
+
+    double GetCondEffect(int cond) const    {
+        return condvarray->GetVal(cond);
+    }
+
+    double GetMeanGeneEffect() const    {
+        double mean = 0;
+        for (int gene=0; gene<Ngene; gene++)    {
+            mean += genewarray->GetVal(gene);
+        }
+        mean /= Ngene;
+        return mean;
+    }
+
+    double GetMeanCondEffect() const    {
+        double mean = 0;
+        for (int cond=0; cond<Ncond; cond++)    {
+            mean += condvarray->GetVal(cond);
+        }
+        mean /= Ncond;
+        return mean;
     }
 
     double GetLogPrior() const {
