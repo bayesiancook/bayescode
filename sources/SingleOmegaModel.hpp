@@ -144,6 +144,10 @@ class SingleOmegaModel : public ProbModel {
         return Nsite;
     }
 
+    const Tree* GetTree() const {
+        return tree;
+    }
+
     //! model allocation
     void Allocate() {
 

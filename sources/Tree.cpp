@@ -303,6 +303,10 @@ Tree::Tree(string filename) {
     ReadFromStream(is);
 }
 
+Tree::Tree(istream& is) {
+    ReadFromStream(is);
+}
+
 void Tree::ReadFromStream(istream &is) {
     string expr = "";
     int cont = 1;

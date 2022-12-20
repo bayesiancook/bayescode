@@ -8,10 +8,9 @@ int main(int argc, char* argv[])    {
 
     ifstream is(argv[1]);
     Tree tree(argv[2]);
-    tree.SetIndices();
+    string basename = argv[3];
 
-    string prefix = argv[3];
-    string basename = argv[4];
+    tree.SetIndices();
 
     dSOmegaPathSuffStatBranchArray dsomss(tree);
 
@@ -21,25 +20,42 @@ int main(int argc, char* argv[])    {
         string genename;
         is >> genename;
 
-        Tree treedscount(prefix + genename + ".counts_dS.dnd");
+        string tmp;
+        is >> tmp;
+        if (tmp != "counts_dS") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedscount(is);
         treedscount.SetIndices();
 
-        Tree treedsbeta(prefix + genename + ".counts_dS_norm.dnd");
+        is >> tmp;
+        if (tmp != "counts_dS_norm") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedsbeta(is);
         treedsbeta.SetIndices();
 
-        Tree treedncount(prefix + genename + ".counts_dN.dnd");
+        is >> tmp;
+        if (tmp != "counts_dN") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedncount(is);
         treedncount.SetIndices();
 
-        Tree treednbeta(prefix + genename + ".counts_dN_norm.dnd");
+        is >> tmp;
+        if (tmp != "counts_dN_norm") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treednbeta(is);
         treednbeta.SetIndices();
 
         dsomss.Add(treedscount, treedsbeta, treedncount, treednbeta);
     }
 
-    ofstream dos((basename + ".branchdsomsuffstat").c_str());
-    dos << dsomss;
-    cerr << "tabulated suff stats in " << basename << ".branchdsomsuffstat\n";
-    
     SimpleBranchArray<double> dnds(tree);
     dsomss.GetdNdS(dnds);
     SimpleBranchArray<double> ds(tree);

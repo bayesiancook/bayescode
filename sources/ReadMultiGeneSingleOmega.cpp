@@ -119,48 +119,72 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         cerr << '\n';
 
         GetModel()->MasterReceiveGeneArray(array);
-        ofstream os((name + ".genebranchdsomsuffstat").c_str());
-        for (int i=0; i<GetModel()->GetNgene(); i++) {
-            os << array[i] << '\n';
-        }
-        cerr << "gene dsom path suffstats in " << name << ".genebranchdsomsuffstat\n";
 
-        dSOmegaPathSuffStatBranchArray globdsomss(GetModel()->GetTree());
-        for (int i=0; i<GetModel()->GetNgene(); i++) {
-            globdsomss.Add(array[i]);
+        ofstream dsom_os((name + ".genedsomsuffstat").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            dsom_os << GetModel()->GetLocalGeneName(gene) << '\n';
+            dsom_os << "counts_dS\t";
+            array[gene].BranchToNewickSynCount(dsom_os);
+            dsom_os << "counts_dS_norm\t";
+            array[gene].BranchToNewickSynBeta(dsom_os);
+            dsom_os << "counts_dN\t";
+            array[gene].BranchToNewickNonSynCount(dsom_os);
+            dsom_os << "counts_dN_norm\t";
+            array[gene].BranchToNewickNonSynBeta(dsom_os);
         }
-
-        ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
-        gos << globdsomss << '\n';
-        cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
-        ofstream tgos((name + ".meanbranchdsomsuffstat.tre").c_str());
-        globdsomss.BranchToNewick(tgos);
-        cerr << "newick format: global dsom path suffstats in " << name << ".meanbranchdsomsuffstat.tre\n";
 
         /*
-        ofstream tgos((name + ".meanbranchdnds.tre").c_str());
-        globdsomss.WritedNdSTree(tgos);
-        cerr << "empirical dN/dS in newick format in " << name << ".meanbranchdnds.tre\n";
+        ofstream syn_count_os((name + ".genewise.counts_dS.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            syn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            array[gene].BranchToNewickSynCount(syn_count_os);
+        }
+
+        ofstream syn_beta_os((name + ".genewise.counts_dS_norm.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            syn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            array[gene].BranchToNewickSynBeta(syn_beta_os);
+        }
+
+        ofstream nonsyn_count_os((name + ".genewise.counts_dN.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            nonsyn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            array[gene].BranchToNewickNonSynCount(nonsyn_count_os);
+        }
+
+        ofstream nonsyn_beta_os((name + ".genewise.counts_dN_norm.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            nonsyn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            array[gene].BranchToNewickNonSynBeta(nonsyn_beta_os);
+        }
         */
 
         GetModel()->MasterReceiveGeneArray(gcconsarray);
-        ofstream gcos((name + ".genebranchgcconsdsomsuffstat").c_str());
-        for (int i=0; i<GetModel()->GetNgene(); i++) {
-            gcos << gcconsarray[i] << '\n';
-        }
-        cerr << "GC-cons gene dsom path suffstats in " << name << ".genebranchgcconsdsomsuffstat\n";
-        GCConsdSOmegaPathSuffStatBranchArray gcconsglobdsomss(GetModel()->GetTree());
-        for (int i=0; i<GetModel()->GetNgene(); i++) {
-            gcconsglobdsomss.Add(gcconsarray[i]);
-        }
-        ofstream gcgos((name + ".meanbranchgcconsdsomsuffstat").c_str());
-        gcgos << gcconsglobdsomss << '\n';
-        cerr << "global GC-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat\n";
 
         /*
-        ofstream tgcgos((name + ".meanbranchgcconsdnds.tre").c_str());
-        globgcconsdsomss.WritedNdSTree(tgcgos);
-        cerr << "empirical dN/dS in newick format in " << name << ".meanbranchgcconsdnds.tre\n";
+        ofstream gccons_syn_count_os((name + ".gccons.genewise.counts_dS.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            gccons_syn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            gcconsarray[gene].BranchToNewickSynCount(gccons_syn_count_os);
+        }
+
+        ofstream gccons_syn_beta_os((name + ".gccons.genewise.counts_dS_norm.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            gccons_syn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            gcconsarray[gene].BranchToNewickSynBeta(gccons_syn_beta_os);
+        }
+
+        ofstream gccons_nonsyn_count_os((name + ".gccons.genewise.counts_dN.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            gccons_nonsyn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            gcconsarray[gene].BranchToNewickNonSynCount(gccons_nonsyn_count_os);
+        }
+
+        ofstream gccons_nonsyn_beta_os((name + ".gccons.genewise.counts_dN_norm.dnd").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            gccons_nonsyn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
+            gcconsarray[gene].BranchToNewickNonSynBeta(gccons_nonsyn_beta_os);
+        }
         */
     }
 

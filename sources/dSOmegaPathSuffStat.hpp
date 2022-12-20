@@ -524,6 +524,7 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         }
     }
 
+    /*
     void BranchToNewick(ostream& os)    {
         RecursiveBranchToNewick(os, GetTree().GetRoot(), 0);
         os << ";\n";
@@ -531,6 +532,27 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
         os << ";\n";
         RecursiveBranchToNewick(os, GetTree().GetRoot(), 2);
         os << ";\n";
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 3);
+        os << ";\n";
+    }
+    */
+
+    void BranchToNewickSynCount(ostream& os)    {
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 0);
+        os << ";\n";
+    }
+
+    void BranchToNewickSynBeta(ostream& os)    {
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 1);
+        os << ";\n";
+    }
+
+    void BranchToNewickNonSynCount(ostream& os)    {
+        RecursiveBranchToNewick(os, GetTree().GetRoot(), 2);
+        os << ";\n";
+    }
+
+    void BranchToNewickNonSynBeta(ostream& os)    {
         RecursiveBranchToNewick(os, GetTree().GetRoot(), 3);
         os << ";\n";
     }

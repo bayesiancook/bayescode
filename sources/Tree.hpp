@@ -193,6 +193,7 @@ class Tree {
 
     //! create a tree by reading from file (newick format expected)
     Tree(std::string filename);
+    Tree(std::istream& is);
 
     //! recursively delete the whole chained structure of Link, Branch and Node
     //! objects

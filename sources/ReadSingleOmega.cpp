@@ -93,6 +93,58 @@ class SingleOmegaSample : public Sample {
         cout << "site dsom suffstat written in : " << name << ".sitedsomss\n";
     }
 
+    void ReadBranchSuffStat()   {
+        cerr << size << " points to read\n";
+        dSOmegaPathSuffStatBranchArray array(*GetModel()->GetTree());
+        GCConsdSOmegaPathSuffStatBranchArray gcconsarray(*GetModel()->GetTree());
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AdddSOmegaPathSuffStat(array);
+            GetModel()->AddGCConsdSOmegaPathSuffStat(gcconsarray);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        gcconsarray.Normalize(1.0/size);
+
+        /*
+        ofstream gos((name + ".meanbranchdsomsuffstat").c_str());
+        gos << array << '\n';
+        cerr << "global dsom path suffstats in " << name << ".meanbranchdsomsuffstat\n";
+        ofstream tgos((name + ".meanbranchdsomsuffstat.tre").c_str());
+        array.BranchToNewick(tgos);
+        cerr << "newick format: global dsom path suffstats in " << name << ".meanbranchdsomsuffstat.tre\n";
+
+        ofstream gcgos((name + ".meanbranchgcconsdsomsuffstat").c_str());
+        gcgos << gcconsarray << '\n';
+        cerr << "global gc-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat\n";
+        ofstream gctgos((name + ".meanbranchgcconsdsomsuffstat.tre").c_str());
+        // gcconsarray.BranchToNewick(gctgos);
+        // cerr << "newick format: global gc-cons dsom path suffstats in " << name << ".meanbranchgcconsdsomsuffstat.tre\n";
+        */
+
+        ofstream syn_count_os((name + ".counts_dS.dnd").c_str());
+        array.BranchToNewickSynCount(syn_count_os);
+        ofstream syn_beta_os((name + ".counts_dS_norm.dnd").c_str());
+        array.BranchToNewickSynBeta(syn_beta_os);
+        ofstream nonsyn_count_os((name + ".counts_dN.dnd").c_str());
+        array.BranchToNewickNonSynCount(nonsyn_count_os);
+        ofstream nonsyn_beta_os((name + ".counts_dN_norm.dnd").c_str());
+        array.BranchToNewickNonSynBeta(nonsyn_beta_os);
+        cerr << "dsom path suffstats in " << name << ".counts_dS.dnd, counts_dS_norm.dnd, counts_dN.dnd, counts_dN_norm.dnd\n";
+
+        ofstream gccons_syn_count_os((name + ".gccons.counts_dS.dnd").c_str());
+        gcconsarray.BranchToNewickSynCount(gccons_syn_count_os);
+        ofstream gccons_syn_beta_os((name + ".gccons.counts_dS_norm.dnd").c_str());
+        gcconsarray.BranchToNewickSynBeta(gccons_syn_beta_os);
+        ofstream gccons_nonsyn_count_os((name + ".gccons.counts_dN.dnd").c_str());
+        gcconsarray.BranchToNewickNonSynCount(gccons_nonsyn_count_os);
+        ofstream gccons_nonsyn_beta_os((name + ".gccons.counts_dN_norm.dnd").c_str());
+        gcconsarray.BranchToNewickNonSynBeta(gccons_nonsyn_beta_os);
+        cerr << "dsom path suffstats in " << name << ".counts_dS.dnd, counts_dS_norm.dnd, counts_dN.dnd, counts_dN_norm.dnd\n";
+    }
+
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
@@ -123,6 +175,7 @@ int main(int argc, char *argv[]) {
     int until = -1;
     int ppred = 0;
     int sitess = 0;
+    int branchss = 0;
 
     string name;
 
@@ -151,6 +204,8 @@ int main(int argc, char *argv[]) {
                 ppred = 1;
             } else if (s == "-sitesuffstat")    {
                 sitess = 1;
+            } else if (s == "-branchsuffstat")    {
+                branchss = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -173,6 +228,8 @@ int main(int argc, char *argv[]) {
         sample->PostPred();
     } else if (sitess)  {
         sample->ReadSiteSuffStat();
+    } else if (branchss)  {
+        sample->ReadBranchSuffStat();
     } else {
         sample->Read();
     }
