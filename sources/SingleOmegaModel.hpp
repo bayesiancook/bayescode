@@ -41,6 +41,7 @@ class SingleOmegaModel : public ProbModel {
 
     int blmode;
     int nucmode;
+    int fixbl;
 
     // Branch lengths
 
@@ -106,6 +107,7 @@ class SingleOmegaModel : public ProbModel {
     SingleOmegaModel(string datafile, string treefile) {
 
         blmode = 0;
+        fixbl = 0;
         nucmode = 0;
 
         data = new FileSequenceAlignment(datafile);
@@ -129,6 +131,7 @@ class SingleOmegaModel : public ProbModel {
     SingleOmegaModel(const CodonSequenceAlignment* incodondata, const Tree* intree) {
 
         blmode = 0;
+        fixbl = 0;
         nucmode = 0;
 
         codondata = incodondata;
@@ -148,6 +151,22 @@ class SingleOmegaModel : public ProbModel {
         return tree;
     }
 
+    /*
+    void RecursiveSetBL(const Link* from)   {
+        if (! from->isRoot())   {
+            double tmp = tree->GetBranchLength(from);
+            if (!tmp)   {
+                cerr << "error: null branch length\n";
+                exit(1);
+            }
+            branchlength
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveSetBL(link->Out());
+        }
+    }
+    */
+
     //! model allocation
     void Allocate() {
 
@@ -159,6 +178,12 @@ class SingleOmegaModel : public ProbModel {
         blhyperinvshape = 1.0;
         branchlength = new GammaWhiteNoise(*tree, *blhypermean, 1.0 / blhyperinvshape);
         lengthpathsuffstatarray = new PoissonSuffStatBranchArray(*tree);
+
+        if (fixbl)  {
+            for (int j=0; j<Nbranch; j++)  {
+                (*branchlength)[j] = tree->GetBranchLength(j);
+            }
+        }
 
         // Nucleotide rates
 
@@ -212,6 +237,13 @@ class SingleOmegaModel : public ProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode) {
         blmode = inblmode;
         nucmode = innucmode;
+    }
+
+    void SetFixBL(int in)   {
+        fixbl = in;
+        if (fixbl)  {
+            blmode = 2;
+        }
     }
 
     // Branch lengths

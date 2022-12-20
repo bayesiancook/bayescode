@@ -16,6 +16,7 @@ class SingleOmegaSample : public Sample {
     string modeltype;
     string datafile;
     string treefile;
+    int fixbl;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -42,11 +43,16 @@ class SingleOmegaSample : public Sample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile;
+        fixbl = 0;
         int check;
         is >> check;
         if (check) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
+            is >> fixbl;
+            is >> check;
+            if (check)  {
+                cerr << "-- Error when reading model\n";
+                exit(1);
+            }
         }
         is >> chainevery >> chainuntil >> chainsize;
 
@@ -58,6 +64,7 @@ class SingleOmegaSample : public Sample {
             exit(1);
         }
 
+        GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
 
         // read model (i.e. chain's last point) from <name>.param

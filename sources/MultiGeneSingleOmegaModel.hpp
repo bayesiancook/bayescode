@@ -133,6 +133,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
 
     const Tree& GetTree() const {return *tree;}
 
+    int GetNbranch() const  {
+        return Nbranch;
+    }
+
     void Allocate() {
 
         // Branch lengths
@@ -453,6 +457,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         }
 
         return branchlengtharray->GetVarLength();
+    }
+
+    void AddLength(SimpleBranchArray<double>& in)   {
+        for (int j = 0; j < Nbranch; j++) {
+            in[j] += branchlength->GetVal(j);
+        }
     }
 
     // Nucleotide rates

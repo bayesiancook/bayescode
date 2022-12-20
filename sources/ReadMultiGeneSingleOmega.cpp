@@ -75,11 +75,13 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
     void MasterRead() {
         cerr << size << " points to read\n";
 
+        SimpleBranchArray<double> meanbl(GetModel()->GetTree(),0);
         vector<double> meanom(GetNgene(), 0);
         vector<double> varom(GetNgene(), 0);
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();
+            GetModel()->AddLength(meanbl);
             const vector<double> &om = GetModel()->GetOmegaArray();
             for (int gene = 0; gene < GetNgene(); gene++) {
                 meanom[gene] += om[gene];
@@ -92,6 +94,14 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             varom[gene] /= size;
             varom[gene] -= meanom[gene] * meanom[gene];
         }
+
+        for (int j=0; j<GetModel()->GetNbranch(); j++)  {
+            meanbl[j] /= size;
+        }
+        ofstream blos((name + ".postmeansynrate.tre").c_str());
+        BranchToNewick(blos, meanbl);
+        cerr << "posterior mean branch lengths in " << name << ".postmeansynrate.tre\n";
+
 
         ofstream os((name + ".postmeanomega").c_str());
         for (int gene = 0; gene < GetNgene(); gene++) {

@@ -13,13 +13,15 @@ class SingleOmegaChain : public Chain {
     // Chain parameters
     string modeltype;
     string datafile, treefile;
+    int fixbl;
 
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    SingleOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
+    SingleOmegaChain(string indatafile, string intreefile, int infixbl, int inevery, int inuntil, string inname,
                      int force)
         : modeltype("SINGLEOMEGA"), datafile(indatafile), treefile(intreefile) {
+        fixbl = infixbl;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -36,6 +38,7 @@ class SingleOmegaChain : public Chain {
 
     void New(int force) override {
         model = new SingleOmegaModel(datafile, treefile);
+        GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
         GetModel()->Update();
         cerr << "-- Reset" << endl;
@@ -52,11 +55,16 @@ class SingleOmegaChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        fixbl = 0;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
+            is >> fixbl;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "-- Error when reading model\n";
+                exit(1);
+            }
         }
         is >> every >> until >> size;
 
@@ -67,6 +75,7 @@ class SingleOmegaChain : public Chain {
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
+        GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
         model->FromStream(is);
         model->Update();
@@ -78,6 +87,8 @@ class SingleOmegaChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << 1 << '\n';
+        param_os << fixbl << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -117,6 +128,7 @@ int main(int argc, char *argv[]) {
     else {
         string datafile = "";
         string treefile = "";
+        int fixbl = 0;
         name = "";
         int force = 1;
         int every = 1;
@@ -139,6 +151,8 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "-fixbl")   {
+                    fixbl = 1;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -163,7 +177,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new SingleOmegaChain(datafile, treefile, every, until, name, force);
+        chain = new SingleOmegaChain(datafile, treefile, fixbl, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";
