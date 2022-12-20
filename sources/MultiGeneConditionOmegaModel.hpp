@@ -295,7 +295,7 @@ class MultiGeneConditionOmegaModel : public MultiGeneProbModel {
             }
             else    {
                 for (int gene = 0; gene < GetLocalNgene(); gene++) {
-                    new ConditionOmegaModel(GetLocalGeneName(gene), treefile, Ncond, Nlevel);
+                    geneprocess[gene] = new ConditionOmegaModel(GetLocalGeneName(gene), treefile, Ncond, Nlevel);
                 }
             }
 
