@@ -30,6 +30,36 @@ void ToNewick(ostream& os, const BranchSelector<double>& ds, const BranchSelecto
     os << ";\n";
 }
 
+void RecursiveToNewick(ostream& os, const Link* from, const vector<double>& ds, const vector<double>& dnds) {
+    if (from->isLeaf()) {
+        os << from->GetNode()->GetName();
+        os << "_";
+    }
+    else    {
+        os << "(";
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveToNewick(os, link->Out(), ds, dnds);
+            if (link->Next() != from)   {
+                os << ",";
+            }
+        }
+        os << ")";
+    }
+    if (! from->isRoot())	{
+        os << dnds.at(from->GetBranch()->GetIndex());
+        os << ":";
+        os << ds.at(from->GetBranch()->GetIndex());
+    }
+    else    {
+        os << dnds.at(from->Next()->GetBranch()->GetIndex());
+    }
+}
+
+void ToNewick(ostream& os, const Tree& tree, const vector<double>& ds, const vector<double>& dnds)    {
+    RecursiveToNewick(os, tree.GetRoot(), ds, dnds);
+    os << ";\n";
+}
+
 void RecursiveBranchToNewick(ostream& os, const Link* from, const BranchSelector<double>& v)    {
     if (from->isLeaf()) {
         os << from->GetNode()->GetName();
@@ -113,5 +143,25 @@ void RecursiveTabulate(ostream& os, const Tree* tree, const Link* from, const ve
 
 void Tabulate(ostream& os, const Tree* tree, const vector<double>& v, bool leaf) {
     RecursiveTabulate(os, tree, tree->GetRoot(), v, leaf);
+}
+
+void RecursiveTabulate(ostream& os, const Tree* tree, const Link* from, const vector<double>& vs, const vector<double>& vn, bool leaf)  {
+    if (leaf)   {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << vs.at(from->GetBranch()->GetIndex()) << '\t' << vn.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    else    {
+        if (! from->isRoot())   {
+            os << tree->GetLeftMost(from) << '\t' << tree->GetRightMost(from) << '\t' << vs.at(from->GetBranch()->GetIndex()) << '\t' << vn.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulate(os, tree, link->Out(), vs, vn, leaf);
+    }
+}
+
+void Tabulate(ostream& os, const Tree* tree, const vector<double>& vs, const vector<double>& vn, bool leaf) {
+    RecursiveTabulate(os, tree, tree->GetRoot(), vs, vn, leaf);
 }
 

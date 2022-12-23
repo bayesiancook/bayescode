@@ -328,6 +328,18 @@ class FastGeneBranchOmegaModel : public ProbModel {
         */
     }
 
+    void AddGeneSynArrayTo(vector<double>& array) const {
+        for (int i=0; i<Ngene; i++)   {
+            array[i] += genesyn_array->GetVal(i);
+        }
+    }
+
+    void AddBranchSynArrayTo(vector<double>& array) const {
+        for (int j=0; j<Nbranch; j++)   {
+            array[j] += branchsyn_array->GetVal(j);
+        }
+    }
+
     void AddGeneOmegaArrayTo(vector<double>& array) const {
         for (int i=0; i<Ngene; i++)   {
             array[i] += geneom_array->GetVal(i);

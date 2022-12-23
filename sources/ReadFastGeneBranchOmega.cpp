@@ -75,32 +75,46 @@ class FastGeneBranchOmegaSample : public Sample {
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
+
         int Nbranch = GetModel()->GetNbranch();
         int Ngene = GetModel()->GetNgene();
+        vector<double> mean_branchsyn_array(Nbranch,0);
         vector<double> mean_branchom_array(Nbranch,0);
+        vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
+
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
+            GetModel()->AddBranchSynArrayTo(mean_branchsyn_array);
             GetModel()->AddBranchOmegaArrayTo(mean_branchom_array);
+            GetModel()->AddGeneSynArrayTo(mean_genesyn_array);
             GetModel()->AddGeneOmegaArrayTo(mean_geneom_array);
         }
         cerr << '\n';
         for (int j=0; j<Nbranch; j++)   {
+            mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;
         }
         for (int i=0; i<Ngene; i++) {
+            mean_genesyn_array[i] /= size;
             mean_geneom_array[i] /= size;
         }
-        ofstream os((name + ".postmean.leafdsom.tab").c_str());
-        Tabulate(os, GetModel()->GetTree(), mean_branchom_array, true);
         ofstream gos((name + ".postmean.geneom.tab").c_str());
         for (int i=0; i<Ngene; i++) {
-            gos << GetModel()->GetGeneName(i) << '\t' << mean_geneom_array[i] << '\n';
+            gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\n';
         }
         cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
+
+        ofstream os((name + ".postmean.leafdsom.tab").c_str());
+        Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
+
+        ofstream tos((name + ".dsom.tre").c_str());
+        ToNewick(tos, *GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array);
+
         cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
+        cerr << "newick format in " << name << ".dsom.tre\n";
     }
 };
 
