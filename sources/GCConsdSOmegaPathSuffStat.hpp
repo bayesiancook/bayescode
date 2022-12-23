@@ -439,14 +439,5 @@ class GCConsdSOmegaPathSuffStatBranchArray : public SimpleBranchArray<GCConsdSOm
         RecursiveBranchToNewick(os, GetTree().GetRoot(), 3);
         os << ";\n";
     }
-
-    private:
-
-    // int nsyn;
-    // int nnonsyn;
-    double nsyn;
-    double nnonsyn;
-    double bsyn;
-    double bnonsyn;
 };
 
