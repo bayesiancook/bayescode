@@ -75,6 +75,26 @@ void Tabulate(ostream& os, const BranchSelector<double>& v, bool leaf) {
     RecursiveTabulate(os, v.GetTree().GetRoot(), v, leaf);
 }
 
+void RecursiveTabulate(ostream& os, const Link* from, const BranchSelector<double>& vs, const BranchSelector<double>& vn, bool leaf)  {
+    if (leaf)   {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << vs.GetVal(from->GetBranch()->GetIndex()) << '\t' << vn.GetVal(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    else    {
+        if (! from->isRoot())   {
+            os << vs.GetTree().GetLeftMost(from) << '\t' << vs.GetTree().GetRightMost(from) << '\t' << vs.GetVal(from->GetBranch()->GetIndex()) << '\t' << vn.GetVal(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulate(os, link->Out(), vs, vn, leaf);
+    }
+}
+
+void Tabulate(ostream& os, const BranchSelector<double>& vs, const BranchSelector<double>& vn, bool leaf) {
+    RecursiveTabulate(os, vs.GetTree().GetRoot(), vs, vn, leaf);
+}
+
 void RecursiveTabulate(ostream& os, const Tree* tree, const Link* from, const vector<double>& v, bool leaf)  {
     if (leaf)   {
         if (from->isLeaf()) {

@@ -66,10 +66,10 @@ int main(int argc, char* argv[])    {
     cerr << "newick tree in " << basename << ".dsom.tre\n";
 
     ofstream tabos((basename + ".alldsom.tab").c_str());
-    Tabulate(tabos, dnds, false);
+    Tabulate(tabos, ds, dnds, false);
     ofstream ltabos((basename + ".leafdsom.tab").c_str());
-    Tabulate(ltabos, dnds, true);
-    cerr << "tabulated branch dN/dS values in : " << basename << ".dsom.tab\n";
+    Tabulate(ltabos, ds, dnds, true);
+    cerr << "tabulated branch dS and dN/dS in : " << basename << ".dsom.tab\n";
     cerr << "for terminal branches only       : " << basename << ".leafdsom.tab\n";
 
 }
