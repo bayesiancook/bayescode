@@ -54,10 +54,10 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
   public:
 
-    FastGeneBranchOmegaModel(string datafile, string treefile)  {
+    FastGeneBranchOmegaModel(string datafile, string treefile, int insyn_devmode, int inom_devmode)  {
 
-        syn_devmode = 1;
-        om_devmode = 1;
+        syn_devmode = insyn_devmode;
+        om_devmode = inom_devmode;
 
         tree = new Tree(treefile);
         tree->SetIndices();
@@ -120,6 +120,10 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
     int GetNgene() const    {
         return Ngene;
+    }
+
+    string GetGeneName(int gene) const  {
+        return gene_names[gene];
     }
 
     const Tree* GetTree() const {
@@ -322,6 +326,12 @@ class FastGeneBranchOmegaModel : public ProbModel {
             is >> *om_bidimarray;
         }
         */
+    }
+
+    void AddGeneOmegaArrayTo(vector<double>& array) const {
+        for (int i=0; i<Ngene; i++)   {
+            array[i] += geneom_array->GetVal(i);
+        }
     }
 
     void AddBranchOmegaArrayTo(vector<double>& array) const {

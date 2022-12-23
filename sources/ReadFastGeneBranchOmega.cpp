@@ -18,6 +18,7 @@ class FastGeneBranchOmegaSample : public Sample {
     string modeltype;
     string datafile;
     string treefile;
+    int syn_devmode, om_devmode;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -44,6 +45,7 @@ class FastGeneBranchOmegaSample : public Sample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> syn_devmode >> om_devmode;
         int check;
         is >> check;
         if (check)  {
@@ -54,7 +56,7 @@ class FastGeneBranchOmegaSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "FASTGENEBRANCHOMEGA") {
-            model = new FastGeneBranchOmegaModel(datafile, treefile);
+            model = new FastGeneBranchOmegaModel(datafile, treefile, syn_devmode, om_devmode);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);
@@ -74,19 +76,31 @@ class FastGeneBranchOmegaSample : public Sample {
     //! deviation) of omega
     void Read() {
         int Nbranch = GetModel()->GetNbranch();
+        int Ngene = GetModel()->GetNgene();
         vector<double> mean_branchom_array(Nbranch,0);
+        vector<double> mean_geneom_array(Ngene,0);
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
             GetModel()->AddBranchOmegaArrayTo(mean_branchom_array);
+            GetModel()->AddGeneOmegaArrayTo(mean_geneom_array);
         }
         cerr << '\n';
         for (int j=0; j<Nbranch; j++)   {
             mean_branchom_array[j] /= size;
         }
+        for (int i=0; i<Ngene; i++) {
+            mean_geneom_array[i] /= size;
+        }
         ofstream os((name + ".postmean.leafdsom.tab").c_str());
         Tabulate(os, GetModel()->GetTree(), mean_branchom_array, true);
+        ofstream gos((name + ".postmean.geneom.tab").c_str());
+        for (int i=0; i<Ngene; i++) {
+            gos << GetModel()->GetGeneName(i) << '\t' << mean_geneom_array[i] << '\n';
+        }
+        cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
     }
 };
 

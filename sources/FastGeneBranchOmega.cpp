@@ -13,15 +13,18 @@ class FastGeneBranchOmegaChain : public Chain {
     // Chain parameters
     string modeltype;
     string datafile, treefile;
+    int syn_devmode, om_devmode;
 
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    FastGeneBranchOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
+    FastGeneBranchOmegaChain(string indatafile, string intreefile, int insyn_devmode, int inom_devmode, int inevery, int inuntil, string inname,
                      int force)
         : modeltype("FASTGENEBRANCHOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
         until = inuntil;
+        syn_devmode = insyn_devmode;
+        om_devmode = inom_devmode;
         name = inname;
         New(force);
     }
@@ -35,7 +38,7 @@ class FastGeneBranchOmegaChain : public Chain {
     }
 
     void New(int force) override {
-        model = new FastGeneBranchOmegaModel(datafile, treefile);
+        model = new FastGeneBranchOmegaModel(datafile, treefile, syn_devmode, om_devmode);
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
@@ -51,6 +54,7 @@ class FastGeneBranchOmegaChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
+        is >> syn_devmode >> om_devmode;
         int tmp;
         is >> tmp;
         if (tmp)    {
@@ -60,13 +64,12 @@ class FastGeneBranchOmegaChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "FASTGENEBRANCHOMEGA") {
-            model = new FastGeneBranchOmegaModel(datafile, treefile);
+            model = new FastGeneBranchOmegaModel(datafile, treefile, syn_devmode, om_devmode);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
             exit(1);
         }
-        GetModel()->Allocate();
         model->FromStream(is);
         model->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -77,6 +80,7 @@ class FastGeneBranchOmegaChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
+        param_os << syn_devmode << '\t' << om_devmode << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -116,6 +120,8 @@ int main(int argc, char *argv[]) {
     else {
         string datafile = "";
         string treefile = "";
+        int syn_devmode = 1;
+        int om_devmode = 1;
         name = "";
         int force = 1;
         int every = 1;
@@ -138,6 +144,12 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
+                } else if (s == "-dev") {
+                    syn_devmode = 1;
+                    om_devmode = 1;
+                } else if (s == "-nodev")   {
+                    syn_devmode = 0;
+                    om_devmode = 0;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -162,7 +174,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new FastGeneBranchOmegaChain(datafile, treefile, every, until, name, force);
+        chain = new FastGeneBranchOmegaChain(datafile, treefile, syn_devmode, om_devmode, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";
