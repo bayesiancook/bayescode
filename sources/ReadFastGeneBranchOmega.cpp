@@ -1,5 +1,6 @@
 #include <cmath>
 #include <fstream>
+#include <algorithm>
 #include "Sample.hpp"
 #include "FastGeneBranchOmegaModel.hpp"
 // #include "RecursiveNewick.hpp"
@@ -116,12 +117,41 @@ class FastGeneBranchOmegaSample : public Sample {
         cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
         cerr << "newick format in " << name << ".dsom.tre\n";
     }
+
+    void ReadQQPlot()   {
+        int Ngene = GetModel()->GetNgene();
+        int Nbranch = GetModel()->GetNbranch();
+        int n = Ngene*Nbranch*size;
+        vector<double> syn_postsample(n,0);
+        vector<double> syn_predsample(n,0);
+        vector<double> om_postsample(n,0);
+        vector<double> om_predsample(n,0);
+        cerr << size << " points to read\n";
+        for (int i=0; i<size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AddSynDevToHist(syn_postsample, syn_predsample, i*Ngene*Nbranch);
+            GetModel()->AddOmegaDevToHist(om_postsample, om_predsample, i*Ngene*Nbranch);
+        }
+        cerr << '\n';
+        ofstream os((name + ".qqplot").c_str());
+        sort(syn_postsample.begin(), syn_postsample.end());
+        sort(syn_predsample.begin(), syn_predsample.end());
+        sort(om_postsample.begin(), om_postsample.end());
+        sort(om_predsample.begin(), om_predsample.end());
+        for (int i=0; i<n; i++) {
+            os << syn_postsample[i] << '\t' << syn_predsample[i] << '\t' << om_postsample[i] << '\t' << om_predsample[i] << '\n';
+        }
+        cerr << "sorted centered deviations in " << name << ".qqplot\n";
+    }
 };
 
 int main(int argc, char *argv[]) {
     int burnin = 0;
     int every = 1;
     int until = -1;
+    int qqplot = 0;
 
     string name;
 
@@ -133,7 +163,10 @@ int main(int argc, char *argv[]) {
         int i = 1;
         while (i < argc) {
             string s = argv[i];
-            if ((s == "-x") || (s == "-extract")) {
+            if (s == "-qqplot") {
+                qqplot = 1;
+            }
+            else if ((s == "-x") || (s == "-extract")) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
@@ -164,5 +197,10 @@ int main(int argc, char *argv[]) {
     }
 
     FastGeneBranchOmegaSample *sample = new FastGeneBranchOmegaSample(name, burnin, every, until);
-    sample->Read();
+    if (qqplot) {
+        sample->ReadQQPlot();
+    }
+    else    {
+        sample->Read();
+    }
 }

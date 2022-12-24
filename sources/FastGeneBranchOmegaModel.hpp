@@ -289,14 +289,12 @@ class FastGeneBranchOmegaModel : public ProbModel {
             os << '\t' << om_invshape;
         }
 
-        /*
         if (syn_devmode)    {
             os << '\t' << *syn_bidimarray;
         }
         if (om_devmode) {
             os << '\t' << *om_bidimarray;
         }
-        */
     }
 
     void FromStream(istream &is) override {
@@ -318,14 +316,12 @@ class FastGeneBranchOmegaModel : public ProbModel {
             is >> om_invshape;
         }
 
-        /*
         if (syn_devmode)    {
             is >> *syn_bidimarray;
         }
         if (om_devmode) {
             is >> *om_bidimarray;
         }
-        */
     }
 
     void AddGeneSynArrayTo(vector<double>& array) const {
@@ -349,6 +345,34 @@ class FastGeneBranchOmegaModel : public ProbModel {
     void AddBranchOmegaArrayTo(vector<double>& array) const {
         for (int j=0; j<Nbranch; j++)   {
             array[j] += branchom_array->GetVal(j);
+        }
+    }
+
+    void AddSynDevToHist(vector<double>& post, vector<double>& ppred, int offset) const {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = meansyn_bidimarray->GetVal(i).GetVal(j);
+                post[offset] = syn_bidimarray->GetVal(i).GetVal(j) - mean;
+                double alpha = 1.0 / syn_invshape;
+                double beta = alpha / mean;
+                double tmp = Random::Gamma(alpha, beta);
+                ppred[offset] = tmp - mean;
+                offset++;
+            }
+        }
+    }
+
+    void AddOmegaDevToHist(vector<double>& post, vector<double>& ppred, int offset) const {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = meanom_bidimarray->GetVal(i).GetVal(j);
+                post[offset] = om_bidimarray->GetVal(i).GetVal(j) - mean;
+                double alpha = 1.0 / om_invshape;
+                double beta = alpha / mean;
+                double tmp = Random::Gamma(alpha, beta);
+                ppred[offset] = tmp - mean;
+                offset++;
+            }
         }
     }
 
