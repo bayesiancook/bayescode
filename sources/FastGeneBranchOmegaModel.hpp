@@ -411,11 +411,11 @@ class FastGeneBranchOmegaModel : public ProbModel {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = meansyn_bidimarray->GetVal(i).GetVal(j);
-                post[offset] = syn_bidimarray->GetVal(i).GetVal(j) - mean;
+                post[offset] = log(syn_bidimarray->GetVal(i).GetVal(j)/mean);
                 double alpha = 1.0 / syn_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = tmp - mean;
+                ppred[offset] = log(tmp/mean);
                 offset++;
             }
         }
@@ -425,11 +425,11 @@ class FastGeneBranchOmegaModel : public ProbModel {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = meanom_bidimarray->GetVal(i).GetVal(j);
-                post[offset] = om_bidimarray->GetVal(i).GetVal(j) - mean;
+                post[offset] = log(om_bidimarray->GetVal(i).GetVal(j)/mean);
                 double alpha = 1.0 / om_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = tmp - mean;
+                ppred[offset] = log(tmp/mean);
                 offset++;
             }
         }
