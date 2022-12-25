@@ -4,7 +4,8 @@
 #include "IIDGamma.hpp"
 #include "GammaSuffStat.hpp"
 #include "Product.hpp"
-#include "ConditionSpecificMeanGammaArray.hpp"
+// #include "ConditionSpecificMeanGammaArray.hpp"
+#include "ConditionSpecificMeanGammaMixArray.hpp"
 #include "dSOmegaPathSuffStatGeneBranchArray.hpp"
 #include "RecursiveNewick.hpp"
 
@@ -32,8 +33,12 @@ class FastGeneBranchOmegaModel : public ProbModel {
     GammaSuffStat genesyn_hypersuffstat;
 
     double syn_invshape;
+    double syn_invshape_ratio;
+    double syn_pi;
+
     ProductArray *meansyn_bidimarray;
-    ConditionSpecificMeanGammaBidimArray *syn_bidimarray;
+    ConditionSpecificMeanGammaMixBidimArray *syn_bidimarray;
+    // ConditionSpecificMeanGammaBidimArray *syn_bidimarray;
 
     double branchom_hypermean;
     double branchom_hyperinvshape;
@@ -46,8 +51,14 @@ class FastGeneBranchOmegaModel : public ProbModel {
     GammaSuffStat geneom_hypersuffstat;
 
     double om_invshape;
+    double om_invshape_ratio;
+    double om_pi;
+
+    double min_shape_ratio;
+
     ProductArray *meanom_bidimarray;
-    ConditionSpecificMeanGammaBidimArray *om_bidimarray;
+    // ConditionSpecificMeanGammaBidimArray *om_bidimarray;
+    ConditionSpecificMeanGammaMixBidimArray *om_bidimarray;
 
     dSOmegaPathSuffStatGeneBranchArray *dsomss;
     vector<string> gene_names;
@@ -58,6 +69,8 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
         syn_devmode = insyn_devmode;
         om_devmode = inom_devmode;
+
+        min_shape_ratio = 3.0;
 
         tree = new Tree(treefile);
         tree->SetIndices();
@@ -150,10 +163,19 @@ class FastGeneBranchOmegaModel : public ProbModel {
         meansyn_bidimarray = new ProductArray(*branchsyn_array, *genesyn_array);
         syn_invshape = 1.0;
 
+        if (syn_devmode == 2)    {
+            syn_invshape_ratio = 2*min_shape_ratio;
+            syn_pi = 0.01;
+        }
+        else    {
+            syn_invshape_ratio = 1.0;
+            syn_pi = 0;
+        }
+
         syn_bidimarray = 0;
         if (syn_devmode)    {
             syn_bidimarray =
-                new ConditionSpecificMeanGammaBidimArray(*meansyn_bidimarray, syn_invshape);
+                new ConditionSpecificMeanGammaMixBidimArray(*meansyn_bidimarray, syn_invshape, syn_invshape_ratio, syn_pi);
         }
 
         branchom_hypermean = 1.0;
@@ -174,10 +196,19 @@ class FastGeneBranchOmegaModel : public ProbModel {
         meanom_bidimarray = new ProductArray(*branchom_array, *geneom_array);
         om_invshape = 1.0;
 
+        if (om_devmode == 2)    {
+            om_invshape_ratio = 2*min_shape_ratio;
+            om_pi = 0.01;
+        }
+        else    {
+            om_invshape_ratio = 1.0;
+            om_pi = 0;
+        }
+
         om_bidimarray = 0;
         if (om_devmode) {
             om_bidimarray =
-                new ConditionSpecificMeanGammaBidimArray(*meanom_bidimarray, om_invshape);
+                new ConditionSpecificMeanGammaMixBidimArray(*meanom_bidimarray, om_invshape, om_invshape_ratio, om_pi);
         }
 
         dsomss = new dSOmegaPathSuffStatGeneBranchArray(*tree, Ngene);
@@ -209,10 +240,18 @@ class FastGeneBranchOmegaModel : public ProbModel {
         os << "\tbranchom_invshape";
 
         if (syn_devmode)    {
-            os << "\tomdev";
+            os << "\tsyndev";
+            if (syn_devmode == 2)   {
+                os << "\tsynpi";
+                os << "\tsynshaperatio";
+            }
         }
         if (om_devmode) {
-            os << "\tsyndev";
+            os << "\tomdev";
+            if (om_devmode == 2)    {
+                os << "\tompi";
+                os << "\tomshaperatio";
+            }
         }
         os << '\n';
     }
@@ -255,12 +294,20 @@ class FastGeneBranchOmegaModel : public ProbModel {
         os << '\t' << GetBranchMeanOmega();
         os << '\t' << branchom_hyperinvshape;
 
-        if (syn_devmode)    {
-            os << '\t' << om_invshape;
+        if (syn_devmode) {
+            os << '\t' << syn_invshape;
+            if (syn_devmode == 2)   {
+                os << '\t' << syn_pi;
+                os << '\t' << syn_invshape_ratio;
+            }
         }
 
-        if (om_devmode) {
-            os << '\t' << syn_invshape;
+        if (om_devmode)    {
+            os << '\t' << om_invshape;
+            if (syn_devmode == 2)   {
+                os << '\t' << om_pi;
+                os << '\t' << om_invshape_ratio;
+            }
         }
 
         os << '\n';
@@ -284,9 +331,15 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
         if (syn_devmode)    {
             os << '\t' << syn_invshape;
+            if (syn_devmode == 2)   {
+                os << '\t' << syn_pi << '\t' << syn_invshape_ratio;
+            }
         }
         if (om_devmode) {
             os << '\t' << om_invshape;
+            if (om_devmode == 2)    {
+                os << '\t' << om_pi << '\t' << om_invshape_ratio;
+            }
         }
 
         if (syn_devmode)    {
@@ -311,9 +364,15 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
         if (syn_devmode)    {
             is >> syn_invshape;
+            if (syn_devmode == 2)   {
+                is >> syn_pi >> syn_invshape_ratio;
+            }
         }
         if (om_devmode) {
             is >> om_invshape;
+            if (om_devmode == 2)    {
+                is >> om_pi >> om_invshape_ratio;
+            }
         }
 
         if (syn_devmode)    {
@@ -376,6 +435,26 @@ class FastGeneBranchOmegaModel : public ProbModel {
         }
     }
 
+    void AddSynDevLogFactorTo(vector<vector<double>>& array) const  {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = meansyn_bidimarray->GetVal(i).GetVal(j);
+                double logfactor = log(syn_bidimarray->GetVal(i).GetVal(j) / mean);
+                array[i][j] += logfactor;
+            }
+        }
+    }
+
+    void AddOmegaDevLogFactorTo(vector<vector<double>>& array) const  {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = meanom_bidimarray->GetVal(i).GetVal(j);
+                double logfactor = log(om_bidimarray->GetVal(i).GetVal(j) / mean);
+                array[i][j] += logfactor;
+            }
+        }
+    }
+
     void Update(IIDGamma& array, double hypermean, double hyperinvshape)    {
         double alpha = 1.0 / hyperinvshape;
         double beta = alpha / hypermean;
@@ -387,10 +466,10 @@ class FastGeneBranchOmegaModel : public ProbModel {
         meansyn_bidimarray->Update();
         meanom_bidimarray->Update();
         if (syn_devmode)    {
-            syn_bidimarray->SetInvShape(syn_invshape);
+            syn_bidimarray->SetParams(syn_invshape, syn_invshape_ratio, syn_pi);
         }
         if (om_devmode) {
-            om_bidimarray->SetInvShape(om_invshape);
+            om_bidimarray->SetParams(om_invshape, om_invshape_ratio, om_pi);
         }
         Update(*branchsyn_array, branchsyn_hypermean, branchsyn_hyperinvshape);
         Update(*genesyn_array, genesyn_hypermean, genesyn_hyperinvshape);
@@ -410,8 +489,8 @@ class FastGeneBranchOmegaModel : public ProbModel {
         total += GeneSynHyperLogPrior();
         total += GeneSynLogPrior();
         if (syn_devmode)    {
-            total += SynInvShapeLogPrior();
-            total += SynLogPrior();
+            total += SynDevHyperLogPrior();
+            total += SynDevLogPrior();
         }
 
         total += BranchOmegaHyperLogPrior();
@@ -419,8 +498,8 @@ class FastGeneBranchOmegaModel : public ProbModel {
         total += GeneOmegaHyperLogPrior();
         total += GeneOmegaLogPrior();
         if (om_devmode) {
-            total += OmegaInvShapeLogPrior();
-            total += OmegaLogPrior();
+            total += OmegaDevHyperLogPrior();
+            total += OmegaDevLogPrior();
         }
 
         return total;
@@ -438,9 +517,15 @@ class FastGeneBranchOmegaModel : public ProbModel {
         return genesyn_array->GetLogProb(); 
     }
 
-    double SynInvShapeLogPrior() const { return -syn_invshape; }
+    double SynDevHyperLogPrior() const {
+        double ret = -syn_invshape;
+        if (syn_devmode == 2)   {
+            ret -= syn_invshape_ratio;
+        }
+        return ret;
+    }
 
-    double SynLogPrior() const  {
+    double SynDevLogPrior() const  {
         return syn_bidimarray->GetLogProb();
     }
 
@@ -456,9 +541,15 @@ class FastGeneBranchOmegaModel : public ProbModel {
         return geneom_array->GetLogProb(); 
     }
 
-    double OmegaInvShapeLogPrior() const { return -om_invshape; }
+    double OmegaDevHyperLogPrior() const { 
+        double ret = -om_invshape;
+        if (om_devmode == 2)    {
+            ret -= om_invshape_ratio;
+        }
+        return ret;
+    }
 
-    double OmegaLogPrior() const {
+    double OmegaDevLogPrior() const {
         return om_bidimarray->GetLogProb();
     }
 
@@ -551,6 +642,30 @@ class FastGeneBranchOmegaModel : public ProbModel {
                 - (synbeta + om * nonsynbeta) * synmean;
         }
 
+        if (syn_devmode == 2)   {
+            double alpha1 = 1.0 / syn_invshape;
+            double beta1 = alpha1 / synmean;
+            double postalpha1 = alpha1 + syncount + nonsyncount;
+            double postbeta1 = beta1 + synbeta + om * nonsynbeta;
+
+            double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+                + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
+
+            double alpha2 = alpha1 / syn_invshape_ratio;
+            double beta2 = alpha2 / synmean;
+            double postalpha2 = alpha2 + syncount + nonsyncount;
+            double postbeta2 = beta2 + synbeta + om * nonsynbeta;
+
+            double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+                + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+            double max = (logl1 > logl2) ? logl1 : logl2;
+            double l1 = exp(logl1-max);
+            double l2 = exp(logl2-max);
+            double logl = log((1-syn_pi)*l1 + syn_pi*l2) + max;
+            return  logl;
+        }
+
         double alpha = 1.0 / syn_invshape;
         double beta = alpha / synmean;
 
@@ -559,6 +674,49 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
         return alpha * log(beta) - Random::logGamma(alpha) 
             + Random::logGamma(postalpha) - postalpha * log(postbeta);
+    }
+
+    double GeneBranchSynSuffStatPostProb(int gene, int branch) const {
+
+        if (syn_devmode != 2)   {
+            cerr << "error: dev post prob only under mixture model\n";
+            exit(1);
+        }
+
+        const dSOmegaPathSuffStat &suffstat = dsomss->GetVal(gene).GetVal(branch);
+        double syncount = suffstat.GetSynCount();
+        double synbeta = suffstat.GetSynBeta();
+        double nonsyncount = suffstat.GetNonSynCount();
+        double nonsynbeta = suffstat.GetNonSynBeta();
+
+        double om = om_devmode ? om_bidimarray->GetVal(gene).GetVal(branch):
+            meanom_bidimarray->GetVal(gene).GetVal(branch);
+
+        double synmean = genesyn_array->GetVal(gene) * branchsyn_array->GetVal(branch);
+
+        double alpha1 = 1.0 / syn_invshape;
+        double beta1 = alpha1 / synmean;
+        double postalpha1 = alpha1 + syncount + nonsyncount;
+        double postbeta1 = beta1 + synbeta + om * nonsynbeta;
+
+        double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+            + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
+
+        double alpha2 = alpha1 / syn_invshape_ratio;
+        double beta2 = alpha2 / synmean;
+        double postalpha2 = alpha2 + syncount + nonsyncount;
+        double postbeta2 = beta2 + synbeta + om * nonsynbeta;
+
+        double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+            + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+        double max = (logl1 > logl2) ? logl1 : logl2;
+        double l1 = exp(logl1-max);
+        double l2 = exp(logl2-max);
+        double p1 = (1-syn_pi)*l1;
+        double p2 = syn_pi*l2;
+        double postprob = p1/(p1+p2);
+        return postprob;
     }
 
     void ResampleSyn(int gene, int branch)  {
@@ -572,19 +730,61 @@ class FastGeneBranchOmegaModel : public ProbModel {
         double om = om_bidimarray->GetVal(gene).GetVal(branch);
         double synmean = genesyn_array->GetVal(gene) * branchsyn_array->GetVal(branch);
 
-        double alpha = 1.0 / syn_invshape;
-        double beta = alpha / synmean;
+        if (syn_devmode == 2)   {
+            double alpha1 = 1.0 / syn_invshape;
+            double beta1 = alpha1 / synmean;
+            double postalpha1 = alpha1 + syncount + nonsyncount;
+            double postbeta1 = beta1 + synbeta + om * nonsynbeta;
 
-        double postalpha = alpha + syncount + nonsyncount;
-        double postbeta = beta + synbeta + om * nonsynbeta;
+            double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+                + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
 
-        (*syn_bidimarray)[gene][branch] = Random::Gamma(postalpha, postbeta);
+            double alpha2 = alpha1 / syn_invshape_ratio;
+            double beta2 = alpha2 / synmean;
+            double postalpha2 = alpha2 + syncount + nonsyncount;
+            double postbeta2 = beta2 + synbeta + om * nonsynbeta;
+
+            double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+                + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+            double max = (logl1 > logl2) ? logl1 : logl2;
+            double l1 = exp(logl1-max);
+            double l2 = exp(logl2-max);
+            double p1 = (1-syn_pi)*l1;
+            double p2 = syn_pi*l2;
+            double tot = p1 + p2;
+            p1 /= tot;
+            p2 /= tot;
+            if (Random::Uniform() < p2) {
+                (*syn_bidimarray)[gene][branch] = Random::Gamma(postalpha2, postbeta2);
+            }
+            else    {
+                (*syn_bidimarray)[gene][branch] = Random::Gamma(postalpha1, postbeta1);
+            }
+        }
+        else    {
+            double alpha = 1.0 / syn_invshape;
+            double beta = alpha / synmean;
+
+            double postalpha = alpha + syncount + nonsyncount;
+            double postbeta = beta + synbeta + om * nonsynbeta;
+
+            (*syn_bidimarray)[gene][branch] = Random::Gamma(postalpha, postbeta);
+        }
     }
 
     void ResampleSyn()   {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 ResampleSyn(i,j);
+            }
+        }
+    }
+
+    void AddSynDevPostProbsTo(vector<vector<double>>& pp)   {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                pp[i][j] += GeneBranchSynSuffStatPostProb(i,j);
             }
         }
     }
@@ -630,6 +830,30 @@ class FastGeneBranchOmegaModel : public ProbModel {
             return nonsyncount * log(ommean) -  syn * nonsynbeta * ommean;
         }
 
+        if (om_devmode == 2)   {
+            double alpha1 = 1.0 / om_invshape;
+            double beta1 = alpha1 / ommean;
+            double postalpha1 = alpha1 + nonsyncount;
+            double postbeta1 = beta1 + syn * nonsynbeta;
+
+            double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+                + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
+
+            double alpha2 = alpha1 / om_invshape_ratio;
+            double beta2 = alpha2 / ommean;
+            double postalpha2 = alpha2 + nonsyncount;
+            double postbeta2 = beta2 + syn * nonsynbeta;
+
+            double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+                + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+            double max = (logl1 > logl2) ? logl1 : logl2;
+            double l1 = exp(logl1-max);
+            double l2 = exp(logl2-max);
+            double logl = log((1-om_pi)*l1 + om_pi*l2) + max;
+            return logl;
+        }
+
         double alpha = 1.0 / om_invshape;
         double beta = alpha / ommean;
 
@@ -638,6 +862,43 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
         return alpha * log(beta) - Random::logGamma(alpha) 
             + Random::logGamma(postalpha) - postalpha * log(postbeta);
+    }
+
+
+    double GeneBranchOmegaSuffStatPostProb(int gene, int branch) {
+
+        const dSOmegaPathSuffStat &suffstat = dsomss->GetVal(gene).GetVal(branch);
+        double nonsyncount = suffstat.GetNonSynCount();
+        double nonsynbeta = suffstat.GetNonSynBeta();
+
+        double syn = syn_devmode ? syn_bidimarray->GetVal(gene).GetVal(branch):
+            meansyn_bidimarray->GetVal(gene).GetVal(branch);
+
+        double ommean = geneom_array->GetVal(gene) * branchom_array->GetVal(branch);
+
+        double alpha1 = 1.0 / om_invshape;
+        double beta1 = alpha1 / ommean;
+        double postalpha1 = alpha1 + nonsyncount;
+        double postbeta1 = beta1 + syn * nonsynbeta;
+
+        double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+            + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
+
+        double alpha2 = alpha1 / om_invshape_ratio;
+        double beta2 = alpha2 / ommean;
+        double postalpha2 = alpha2 + nonsyncount;
+        double postbeta2 = beta2 + syn * nonsynbeta;
+
+        double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+            + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+        double max = (logl1 > logl2) ? logl1 : logl2;
+        double l1 = exp(logl1-max);
+        double l2 = exp(logl2-max);
+        double p1 = (1-om_pi)*l1;
+        double p2 = om_pi*l2;
+        double postprob = p1/(p1+p2);
+        return postprob;
     }
 
     void ResampleOmega(int gene, int branch)    {
@@ -649,19 +910,61 @@ class FastGeneBranchOmegaModel : public ProbModel {
         double syn = syn_bidimarray->GetVal(gene).GetVal(branch);
         double ommean = geneom_array->GetVal(gene) * branchom_array->GetVal(branch);
 
-        double alpha = 1.0 / om_invshape;
-        double beta = alpha / ommean;
+        if (om_devmode == 2)   {
+            double alpha1 = 1.0 / om_invshape;
+            double beta1 = alpha1 / ommean;
+            double postalpha1 = alpha1 + nonsyncount;
+            double postbeta1 = beta1 + syn * nonsynbeta;
 
-        double postalpha = alpha + nonsyncount;
-        double postbeta = beta + syn * nonsynbeta;
+            double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
+                + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
 
-        (*om_bidimarray)[gene][branch] = Random::Gamma(postalpha, postbeta);
+            double alpha2 = alpha1 / om_invshape_ratio;
+            double beta2 = alpha2 / ommean;
+            double postalpha2 = alpha2 + nonsyncount;
+            double postbeta2 = beta2 + syn * nonsynbeta;
+
+            double logl2 = alpha2 * log(beta2) - Random::logGamma(alpha2) 
+                + Random::logGamma(postalpha2) - postalpha2 * log(postbeta2);
+
+            double max = (logl1 > logl2) ? logl1 : logl2;
+            double l1 = exp(logl1-max);
+            double l2 = exp(logl2-max);
+            double p1 = (1-om_pi)*l1;
+            double p2 = om_pi*l2;
+            double tot = p1 + p2;
+            p1 /= tot;
+            p2 /= tot;
+            if (Random::Uniform() < p2) {
+                (*om_bidimarray)[gene][branch] = Random::Gamma(postalpha2, postbeta2);
+            }
+            else    {
+                (*om_bidimarray)[gene][branch] = Random::Gamma(postalpha1, postbeta1);
+            }
+        }
+        else    {
+            double alpha = 1.0 / om_invshape;
+            double beta = alpha / ommean;
+
+            double postalpha = alpha + nonsyncount;
+            double postbeta = beta + syn * nonsynbeta;
+
+            (*om_bidimarray)[gene][branch] = Random::Gamma(postalpha, postbeta);
+        }
     }
 
     void ResampleOmega()    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 ResampleOmega(i,j);
+            }
+        }
+    }
+
+    void AddOmegaDevPostProbsTo(vector<vector<double>>& pp)   {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                pp[i][j] += GeneBranchOmegaSuffStatPostProb(i,j);
             }
         }
     }
@@ -694,17 +997,17 @@ class FastGeneBranchOmegaModel : public ProbModel {
             HyperSuffStatLogProb(geneom_hypersuffstat, geneom_hypermean, geneom_hyperinvshape); 
     }
 
-    double SynInvShapeLogProb() const {
-        return SynInvShapeLogPrior() + SynSuffStatLogProb();
+    double SynDevLogProb() const {
+        return SynDevHyperLogPrior() + SynSuffStatLogProb();
     }
 
-    double OmegaInvShapeLogProb() const {
-        return OmegaInvShapeLogPrior() + OmegaSuffStatLogProb();
+    double OmegaDevLogProb() const {
+        return OmegaDevHyperLogPrior() + OmegaSuffStatLogProb();
     }
 
     double Move() override  {
         int nrep = 10;
-        int nsmallrep = 1;
+        int nsmallrep = 3;
 
         for (int rep=0; rep<nrep; rep++) {
 
@@ -719,10 +1022,17 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
                 if (syn_devmode)    {
                     ScalingMove(syn_invshape, 0.3, 1, 
-                            &FastGeneBranchOmegaModel::SynInvShapeLogProb,
-                            &FastGeneBranchOmegaModel::NoUpdate,
-                            this);
-                    syn_bidimarray->SetInvShape(syn_invshape);
+                            &FastGeneBranchOmegaModel::SynDevLogProb,
+                            &FastGeneBranchOmegaModel::NoUpdate, this);
+                    if (syn_devmode == 2)   {
+                        SlidingMove(syn_invshape_ratio, 0.3, 1, 1.0, 50.0, 
+                                &FastGeneBranchOmegaModel::SynDevLogProb,
+                                &FastGeneBranchOmegaModel::NoUpdate, this);
+                        SlidingMove(syn_pi, 0.3, 1, 0, 0.3, 
+                                &FastGeneBranchOmegaModel::SynDevLogProb,
+                                &FastGeneBranchOmegaModel::NoUpdate, this);
+                    }
+                    syn_bidimarray->SetParams(syn_invshape, syn_invshape_ratio, syn_pi);
                 }
             }
 
@@ -741,10 +1051,17 @@ class FastGeneBranchOmegaModel : public ProbModel {
 
                 if (om_devmode)    {
                     ScalingMove(om_invshape, 0.3, 1, 
-                            &FastGeneBranchOmegaModel::OmegaInvShapeLogProb,
-                            &FastGeneBranchOmegaModel::NoUpdate,
-                            this);
-                    om_bidimarray->SetInvShape(om_invshape);
+                            &FastGeneBranchOmegaModel::OmegaDevLogProb,
+                            &FastGeneBranchOmegaModel::NoUpdate, this);
+                    if (om_devmode == 2)    {
+                        SlidingMove(om_invshape_ratio, 0.3, 1, 1.0, 50.0, 
+                                &FastGeneBranchOmegaModel::OmegaDevLogProb,
+                                &FastGeneBranchOmegaModel::NoUpdate, this);
+                        SlidingMove(om_pi, 0.3, 1, 0, 0.3, 
+                                &FastGeneBranchOmegaModel::OmegaDevLogProb,
+                                &FastGeneBranchOmegaModel::NoUpdate, this);
+                    }
+                    om_bidimarray->SetParams(om_invshape, om_invshape_ratio, om_pi);
                 }
             }
 

@@ -144,9 +144,12 @@ int main(int argc, char *argv[]) {
                     treefile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
-                } else if (s == "-dev") {
+                } else if (s == "-gamdev") {
                     syn_devmode = 1;
                     om_devmode = 1;
+                } else if (s == "-mixdev") {
+                    syn_devmode = 2;
+                    om_devmode = 2;
                 } else if (s == "-nodev")   {
                     syn_devmode = 0;
                     om_devmode = 0;

@@ -118,6 +118,92 @@ class FastGeneBranchOmegaSample : public Sample {
         cerr << "newick format in " << name << ".dsom.tre\n";
     }
 
+    void ReadMixDev(double logratio_cutoff, double pp_cutoff)   {
+        int Ngene = GetModel()->GetNgene();
+        int Nbranch = GetModel()->GetNbranch();
+        vector<vector<double>> syn_postprob(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_postprob(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> syn_logfactor(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_logfactor(Ngene, vector<double>(Nbranch,0));
+        cerr << size << " points to read\n";
+        for (int i=0; i<size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AddSynDevPostProbsTo(syn_postprob);
+            GetModel()->AddOmegaDevPostProbsTo(om_postprob);
+            GetModel()->AddSynDevLogFactorTo(syn_logfactor);
+            GetModel()->AddOmegaDevLogFactorTo(om_logfactor);
+        }
+        cerr << '\n';
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                syn_postprob[i][j] /= size;
+                om_postprob[i][j] /= size;
+                syn_logfactor[i][j] /= size;
+                om_logfactor[i][j] /= size;
+            }
+        }
+
+        /*
+        ofstream os((name + ".devpostprob").c_str());
+        for (int i=0; i<Ngene; i++)   {
+            os << GetModel()->GetGeneName(i);
+            for (int j=0; j<Nbranch; j++)   {
+                os << '\t' << syn_postprob[i][j];
+                os << '\t' << syn_logfactor[i][j];
+                os << '\t' << om_postprob[i][j];
+                os << '\t' << om_logfactor[i][j];
+            }
+            os << '\n';
+        }
+        */
+
+        ofstream os((name + ".devpostprob").c_str());
+        os << "cutoff ratio and pp : " << exp(logratio_cutoff) << '\t' << pp_cutoff << '\n';
+        for (int i=0; i<Ngene; i++)   {
+            int nsyn = 0;
+            int nom = 0;
+            int nboth = 0;
+            for (int j=0; j<Nbranch; j++)   {
+                bool csyn = (fabs(syn_logfactor[i][j]) >= logratio_cutoff) && (syn_postprob[i][j] <= pp_cutoff);
+                bool com = (fabs(om_logfactor[i][j]) >= logratio_cutoff) && (om_postprob[i][j] <= pp_cutoff);
+                if (csyn)   {
+                    nsyn++;
+                }
+                if (com)    {
+                    nom++;
+                }
+                if (csyn && com)    {
+                    nboth++;
+                }
+            }
+            if (nsyn || nom)  {
+                os << GetModel()->GetGeneName(i) << '\t' << nsyn << '\t' << nom << '\t' << nboth;
+                for (int j=0; j<Nbranch; j++)   {
+                    bool csyn = (fabs(syn_logfactor[i][j]) >= logratio_cutoff) && (syn_postprob[i][j] <= pp_cutoff);
+                    bool com = (fabs(om_logfactor[i][j]) >= logratio_cutoff) && (om_postprob[i][j] <= pp_cutoff);
+                    if (csyn || com)    {
+                        os << '\t' << j;
+                        if (csyn)   {
+                            os << '\t' << double(int(10*exp(syn_logfactor[i][j])))/10;
+                        }
+                        else    {
+                            os << '\t' << " - ";
+                        }
+                        if (com)    {
+                            os << '\t' << double(int(10*exp(om_logfactor[i][j])))/10;
+                        }
+                        else    {
+                            os << '\t' << " - ";
+                        }
+                    }
+                }
+                os << '\n';
+            }
+        }
+    }
+
     void ReadQQPlot()   {
         int Ngene = GetModel()->GetNgene();
         int Nbranch = GetModel()->GetNbranch();
@@ -152,6 +238,9 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int qqplot = 0;
+    int ppdev = 0;
+    double ratio = 0;
+    double cutoff = 0;
 
     string name;
 
@@ -165,6 +254,12 @@ int main(int argc, char *argv[]) {
             string s = argv[i];
             if (s == "-qqplot") {
                 qqplot = 1;
+            } else if (s == "-ppdev")   {
+                ppdev = 1;
+                i++;
+                ratio = atof(argv[i]);
+                i++;
+                cutoff = atof(argv[i]);
             }
             else if ((s == "-x") || (s == "-extract")) {
                 i++;
@@ -199,6 +294,9 @@ int main(int argc, char *argv[]) {
     FastGeneBranchOmegaSample *sample = new FastGeneBranchOmegaSample(name, burnin, every, until);
     if (qqplot) {
         sample->ReadQQPlot();
+    }
+    else if (ppdev) {
+        sample->ReadMixDev(log(ratio), cutoff);
     }
     else    {
         sample->Read();
