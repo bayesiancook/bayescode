@@ -143,59 +143,20 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             array[gene].BranchToNewickNonSynBeta(dsom_os);
         }
 
-        /*
-        ofstream syn_count_os((name + ".genewise.counts_dS.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            syn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            array[gene].BranchToNewickSynCount(syn_count_os);
-        }
-
-        ofstream syn_beta_os((name + ".genewise.counts_dS_norm.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            syn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            array[gene].BranchToNewickSynBeta(syn_beta_os);
-        }
-
-        ofstream nonsyn_count_os((name + ".genewise.counts_dN.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            nonsyn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            array[gene].BranchToNewickNonSynCount(nonsyn_count_os);
-        }
-
-        ofstream nonsyn_beta_os((name + ".genewise.counts_dN_norm.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            nonsyn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            array[gene].BranchToNewickNonSynBeta(nonsyn_beta_os);
-        }
-        */
-
         GetModel()->MasterReceiveGeneArray(gcconsarray);
 
-        /*
-        ofstream gccons_syn_count_os((name + ".gccons.genewise.counts_dS.dnd").c_str());
+        ofstream gcdsom_os((name + ".genegcconsdsomsuffstat").c_str());
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            gccons_syn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            gcconsarray[gene].BranchToNewickSynCount(gccons_syn_count_os);
+            gcdsom_os << GetModel()->GetLocalGeneName(gene) << '\n';
+            gcdsom_os << "counts_dS\t";
+            gcconsarray[gene].BranchToNewickSynCount(gcdsom_os);
+            gcdsom_os << "counts_dS_norm\t";
+            gcconsarray[gene].BranchToNewickSynBeta(gcdsom_os);
+            gcdsom_os << "counts_dN\t";
+            gcconsarray[gene].BranchToNewickNonSynCount(gcdsom_os);
+            gcdsom_os << "counts_dN_norm\t";
+            gcconsarray[gene].BranchToNewickNonSynBeta(gcdsom_os);
         }
-
-        ofstream gccons_syn_beta_os((name + ".gccons.genewise.counts_dS_norm.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            gccons_syn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            gcconsarray[gene].BranchToNewickSynBeta(gccons_syn_beta_os);
-        }
-
-        ofstream gccons_nonsyn_count_os((name + ".gccons.genewise.counts_dN.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            gccons_nonsyn_count_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            gcconsarray[gene].BranchToNewickNonSynCount(gccons_nonsyn_count_os);
-        }
-
-        ofstream gccons_nonsyn_beta_os((name + ".gccons.genewise.counts_dN_norm.dnd").c_str());
-        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
-            gccons_nonsyn_beta_os << GetModel()->GetLocalGeneName(gene) << '\t';
-            gcconsarray[gene].BranchToNewickNonSynBeta(gccons_nonsyn_beta_os);
-        }
-        */
     }
 
     void SlaveReaddSOmegaPathSuffStat() {
