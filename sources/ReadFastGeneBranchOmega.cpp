@@ -145,8 +145,7 @@ class FastGeneBranchOmegaSample : public Sample {
             }
         }
 
-        /*
-        ofstream os((name + ".devpostprob").c_str());
+        ofstream os((name + ".devlogratios").c_str());
         for (int i=0; i<Ngene; i++)   {
             os << GetModel()->GetGeneName(i);
             for (int j=0; j<Nbranch; j++)   {
@@ -156,51 +155,6 @@ class FastGeneBranchOmegaSample : public Sample {
                 os << '\t' << om_logfactor[i][j];
             }
             os << '\n';
-        }
-        */
-
-        ofstream os((name + ".devpostprob").c_str());
-        os << "cutoff ratio and pp : " << exp(logratio_cutoff) << '\t' << pp_cutoff << '\n';
-        for (int i=0; i<Ngene; i++)   {
-            int nsyn = 0;
-            int nom = 0;
-            int nboth = 0;
-            for (int j=0; j<Nbranch; j++)   {
-                bool csyn = (fabs(syn_logfactor[i][j]) >= logratio_cutoff) && (syn_postprob[i][j] <= pp_cutoff);
-                bool com = (fabs(om_logfactor[i][j]) >= logratio_cutoff) && (om_postprob[i][j] <= pp_cutoff);
-                if (csyn)   {
-                    nsyn++;
-                }
-                if (com)    {
-                    nom++;
-                }
-                if (csyn && com)    {
-                    nboth++;
-                }
-            }
-            if (nsyn || nom)  {
-                os << GetModel()->GetGeneName(i) << '\t' << nsyn << '\t' << nom << '\t' << nboth;
-                for (int j=0; j<Nbranch; j++)   {
-                    bool csyn = (fabs(syn_logfactor[i][j]) >= logratio_cutoff) && (syn_postprob[i][j] <= pp_cutoff);
-                    bool com = (fabs(om_logfactor[i][j]) >= logratio_cutoff) && (om_postprob[i][j] <= pp_cutoff);
-                    if (csyn || com)    {
-                        os << '\t' << j;
-                        if (csyn)   {
-                            os << '\t' << double(int(10*exp(syn_logfactor[i][j])))/10;
-                        }
-                        else    {
-                            os << '\t' << " - ";
-                        }
-                        if (com)    {
-                            os << '\t' << double(int(10*exp(om_logfactor[i][j])))/10;
-                        }
-                        else    {
-                            os << '\t' << " - ";
-                        }
-                    }
-                }
-                os << '\n';
-            }
         }
     }
 
