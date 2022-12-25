@@ -136,6 +136,25 @@ class PathSuffStat : public SuffStat {
         return total;
     }
 
+    void Normalize(double f)    {
+        for (std::map<int, double >::iterator i = rootcount.begin(); i != rootcount.end(); i++) {
+            double tmp = i->second;
+            i->second *= f;
+            if (i->second == tmp)   {
+                cerr << "error\n";
+                exit(1);
+            }
+        }
+        for (std::map<int, double>::iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            i->second *= f;
+        }
+        for (std::map<pair<int, int>, double >::iterator i = paircount.begin();
+             i != paircount.end(); i++) {
+            i->second *= f;
+        }
+    }
+
     //! const access to the ordered map giving the root count stat (sparse data
     //! structure)
     const std::map<int, double > &GetRootCountMap() const { return rootcount; }
@@ -155,6 +174,58 @@ class PathSuffStat : public SuffStat {
         return 2*Nstate + Nstate*(Nstate-1);
     }
 
+    //! put object into stream
+    void ToStream(ostream& os) const {
+        for (int i=0; i<Nstate; i++)    {
+            os << GetWaitingTime(i) << '\t';
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    os << GetPairCount(i,j) << '\t';
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            os << GetRootCount(i) << '\t';
+        }
+    }
+
+    //! get object from stream
+    void FromStream(istream& is)    {
+        Clear();
+        Add(is);
+    }
+
+    //! get a nucpath suffstat from stream add it to this
+    void Add(istream& is)   {
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                AddRootCount(i,tmp);
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            for (int j=0; j<Nstate; j++)    {
+                if (i != j) {
+                    double tmp;
+                    is >> tmp;
+                    if (tmp)    {
+                        AddPairCount(i,j,tmp);
+                    }
+                }
+            }
+        }
+        for (int i=0; i<Nstate; i++)    {
+            double tmp;
+            is >> tmp;
+            if (tmp)    {
+                AddWaitingTime(i,tmp);
+            }
+        }
+    }
+
     //! put object into MPI buffer
     void MPIPut(MPIBuffer &buffer) const {
         for (int i=0; i<Nstate; i++)    {
@@ -169,7 +240,6 @@ class PathSuffStat : public SuffStat {
         }
         for (int i=0; i<Nstate; i++)    {
             buffer << GetWaitingTime(i);
-
         }
     }
 
@@ -216,6 +286,10 @@ class PathSuffStat : public SuffStat {
     std::map<int, double> waitingtime;
 };
 
+
+ostream& operator<<(ostream& os, const PathSuffStat& suffstat);
+istream& operator>>(istream& is, PathSuffStat& suffstat);
+
 /**
  * \brief An array of substitution path sufficient statistics
  *
@@ -226,7 +300,8 @@ class PathSuffStat : public SuffStat {
 
 class PathSuffStatArray : public SimpleArray<PathSuffStat> {
   public:
-    PathSuffStatArray(int insize) : SimpleArray<PathSuffStat>(insize) {}
+    PathSuffStatArray(int insize, int Nstate = 0) : SimpleArray<PathSuffStat>(insize, PathSuffStat(Nstate)) {}
+
     ~PathSuffStatArray() {}
 
     //! set all suff stats to 0
@@ -268,6 +343,10 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
     }
 };
 
+
+ostream& operator<<(ostream& os, const PathSuffStatArray& suffstat);
+istream& operator>>(istream& is, PathSuffStatArray& suffstat);
+
 /**
  * \brief A NodeArray of substitution path sufficient statistics
  *
@@ -277,7 +356,7 @@ class PathSuffStatArray : public SimpleArray<PathSuffStat> {
 
 class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
   public:
-    PathSuffStatNodeArray(const Tree &intree) : SimpleNodeArray<PathSuffStat>(intree) {}
+    PathSuffStatNodeArray(const Tree &intree, int Nstate = 0) : SimpleNodeArray<PathSuffStat>(intree, PathSuffStat(Nstate)) {}
     ~PathSuffStatNodeArray() {}
 
     //! set all suff stats to 0
@@ -313,13 +392,28 @@ class PathSuffStatNodeArray : public SimpleNodeArray<PathSuffStat> {
         return total;
     }
 
+    void Add(const PathSuffStatNodeArray& ss)   {
+        for (int i = 0; i < GetNnode(); i++) {
+            (*this)[i].Add(ss.GetVal(i));
+        }
+    }
+
     //! get array from MPI buffer and add it to this array (member-wise addition)
     void Add(const MPIBuffer &buffer) {
         for (int i = 0; i < GetNnode(); i++) {
             (*this)[i] += buffer;
         }
     }
+
+    void Normalize(double f)    {
+        for (int i = 0; i < GetNnode(); i++) {
+            (*this)[i].Normalize(f);
+        }
+    }
 };
+
+ostream& operator<<(ostream& os, const PathSuffStatNodeArray& suffstat);
+istream& operator>>(istream& is, PathSuffStatNodeArray& suffstat);
 
 /**
  * \brief A bi-dimensional array of substitution path sufficient statistics
@@ -424,7 +518,9 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
             }
         }
     }
-
 };
+
+ostream& operator<<(ostream& os, const PathSuffStatBidimArray& suffstat);
+istream& operator>>(istream& is, PathSuffStatBidimArray& suffstat);
 
 #endif
