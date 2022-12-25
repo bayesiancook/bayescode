@@ -1197,6 +1197,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         MasterReceiveAdditive(lnL);
     }
 
+    void SlaveAddGeneNodePathSuffStat(vector<PathSuffStatNodeArray>& array)   {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AddNodePathSuffStat(array[gene]);
+        }
+    }
+
     void SlaveAdddSOmegaPathSuffStat(vector<dSOmegaPathSuffStatBranchArray>& array)   {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->AdddSOmegaPathSuffStat(array[gene]);

@@ -215,6 +215,40 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         GetModel()->SlaveSendGeneArray(gcconsarray);
     }
 
+
+    void MasterReadGeneNodePathSuffStat() {
+        vector<PathSuffStatNodeArray> array(GetModel()->GetNgene(), PathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->MasterUpdate();
+        }
+        cerr << '\n';
+
+        GetModel()->MasterReceiveGeneArray(array);
+
+        ofstream os((name + ".genenodepathsuffstat").c_str());
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            os << GetModel()->GetLocalGeneName(gene) << '\t';
+            os << array[gene];
+            os << '\n';
+        }
+    }
+
+    void SlaveReadGeneNodePathSuffStat() {
+        vector<PathSuffStatNodeArray> array(GetModel()->GetNgene(), PathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            GetModel()->SlaveUpdate();
+            GetModel()->SlaveAddGeneNodePathSuffStat(array);
+        }
+        for (int i=0; i<GetModel()->GetLocalNgene(); i++) {
+            array[i].Normalize(1.0/size);
+        }
+        GetModel()->SlaveSendGeneArray(array);
+    }
+
 };
 
 int main(int argc, char *argv[]) {
@@ -230,7 +264,8 @@ int main(int argc, char *argv[]) {
     int until = -1;
     string name;
     int ppred = 0;
-    int dsom = 0;
+    int dsomss = 0;
+    int nodepathss = 0;
 
     try {
         if (argc == 1) {
@@ -267,7 +302,9 @@ int main(int argc, char *argv[]) {
                     i--;
                 }
             } else if (s == "-dsomss")    {
-                dsom = 1;
+                dsomss = 1;
+            } else if (s == "-nodepathss")	{
+                nodepathss = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -294,12 +331,19 @@ int main(int argc, char *argv[]) {
         } else {
             sample->SlavePostPred();
         }
-    } else if (dsom)    {
+    } else if (dsomss)    {
         if (! myid) {
             sample->MasterReaddSOmegaPathSuffStat();
         }
         else    {
             sample->SlaveReaddSOmegaPathSuffStat();
+        }
+    } else if (nodepathss)    {
+        if (! myid) {
+            sample->MasterReadGeneNodePathSuffStat();
+        }
+        else    {
+            sample->SlaveReadGeneNodePathSuffStat();
         }
     } else {
         if (!myid) {

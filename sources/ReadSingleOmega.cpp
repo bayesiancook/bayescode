@@ -100,6 +100,22 @@ class SingleOmegaSample : public Sample {
         cout << "site dsom suffstat written in : " << name << ".sitedsomss\n";
     }
 
+    void ReadNodePathSuffStat() {
+        cerr << size << " points to read\n";
+        PathSuffStatNodeArray array(*GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AddNodePathSuffStat(array);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        ofstream os((name + ".meannodepathsuffstat").c_str());
+        os << array << '\n';
+        cerr << "node path suffstats in " << name << ".meannodepathsuffstat\n";
+    }
+
     void ReadBranchSuffStat()   {
         cerr << size << " points to read\n";
         dSOmegaPathSuffStatBranchArray array(*GetModel()->GetTree());
@@ -183,6 +199,7 @@ int main(int argc, char *argv[]) {
     int ppred = 0;
     int sitess = 0;
     int branchss = 0;
+    int nodepathss = 0;
 
     string name;
 
@@ -209,10 +226,12 @@ int main(int argc, char *argv[]) {
                 until = atoi(argv[i]);
             } else if (s == "-ppred") {
                 ppred = 1;
-            } else if (s == "-sitesuffstat")    {
+            } else if (s == "-sitedsomss")    {
                 sitess = 1;
-            } else if (s == "-branchsuffstat")    {
+            } else if (s == "-branchdsomss")    {
                 branchss = 1;
+            } else if (s == "-nodepathss")  {
+                nodepathss = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -237,6 +256,8 @@ int main(int argc, char *argv[]) {
         sample->ReadSiteSuffStat();
     } else if (branchss)  {
         sample->ReadBranchSuffStat();
+    } else if (nodepathss)  {
+        sample->ReadNodePathSuffStat();
     } else {
         sample->Read();
     }

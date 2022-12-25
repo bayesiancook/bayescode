@@ -669,6 +669,14 @@ class SingleOmegaModel : public ProbModel {
         into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
     }
 
+    //! collect generic sufficient statistics from substitution mappings
+    void AddNodePathSuffStat(PathSuffStatNodeArray& into) const {
+        PathSuffStatNodeArray pathsuffstatarray(*tree);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        into.Add(pathsuffstatarray);
+    }
+
     /*
     void TracedSOmegaPathSuffStat(ostream& os) const    {
         PathSuffStatNodeArray pathsuffstatarray(*tree);
