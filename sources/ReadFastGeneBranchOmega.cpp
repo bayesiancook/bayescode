@@ -88,10 +88,10 @@ class FastGeneBranchOmegaSample : public Sample {
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
-            GetModel()->AddBranchSynArrayTo(mean_branchsyn_array);
-            GetModel()->AddBranchOmegaArrayTo(mean_branchom_array);
-            GetModel()->AddGeneSynArrayTo(mean_genesyn_array);
-            GetModel()->AddGeneOmegaArrayTo(mean_geneom_array);
+            GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
+            GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
+            GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
+            GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
         }
         cerr << '\n';
         for (int j=0; j<Nbranch; j++)   {
@@ -132,8 +132,8 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->Update();
             GetModel()->AddSynDevPostProbsTo(syn_postprob);
             GetModel()->AddOmegaDevPostProbsTo(om_postprob);
-            GetModel()->AddSynDevLogFactorTo(syn_logfactor);
-            GetModel()->AddOmegaDevLogFactorTo(om_logfactor);
+            GetModel()->GetSynModel()->AddDevLogFactorTo(syn_logfactor);
+            GetModel()->GetOmegaModel()->AddDevLogFactorTo(om_logfactor);
         }
         cerr << '\n';
         for (int i=0; i<Ngene; i++)   {
@@ -171,8 +171,8 @@ class FastGeneBranchOmegaSample : public Sample {
             cerr << '.';
             GetNextPoint();
             GetModel()->Update();
-            GetModel()->AddSynDevToHist(syn_postsample, syn_predsample, i*Ngene*Nbranch);
-            GetModel()->AddOmegaDevToHist(om_postsample, om_predsample, i*Ngene*Nbranch);
+            GetModel()->GetSynModel()->AddDevToHist(syn_postsample, syn_predsample, i*Ngene*Nbranch);
+            GetModel()->GetOmegaModel()->AddDevToHist(om_postsample, om_predsample, i*Ngene*Nbranch);
         }
         cerr << '\n';
         ofstream os((name + ".qqplot").c_str());

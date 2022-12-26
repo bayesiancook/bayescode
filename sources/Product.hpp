@@ -81,6 +81,11 @@ class ProductArray : public Array<Product> {
             array[gene]->SetMulVal(siteval.GetVal(gene));
         }
     }
+    void UpdateGene(int gene)   {
+        array[gene]->SetMulVal(siteval.GetVal(gene));
+    }
+    void UpdateBranch(int branch)   {
+    }
 
   private:
     const Selector<double> &branchval;
