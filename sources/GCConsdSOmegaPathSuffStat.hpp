@@ -134,15 +134,15 @@ class GCConsdSOmegaPathSuffStat : public SuffStat {
         bnonsyn += from.bnonsyn;
     }
 
-    int GetCount() const {
+    double GetCount() const {
         return nsyn + nnonsyn;
     }
 
-    int GetSynCount() const {
+    double GetSynCount() const {
         return nsyn;
     }
 
-    int GetNonSynCount() const  {
+    double GetNonSynCount() const  {
         return nnonsyn;
     }
 
