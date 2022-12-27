@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= genebranchcodon genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= readgenebranchcodon genebranchcodon genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -43,17 +43,21 @@ endif
 
 # Targets
 
-readgenebranchdnds$(EXEEXT): $(PROGSDIR)/readgenebranchdnds$(EXEEXT)
-$(PROGSDIR)/readgenebranchdnds$(EXEEXT): ReadFastGeneBranchOmega.o $(OBJS)
-	$(CC) ReadFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
 genebranchcodon$(EXEEXT): $(PROGSDIR)/genebranchcodon$(EXEEXT)
 $(PROGSDIR)/genebranchcodon$(EXEEXT): GeneBranchStrandSymmetric.o $(OBJS)
 	$(CC) GeneBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
+readgenebranchcodon$(EXEEXT): $(PROGSDIR)/readgenebranchcodon$(EXEEXT)
+$(PROGSDIR)/readgenebranchcodon$(EXEEXT): ReadGeneBranchStrandSymmetric.o $(OBJS)
+	$(CC) ReadGeneBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
 genebranchdnds$(EXEEXT): $(PROGSDIR)/genebranchdnds$(EXEEXT)
 $(PROGSDIR)/genebranchdnds$(EXEEXT): FastGeneBranchOmega.o $(OBJS)
 	$(CC) FastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readgenebranchdnds$(EXEEXT): $(PROGSDIR)/readgenebranchdnds$(EXEEXT)
+$(PROGSDIR)/readgenebranchdnds$(EXEEXT): ReadFastGeneBranchOmega.o $(OBJS)
+	$(CC) ReadFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readbranchtree$(EXEEXT): $(PROGSDIR)/readbranchtree$(EXEEXT)
 $(PROGSDIR)/readbranchtree$(EXEEXT): ReadMeanBranchTree.o $(OBJS)
