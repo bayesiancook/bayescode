@@ -178,7 +178,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
 
     void MasterReadGeneNodePathSuffStat() {
-        vector<PathSuffStatNodeArray> array(GetModel()->GetNgene(), PathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
+        vector<RelativePathSuffStatNodeArray> array(GetModel()->GetNgene(), RelativePathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
         cerr << size << " points to read\n";
         for (int i = 0; i < size; i++) {
             cerr << '.';
@@ -189,15 +189,18 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
         GetModel()->MasterReceiveGeneArray(array);
 
-        PathSuffStatNodeArray global_pathss(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
+        RelativePathSuffStatNodeArray global_pathss(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
         global_pathss.Clear();
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
             global_pathss.Add(array[gene]);
         }
         ofstream gos((name + ".globalnodepathsuffstat").c_str());
+        gos << global_pathss << '\n';
+        /*
         for (int j=0; j<GetModel()->GetTree().GetNnode(); j++)   {
             gos << global_pathss[j] << '\n';
         }
+        */
 
         ofstream os((name + ".genenodepathsuffstat").c_str());
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
@@ -208,7 +211,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
     }
 
     void SlaveReadGeneNodePathSuffStat() {
-        vector<PathSuffStatNodeArray> array(GetModel()->GetNgene(), PathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
+        vector<RelativePathSuffStatNodeArray> array(GetModel()->GetNgene(), RelativePathSuffStatNodeArray(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate()));
         for (int i = 0; i < size; i++) {
             GetNextPoint();
             GetModel()->SlaveUpdate();

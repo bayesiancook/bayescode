@@ -143,6 +143,25 @@ class RelativePathSuffStat {
         return total;
     }
 
+    void Normalize(double f)    {
+        for (std::map<int, double >::iterator i = rootcount.begin(); i != rootcount.end(); i++) {
+            double tmp = i->second;
+            i->second *= f;
+            if (i->second == tmp)   {
+                cerr << "error\n";
+                exit(1);
+            }
+        }
+        for (std::map<int, double>::iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            i->second *= f;
+        }
+        for (std::map<pair<int, int>, double >::iterator i = paircount.begin();
+             i != paircount.end(); i++) {
+            i->second *= f;
+        }
+    }
+
     //! const access to the ordered map giving the root count stat (sparse data
     //! structure)
     const std::map<int, double > &GetRootCountMap() const { return rootcount; }
@@ -381,6 +400,18 @@ class RelativePathSuffStatNodeArray : public SimpleNodeArray<RelativePathSuffSta
     void Add(const MPIBuffer &buffer) {
         for (int i = 0; i < GetNnode(); i++) {
             (*this)[i] += buffer;
+        }
+    }
+
+    void Add(const RelativePathSuffStatNodeArray& ss)   {
+        for (int i = 0; i < GetNnode(); i++) {
+            (*this)[i].Add(ss.GetVal(i));
+        }
+    }
+
+    void Normalize(double f)    {
+        for (int i = 0; i < GetNnode(); i++) {
+            (*this)[i].Normalize(f);
         }
     }
 };

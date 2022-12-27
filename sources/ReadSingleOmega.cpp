@@ -102,7 +102,7 @@ class SingleOmegaSample : public Sample {
 
     void ReadNodePathSuffStat() {
         cerr << size << " points to read\n";
-        PathSuffStatNodeArray array(*GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
+        RelativePathSuffStatNodeArray array(*GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
         for (int i = 0; i < size; i++) {
             cerr << '.';
             GetNextPoint();

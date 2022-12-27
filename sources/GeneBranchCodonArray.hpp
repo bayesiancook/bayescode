@@ -391,12 +391,12 @@ class CodonMatrixGeneBranchArray : public BidimArray<MGOmegaCodonSubMatrix>  {
     vector<vector<MGOmegaCodonSubMatrix *>> matrixarray;
 };
 
-class PathSuffStatGeneBranchArray : public SimpleBidimArray<PathSuffStat>   {
+class PathSuffStatGeneBranchArray : public SimpleBidimArray<RelativePathSuffStat>   {
 
     public:
 
     PathSuffStatGeneBranchArray(int Ngene, int Nbranch, int Nstate) : 
-        SimpleBidimArray<PathSuffStat>(Ngene, Nbranch, PathSuffStat(Nstate)) {
+        SimpleBidimArray<RelativePathSuffStat>(Ngene, Nbranch, RelativePathSuffStat(Nstate)) {
         Clear();
     }
 
@@ -408,14 +408,14 @@ class PathSuffStatGeneBranchArray : public SimpleBidimArray<PathSuffStat>   {
         }
     }
 
-    void Get(int gene, const NodeSelector<PathSuffStat>& nodearray)   {
+    void Get(int gene, const NodeSelector<RelativePathSuffStat>& nodearray)   {
         for (int j=0; j<GetNcol(); j++) {
             (*this)(gene,j).Clear();
         }
         RecursiveAdd(gene, nodearray.GetTree().GetRoot(), nodearray);
     }
 
-    void RecursiveAdd(int gene, const Link *from, const NodeSelector<PathSuffStat>& nodearray)    {
+    void RecursiveAdd(int gene, const Link *from, const NodeSelector<RelativePathSuffStat>& nodearray)    {
         if (!from->isRoot()) {
             (*this)(gene,from->GetBranch()->GetIndex()).Add(nodearray.GetVal(from->GetNode()->GetIndex()));
         }
@@ -425,11 +425,12 @@ class PathSuffStatGeneBranchArray : public SimpleBidimArray<PathSuffStat>   {
     }
 
     //! return total log prob over array, given an array of omega_i's of same size
-    double GetLogProb(const CodonMatrixGeneBranchArray& mat) const  {
+    double GetLogProb(const CodonMatrixGeneBranchArray& mat,
+            const GeneBranchGammaEffects& length) const  {
         double total = 0;
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
-                total += GetVal(i,j).GetLogProb(mat.GetVal(i,j));
+                total += GetVal(i,j).GetLogProb(mat.GetVal(i,j), length.GetVal(i,j));
             }
         }
         return total;
@@ -455,12 +456,14 @@ class dSOmegaPathSuffStatGeneBranchArray : public SimpleBidimArray<dSOmegaPathSu
         }
     }
 
-    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, const CodonMatrixGeneBranchArray& mat, 
-            const GeneBranchGammaEffects& ds, const GeneBranchGammaEffects& om)  {
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const CodonMatrixGeneBranchArray& mat, 
+            const GeneBranchGammaEffects& om)  {
+            // const GeneBranchGammaEffects& ds, const GeneBranchGammaEffects& om)  {
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
-                (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), 
-                        ds.GetVal(i,j), om.GetVal(i,j));
+                (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), om.GetVal(i,j));
+                        // ds.GetVal(i,j), om.GetVal(i,j));
             }
         }
     }
@@ -493,10 +496,12 @@ class NucPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanNucPathSuffSt
         }
     }
 
-    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, const CodonMatrixGeneBranchArray& mat)  {
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const CodonMatrixGeneBranchArray& mat,
+            const GeneBranchGammaEffects& length)  {
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
-                (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j));
+                (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), length.GetVal(i,j));
             }
         }
     }

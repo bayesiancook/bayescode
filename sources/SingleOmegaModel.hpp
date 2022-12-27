@@ -670,11 +670,15 @@ class SingleOmegaModel : public ProbModel {
     }
 
     //! collect generic sufficient statistics from substitution mappings
-    void AddNodePathSuffStat(PathSuffStatNodeArray& into) const {
-        PathSuffStatNodeArray pathsuffstatarray(*tree);
-        pathsuffstatarray.Clear();
+    void AddNodePathSuffStat(RelativePathSuffStatNodeArray& into) const {
+        PathSuffStatNodeArray pathsuffstatarray(*tree, codondata->GetNstate());
         pathsuffstatarray.AddSuffStat(*phyloprocess);
-        into.Add(pathsuffstatarray);
+
+        RelativePathSuffStatNodeArray relpathsuffstatarray(*tree, codondata->GetNstate());
+        relpathsuffstatarray.Clear();
+        relpathsuffstatarray.AddSuffStat(pathsuffstatarray, *branchlength);
+
+        into.Add(relpathsuffstatarray);
     }
 
     /*

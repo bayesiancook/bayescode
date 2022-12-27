@@ -77,26 +77,28 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
 
         cerr << "read suff stat\n";
         // read suff stats
-        PathSuffStatNodeArray tot(*tree, codonstatespace->GetNstate());
+        // RelativePathSuffStatNodeArray tot(*tree, codonstatespace->GetNstate());
+        // tot.Clear();
         for (int gene=0; gene<Ngene; gene++)    {
             is >> gene_names[gene];
             cerr << gene_names[gene] << '\n';
-            PathSuffStatNodeArray tmp(*tree, codonstatespace->GetNstate());
+            RelativePathSuffStatNodeArray tmp(*tree, codonstatespace->GetNstate());
             is >> tmp;
-            tot.Add(tmp);
+            // tot.Add(tmp);
             pathss->Get(gene, tmp);
         }
+        /*
         ofstream cos("tmp");
-        for (int j=0; j<tree->GetNnode(); j++)    {
-            cos << tot[j] << '\n';
-        }
+        cos << tot << '\n';
         cos.close();
-        exit(1);
+        */
 
+        /*
         Update();
 
         cerr << "dnds tree\n";
         ComputeEmpiricaldNdSTree();
+        */
     }
 
     void ComputeEmpiricaldNdSTree()  {
@@ -180,6 +182,11 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         os << "logprior\tlogl";
         syn_model->TraceHeader(os, "syn");
         om_model->TraceHeader(os, "om");
+        rho_AC_model->TraceHeader(os, "AC");
+        rho_AG_model->TraceHeader(os, "AG");
+        rho_CA_model->TraceHeader(os, "CA");
+        rho_CG_model->TraceHeader(os, "CG");
+        rho_CT_model->TraceHeader(os, "CT");
         os << '\n';
     }
 
@@ -187,6 +194,11 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         os << GetLogPrior() << '\t' << GetLogLikelihood();
         syn_model->Trace(os);
         om_model->Trace(os);
+        rho_AC_model->Trace(os);
+        rho_AG_model->Trace(os);
+        rho_CA_model->Trace(os);
+        rho_CG_model->Trace(os);
+        rho_CT_model->Trace(os);
         os << '\n';
     }
 
@@ -196,12 +208,22 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     void ToStream(ostream &os) const override {
         syn_model->ToStream(os);
         om_model->ToStream(os);
+        rho_AC_model->ToStream(os);
+        rho_AG_model->ToStream(os);
+        rho_CA_model->ToStream(os);
+        rho_CG_model->ToStream(os);
+        rho_CT_model->ToStream(os);
         os << '\n';
     }
 
     void FromStream(istream &is) override {
         syn_model->FromStream(is);
         om_model->FromStream(is);
+        rho_AC_model->FromStream(is);
+        rho_AG_model->FromStream(is);
+        rho_CA_model->FromStream(is);
+        rho_CG_model->FromStream(is);
+        rho_CT_model->FromStream(is);
     }
 
     void Update() override {
@@ -257,7 +279,8 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     }
 
     double GetLogLikelihood(int gene, int branch) const {
-        return pathss->GetVal(gene,branch).GetLogProb(codonmat->GetVal(gene,branch));
+        return pathss->GetVal(gene,branch).GetLogProb(
+                codonmat->GetVal(gene,branch), syn_model->GetVal(gene,branch));
     }
 
     double GetLogProb() const override  {
@@ -265,22 +288,25 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     }
 
     double Move() override  {
-        CollectNucPathSuffStat();
-        MoveNuc(1,1);
-        CollectdSOmPathSuffStat();
-        // 10 3 
-        MovedSOmega(1,1);
+        for (int rep=0; rep<10; rep++)  {
+            CollectNucPathSuffStat();
+            MoveNuc(3,1);
+            CollectdSOmPathSuffStat();
+            // 10 3 
+            MovedSOmega(3,1);
+        }
         return 1.0;
     }
 
     void CollectNucPathSuffStat()   {
         nucss->Clear();
-        nucss->AddSuffStat(*pathss, *codonmat);
+        nucss->AddSuffStat(*pathss, *codonmat, *syn_model);
     }
 
     void CollectdSOmPathSuffStat()  {
         dsomss->Clear();
-        dsomss->AddSuffStat(*pathss, *codonmat, *syn_model, *om_model);
+        dsomss->AddSuffStat(*pathss, *codonmat, *om_model);
+        // dsomss->AddSuffStat(*pathss, *codonmat, *syn_model, *om_model);
     }
 
     double MoveNuc(int nrep, int nsmallrep) {

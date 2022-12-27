@@ -177,7 +177,7 @@ class PathSuffStat : public SuffStat {
     //! put object into stream
     void ToStream(ostream& os) const {
         for (int i=0; i<Nstate; i++)    {
-            os << GetWaitingTime(i) << '\t';
+            os << GetRootCount(i) << '\t';
         }
         for (int i=0; i<Nstate; i++)    {
             for (int j=0; j<Nstate; j++)    {
@@ -187,7 +187,7 @@ class PathSuffStat : public SuffStat {
             }
         }
         for (int i=0; i<Nstate; i++)    {
-            os << GetRootCount(i) << '\t';
+            os << GetWaitingTime(i) << '\t';
         }
     }
 
