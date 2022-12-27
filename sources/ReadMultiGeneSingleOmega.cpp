@@ -189,6 +189,16 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
         GetModel()->MasterReceiveGeneArray(array);
 
+        PathSuffStatNodeArray global_pathss(GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
+        global_pathss.Clear();
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            global_pathss.Add(array[gene]);
+        }
+        ofstream gos((name + ".globalnodepathsuffstat").c_str());
+        for (int j=0; j<GetModel()->GetTree().GetNnode(); j++)   {
+            gos << global_pathss[j] << '\n';
+        }
+
         ofstream os((name + ".genenodepathsuffstat").c_str());
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
             os << GetModel()->GetLocalGeneName(gene) << '\t';
