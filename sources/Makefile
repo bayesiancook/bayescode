@@ -1,14 +1,14 @@
 CC=mpic++
 CPPFLAGS= -std=c++11 -Wall -O3
 LDFLAGS= -O3
-SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CovMatrix.cpp PathSuffStat.cpp
+SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp StrandSymmetricIrreversibleSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CovMatrix.cpp PathSuffStat.cpp
 
 OBJS=$(patsubst %.cpp,%.o,$(SRCS))
 ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= genebranchcodon genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -46,6 +46,10 @@ endif
 readgenebranchdnds$(EXEEXT): $(PROGSDIR)/readgenebranchdnds$(EXEEXT)
 $(PROGSDIR)/readgenebranchdnds$(EXEEXT): ReadFastGeneBranchOmega.o $(OBJS)
 	$(CC) ReadFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+genebranchcodon$(EXEEXT): $(PROGSDIR)/genebranchcodon$(EXEEXT)
+$(PROGSDIR)/genebranchcodon$(EXEEXT): GeneBranchStrandSymmetric.o $(OBJS)
+	$(CC) GeneBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 genebranchdnds$(EXEEXT): $(PROGSDIR)/genebranchdnds$(EXEEXT)
 $(PROGSDIR)/genebranchdnds$(EXEEXT): FastGeneBranchOmega.o $(OBJS)
