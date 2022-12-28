@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= readgenebranchcodon genebranchcodon genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= gtr readgtr multigenegtr readmultigenegtr readgenebranchcodon genebranchcodon genebranchdnds readgenebranchdnds get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -115,6 +115,14 @@ brownclock$(EXEEXT): $(PROGSDIR)/brownclock$(EXEEXT)
 $(PROGSDIR)/brownclock$(EXEEXT): BrownianClock.o $(OBJS)
 	$(CC) BrownianClock.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
+gtr$(EXEEXT): $(PROGSDIR)/gtr$(EXEEXT)
+$(PROGSDIR)/gtr$(EXEEXT): GTR.o $(OBJS)
+	$(CC) GTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readgtr$(EXEEXT): $(PROGSDIR)/readgtr$(EXEEXT)
+$(PROGSDIR)/readgtr$(EXEEXT): ReadGTR.o $(OBJS)
+	$(CC) ReadGTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
 globom$(EXEEXT): $(PROGSDIR)/globom$(EXEEXT)
 $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
 	$(CC) SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
@@ -122,6 +130,14 @@ $(PROGSDIR)/globom$(EXEEXT): SingleOmega.o $(OBJS)
 readglobom$(EXEEXT): $(PROGSDIR)/readglobom$(EXEEXT)
 $(PROGSDIR)/readglobom$(EXEEXT): ReadSingleOmega.o $(OBJS)
 	$(CC) ReadSingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+multigenegtr$(EXEEXT): $(PROGSDIR)/multigenegtr$(EXEEXT)
+$(PROGSDIR)/multigenegtr$(EXEEXT): MultiGeneGTR.o $(OBJS)
+	$(CC) MultiGeneGTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readmultigenegtr$(EXEEXT): $(PROGSDIR)/readmultigenegtr$(EXEEXT)
+$(PROGSDIR)/readmultigenegtr$(EXEEXT): ReadMultiGeneGTR.o $(OBJS)
+	$(CC) ReadMultiGeneGTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneglobom$(EXEEXT): $(PROGSDIR)/multigeneglobom$(EXEEXT)
 $(PROGSDIR)/multigeneglobom$(EXEEXT): MultiGeneSingleOmega.o $(OBJS)
