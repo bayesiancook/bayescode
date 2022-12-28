@@ -1,11 +1,11 @@
 #include <cmath>
 #include <fstream>
 #include "Chain.hpp"
-#include "GeneBranchStrandSymmetricCodonModel.hpp"
+#include "GeneBranchNucModel.hpp"
 using namespace std;
 
 /**
- * \brief Chain object for running an MCMC under GeneBranchStrandSymmetricCodonModel
+ * \brief Chain object for running an MCMC under GeneBranchNucModel
  */
 
 class GeneBranchStrandSymmetricChain : public Chain {
@@ -13,18 +13,17 @@ class GeneBranchStrandSymmetricChain : public Chain {
     // Chain parameters
     string modeltype;
     string datafile, treefile, taxonfile;
-    int syn_devmode, om_devmode, nuc_devmode;
+    int syn_devmode, nuc_devmode;
 
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    GeneBranchStrandSymmetricChain(string indatafile, string intreefile, string intaxonfile, int insyn_devmode, int inom_devmode, int innuc_devmode, int inevery, int inuntil, string inname,
+    GeneBranchStrandSymmetricChain(string indatafile, string intreefile, string intaxonfile, int insyn_devmode, int innuc_devmode, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("GENEBRANCHCODON"), datafile(indatafile), treefile(intreefile), taxonfile(intaxonfile) {
+        : modeltype("GENEBRANCHNUC"), datafile(indatafile), treefile(intreefile), taxonfile(intaxonfile) {
         every = inevery;
         until = inuntil;
         syn_devmode = insyn_devmode;
-        om_devmode = inom_devmode;
         nuc_devmode = innuc_devmode;
         name = inname;
         New(force);
@@ -39,7 +38,7 @@ class GeneBranchStrandSymmetricChain : public Chain {
     }
 
     void New(int force) override {
-        model = new GeneBranchStrandSymmetricCodonModel(datafile, treefile, taxonfile, syn_devmode, om_devmode, nuc_devmode);
+        model = new GeneBranchNucModel(datafile, treefile, taxonfile, syn_devmode, nuc_devmode);
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
@@ -55,7 +54,7 @@ class GeneBranchStrandSymmetricChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile >> taxonfile;
-        is >> syn_devmode >> om_devmode >> nuc_devmode;
+        is >> syn_devmode >> nuc_devmode;
         int tmp;
         is >> tmp;
         if (tmp)    {
@@ -64,8 +63,8 @@ class GeneBranchStrandSymmetricChain : public Chain {
         }
         is >> every >> until >> size;
 
-        if (modeltype == "GENEBRANCHCODON") {
-            model = new GeneBranchStrandSymmetricCodonModel(datafile, treefile, taxonfile, syn_devmode, om_devmode, nuc_devmode);
+        if (modeltype == "GENEBRANCHNUC") {
+            model = new GeneBranchNucModel(datafile, treefile, taxonfile, syn_devmode, nuc_devmode);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -81,14 +80,14 @@ class GeneBranchStrandSymmetricChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\t' << taxonfile << '\n';
-        param_os << syn_devmode << '\t' << om_devmode << '\t' << nuc_devmode << '\n';
+        param_os << syn_devmode << '\t' << nuc_devmode << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
     }
 
     //! return the model, with its derived type (unlike ProbModel::GetModel)
-    GeneBranchStrandSymmetricCodonModel *GetModel() { return static_cast<GeneBranchStrandSymmetricCodonModel *>(model); }
+    GeneBranchNucModel *GetModel() { return static_cast<GeneBranchNucModel *>(model); }
 
     //! return model type
     string GetModelType() override { return modeltype; }
@@ -110,7 +109,6 @@ int main(int argc, char *argv[]) {
         string treefile = "";
         string taxonfile = "";
         int syn_devmode = 1;
-        int om_devmode = 1;
         int nuc_devmode = 1;
         name = "";
         int force = 1;
@@ -132,20 +130,17 @@ int main(int argc, char *argv[]) {
                 } else if ((s == "-t") || (s == "-T")) {
                     i++;
                     treefile = argv[i];
-                } else if (s == "-tax") {
+                } else if (s == "-tax")   {
                     i++;
                     taxonfile = argv[i];
                 } else if (s == "-f") {
                     force = 1;
                 } else if (s == "-gamdev") {
                     syn_devmode = 1;
-                    om_devmode = 1;
                 } else if (s == "-mixdev") {
                     syn_devmode = 2;
-                    om_devmode = 2;
                 } else if (s == "-nodev")   {
                     syn_devmode = 0;
-                    om_devmode = 0;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -165,12 +160,12 @@ int main(int argc, char *argv[]) {
                 throw(0);
             }
         } catch (...) {
-            cerr << "genebranchdnds -d <alignment> -t <tree> <chainname> \n";
+            cerr << "genebranchdnds -d <alignment> -t <tree> -tax <taxfile> <chainname> \n";
             cerr << '\n';
             exit(1);
         }
 
-        chain = new GeneBranchStrandSymmetricChain(datafile, treefile, taxonfile, syn_devmode, om_devmode, nuc_devmode, every, until, name, force);
+        chain = new GeneBranchStrandSymmetricChain(datafile, treefile, taxonfile, syn_devmode, nuc_devmode, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

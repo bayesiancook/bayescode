@@ -1,16 +1,7 @@
 #include "IIDGamma.hpp"
 #include "GammaSuffStat.hpp"
 #include "ConditionSpecificMeanGammaMixArray.hpp"
-
-class MeanPoissonSuffStat   {
-
-    public:
-        double count;
-        double beta;
-        MeanPoissonSuffStat(double incount, double inbeta) : count(incount), beta(inbeta) {}
-        MeanPoissonSuffStat(const MeanPoissonSuffStat& from) : count(from.count), beta(from.beta) {}
-        ~MeanPoissonSuffStat() {}
-};
+#include "MeanPoissonSuffStat.hpp"
 
 class GeneBranchGammaEffects    {
 
@@ -76,6 +67,10 @@ class GeneBranchGammaEffects    {
            return dev_bidimarray->GetVal(gene, branch);
         }
         return mean_bidimarray->GetVal(gene, branch);
+    }
+
+    double GetMeanBranchTotal() const	{
+        return branch_hypermean * Nbranch;
     }
 
     void TraceHeader(ostream &os, string prefix) const {

@@ -19,6 +19,7 @@ class GeneBranchStrandSymmetricSample : public Sample {
     string modeltype;
     string datafile;
     string treefile;
+    string taxonfile;
     int syn_devmode, om_devmode, nuc_devmode;
 
   public:
@@ -45,7 +46,7 @@ class GeneBranchStrandSymmetricSample : public Sample {
 
         // read model type, and other standard fields
         is >> modeltype;
-        is >> datafile >> treefile;
+        is >> datafile >> treefile >> taxonfile;
         is >> syn_devmode >> om_devmode >> nuc_devmode;
         int check;
         is >> check;
@@ -57,7 +58,7 @@ class GeneBranchStrandSymmetricSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "GENEBRANCHCODON") {
-            model = new GeneBranchStrandSymmetricCodonModel(datafile, treefile, syn_devmode, om_devmode, nuc_devmode);
+            model = new GeneBranchStrandSymmetricCodonModel(datafile, treefile, taxonfile, syn_devmode, om_devmode, nuc_devmode);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);

@@ -36,8 +36,33 @@ class MeanNucPathSuffStat : public SuffStat {
         return pairbeta[i][j];
     }
 
+    double GetTotalCount() const	{
+	    double tot = 0;
+        for (int i=0; i<Nnuc; i++)  {
+            for (int j=0; j<Nnuc; j++)  {
+                if (i != j) {
+                    tot += paircount[i][j];
+                }
+            }
+        }
+        return tot;
+    }
+
+    double GetTotalBeta() const {
+        double tot = 0;
+        for (int i=0; i<Nnuc; i++)   {
+            for (int j=0; j<Nnuc; j++)  {
+                if (i!=j)   {
+                    tot += pairbeta[i][j];
+                }
+            }
+        }
+        return tot;
+    }
+
     //! Note that the resulting 4x4 nuc path suff stat depends on other aspects of
     //! the codon matrix (e.g. the value of omega)
+    /*
     void AddSuffStat(const NucCodonSubMatrix &codonmatrix, const PathSuffStat &codonpathsuffstat) {
         const CodonStateSpace *cod = codonmatrix.GetCodonStateSpace();
         const SubMatrix *nucmatrix = codonmatrix.GetNucMatrix();
@@ -84,6 +109,7 @@ class MeanNucPathSuffStat : public SuffStat {
             paircount[n1][n2] += i->second;
         }
     }
+    */
 
     void AddSuffStat(const NucCodonSubMatrix &codonmatrix, const RelativePathSuffStat &codonpathsuffstat, double length) {
         const CodonStateSpace *cod = codonmatrix.GetCodonStateSpace();
@@ -131,6 +157,35 @@ class MeanNucPathSuffStat : public SuffStat {
             paircount[n1][n2] += i->second;
         }
     }
+
+    void AddSuffStat(const RelativePathSuffStat &pathsuffstat, double length) {
+        // root part
+        const std::map<int, double> &fromrootcount = pathsuffstat.GetRootCountMap();
+        for (std::map<int, double>::const_iterator i = fromrootcount.begin();
+             i != fromrootcount.end(); i++) {
+            rootcount[i->first] += i->second;
+        }
+
+        const std::map<int, double> &waitingtime = pathsuffstat.GetWaitingTimeMap();
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            int n1 = i->first;
+            for (int n2=0; n2<Nnuc; n2++) {
+                if (n1 != n2)   {
+                    pairbeta[n1][n2] += length * i->second;
+                }
+            }
+        }
+
+        const std::map<pair<int, int>, double> &frompaircount = pathsuffstat.GetPairCountMap();
+        for (std::map<pair<int, int>, double>::const_iterator i = frompaircount.begin();
+             i != frompaircount.end(); i++) {
+            paircount[i->first.first][i->first.second] += i->second;
+        }
+    }
+
+    //! \brief return the log probability as a function of a nucleotide matrix
+    //!
 
     //! \brief return the log probability as a function of a nucleotide matrix
     //!
@@ -288,6 +343,18 @@ class NucMatrixGeneBranchArray : public BidimArray<StrandSymmetricIrreversibleSu
             matrixarray[i][j]->CorruptMatrix();
         }
     }
+
+    double GetMeanRate() const  {
+        double tot = 0;
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                tot += matrixarray[i][j]->GetRate();
+            }
+        }
+        tot /= GetNrow() * GetNcol();
+        return tot;
+    }
+
     private:
 
     void Create()   {
@@ -408,6 +475,20 @@ class PathSuffStatGeneBranchArray : public SimpleBidimArray<RelativePathSuffStat
         }
     }
 
+    vector<double> GetEmpiricalBranchLengths() const  {
+        vector<double> bl(GetNcol(),0);
+        for (int j=0; j<GetNcol(); j++) {
+            double count = 0;
+            double beta = 0;
+            for (int i=0; i<GetNrow(); i++) {
+                count += GetVal(i,j).GetTotalCount();
+                beta += GetVal(i,j).GetTotalWaitingTime();
+            }
+            bl[j] = count / beta;
+        }
+        return bl;
+    }
+
     void Get(int gene, const NodeSelector<RelativePathSuffStat>& nodearray)   {
         for (int j=0; j<GetNcol(); j++) {
             (*this)(gene,j).Clear();
@@ -426,6 +507,18 @@ class PathSuffStatGeneBranchArray : public SimpleBidimArray<RelativePathSuffStat
 
     //! return total log prob over array, given an array of omega_i's of same size
     double GetLogProb(const CodonMatrixGeneBranchArray& mat,
+            const GeneBranchGammaEffects& length) const  {
+        double total = 0;
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                total += GetVal(i,j).GetLogProb(mat.GetVal(i,j), length.GetVal(i,j));
+            }
+        }
+        return total;
+    }
+
+    //! return total log prob over array, given an array of omega_i's of same size
+    double GetLogProb(const NucMatrixGeneBranchArray& mat,
             const GeneBranchGammaEffects& length) const  {
         double total = 0;
         for (int i=0; i<GetNrow(); i++) {
@@ -477,6 +570,35 @@ class dSOmegaPathSuffStatGeneBranchArray : public SimpleBidimArray<dSOmegaPathSu
     }
 };
 
+class LengthPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanPoissonSuffStat> {
+
+    public:
+
+    LengthPathSuffStatGeneBranchArray(int Ngene, int Nbranch) : 
+        SimpleBidimArray<MeanPoissonSuffStat>(Ngene, Nbranch, MeanPoissonSuffStat())    {
+        Clear();
+    }
+
+    ~LengthPathSuffStatGeneBranchArray() {}
+
+    void Clear()    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Clear();
+            }
+        }
+    }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const NucMatrixGeneBranchArray& mat)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                pathss.GetVal(i,j).AddSuffStatTo((*this)(i,j), mat.GetVal(i,j));
+            }
+        }
+    }
+};
+
 class NucPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanNucPathSuffStat> {
 
     public:
@@ -496,12 +618,35 @@ class NucPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanNucPathSuffSt
         }
     }
 
+    vector<double> GetEmpiricalBranchLengths() const  {
+        vector<double> bl(GetNcol(),0);
+        for (int j=0; j<GetNcol(); j++) {
+            double count = 0;
+            double beta = 0;
+            for (int i=0; i<GetNrow(); i++) {
+                count += GetVal(i,j).GetTotalCount();
+                beta += GetVal(i,j).GetTotalBeta();
+            }
+            bl[j] = count / beta;
+        }
+        return bl;
+    }
+
     void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
             const CodonMatrixGeneBranchArray& mat,
             const GeneBranchGammaEffects& length)  {
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
                 (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), length.GetVal(i,j));
+            }
+        }
+    }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const GeneBranchGammaEffects& length)  {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).AddSuffStat(pathss.GetVal(i,j), length.GetVal(i,j));
             }
         }
     }

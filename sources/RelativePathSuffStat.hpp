@@ -10,6 +10,7 @@
 #include "SuffStat.hpp"
 #include "PhyloProcess.hpp"
 #include "PathSuffStat.hpp"
+#include "MeanPoissonSuffStat.hpp"
 
 /**
  * \brief A general sufficient statistic for substitution histories, as a
@@ -65,6 +66,21 @@ class RelativePathSuffStat {
         waitingtime.clear();
     }
 
+    void AddSuffStatTo(MeanPoissonSuffStat& ss, const SubMatrix& mat) const {
+        if (Nstate != mat.GetNstate()) {
+            cerr << "error in RelativePathSuffStat::AddSuffStatTo(PoissonSuffstat, SubMatrix)\n";
+            exit(1);
+        }
+        for (std::map<pair<int, int>, double>::const_iterator i = GetPairCountMap().begin();
+             i != GetPairCountMap().end(); i++) {
+            ss.AddCount(i->second);
+        }
+        for (std::map<int, double>::const_iterator i = GetWaitingTimeMap().begin();
+             i != GetWaitingTimeMap().end(); i++) {
+            ss.AddBeta(-i->second * mat(i->first, i->first));
+        }
+    }
+
     void Add(const PathSuffStat &suffstat, double length) {
         for (std::map<int, double>::const_iterator i = suffstat.GetRootCountMap().begin();
              i != suffstat.GetRootCountMap().end(); i++) {
@@ -117,6 +133,30 @@ class RelativePathSuffStat {
         return i->second;
     }
 
+    double GetTotalCount() const    {
+        double tot = 0;
+        /*
+        for (std::map<int, double >::const_iterator i = rootcount.begin();
+                i != rootcount.end(); i++) {
+            tot += i->second;
+        }
+        */
+        for (std::map<pair<int, int>, double >::const_iterator i = paircount.begin();
+             i != paircount.end(); i++) {
+            tot += i->second;
+        }
+        return tot;
+    }
+
+    double GetTotalWaitingTime() const  {
+        double tot = 0;
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); 
+                i != waitingtime.end(); i++) {
+            tot += i->second;
+        }
+        return tot;
+    }
+
     double GetWaitingTime(int state) const {
         std::map<int, double>::const_iterator i = waitingtime.find(state);
         if (i == waitingtime.end()) {
@@ -129,11 +169,12 @@ class RelativePathSuffStat {
     double GetLogProb(const SubMatrix &mat, double length) const {
         double total = 0;
         auto stat = mat.GetStationary();
-        for (std::map<int, double >::const_iterator i = rootcount.begin(); i != rootcount.end(); i++) {
+        for (std::map<int, double >::const_iterator i = rootcount.begin(); 
+                i != rootcount.end(); i++) {
             total += i->second * log(stat[i->first]);
         }
-        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
-             i++) {
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); 
+                i != waitingtime.end(); i++) {
             total += length * i->second * mat(i->first, i->first);
         }
         for (std::map<pair<int, int>, double >::const_iterator i = paircount.begin();

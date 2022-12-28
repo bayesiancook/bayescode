@@ -51,6 +51,10 @@ class PathSuffStat : public SuffStat {
     PathSuffStat(int inNstate = 0) : Nstate(inNstate) {}
     ~PathSuffStat() {}
 
+    int GetNstate() const {
+        return Nstate;
+    }
+
     //! set suff stats to 0
     void Clear() {
         rootcount.clear();
