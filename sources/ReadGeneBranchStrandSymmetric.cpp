@@ -81,6 +81,8 @@ class GeneBranchStrandSymmetricSample : public Sample {
         int Ngene = GetModel()->GetNgene();
         vector<double> mean_branchsyn_array(Nbranch,0);
         vector<double> mean_branchom_array(Nbranch,0);
+        vector<double> var_branchom_array(Nbranch,0);
+        vector<double> err_branchom_array(Nbranch,0);
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
 
@@ -100,6 +102,7 @@ class GeneBranchStrandSymmetricSample : public Sample {
             GetNextPoint();
             GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
+            GetModel()->GetOmegaModel()->AddSquaredBranchArrayTo(var_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
             GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
@@ -133,18 +136,21 @@ class GeneBranchStrandSymmetricSample : public Sample {
         devCG /= size;
         devCT /= size;
 
-        ofstream nos((name + "nucstats").c_str());
-        nos << "XX\tmean\tgenevar\tbranchvar\tdevvar\n";
-        nos << meanAC << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\n';
-        nos << meanAG << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\n';
-        nos << meanCA << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\n';
-        nos << meanCG << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\n';
-        nos << meanCT << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\n';
-        cerr << "post mean nuc stats in " << name << ".nuctstats\n";
+        ofstream nos((name + ".nucstats").c_str());
+        nos << "          \tmean\tgenevar\tbranchvar\tdevvar\n";
+        nos << "A:T -> C:G\t" << meanAC << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\n';
+        nos << "A:T -> G:C\t" << meanAG << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\n';
+        nos << "C:G -> A:T\t" << meanCA << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\n';
+        nos << "C:G -> G:C\t" << meanCG << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\n';
+        nos << "C:G -> T:A\t" << meanCT << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\n';
+        cerr << "post mean nuc stats in " << name << ".nucstats\n";
 
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;
+            var_branchom_array[j] /= size;
+            var_branchom_array[j] -= mean_branchom_array[j] * mean_branchom_array[j];
+            err_branchom_array[j] = sqrt(var_branchom_array[j]);
         }
         for (int i=0; i<Ngene; i++) {
             mean_genesyn_array[i] /= size;
@@ -157,7 +163,8 @@ class GeneBranchStrandSymmetricSample : public Sample {
         cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
 
         ofstream os((name + ".postmean.leafdsom.tab").c_str());
-        Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
+        // Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
+        Tabulate(os, GetModel()->GetTree(), mean_branchom_array, err_branchom_array, true);
 
         ofstream tos((name + ".dsom.tre").c_str());
         ToNewick(tos, *GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array);

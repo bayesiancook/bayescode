@@ -188,9 +188,21 @@ class GeneBranchGammaEffects    {
         }
     }
 
+    void AddSquaredGeneArrayTo(vector<double>& array) const {
+        for (int i=0; i<Ngene; i++)   {
+            array[i] += gene_array->GetVal(i) * gene_array->GetVal(i);
+        }
+    }
+
     void AddBranchArrayTo(vector<double>& array) const {
         for (int j=0; j<Nbranch; j++)   {
             array[j] += branch_array->GetVal(j);
+        }
+    }
+
+    void AddSquaredBranchArrayTo(vector<double>& array) const {
+        for (int j=0; j<Nbranch; j++)   {
+            array[j] += branch_array->GetVal(j) * branch_array->GetVal(j);
         }
     }
 
