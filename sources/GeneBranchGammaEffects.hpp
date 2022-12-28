@@ -175,6 +175,13 @@ class GeneBranchGammaEffects    {
         return tot;
     }
 
+    void AddStats(double& mean, double& gene, double& branch, double& dev)  {
+        mean += branch_hypermean * gene_hypermean;
+        gene += gene_hyperinvshape;
+        branch += branch_hyperinvshape;
+        dev += dev_invshape;
+    }
+
     void AddGeneArrayTo(vector<double>& array) const {
         for (int i=0; i<Ngene; i++)   {
             array[i] += gene_array->GetVal(i);

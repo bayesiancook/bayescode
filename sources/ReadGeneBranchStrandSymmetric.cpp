@@ -84,6 +84,16 @@ class GeneBranchStrandSymmetricSample : public Sample {
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
 
+        double meanAC, meanAG, meanCA, meanCG, meanCT;
+        double geneAC, geneAG, geneCA, geneCG, geneCT;
+        double branchAC, branchAG, branchCA, branchCG, branchCT;
+        double devAC, devAG, devCA, devCG, devCT;
+
+        meanAC = meanAG = meanCA = meanCG = meanCT = 0;
+        geneAC = geneAG = geneCA = geneCG = geneCT = 0;
+        branchAC = branchAG = branchCA = branchCG = branchCT = 0;
+        devAC = devAG = devCA = devCG = devCT = 0;
+
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
@@ -92,8 +102,46 @@ class GeneBranchStrandSymmetricSample : public Sample {
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
+            GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
+                    geneAC, geneAG, geneCA, geneCG, geneCT,
+                    branchAC, branchAG, branchCA, branchCG, branchCT,
+                    devAC, devAG, devCA, devCG, devCT);
         }
         cerr << '\n';
+
+        meanAC /= size;
+        meanAG /= size;
+        meanCA /= size;
+        meanCG /= size;
+        meanCT /= size;
+
+        geneAC /= size;
+        geneAG /= size;
+        geneCA /= size;
+        geneCG /= size;
+        geneCT /= size;
+
+        branchAC /= size;
+        branchAG /= size;
+        branchCA /= size;
+        branchCG /= size;
+        branchCT /= size;
+
+        devAC /= size;
+        devAG /= size;
+        devCA /= size;
+        devCG /= size;
+        devCT /= size;
+
+        ofstream nos((name + "nucstats").c_str());
+        nos << "XX\tmean\tgenevar\tbranchvar\tdevvar\n";
+        nos << meanAC << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\n';
+        nos << meanAG << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\n';
+        nos << meanCA << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\n';
+        nos << meanCG << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\n';
+        nos << meanCT << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\n';
+        cerr << "post mean nuc stats in " << name << ".nuctstats\n";
+
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;

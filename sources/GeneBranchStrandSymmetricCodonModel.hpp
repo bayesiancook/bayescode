@@ -409,6 +409,19 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         return 1.0;
     }
 
+    void AddNucStats(double& meanAC, double& meanAG, double& meanCA, double& meanCG, double& meanCT,
+            double& geneAC, double& geneAG, double& geneCA, double& geneCG, double& geneCT,
+            double& branchAC, double& branchAG, double& branchCA, double& branchCG, double& branchCT,
+            double& devAC, double& devAG, double& devCA, double& devCG, double& devCT)  {
+
+        rho_AC_model->AddStats(meanAC, geneAC, branchAC, devAC);
+        rho_AG_model->AddStats(meanAG, geneAG, branchAG, devAG);
+        rho_CA_model->AddStats(meanCA, geneCA, branchCA, devCA);
+        rho_CG_model->AddStats(meanCG, geneCG, branchCG, devCG);
+        rho_CT_model->AddStats(meanCT, geneCT, branchCT, devCT);
+
+    }
+
     void AddSynDevPostProbsTo(vector<vector<double>> array) const   {
         auto get_syn_ss = [this] (int gene, int branch) {
             const dSOmegaPathSuffStat &suffstat = this->dsomss->GetVal(gene,branch);
