@@ -129,13 +129,44 @@ class GeneBranchStrandSymmetricSample : public Sample {
         devCG /= size;
         devCT /= size;
 
+        double totAC = devAC + branchAC + geneAC + branchAC*geneAC;
+        double pbranchAC = branchAC / totAC;
+        double pgeneAC = geneAC / totAC;
+        double pdevAC = devAC / totAC;
+
+        double totAG = devAG + branchAG + geneAG + branchAG*geneAG;
+        double pbranchAG = branchAG / totAG;
+        double pgeneAG = geneAG / totAG;
+        double pdevAG = devAG / totAG;
+
+        double totCA = devCA + branchCA + geneCA + branchCA*geneCA;
+        double pbranchCA = branchCA / totCA;
+        double pgeneCA = geneCA / totCA;
+        double pdevCA = devCA / totCA;
+
+        double totCG = devCG + branchCG + geneCG + branchCG*geneCG;
+        double pbranchCG = branchCG / totCG;
+        double pgeneCG = geneCG / totCG;
+        double pdevCG = devCG / totCG;
+
+        double totCT = devCT + branchCT + geneCT + branchCT*geneCT;
+        double pbranchCT = branchCT / totCT;
+        double pgeneCT = geneCT / totCT;
+        double pdevCT = devCT / totCT;
+
         ofstream nos((name + ".nucstats").c_str());
-        nos << "          \tmean\tgenevar\tbranchvar\tdevvar\n";
-        nos << "A:T -> C:G\t" << meanAC << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\n';
-        nos << "A:T -> G:C\t" << meanAG << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\n';
-        nos << "C:G -> A:T\t" << meanCA << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\n';
-        nos << "C:G -> G:C\t" << meanCG << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\n';
-        nos << "C:G -> T:A\t" << meanCT << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\n';
+        nos << "          \tmean\t\tc-gene\tc-brnch\tc-dev\tc-tot\t\tp-gene\tp-brnch\tp-dev\n";
+        nos << fixed << setw(5) << setprecision(2);
+        nos << "A:T -> C:G\t" << meanAC << '\t' << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\t';
+        nos << totAC << '\t' << '\t' << pgeneAC << '\t' << pbranchAC << '\t' << pdevAC << '\n';
+        nos << "A:T -> G:C\t" << meanAG << '\t' << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\t';
+        nos << totAG << '\t' << '\t' << pgeneAG << '\t' << pbranchAG << '\t' << pdevAG << '\n';
+        nos << "C:G -> A:T\t" << meanCA << '\t' << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\t';
+        nos << totCA << '\t' << '\t' << pgeneCA << '\t' << pbranchCA << '\t' << pdevCA << '\n';
+        nos << "C:G -> G:C\t" << meanCG << '\t' << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\t';
+        nos << totCG << '\t' << '\t' << pgeneCG << '\t' << pbranchCG << '\t' << pdevCG << '\n';
+        nos << "C:G -> T:A\t" << meanCT << '\t' << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\t';
+        nos << totCT << '\t' << '\t' << pgeneCT << '\t' << pbranchCT << '\t' << pdevCT << '\n';
         cerr << "post mean nuc stats in " << name << ".nucstats\n";
 
         double totlength = 0;
