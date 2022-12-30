@@ -300,27 +300,37 @@ class FastGeneBranchOmegaSample : public Sample {
             }
         }
         ofstream los((name + ".devzscores").c_str());
-        double totsyn = 0;
-        double totom = 0;
+        int totsyn = 0;
+        int totom = 0;
+        int totgenesyn = 0;
+        int totgeneom = 0;
         for (int i=0; i<Ngene; i++)   {
             los << GetModel()->GetGeneName(i);
+            int syn_one = 0;
+            int om_one = 0;
             for (int j=0; j<Nbranch; j++)   {
                 if (syn_z[i][j] > z_cutoff)  {
                     totsyn++;
+                    syn_one = 1;
                 }
                 if (om_z[i][j] > z_cutoff)   {
                     totom++;
+                    om_one = 1;
                 }
                 los << '\t' << syn_z[i][j];
                 los << '\t' << om_z[i][j];
             }
             los << '\n';
+            if (syn_one)    {
+                totgenesyn++;
+            }
+            if (om_one) {
+                totgeneom++;
+            }
         }
-        totsyn /= Ngene*Nbranch;
-        totom /= Ngene*Nbranch;
-        cerr << "fraction of deviations with z > " << z_cutoff << '\n';
-        cerr << "syn : " << totsyn << '\n';
-        cerr << "om  : " << totom << '\n';
+        cerr << "number of deviating gene/branch effects\n";
+        cerr << "syn : " << totsyn << '\t' << totgenesyn << '\n';
+        cerr << "om  : " << totom << '\t' << totgeneom << '\n';
     }
 };
 
