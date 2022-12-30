@@ -79,21 +79,41 @@ class FastGeneBranchOmegaSample : public Sample {
 
         int Nbranch = GetModel()->GetNbranch();
         int Ngene = GetModel()->GetNgene();
+
         vector<double> mean_branchsyn_array(Nbranch,0);
         vector<double> mean_branchom_array(Nbranch,0);
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
 
+        vector<vector<double>> syn_relvar(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_relvar(Ngene, vector<double>(Nbranch,0));
+
+        double mean_syn_invshape = 0;
+        double mean_om_invshape = 0;
+
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
+            GetModel()->Update();
             GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
+            mean_syn_invshape += GetModel()->GetSynModel()->GetDevInvShape();
+            mean_om_invshape += GetModel()->GetOmegaModel()->GetDevInvShape();
+
+            GetModel()->GetSynModel()->AddRelVarTo(syn_relvar);
+            GetModel()->GetOmegaModel()->AddRelVarTo(om_relvar);
         }
         cerr << '\n';
+
+        mean_syn_invshape /= size;
+        mean_om_invshape /= size;
+        cerr << "syn rel var : " << mean_syn_invshape << '\n';
+        cerr << "om rel var  : " << mean_om_invshape << '\n';
+        cerr << '\n';
+
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;
@@ -102,11 +122,46 @@ class FastGeneBranchOmegaSample : public Sample {
             mean_genesyn_array[i] /= size;
             mean_geneom_array[i] /= size;
         }
-        ofstream gos((name + ".postmean.geneom.tab").c_str());
+
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                syn_relvar[i][j] /= size;
+                om_relvar[i][j] /= size;
+            }
+        }
+
+        vector<double> branch_syn_relvar(Nbranch, 0);
+        vector<double> branch_om_relvar(Nbranch, 0);
+        vector<double> gene_syn_relvar(Ngene, 0);
+        vector<double> gene_om_relvar(Ngene, 0);
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                branch_syn_relvar[j] += syn_relvar[i][j];
+                gene_syn_relvar[i] += syn_relvar[i][j];
+                branch_om_relvar[j] += om_relvar[i][j];
+                gene_om_relvar[i] += om_relvar[i][j];
+            }
+        }
         for (int i=0; i<Ngene; i++) {
-            gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\n';
+            gene_syn_relvar[i] /= Nbranch;
+            gene_om_relvar[i] /= Nbranch;
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            branch_syn_relvar[j] /= Ngene;
+            branch_om_relvar[j] /= Ngene;
+        }
+
+        ofstream gos((name + ".postmean.genesynom.tab").c_str());
+        for (int i=0; i<Ngene; i++) {
+            gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\n';
         }
         cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
+
+        ofstream bsos((name + ".postmean.branchsyn.tab").c_str());
+        Tabulate(bsos, GetModel()->GetTree(), mean_branchsyn_array, branch_syn_relvar, false);
+
+        ofstream boos((name + ".postmean.branchom.tab").c_str());
+        Tabulate(boos, GetModel()->GetTree(), mean_branchom_array, branch_om_relvar, false);
 
         ofstream os((name + ".postmean.leafdsom.tab").c_str());
         Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
@@ -116,15 +171,16 @@ class FastGeneBranchOmegaSample : public Sample {
 
         cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
         cerr << "newick format in " << name << ".dsom.tre\n";
+        cerr << '\n';
     }
 
-    void ReadMixDev(double logratio_cutoff, double pp_cutoff)   {
+    void ReadMixDev(double z_cutoff, double pp_cutoff)   {
         int Ngene = GetModel()->GetNgene();
         int Nbranch = GetModel()->GetNbranch();
         vector<vector<double>> syn_postprob(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> om_postprob(Ngene, vector<double>(Nbranch,0));
-        vector<vector<double>> syn_logfactor(Ngene, vector<double>(Nbranch,0));
-        vector<vector<double>> om_logfactor(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
@@ -132,33 +188,56 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->Update();
             GetModel()->AddSynDevPostProbsTo(syn_postprob);
             GetModel()->AddOmegaDevPostProbsTo(om_postprob);
-            GetModel()->GetSynModel()->AddDevLogFactorTo(syn_logfactor);
-            GetModel()->GetOmegaModel()->AddDevLogFactorTo(om_logfactor);
+            GetModel()->GetSynModel()->AddDevZscoreTo(syn_z);
+            GetModel()->GetOmegaModel()->AddDevZscoreTo(om_z);
         }
         cerr << '\n';
         for (int i=0; i<Ngene; i++)   {
             for (int j=0; j<Nbranch; j++)   {
                 syn_postprob[i][j] /= size;
                 om_postprob[i][j] /= size;
-                syn_logfactor[i][j] /= size;
-                om_logfactor[i][j] /= size;
+                syn_z[i][j] /= size;
+                om_z[i][j] /= size;
             }
         }
 
-        ofstream os((name + ".devlogratios").c_str());
+        ofstream os((name + ".devzscores").c_str());
+        int totsyn = 0;
+        int totom = 0;
+        int totgenesyn = 0;
+        int totgeneom = 0;
         for (int i=0; i<Ngene; i++)   {
             os << GetModel()->GetGeneName(i);
+            int syn_one = 0;
+            int om_one = 0;
             for (int j=0; j<Nbranch; j++)   {
+                if ((syn_z[i][j] > z_cutoff) && (syn_postprob[i][j] < pp_cutoff))    {
+                    totsyn++;
+                    syn_one = 1;
+                }
+                if ((om_z[i][j] > z_cutoff) && (om_postprob[i][j] < pp_cutoff))    {
+                    totom++;
+                    om_one = 1;
+                }
                 os << '\t' << syn_postprob[i][j];
-                os << '\t' << syn_logfactor[i][j];
+                os << '\t' << syn_z[i][j];
                 os << '\t' << om_postprob[i][j];
-                os << '\t' << om_logfactor[i][j];
+                os << '\t' << om_z[i][j];
             }
             os << '\n';
+            if (syn_one)    {
+                totgenesyn++;
+            }
+            if (om_one) {
+                totgeneom++;
+            }
         }
+        cerr << "number of deviating gene/branch effects\n";
+        cerr << "syn : " << totsyn << '\t' << totgenesyn << '\n';
+        cerr << "om  : " << totom << '\t' << totgeneom << '\n';
     }
 
-    void ReadQQPlot()   {
+    void ReadQQPlot(double z_cutoff = 1.0)   {
         int Ngene = GetModel()->GetNgene();
         int Nbranch = GetModel()->GetNbranch();
         int n = Ngene*Nbranch*size;
@@ -166,6 +245,10 @@ class FastGeneBranchOmegaSample : public Sample {
         vector<double> syn_predsample(n,0);
         vector<double> om_postsample(n,0);
         vector<double> om_predsample(n,0);
+
+        vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
+
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
@@ -173,6 +256,8 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->Update();
             GetModel()->GetSynModel()->AddDevToHist(syn_postsample, syn_predsample, i*Ngene*Nbranch);
             GetModel()->GetOmegaModel()->AddDevToHist(om_postsample, om_predsample, i*Ngene*Nbranch);
+            GetModel()->GetSynModel()->AddDevZscoreTo(syn_z);
+            GetModel()->GetOmegaModel()->AddDevZscoreTo(om_z);
         }
         cerr << '\n';
         ofstream os((name + ".qqplot").c_str());
@@ -180,10 +265,62 @@ class FastGeneBranchOmegaSample : public Sample {
         sort(syn_predsample.begin(), syn_predsample.end());
         sort(om_postsample.begin(), om_postsample.end());
         sort(om_predsample.begin(), om_predsample.end());
+        int synposti = 0;
+        int synpredi = 0;
+        int omposti = 0;
+        int ompredi = 0;
         for (int i=0; i<n; i++) {
             os << syn_postsample[i] << '\t' << syn_predsample[i] << '\t' << om_postsample[i] << '\t' << om_predsample[i] << '\n';
+            if (syn_postsample[i] < z_cutoff)   {
+                synposti = i;
+            }
+            if (syn_predsample[i] < z_cutoff)   {
+                synpredi = i;
+            }
+            if (om_postsample[i] < z_cutoff)    {
+                omposti = i;
+            }
+            if (om_predsample[i] < z_cutoff)    {
+                ompredi = i;
+            }
         }
-        cerr << "sorted centered deviations in " << name << ".qqplot\n";
+        cerr << "sorted centered and normalized deviations in " << name << ".qqplot\n";
+        int synpostf = (n-synposti-1);
+        int synpredf = (n-synpredi-1);
+        int ompostf = (n-omposti-1);
+        int ompredf = (n-ompredi-1);
+        cerr << "fraction with z > " << z_cutoff << " (obs / exp)\n";
+        cerr << "syn : " << synpostf << " / " << synpredf << '\n';
+        cerr << "om  : " << ompostf << " / " << ompredf << '\n';
+
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                syn_z[i][j] /= size;
+                om_z[i][j] /= size;
+            }
+        }
+        ofstream los((name + ".devzscores").c_str());
+        double totsyn = 0;
+        double totom = 0;
+        for (int i=0; i<Ngene; i++)   {
+            los << GetModel()->GetGeneName(i);
+            for (int j=0; j<Nbranch; j++)   {
+                if (syn_z[i][j] > z_cutoff)  {
+                    totsyn++;
+                }
+                if (om_z[i][j] > z_cutoff)   {
+                    totom++;
+                }
+                los << '\t' << syn_z[i][j];
+                los << '\t' << om_z[i][j];
+            }
+            los << '\n';
+        }
+        totsyn /= Ngene*Nbranch;
+        totom /= Ngene*Nbranch;
+        cerr << "fraction of deviations with z > " << z_cutoff << '\n';
+        cerr << "syn : " << totsyn << '\n';
+        cerr << "om  : " << totom << '\n';
     }
 };
 
@@ -191,9 +328,9 @@ int main(int argc, char *argv[]) {
     int burnin = 0;
     int every = 1;
     int until = -1;
-    int qqplot = 0;
+    int dev = 0;
     int ppdev = 0;
-    double ratio = 0;
+    double z = 0;
     double cutoff = 0;
 
     string name;
@@ -206,12 +343,14 @@ int main(int argc, char *argv[]) {
         int i = 1;
         while (i < argc) {
             string s = argv[i];
-            if (s == "-qqplot") {
-                qqplot = 1;
+            if (s == "-dev") {
+                dev = 1;
+                i++;
+                z = atof(argv[i]);
             } else if (s == "-ppdev")   {
                 ppdev = 1;
                 i++;
-                ratio = atof(argv[i]);
+                z = atof(argv[i]);
                 i++;
                 cutoff = atof(argv[i]);
             }
@@ -246,11 +385,11 @@ int main(int argc, char *argv[]) {
     }
 
     FastGeneBranchOmegaSample *sample = new FastGeneBranchOmegaSample(name, burnin, every, until);
-    if (qqplot) {
-        sample->ReadQQPlot();
+    if (dev) {
+        sample->ReadQQPlot(z);
     }
     else if (ppdev) {
-        sample->ReadMixDev(log(ratio), cutoff);
+        sample->ReadMixDev(z, cutoff);
     }
     else    {
         sample->Read();

@@ -73,6 +73,10 @@ class GeneBranchGammaEffects    {
         return branch_hypermean * Nbranch;
     }
 
+    double GetDevInvShape() const   {
+        return dev_invshape;
+    }
+
     void TraceHeader(ostream &os, string prefix) const {
         if (! fixgene_hypermean)    {
             os << "\t" << prefix << "_genemean";
@@ -128,6 +132,7 @@ class GeneBranchGammaEffects    {
             if (devmode == 2)   {
                 os << '\t' << dev_pi << '\t' << dev_invshape_ratio;
             }
+            os << '\t' << *dev_bidimarray;
         }
     }
 
@@ -149,6 +154,7 @@ class GeneBranchGammaEffects    {
             if (devmode == 2)   {
                 is >> dev_pi >> dev_invshape_ratio;
             }
+            is >> *dev_bidimarray;
         }
     }
 
@@ -201,26 +207,36 @@ class GeneBranchGammaEffects    {
         }
     }
 
+    void AddRelVarTo(vector<vector<double>>& array) const   {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = GetMeanVal(i,j);
+                double tmp = (GetVal(i,j) - mean) / mean;
+                array[i][j] += tmp*tmp / dev_invshape;
+            }
+        }
+    }
+
     void AddDevToHist(vector<double>& post, vector<double>& ppred, int offset) const {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                post[offset] = log(dev_bidimarray->GetVal(i,j) / mean);
+                post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
                 double alpha = 1.0 / dev_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = log(tmp/mean);
+                ppred[offset] = (tmp - mean) / mean / sqrt(dev_invshape);
                 offset++;
             }
         }
     }
 
-    void AddDevLogFactorTo(vector<vector<double>>& array) const  {
+    void AddDevZscoreTo(vector<vector<double>>& array) const  {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                double logfactor = log(dev_bidimarray->GetVal(i,j) / mean);
-                array[i][j] += logfactor;
+                double z = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
+                array[i][j] += z;
             }
         }
     }
@@ -372,7 +388,9 @@ class GeneBranchGammaEffects    {
             double p1 = (1-dev_pi) * l1;
             double p2 = dev_pi * l2;
             double tot = p1 + p2;
-            postprob = p1 / tot;
+            p1 /= tot;
+            p2 /= tot;
+            postprob = p1;
             double logl = log(tot) + max;
 
             if (gibbs_resample) {
@@ -420,9 +438,9 @@ class GeneBranchGammaEffects    {
 
     template<class SS>
     void AddDevPostProbsTo(vector<vector<double>>& pp, SS get_ss)   {
-        double p;
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
+                double p = 0;
                 GeneBranchSuffStatLogProb(i,j, get_ss, 0, p);
                 pp[i][j] += p;
             }

@@ -33,7 +33,10 @@ class FastGeneBranchOmegaModel : public ProbModel {
         om_devmode = inom_devmode;
         integrated_move = 1;
 
+        // taxonset = new TaxonSet(taxonfile);
+
         tree = new Tree(treefile);
+        // tree->RegisterWith(taxonset);
         tree->SetIndices();
         Ntaxa = tree->GetSize();
         Nbranch = tree->GetNbranch();
@@ -239,7 +242,7 @@ class FastGeneBranchOmegaModel : public ProbModel {
         return 1.0;
     }
 
-    void AddSynDevPostProbsTo(vector<vector<double>> array) const   {
+    void AddSynDevPostProbsTo(vector<vector<double>>& array) const   {
         auto get_syn_ss = [this] (int gene, int branch) {
             const dSOmegaPathSuffStat &suffstat = this->dsomss->GetVal(gene).GetVal(branch);
             double om = this->om_model->GetVal(gene,branch);
@@ -250,7 +253,7 @@ class FastGeneBranchOmegaModel : public ProbModel {
         syn_model->AddDevPostProbsTo(array, get_syn_ss);
     }
     
-    void AddOmegaDevPostProbsTo(vector<vector<double>> array) const   {
+    void AddOmegaDevPostProbsTo(vector<vector<double>>& array) const   {
         auto get_om_ss = [this] (int gene, int branch)  {
             const dSOmegaPathSuffStat &suffstat = this->dsomss->GetVal(gene).GetVal(branch);
             double syn = this->syn_model->GetVal(gene,branch);
