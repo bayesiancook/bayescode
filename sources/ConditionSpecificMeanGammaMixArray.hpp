@@ -26,17 +26,18 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
 
   public:
 
-    ConditionSpecificMeanGammaMixBidimArray(const BidimProduct& inmean, double ininvshape, double ininvshape_ratio, double inpi) : 
+    ConditionSpecificMeanGammaMixBidimArray(const BidimProduct& inmean, double ininvshape, double inmean2, double ininvshape2, double inpi) : 
         SimpleBidimArray(inmean.GetNrow(), inmean.GetNcol(), 0), 
-        mean(inmean), invshape(ininvshape), invshape_ratio(ininvshape_ratio), pi(inpi) {
+        mean(inmean), invshape(ininvshape), mean2(inmean2), invshape2(ininvshape2), pi(inpi) {
             Sample();
     }
 
     ~ConditionSpecificMeanGammaMixBidimArray() {}
 
-    void SetParams(double ininvshape, double ininvshape_ratio, double inpi) {
+    void SetParams(double ininvshape, double inmean2, double ininvshape2, double inpi) {
         invshape = ininvshape;
-        invshape_ratio = ininvshape_ratio;
+        mean2 = inmean2;
+        invshape2 = ininvshape2;
         pi = inpi;
     }
 
@@ -71,9 +72,11 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
     double GetLogProb(int gene, int branch) const {
         if (pi) {
             double shape1 = 1.0 / invshape;
-            double shape2 = shape1 / invshape_ratio;
             double scale1 = shape1 / mean.GetVal(gene, branch);
-            double scale2 = shape2 / mean.GetVal(gene, branch);
+
+            double shape2 = 1.0 / invshape2;
+            double scale2 = shape2 / mean.GetVal(gene, branch) / mean2;
+
             double logl1 = Random::logGammaDensity(GetVal(gene, branch), shape1, scale1);
             double logl2 = Random::logGammaDensity(GetVal(gene, branch), shape2, scale2);
             double max = (logl1 > logl2) ? logl1 : logl2;
@@ -98,9 +101,11 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
     void Sample(int gene, int branch)   {
         if (pi) {
             double shape1 = 1.0 / invshape;
-            double shape2 = shape1 / invshape_ratio;
             double scale1 = shape1 / mean.GetVal(gene, branch);
-            double scale2 = shape2 / mean.GetVal(gene, branch);
+
+            double shape2 = 1.0 / invshape2;
+            double scale2 = shape2 / mean.GetVal(gene, branch) / mean2;
+
             if (Random::Uniform() < pi) {
                 (*this)(gene,branch) = Random::Gamma(shape2, scale2);
             }
@@ -118,7 +123,8 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
   private:
     const BidimProduct& mean;
     double invshape;
-    double invshape_ratio;
+    double mean2;
+    double invshape2;
     double pi;
 };
 

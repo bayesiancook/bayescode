@@ -181,6 +181,10 @@ class FastGeneBranchOmegaSample : public Sample {
         vector<vector<double>> om_postprob(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
+
+        double syn_devpi = 0;
+        double om_devpi = 0;
+
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
             cerr << '.';
@@ -190,8 +194,15 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->AddOmegaDevPostProbsTo(om_postprob);
             GetModel()->GetSynModel()->AddDevZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddDevZscoreTo(om_z);
+
+            syn_devpi += GetModel()->GetSynModel()->GetDevPi();
+            om_devpi += GetModel()->GetOmegaModel()->GetDevPi();
         }
         cerr << '\n';
+
+        syn_devpi /= size;
+        om_devpi /= size;
+
         for (int i=0; i<Ngene; i++)   {
             for (int j=0; j<Nbranch; j++)   {
                 syn_postprob[i][j] /= size;
@@ -211,11 +222,11 @@ class FastGeneBranchOmegaSample : public Sample {
             int syn_one = 0;
             int om_one = 0;
             for (int j=0; j<Nbranch; j++)   {
-                if ((syn_z[i][j] > z_cutoff) && (syn_postprob[i][j] < pp_cutoff))    {
+                if ((fabs(syn_z[i][j] > z_cutoff)) && (syn_postprob[i][j] < pp_cutoff))    {
                     totsyn++;
                     syn_one = 1;
                 }
-                if ((om_z[i][j] > z_cutoff) && (om_postprob[i][j] < pp_cutoff))    {
+                if ((fabs(om_z[i][j] > z_cutoff)) && (om_postprob[i][j] < pp_cutoff))    {
                     totom++;
                     om_one = 1;
                 }
@@ -232,9 +243,11 @@ class FastGeneBranchOmegaSample : public Sample {
                 totgeneom++;
             }
         }
+        int exptotsyn = syn_devpi * Nbranch * Ngene;
+        int exptotom = om_devpi * Nbranch * Ngene;
         cerr << "number of deviating gene/branch effects\n";
-        cerr << "syn : " << totsyn << '\t' << totgenesyn << '\n';
-        cerr << "om  : " << totom << '\t' << totgeneom << '\n';
+        cerr << "syn : " << totsyn << " (" << exptotsyn << ")" << '\t' << totgenesyn << '\n';
+        cerr << "om  : " << totom << " (" << exptotom << ") " << '\t' << totgeneom << '\n';
     }
 
     void ReadQQPlot(double z_cutoff = 1.0)   {
@@ -357,7 +370,7 @@ int main(int argc, char *argv[]) {
                 dev = 1;
                 i++;
                 z = atof(argv[i]);
-            } else if (s == "-ppdev")   {
+            } else if (s == "-mixdev")   {
                 ppdev = 1;
                 i++;
                 z = atof(argv[i]);

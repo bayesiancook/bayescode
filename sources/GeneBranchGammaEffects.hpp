@@ -12,8 +12,6 @@ class GeneBranchGammaEffects    {
         Ngene(inNgene), Nbranch(inNbranch), devmode(indevmode),
         fixgene_hypermean(infixgene_hypermean), fixbranch_hypermean(infixbranch_hypermean)  {
 
-        min_shape_ratio = 3.0;
-
         branch_hypermean = 1.0;
         branch_hyperinvshape = 1.0;
         double branch_alpha = 1.0 / branch_hyperinvshape;
@@ -38,12 +36,12 @@ class GeneBranchGammaEffects    {
 
         dev_invshape = 1.0;
 
+        dev_invshape2 = 1.0;
+        dev_mean2 = 2.0;
         if (devmode == 2)    {
-            dev_invshape_ratio = 2*min_shape_ratio;
             dev_pi = 0.01;
         }
         else    {
-            dev_invshape_ratio = 1.0;
             dev_pi = 0;
         }
 
@@ -53,7 +51,7 @@ class GeneBranchGammaEffects    {
         if (devmode)    {
             dev_bidimarray =
                 new ConditionSpecificMeanGammaMixBidimArray(*mean_bidimarray,
-                        dev_invshape, dev_invshape_ratio, dev_pi);
+                        dev_invshape, dev_mean2, dev_invshape2, dev_pi);
         }
     }
 
@@ -77,6 +75,10 @@ class GeneBranchGammaEffects    {
         return dev_invshape;
     }
 
+    double GetDevPi() const {
+        return dev_pi;
+    }
+
     void TraceHeader(ostream &os, string prefix) const {
         if (! fixgene_hypermean)    {
             os << "\t" << prefix << "_genemean";
@@ -91,7 +93,8 @@ class GeneBranchGammaEffects    {
             os << "\t" << prefix << "_dev";
             if (devmode == 2)   {
                 os << '\t' << prefix << "_pi";
-                os << '\t' << prefix << "_dev2";
+                os << '\t' << prefix << "_mean2";
+                // os << '\t' << prefix << "_dev2";
             }
         }
     }
@@ -109,7 +112,8 @@ class GeneBranchGammaEffects    {
             os << '\t' << dev_invshape;
             if (devmode == 2)   {
                 os << '\t' << dev_pi;
-                os << '\t' << dev_invshape_ratio;
+                os << '\t' << dev_mean2;
+                // os << '\t' << dev_invshape2;
             }
         }
     }
@@ -130,7 +134,7 @@ class GeneBranchGammaEffects    {
         if (devmode)    {
             os << '\t' << dev_invshape;
             if (devmode == 2)   {
-                os << '\t' << dev_pi << '\t' << dev_invshape_ratio;
+                os << '\t' << dev_pi << '\t' << dev_mean2 << '\t' << dev_invshape2;
             }
             os << '\t' << *dev_bidimarray;
         }
@@ -152,7 +156,7 @@ class GeneBranchGammaEffects    {
         if (devmode)    {
             is >> dev_invshape;
             if (devmode == 2)   {
-                is >> dev_pi >> dev_invshape_ratio;
+                is >> dev_pi >> dev_mean2 >> dev_invshape2;
             }
             is >> *dev_bidimarray;
         }
@@ -250,7 +254,7 @@ class GeneBranchGammaEffects    {
 
     void Update()   {
         if (devmode)    {
-            dev_bidimarray->SetParams(dev_invshape, dev_invshape_ratio, dev_pi);
+            dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);
         }
         Update(*branch_array, branch_hypermean, branch_hyperinvshape);
         Update(*gene_array, gene_hypermean, gene_hyperinvshape);
@@ -298,7 +302,8 @@ class GeneBranchGammaEffects    {
     double DevHyperLogPrior() const {
         double ret = -dev_invshape;
         if (devmode == 2)   {
-            ret -= dev_invshape_ratio;
+            ret -= dev_mean2;
+            ret -= dev_invshape2;
         }
         return ret;
     }
@@ -374,8 +379,9 @@ class GeneBranchGammaEffects    {
             double logl1 = alpha1 * log(beta1) - Random::logGamma(alpha1) 
                 + Random::logGamma(postalpha1) - postalpha1 * log(postbeta1);
 
-            double alpha2 = alpha1 / dev_invshape_ratio;
-            double beta2 = alpha2 / mean;
+            double mean2 = mean * dev_mean2;
+            double alpha2 = alpha1 / dev_invshape2;
+            double beta2 = alpha2 / mean2;
             double postalpha2 = alpha2 + ss.count;
             double postbeta2 = beta2 + ss.beta;
 
@@ -477,18 +483,25 @@ class GeneBranchGammaEffects    {
                         [] () {});
 
                 if (devmode == 2)   {
-                    SlidingMove(dev_invshape_ratio, 0.3, 1, 1.0, 50.0, 
+                    ScalingMove(dev_mean2, 0.3, 1, 1.0, 50.0, 
                         [this, get_ss] () {
                         return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
                         [] () {});
 
-                    SlidingMove(dev_pi, 0.3, 1, 0, 0.3, 
+                    /*
+                    ScalingMove(dev_invshape2, 0.3, 1, 1.0, 10.0, 
+                        [this, get_ss] () {
+                        return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
+                        [] () {});
+                    */
+
+                    ScalingMove(dev_pi, 0.3, 1, 0, 0.3, 
                         [this, get_ss] () {
                         return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
                         [] () {});
                 }
 
-                dev_bidimarray->SetParams(dev_invshape, dev_invshape_ratio, dev_pi);
+                dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);
             }
         }
 
@@ -513,15 +526,16 @@ class GeneBranchGammaEffects    {
             CompensatoryMove(1.0, 3);
 
             auto update = [this] () {
-                this->dev_bidimarray->SetParams(dev_invshape, dev_invshape_ratio, dev_pi);};
+                this->dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);};
             auto logprob = [this] () {
                 return this->DevHyperLogPrior() + this->DevLogPrior();};
 
             if (devmode)    {
                 ScalingMove(dev_invshape, 0.3, 1, logprob, update);
                 if (devmode == 2)   {
-                    SlidingMove(dev_invshape_ratio, 0.3, 1, 1.0, 50.0, logprob, update);
-                    SlidingMove(dev_pi, 0.3, 1, 0, 0.3, logprob, update);
+                    ScalingMove(dev_mean2, 0.3, 1, 1.0, 50.0, logprob, update);
+                    // ScalingMove(dev_invshape2, 0.3, 1, 1.0, 10.0, logprob, update);
+                    ScalingMove(dev_pi, 0.3, 1, 0, 0.3, logprob, update);
                 }
             }
         }
@@ -843,12 +857,40 @@ class GeneBranchGammaEffects    {
         return nacc / ntot;
     }
 
+    template <class LogProbF, class UpdateF>
+    double ScalingMove(double &x, double tuning, int nrep, double min, double max, LogProbF logprobf, UpdateF updatef)  {
+        double nacc = 0;
+        double ntot = 0;
+        for (int rep = 0; rep < nrep; rep++) {
+            double deltalogprob = -logprobf();
+            double m = tuning * (Random::Uniform() - 0.5);
+            double e = exp(m);
+            x *= e;
+            if ((x <= min) || (x >= max)) {
+                x /=e;
+            }
+            else    {
+                updatef();
+                deltalogprob += logprobf();
+                deltalogprob += m;
+                int accepted = (log(Random::Uniform()) < deltalogprob);
+                if (accepted) {
+                    nacc++;
+                } else {
+                    x /= e;
+                    updatef();
+                }
+            }
+            ntot++;
+        }
+        return nacc / ntot;
+    }
+
     private:
 
     int Ngene;
     int Nbranch;
 
-    double min_shape_ratio;
     int devmode;
 
     int fixgene_hypermean;
@@ -859,7 +901,8 @@ class GeneBranchGammaEffects    {
     double branch_hypermean;
     double branch_hyperinvshape;
     double dev_invshape;
-    double dev_invshape_ratio;
+    double dev_mean2;
+    double dev_invshape2;
     double dev_pi;
 
     IIDGamma *gene_array;
