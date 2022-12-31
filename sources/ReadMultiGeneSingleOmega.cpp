@@ -131,6 +131,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         GetModel()->MasterReceiveGeneArray(array);
 
         ofstream dsom_os((name + ".genedsomsuffstat").c_str());
+        dsom_os << GetModel()->GetNgene() << '\n';
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
             dsom_os << GetModel()->GetLocalGeneName(gene) << '\n';
             dsom_os << "counts_dS\t";
@@ -146,6 +147,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         GetModel()->MasterReceiveGeneArray(gcconsarray);
 
         ofstream gcdsom_os((name + ".genegcconsdsomsuffstat").c_str());
+        gcdsom_os << GetModel()->GetNgene() << '\n';
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
             gcdsom_os << GetModel()->GetLocalGeneName(gene) << '\n';
             gcdsom_os << "counts_dS\t";
@@ -203,6 +205,7 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         */
 
         ofstream os((name + ".genenodepathsuffstat").c_str());
+        os << GetModel()->GetNgene() << '\n';
         for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
             os << GetModel()->GetLocalGeneName(gene) << '\t';
             os << array[gene];
