@@ -221,6 +221,17 @@ class GeneBranchGammaEffects    {
         }
     }
 
+    void AddZscoreTo(vector<vector<double>>& array) const   {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double mean = GetMeanVal(i,j);
+                double tmp = (GetVal(i,j) - mean) / mean;
+                array[i][j] += tmp / sqrt(dev_invshape);
+                // array[i][j] += tmp*tmp / dev_invshape;
+            }
+        }
+    }
+
     void AddDevToHist(vector<double>& post, vector<double>& ppred, int offset) const {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
