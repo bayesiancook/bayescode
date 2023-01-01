@@ -30,7 +30,7 @@ class random_init {
   public:
     random_init() {
         Random::InitRandom();
-        // Random::InitRandom(642598);
+        // Random::InitRandom(445816);
         std::cerr << "-- [Random] Seed : " << Random::GetSeed() << std::endl;
     }
 };

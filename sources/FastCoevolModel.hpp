@@ -131,9 +131,42 @@ class FastCoevolModel: public ProbModel {
         browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
 
         dsompathsuffstatarray = new dSOmegaPathSuffStatBranchArray(*tree);
-        ifstream is(dsomsuffstatfile.c_str());
-        is >> *dsompathsuffstatarray;
 
+        ifstream is(dsomsuffstatfile.c_str());
+        string tmp;
+        is >> tmp;
+        if (tmp != "counts_dS") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedscount(is);
+        treedscount.SetIndices();
+
+        is >> tmp;
+        if (tmp != "counts_dS_norm") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedsbeta(is);
+        treedsbeta.SetIndices();
+
+        is >> tmp;
+        if (tmp != "counts_dN") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treedncount(is);
+        treedncount.SetIndices();
+
+        is >> tmp;
+        if (tmp != "counts_dN_norm") {
+            cerr << "error when reading suffstat file\n";
+            exit(1);
+        }
+        Tree treednbeta(is);
+        treednbeta.SetIndices();
+
+        dsompathsuffstatarray->Add(treedscount, treedsbeta, treedncount, treednbeta);
         cerr << "allocate ok\n";
     }
 

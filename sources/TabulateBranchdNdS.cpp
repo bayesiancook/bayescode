@@ -61,6 +61,16 @@ int main(int argc, char* argv[])    {
     SimpleBranchArray<double> ds(tree);
     dsomss.GetdS(ds);
 
+    ofstream dsom_os((basename + ".dsompathsuffstat").c_str());
+    dsom_os << "counts_dS\t";
+    dsomss.BranchToNewickSynCount(dsom_os);
+    dsom_os << "counts_dS_norm\t";
+    dsomss.BranchToNewickSynBeta(dsom_os);
+    dsom_os << "counts_dN\t";
+    dsomss.BranchToNewickNonSynCount(dsom_os);
+    dsom_os << "counts_dN_norm\t";
+    dsomss.BranchToNewickNonSynBeta(dsom_os);
+
     ofstream tos((basename + ".dsom.tre").c_str());
     ToNewick(tos, ds, dnds);
     cerr << "newick tree in " << basename << ".dsom.tre\n";
