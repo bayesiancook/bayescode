@@ -1,15 +1,17 @@
 #include "IIDGamma.hpp"
 #include "GammaSuffStat.hpp"
-#include "ConditionSpecificMeanGammaMixArray.hpp"
+#include "ScaledConditionSpecificMeanGammaMixArray.hpp"
 #include "MeanPoissonSuffStat.hpp"
 
-class GeneBranchGammaEffects    {
+class ScaledGeneBranchGammaEffects    {
 
     public:
 
-    GeneBranchGammaEffects(int inNgene, int inNbranch, int indevmode,
+    ScaledGeneBranchGammaEffects(int inNgene, int inNbranch, const Selector<double>* intimescale,
+            int indevmode, int infixed_invshape,
             int infixgene_hypermean, int infixbranch_hypermean) :
-        Ngene(inNgene), Nbranch(inNbranch), devmode(indevmode),
+        Ngene(inNgene), Nbranch(inNbranch), timescale(intimescale),
+        devmode(indevmode), fixed_invshape(infixed_invshape),
         fixgene_hypermean(infixgene_hypermean), fixbranch_hypermean(infixbranch_hypermean)  {
 
         branch_hypermean = 1.0;
@@ -23,6 +25,10 @@ class GeneBranchGammaEffects    {
             }
         }
 
+        if (! timescale)    {
+            timescale = branch_array;
+        }
+
         gene_hypermean = 1.0;
         gene_hyperinvshape = 1.0;
         double gene_alpha = 1.0 / gene_hyperinvshape;
@@ -34,7 +40,9 @@ class GeneBranchGammaEffects    {
             }
         }
 
-        dev_invshape = 1.0;
+        dev_invshape_offset = 1.0;
+        dev_invshape_factor = fixed_invshape ? 0 : 0.01;
+        dev_invshape_offset2 = 1.0;
 
         dev_invshape2 = 1.0;
         dev_mean2 = 2.0;
@@ -50,8 +58,10 @@ class GeneBranchGammaEffects    {
         dev_bidimarray = 0;
         if (devmode)    {
             dev_bidimarray =
-                new ConditionSpecificMeanGammaMixBidimArray(*mean_bidimarray,
-                        dev_invshape, dev_mean2, dev_invshape2, dev_pi);
+                new ScaledConditionSpecificMeanGammaMixBidimArray(*mean_bidimarray, *timescale,
+                        dev_invshape_offset, dev_invshape_factor,
+                        dev_invshape_offset2,
+                        dev_mean2, dev_invshape2, dev_pi);
         }
     }
 
@@ -71,12 +81,29 @@ class GeneBranchGammaEffects    {
         return branch_hypermean * Nbranch;
     }
 
-    double GetDevInvShape() const   {
-        return dev_invshape;
+    double GetDevInvShapeOffset() const   {
+        return dev_invshape_offset;
+    }
+
+    double GetDevInvShapeOffset2() const   {
+        return dev_invshape_offset2;
+    }
+
+    double GetDevInvShapeFactor() const   {
+        return dev_invshape_factor;
     }
 
     double GetDevPi() const {
         return dev_pi;
+    }
+
+    double GetInvShape(int j) const {
+        // return 1.0 / (1.0/dev_invshape_offset + dev_invshape_factor*timescale->GetVal(j));
+        return dev_invshape_offset * (1.0 + dev_invshape_factor/(dev_invshape_offset2 + timescale->GetVal(j)));
+    }
+
+    const Selector<double>* GetBranchArray() const  {
+        return branch_array;
     }
 
     void TraceHeader(ostream &os, string prefix) const {
@@ -91,6 +118,10 @@ class GeneBranchGammaEffects    {
 
         if (devmode)    {
             os << "\t" << prefix << "_dev";
+            if (! fixed_invshape)   {
+                os << "\t" << prefix << "_devf";
+                os << "\t" << prefix << "_devoff";
+            }
             if (devmode == 2)   {
                 os << '\t' << prefix << "_pi";
                 os << '\t' << prefix << "_mean2";
@@ -109,7 +140,11 @@ class GeneBranchGammaEffects    {
         }
         os << '\t' << branch_hyperinvshape;
         if (devmode)    {
-            os << '\t' << dev_invshape;
+            os << '\t' << dev_invshape_offset;
+            if (! fixed_invshape)   {
+                os << '\t' << dev_invshape_factor;
+                os << '\t' << dev_invshape_offset2;
+            }
             if (devmode == 2)   {
                 os << '\t' << dev_pi;
                 os << '\t' << dev_mean2;
@@ -132,7 +167,11 @@ class GeneBranchGammaEffects    {
         os << '\t' << *gene_array;
 
         if (devmode)    {
-            os << '\t' << dev_invshape;
+            os << '\t' << dev_invshape_offset;
+            if (! fixed_invshape)   {
+                os << '\t' << dev_invshape_factor;
+                os << '\t' << dev_invshape_offset2;
+            }
             if (devmode == 2)   {
                 os << '\t' << dev_pi << '\t' << dev_mean2 << '\t' << dev_invshape2;
             }
@@ -154,7 +193,11 @@ class GeneBranchGammaEffects    {
         is >> *gene_array;
 
         if (devmode)    {
-            is >> dev_invshape;
+            is >> dev_invshape_offset;
+            if (! fixed_invshape)   {
+                is >> dev_invshape_factor;
+                is >> dev_invshape_offset2;
+            }
             if (devmode == 2)   {
                 is >> dev_pi >> dev_mean2 >> dev_invshape2;
             }
@@ -184,7 +227,7 @@ class GeneBranchGammaEffects    {
         mean += branch_hypermean * gene_hypermean;
         gene += gene_hyperinvshape;
         branch += branch_hyperinvshape;
-        dev += dev_invshape;
+        dev += dev_invshape_offset;
     }
 
     void AddGeneArrayTo(vector<double>& array) const {
@@ -216,7 +259,7 @@ class GeneBranchGammaEffects    {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp*tmp / dev_invshape;
+                array[i][j] += tmp*tmp / GetInvShape(j);
             }
         }
     }
@@ -226,7 +269,7 @@ class GeneBranchGammaEffects    {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp / sqrt(dev_invshape);
+                array[i][j] += tmp / sqrt(GetInvShape(j));
             }
         }
     }
@@ -234,6 +277,7 @@ class GeneBranchGammaEffects    {
     void AddDevToHist(vector<double>& post, vector<double>& ppred, int offset) const {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
+                double dev_invshape = GetInvShape(j);
                 double mean = GetMeanVal(i,j);
                 post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
                 double alpha = 1.0 / dev_invshape;
@@ -249,6 +293,7 @@ class GeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
+                double dev_invshape = GetInvShape(j);
                 double z = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
                 array[i][j] += z;
             }
@@ -264,7 +309,9 @@ class GeneBranchGammaEffects    {
 
     void Update()   {
         if (devmode)    {
-            dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);
+            dev_bidimarray->SetParams(dev_invshape_offset, dev_invshape_factor, 
+                    dev_invshape_offset2,
+                    dev_mean2, dev_invshape2, dev_pi);
         }
         Update(*branch_array, branch_hypermean, branch_hyperinvshape);
         Update(*gene_array, gene_hypermean, gene_hyperinvshape);
@@ -279,6 +326,16 @@ class GeneBranchGammaEffects    {
         if (devmode)    {
             total += DevHyperLogPrior();
             total += DevLogPrior();
+        }
+        if (std::isinf(total))  {
+            cerr << "rescaled gene branch gamma: get log prior: inf\n";
+            cerr << BranchLogPrior() << '\t' << GeneLogPrior() << '\t' << DevLogPrior() << '\n';
+            exit(1);
+        }
+        if (std::isnan(total))  {
+            cerr << "rescaled gene branch gamma: get log prior: nan\n";
+            cerr << BranchLogPrior() << '\t' << GeneLogPrior() << '\t' << DevLogPrior() << '\n';
+            exit(1);
         }
         return total;
     }
@@ -310,7 +367,11 @@ class GeneBranchGammaEffects    {
     }
 
     double DevHyperLogPrior() const {
-        double ret = -dev_invshape;
+        double ret = -dev_invshape_offset;
+        if (! fixed_invshape)   {
+            ret -= dev_invshape_factor;
+            ret -= dev_invshape_offset2;
+        }
         if (devmode == 2)   {
             ret -= dev_mean2;
             ret -= dev_invshape2;
@@ -319,7 +380,16 @@ class GeneBranchGammaEffects    {
     }
 
     double DevLogPrior() const  {
-        return dev_bidimarray->GetLogProb();
+        double ret = dev_bidimarray->GetLogProb();
+        if (std::isinf(ret))    {
+            cerr << "dev log prior: inf\n";
+            exit(1);
+        }
+        if (std::isnan(ret))    {
+            cerr << "dev log prior: nan\n";
+            exit(1);
+        }
+        return ret;
     }
 
     double GeneDevLogPrior(int gene) const  {
@@ -329,7 +399,6 @@ class GeneBranchGammaEffects    {
     double BranchDevLogPrior(int branch) const  {
         return dev_bidimarray->GetColLogProb(branch);
     }
-
 
     double HyperSuffStatLogProb(const GammaSuffStat& suffstat, 
         double mean, double invshape) const    {
@@ -381,6 +450,7 @@ class GeneBranchGammaEffects    {
         }
 
         if (devmode == 2)   {
+            double dev_invshape = GetInvShape(branch);
             double alpha1 = 1.0 / dev_invshape;
             double beta1 = alpha1 / mean;
             double postalpha1 = alpha1 + ss.count;
@@ -420,6 +490,7 @@ class GeneBranchGammaEffects    {
             return  logl;
         }
 
+        double dev_invshape = GetInvShape(branch);
         double alpha = 1.0 / dev_invshape;
         double beta = alpha / mean;
 
@@ -480,17 +551,31 @@ class GeneBranchGammaEffects    {
     template<class SS>
     double IntegratedMove(double tuning, int nrep, SS get_ss)  {
 
+        auto no_logprob = [] () {return 0;};
+        auto no_update = [] () {};
+
         for (int rep=0; rep<nrep; rep++)    {
 
             IntegratedMoveGeneArray(1.0, 1, get_ss);
             IntegratedMoveBranchArray(1.0, 1, get_ss);
-            CompensatoryMove(1.0, 3);
+            CompensatoryMove(1.0, 3, no_logprob, no_update);
 
             if (devmode)    {
-                ScalingMove(dev_invshape, 0.3, 1, 
+                ScalingMove(dev_invshape_offset, 0.3, 1, 
                         [this, get_ss] () {
                         return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
                         [] () {});
+
+                if (! fixed_invshape)   {
+                    ScalingMove(dev_invshape_offset2, 0.3, 1, 
+                            [this, get_ss] () {
+                            return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
+                            [] () {});
+                    ScalingMove(dev_invshape_factor, 0.3, 1, 
+                            [this, get_ss] () {
+                            return this->DevHyperLogPrior() + this->SuffStatLogProb(get_ss);},
+                            [] () {});
+                }
 
                 if (devmode == 2)   {
                     ScalingMove(dev_mean2, 0.3, 1, 1.0, 50.0, 
@@ -511,7 +596,9 @@ class GeneBranchGammaEffects    {
                         [] () {});
                 }
 
-                dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);
+                dev_bidimarray->SetParams(dev_invshape_offset, dev_invshape_factor,
+                        dev_invshape_offset2,
+                        dev_mean2, dev_invshape2, dev_pi);
             }
         }
 
@@ -522,8 +609,10 @@ class GeneBranchGammaEffects    {
         return 1.0;
     }
 
-    template<class SS>
-    double NonIntegratedMove(double tuning, int nrep, SS get_ss)   {
+    template<class SS, class LogProbF, class UpdateF, class GlobalLogProbF, class GlobalUpdateF>
+    double NonIntegratedMove(double tuning, int nrep, SS get_ss,
+            LogProbF logprob, UpdateF update, 
+            GlobalLogProbF global_logprob, GlobalUpdateF global_update)   {
 
         for (int rep=0; rep<nrep; rep++)    {
 
@@ -532,16 +621,22 @@ class GeneBranchGammaEffects    {
             }
 
             NonIntegratedMoveGeneArray(1.0, 1);
-            NonIntegratedMoveBranchArray(1.0, 1);
-            CompensatoryMove(1.0, 3);
+            NonIntegratedMoveBranchArray(1.0, 1, logprob, update);
+            CompensatoryMove(1.0, 3, global_logprob, global_update);
 
             auto update = [this] () {
-                this->dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);};
+                this->dev_bidimarray->SetParams(dev_invshape_offset, dev_invshape_factor,
+                        dev_invshape_offset2,
+                        dev_mean2, dev_invshape2, dev_pi);};
             auto logprob = [this] () {
                 return this->DevHyperLogPrior() + this->DevLogPrior();};
 
             if (devmode)    {
-                ScalingMove(dev_invshape, 0.3, 1, logprob, update);
+                ScalingMove(dev_invshape_offset, 0.3, 1, logprob, update);
+                if (! fixed_invshape)   {
+                    ScalingMove(dev_invshape_factor, 0.3, 1, logprob, update);
+                    ScalingMove(dev_invshape_offset2, 0.3, 1, logprob, update);
+                }
                 if (devmode == 2)   {
                     ScalingMove(dev_mean2, 0.3, 1, 1.0, 50.0, logprob, update);
                     // ScalingMove(dev_invshape2, 0.3, 1, 1.0, 10.0, logprob, update);
@@ -667,23 +762,30 @@ class GeneBranchGammaEffects    {
         return ret;
     }
 
-    double NonIntegratedMoveBranchArray(double tuning, int nrep) {
+    template<class LogProbF, class UpdateF>
+    double NonIntegratedMoveBranchArray(double tuning, int nrep,
+            LogProbF logprob, UpdateF update)   {
+
         double nacc = 0;
         for (int rep=0; rep<nrep; rep++) {
             for (int j=0; j<Nbranch; j++) {
                 double deltalogprob = -branch_array->GetLogProb(j);
                 deltalogprob -= BranchDevLogPrior(j);
+                deltalogprob -= logprob(j);
                 double m = tuning * (Random::Uniform() - 0.5);
                 double e = exp(m);
                 (*branch_array)[j] *= e;
+                update(j);
                 deltalogprob += branch_array->GetLogProb(j);
                 deltalogprob += BranchDevLogPrior(j);
+                deltalogprob += logprob(j);
                 deltalogprob += m;
                 int acc = (log(Random::Uniform()) < deltalogprob);
                 if (acc) {
                     nacc++;
                 } else {
                     (*branch_array)[j] /= e;
+                    update(j);
                 }
             }
         }
@@ -741,11 +843,16 @@ class GeneBranchGammaEffects    {
         return nacc / Ngene / Nbranch / nrep;
     }
 
-    double CompensatoryMove(double tuning, int nrep)    {
+    template<class LogProbF, class UpdateF>
+    double CompensatoryMove(double tuning, int nrep,
+            LogProbF logprob = [] () {return 0;},
+            UpdateF update = [] () {}) {
+
         double nacc = 0;
         for (int rep=0; rep<nrep; rep++)    {
 
             double deltalogprob = - gene_array->GetLogProb() - branch_array->GetLogProb();
+            deltalogprob -= logprob();
             
             double m = tuning * (Random::Uniform() - 0.5);
             double e = exp(m);
@@ -756,8 +863,10 @@ class GeneBranchGammaEffects    {
                 (*branch_array)[j] /= e;
             }
 
+            update();
             deltalogprob += gene_array->GetLogProb() + branch_array->GetLogProb();
             deltalogprob += (Ngene - Nbranch) * m;
+            deltalogprob += logprob();
 
             int acc = (log(Random::Uniform()) < deltalogprob);
             if (acc) {
@@ -769,6 +878,7 @@ class GeneBranchGammaEffects    {
                 for (int j=0; j<Nbranch; j++)   {
                     (*branch_array)[j] *= e;
                 }
+                update();
             }
         }
         double ret = nacc / nrep;
@@ -901,7 +1011,10 @@ class GeneBranchGammaEffects    {
     int Ngene;
     int Nbranch;
 
+    const Selector<double>* timescale;
+
     int devmode;
+    int fixed_invshape;
 
     int fixgene_hypermean;
     int fixbranch_hypermean;
@@ -910,7 +1023,9 @@ class GeneBranchGammaEffects    {
     double gene_hyperinvshape;
     double branch_hypermean;
     double branch_hyperinvshape;
-    double dev_invshape;
+    double dev_invshape_offset;
+    double dev_invshape_factor;
+    double dev_invshape_offset2;
     double dev_mean2;
     double dev_invshape2;
     double dev_pi;
@@ -918,7 +1033,7 @@ class GeneBranchGammaEffects    {
     IIDGamma *gene_array;
     IIDGamma *branch_array;
     BidimProduct* mean_bidimarray;
-    ConditionSpecificMeanGammaMixBidimArray *dev_bidimarray;
+    ScaledConditionSpecificMeanGammaMixBidimArray *dev_bidimarray;
     GammaSuffStat gene_hypersuffstat;
     GammaSuffStat branch_hypersuffstat;
 };

@@ -3,21 +3,27 @@
 #include "BidimArray.hpp"
 #include "BidimProduct.hpp"
 
-
-class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> {
+class ScaledConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> {
 
   public:
 
-    ConditionSpecificMeanGammaMixBidimArray(const BidimProduct& inmean, double ininvshape, double inmean2, double ininvshape2, double inpi) : 
+    ScaledConditionSpecificMeanGammaMixBidimArray(const BidimProduct& inmean, const Selector<double>& intimescale, double ininvshape_offset, double ininvshape_factor, double ininvshape_offset2, double inmean2, double ininvshape2, double inpi) : 
         SimpleBidimArray(inmean.GetNrow(), inmean.GetNcol(), 0), 
-        mean(inmean), invshape(ininvshape), mean2(inmean2), invshape2(ininvshape2), pi(inpi) {
+        mean(inmean), timescale(intimescale),
+        invshape_offset(ininvshape_offset), invshape_factor(ininvshape_factor), 
+        invshape_offset2(ininvshape_offset2),
+        mean2(inmean2), invshape2(ininvshape2), pi(inpi) {
             Sample();
     }
 
-    ~ConditionSpecificMeanGammaMixBidimArray() {}
+    ~ScaledConditionSpecificMeanGammaMixBidimArray() {}
 
-    void SetParams(double ininvshape, double inmean2, double ininvshape2, double inpi) {
-        invshape = ininvshape;
+    void SetParams(double ininvshape_offset, double ininvshape_factor,
+            double ininvshape_offset2, 
+            double inmean2, double ininvshape2, double inpi) {
+        invshape_offset = ininvshape_offset;
+        invshape_factor = ininvshape_factor;
+        invshape_offset2 = ininvshape_offset2;
         mean2 = inmean2;
         invshape2 = ininvshape2;
         pi = inpi;
@@ -50,9 +56,19 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
         return total;
     }
 
+    double GetInvShape(int j) const {
+        if (timescale.GetVal(j) <= 0)   {
+            cerr << "error in gt invshape\n";
+            exit(1);
+        }
+        // return 1.0 / (1.0/invshape_offset + invshape_factor*timescale.GetVal(j));
+        return invshape_offset * (1.0 + invshape_factor/(invshape_offset2 + timescale.GetVal(j)));
+    }
+
     //! return log prob for one entry
     double GetLogProb(int gene, int branch) const {
         if (pi) {
+            double invshape = GetInvShape(branch);
             double shape1 = 1.0 / invshape;
             double scale1 = shape1 / mean.GetVal(gene, branch);
 
@@ -67,9 +83,16 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
             double logl = log((1-pi)*l1 + pi*l2) + max;
             return logl;
         }
+        double invshape = GetInvShape(branch);
         double shape = 1.0 / invshape;
         double scale = shape / mean.GetVal(gene, branch);
-        return Random::logGammaDensity(GetVal(gene, branch), shape, scale);
+        double ret = Random::logGammaDensity(GetVal(gene, branch), shape, scale);
+        if (std::isinf(ret) || std::isnan(ret)) {
+            cerr << "error in rescaled gamma array get log prob\n";
+            cerr << invshape << '\t' << shape << '\t' << scale << '\t' << mean.GetVal(gene, branch) << '\t' << GetVal(gene, branch) << '\n';
+            exit(1);
+        }
+        return ret;
     }
 
     void Sample()   {
@@ -82,6 +105,7 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
     
     void Sample(int gene, int branch)   {
         if (pi) {
+            double invshape = GetInvShape(branch);
             double shape1 = 1.0 / invshape;
             double scale1 = shape1 / mean.GetVal(gene, branch);
 
@@ -96,6 +120,7 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
             }
         }
         else    {
+            double invshape = GetInvShape(branch);
             double shape = 1.0 / invshape;
             double scale = shape / mean.GetVal(gene, branch);
             (*this)(gene,branch) = Random::Gamma(shape, scale);
@@ -104,7 +129,10 @@ class ConditionSpecificMeanGammaMixBidimArray : public SimpleBidimArray<double> 
 
   private:
     const BidimProduct& mean;
-    double invshape;
+    const Selector<double>& timescale;
+    double invshape_offset;
+    double invshape_factor;
+    double invshape_offset2;
     double mean2;
     double invshape2;
     double pi;

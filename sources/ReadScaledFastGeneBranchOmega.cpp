@@ -2,33 +2,34 @@
 #include <fstream>
 #include <algorithm>
 #include "Sample.hpp"
-#include "FastGeneBranchOmegaModel.hpp"
+#include "ScaledFastGeneBranchOmegaModel.hpp"
 // #include "RecursiveNewick.hpp"
 
 using namespace std;
 
 /**
- * \brief An MCMC sample for FastGeneBranchOmegaModel
+ * \brief An MCMC sample for ScaledFastGeneBranchOmegaModel
  *
  * implements a simple read function, returning the MCMC estimate of the
  * posterior mean and standard deviation of omega=dN/dS
  */
 
-class FastGeneBranchOmegaSample : public Sample {
+class ScaledFastGeneBranchOmegaSample : public Sample {
   private:
     string modeltype;
     string datafile;
     string treefile;
     int syn_devmode, om_devmode;
+    int fixed_invshape;
 
   public:
     string GetModelType() override { return modeltype; }
 
-    FastGeneBranchOmegaModel *GetModel() override { return (FastGeneBranchOmegaModel *)model; }
+    ScaledFastGeneBranchOmegaModel *GetModel() override { return (ScaledFastGeneBranchOmegaModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)
-    FastGeneBranchOmegaSample(string filename, int inburnin, int inevery, int inuntil)
+    ScaledFastGeneBranchOmegaSample(string filename, int inburnin, int inevery, int inuntil)
         : Sample(filename, inburnin, inevery, inuntil) {
         Open();
     }
@@ -47,6 +48,7 @@ class FastGeneBranchOmegaSample : public Sample {
         is >> modeltype;
         is >> datafile >> treefile;
         is >> syn_devmode >> om_devmode;
+        is >> fixed_invshape;
         int check;
         is >> check;
         if (check)  {
@@ -57,7 +59,8 @@ class FastGeneBranchOmegaSample : public Sample {
 
         // make a new model depending on the type obtained from the file
         if (modeltype == "FASTGENEBRANCHOMEGA") {
-            model = new FastGeneBranchOmegaModel(datafile, treefile, syn_devmode, om_devmode);
+            model = new ScaledFastGeneBranchOmegaModel(datafile, treefile,
+                    syn_devmode, om_devmode, fixed_invshape);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);
@@ -104,8 +107,8 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
-            mean_syn_invshape += GetModel()->GetSynModel()->GetDevInvShape();
-            mean_om_invshape += GetModel()->GetOmegaModel()->GetDevInvShape();
+            mean_syn_invshape += GetModel()->GetSynModel()->GetDevInvShapeOffset();
+            mean_om_invshape += GetModel()->GetOmegaModel()->GetDevInvShapeOffset();
 
             GetModel()->GetSynModel()->AddZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
@@ -292,29 +295,37 @@ class FastGeneBranchOmegaSample : public Sample {
         }
         cerr << '\n';
         ofstream os((name + ".qqplot").c_str());
-        int synpost = 0;
-        int synpred = 0;
-        int ompost = 0;
-        int ompred = 0;
+        sort(syn_postsample.begin(), syn_postsample.end());
+        sort(syn_predsample.begin(), syn_predsample.end());
+        sort(om_postsample.begin(), om_postsample.end());
+        sort(om_predsample.begin(), om_predsample.end());
+        int synposti = 0;
+        int synpredi = 0;
+        int omposti = 0;
+        int ompredi = 0;
         for (int i=0; i<n; i++) {
             os << syn_postsample[i] << '\t' << syn_predsample[i] << '\t' << om_postsample[i] << '\t' << om_predsample[i] << '\n';
-            if (syn_postsample[i] > z_cutoff)   {
-                synpost++;
+            if (syn_postsample[i] < z_cutoff)   {
+                synposti = i;
             }
-            if (syn_predsample[i] > z_cutoff)   {
-                synpred++;
+            if (syn_predsample[i] < z_cutoff)   {
+                synpredi = i;
             }
-            if (om_postsample[i] > z_cutoff)    {
-                ompost++;
+            if (om_postsample[i] < z_cutoff)    {
+                omposti = i;
             }
-            if (om_predsample[i] > z_cutoff)    {
-                ompred++;
+            if (om_predsample[i] < z_cutoff)    {
+                ompredi = i;
             }
         }
         cerr << "sorted centered and normalized deviations in " << name << ".qqplot\n";
-        cerr << "number with z > " << z_cutoff << " (obs / exp)\n";
-        cerr << "syn : " << synpost << " / " << synpred << '\n';
-        cerr << "om  : " << ompost << " / " << ompred << '\n';
+        int synpostf = (n-synposti-1);
+        int synpredf = (n-synpredi-1);
+        int ompostf = (n-omposti-1);
+        int ompredf = (n-ompredi-1);
+        cerr << "fraction with z > " << z_cutoff << " (obs / exp)\n";
+        cerr << "syn : " << synpostf << " / " << synpredf << '\n';
+        cerr << "om  : " << ompostf << " / " << ompredf << '\n';
 
         for (int i=0; i<Ngene; i++)   {
             for (int j=0; j<Nbranch; j++)   {
@@ -417,7 +428,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    FastGeneBranchOmegaSample *sample = new FastGeneBranchOmegaSample(name, burnin, every, until);
+    ScaledFastGeneBranchOmegaSample *sample = new ScaledFastGeneBranchOmegaSample(name, burnin, every, until);
     if (dev) {
         sample->ReadQQPlot(z);
     }
