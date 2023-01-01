@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= genebranchdnds readgenebranchdnds genebranchnuc readgenebranchnuc gtr readgtr multigenegtr readmultigenegtr readgenebranchcodon genebranchcodon get_naive_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= branchnucdnds readbranchnucdnds genebranchdnds readgenebranchdnds genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -51,12 +51,20 @@ readgenebranchnuc$(EXEEXT): $(PROGSDIR)/readgenebranchnuc$(EXEEXT)
 $(PROGSDIR)/readgenebranchnuc$(EXEEXT): ReadGeneBranchNuc.o $(OBJS)
 	$(CC) ReadGeneBranchNuc.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-genebranchcodon$(EXEEXT): $(PROGSDIR)/genebranchcodon$(EXEEXT)
-$(PROGSDIR)/genebranchcodon$(EXEEXT): GeneBranchStrandSymmetric.o $(OBJS)
+branchnucdnds$(EXEEXT): $(PROGSDIR)/branchnucdnds$(EXEEXT)
+$(PROGSDIR)/branchnucdnds$(EXEEXT): BranchStrandSymmetric.o $(OBJS)
+	$(CC) BranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readbranchnucdnds$(EXEEXT): $(PROGSDIR)/readbranchnucdnds$(EXEEXT)
+$(PROGSDIR)/readbranchnucdnds$(EXEEXT): ReadBranchStrandSymmetric.o $(OBJS)
+	$(CC) ReadBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+genebranchnucdnds$(EXEEXT): $(PROGSDIR)/genebranchnucdnds$(EXEEXT)
+$(PROGSDIR)/genebranchnucdnds$(EXEEXT): GeneBranchStrandSymmetric.o $(OBJS)
 	$(CC) GeneBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-readgenebranchcodon$(EXEEXT): $(PROGSDIR)/readgenebranchcodon$(EXEEXT)
-$(PROGSDIR)/readgenebranchcodon$(EXEEXT): ReadGeneBranchStrandSymmetric.o $(OBJS)
+readgenebranchnucdnds$(EXEEXT): $(PROGSDIR)/readgenebranchnucdnds$(EXEEXT)
+$(PROGSDIR)/readgenebranchnucdnds$(EXEEXT): ReadGeneBranchStrandSymmetric.o $(OBJS)
 	$(CC) ReadGeneBranchStrandSymmetric.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 genebranchdnds$(EXEEXT): $(PROGSDIR)/genebranchdnds$(EXEEXT)
@@ -71,8 +79,8 @@ readbranchtree$(EXEEXT): $(PROGSDIR)/readbranchtree$(EXEEXT)
 $(PROGSDIR)/readbranchtree$(EXEEXT): ReadMeanBranchTree.o $(OBJS)
 	$(CC) ReadMeanBranchTree.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-get_naive_empirical_branch_dnds$(EXEEXT): $(PROGSDIR)/get_naive_empirical_branch_dnds$(EXEEXT)
-$(PROGSDIR)/get_naive_empirical_branch_dnds$(EXEEXT): TabulateBranchdNdS.o $(OBJS)
+get_empirical_branch_dnds$(EXEEXT): $(PROGSDIR)/get_empirical_branch_dnds$(EXEEXT)
+$(PROGSDIR)/get_empirical_branch_dnds$(EXEEXT): TabulateBranchdNdS.o $(OBJS)
 	$(CC) TabulateBranchdNdS.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 multigeneepsrobustbranchom$(EXEEXT): $(PROGSDIR)/multigeneepsrobustbranchom$(EXEEXT)

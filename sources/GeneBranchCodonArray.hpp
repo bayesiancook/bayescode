@@ -243,6 +243,77 @@ class MeanNucPathSuffStat : public SuffStat {
     std::vector<vector<double>> pairbeta;
 };
 
+class NucRatesBranchArray : public SimpleArray<vector<double>> {
+
+    public:
+
+    NucRatesBranchArray(int Nbranch, 
+            const Selector<double>& inrhoAC,
+            const Selector<double>& inrhoAG,
+            // const GeneBranchGammaEffects& inrhoAT,
+            const Selector<double>& inrhoCA,
+            const Selector<double>& inrhoCG,
+            const Selector<double>& inrhoCT) :
+        SimpleArray<vector<double>>(Nbranch, vector<double>(5,0)),
+        rhoAC(inrhoAC), rhoAG(inrhoAG), rhoCA(inrhoCA), rhoCG(inrhoCG), rhoCT(inrhoCT)  {
+        Update();
+    }
+
+    void Update()   {
+        for (int j=0; j<GetSize(); j++) {
+            Update(j);
+        }
+    }
+
+    void Update(int j)   {
+        (*this)[j][0] = rhoAC.GetVal(j);
+        (*this)[j][1] = rhoAG.GetVal(j);
+        (*this)[j][2] = 1.0;
+        (*this)[j][3] = rhoCA.GetVal(j);
+        (*this)[j][4] = rhoCG.GetVal(j);
+        (*this)[j][5] = rhoCT.GetVal(j);
+    }
+
+    private:
+
+    const Selector<double>& rhoAC;
+    const Selector<double>& rhoAG;
+    const Selector<double>& rhoCA;
+    const Selector<double>& rhoCG;
+    const Selector<double>& rhoCT;
+};
+
+class NucRateSuffStatBranchArray : public SimpleArray<MeanPoissonSuffStat>  {
+
+    public:
+
+    NucRateSuffStatBranchArray(int Nbranch) : SimpleArray<MeanPoissonSuffStat>(Nbranch) {}
+    ~NucRateSuffStatBranchArray() {}
+
+    void Clear()    {
+        for (int j=0; j<GetSize(); j++)   {
+            (*this)[j].Clear();
+        }
+    }
+
+    template<class SS>
+    void AddSuffStat(SS ss) {
+        for (int j=0; j<GetSize(); j++)   {
+            (*this)[j].Add(ss(j));
+        }
+    }
+
+    double GetMarginalLogProbMeanInvShape(double mean, double invshape) const   {
+        double alpha = 1.0 / invshape;
+        double beta = alpha / mean;
+        double total = 0;
+        for (int i=0; i<GetSize(); i++) {
+            total += GetVal(i).GetMarginalLogProb(alpha, beta);
+        }
+        return total;
+    }
+};
+
 class NucRatesGeneBranchArray : public SimpleBidimArray<vector<double>> {
 
     public:
@@ -298,6 +369,65 @@ class NucRatesGeneBranchArray : public SimpleBidimArray<vector<double>> {
     const GeneBranchGammaEffects& rhoCA;
     const GeneBranchGammaEffects& rhoCG;
     const GeneBranchGammaEffects& rhoCT;
+};
+
+class NucMatrixBranchArray : public Array<StrandSymmetricIrreversibleSubMatrix>  {
+
+    public:
+    NucMatrixBranchArray(int inNbranch, const Selector<vector<double>>& inrates, bool innormalise) :
+        Nbranch(inNbranch), rates(inrates), normalise(innormalise),
+        matrixarray(Nbranch, (StrandSymmetricIrreversibleSubMatrix*) 0) {
+        Create();
+    }
+
+    ~NucMatrixBranchArray() {
+        Delete();
+    }
+
+    int GetSize() const {
+        return Nbranch;
+    }
+
+    const StrandSymmetricIrreversibleSubMatrix &GetVal(int j) const { return *matrixarray[j]; }
+    StrandSymmetricIrreversibleSubMatrix &operator[](int j) { return *matrixarray[j]; }
+
+    void UpdateMatrices()   {
+        for (int j=0; j<GetSize(); j++) {
+            matrixarray[j]->CorruptMatrix();
+        }
+    }
+
+    void UpdateMatrix(int j)    {
+        matrixarray[j]->CorruptMatrix();
+    }
+
+    double GetMeanRate() const  {
+        double tot = 0;
+        for (int j=0; j<GetSize(); j++) {
+            tot += matrixarray[j]->GetRate();
+        }
+        tot /= GetSize();
+        return tot;
+    }
+
+    private:
+
+    void Create()   {
+        for (int j=0; j<GetSize(); j++) {
+            matrixarray[j] = new StrandSymmetricIrreversibleSubMatrix(rates.GetVal(j), normalise);
+        }
+    }
+    
+    void Delete()	{
+        for (int j=0; j<GetSize(); j++) {
+            delete matrixarray[j];
+	    }
+    }
+
+    int Nbranch;
+    const Selector<vector<double>>& rates;
+    bool normalise;
+    vector<StrandSymmetricIrreversibleSubMatrix *> matrixarray;
 };
 
 class NucMatrixGeneBranchArray : public BidimArray<StrandSymmetricIrreversibleSubMatrix>  {
@@ -594,6 +724,43 @@ class LengthPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanPoissonSuf
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
                 pathss.GetVal(i,j).AddSuffStatTo((*this)(i,j), mat.GetVal(i,j));
+            }
+        }
+    }
+};
+
+class NucPathSuffStatBranchArray : public SimpleArray<MeanNucPathSuffStat> {
+
+    public:
+
+    NucPathSuffStatBranchArray(int Nbranch) : 
+        SimpleArray<MeanNucPathSuffStat>(Nbranch, MeanNucPathSuffStat()) {
+        Clear();
+    }
+
+    ~NucPathSuffStatBranchArray() {}
+
+    void Clear()    {
+        for (int j=0; j<GetSize(); j++) {
+            (*this)[j].Clear();
+        }
+    }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const CodonMatrixGeneBranchArray& mat,
+            const GeneBranchGammaEffects& length)  {
+        for (int i=0; i<pathss.GetNrow(); i++) {
+            for (int j=0; j<pathss.GetNcol(); j++) {
+                (*this)[j].AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), length.GetVal(i,j));
+            }
+        }
+    }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const GeneBranchGammaEffects& length)  {
+        for (int i=0; i<pathss.GetNrow(); i++) {
+            for (int j=0; j<pathss.GetNcol(); j++) {
+                (*this)[j].AddSuffStat(pathss.GetVal(i,j), length.GetVal(i,j));
             }
         }
     }

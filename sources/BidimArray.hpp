@@ -144,6 +144,26 @@ class BidimHomogeneousSelector : public BidimSelector<T> {
     const T &value;
 };
 
+template <class T>
+class BidimRowHomogeneousSelector : public BidimSelector<T> {
+  public:
+    //! \brief Constructor, taking as its arguments the number of rows and columns
+    //! of the array and the value to be returned for any pair of indices
+    BidimRowHomogeneousSelector(int innrow, const Selector<T> &incolvalues)
+        : nrow(innrow), colvalues(incolvalues) {}
+    ~BidimRowHomogeneousSelector() {}
+
+    int GetNrow() const override { return nrow; }
+    int GetNcol() const override { return colvalues.GetSize(); }
+
+    //! return a reference to the same value (i.e. value) for any pair of indices
+    const T &GetVal(int i, int j) const override { return colvalues.GetVal(j); }
+
+  private:
+    int nrow;
+    const Selector<T> &colvalues;
+};
+
 /**
  * \brief A Selector that distributes the components of a mixture over an array
  * of items, through a vector of allocations

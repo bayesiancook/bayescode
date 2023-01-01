@@ -2,34 +2,34 @@
 #include <fstream>
 #include <algorithm>
 #include "Sample.hpp"
-#include "GeneBranchStrandSymmetricCodonModel.hpp"
+#include "BranchStrandSymmetricCodonModel.hpp"
 // #include "RecursiveNewick.hpp"
 
 using namespace std;
 
 /**
- * \brief An MCMC sample for GeneBranchStrandSymmetricCodonModel
+ * \brief An MCMC sample for BranchStrandSymmetricCodonModel
  *
  * implements a simple read function, returning the MCMC estimate of the
  * posterior mean and standard deviation of omega=dN/dS
  */
 
-class GeneBranchStrandSymmetricSample : public Sample {
+class BranchStrandSymmetricSample : public Sample {
   private:
     string modeltype;
     string datafile;
     string treefile;
     string taxonfile;
-    int syn_devmode, om_devmode, nuc_devmode;
+    int syn_devmode, om_devmode;
 
   public:
     string GetModelType() override { return modeltype; }
 
-    GeneBranchStrandSymmetricCodonModel *GetModel() override { return (GeneBranchStrandSymmetricCodonModel *)model; }
+    BranchStrandSymmetricCodonModel *GetModel() override { return (BranchStrandSymmetricCodonModel *)model; }
 
     //! \brief Constructor (file name, burn-in, thinning and upper limit, see
     //! Sample)
-    GeneBranchStrandSymmetricSample(string filename, int inburnin, int inevery, int inuntil)
+    BranchStrandSymmetricSample(string filename, int inburnin, int inevery, int inuntil)
         : Sample(filename, inburnin, inevery, inuntil) {
         Open();
     }
@@ -47,7 +47,7 @@ class GeneBranchStrandSymmetricSample : public Sample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile >> taxonfile;
-        is >> syn_devmode >> om_devmode >> nuc_devmode;
+        is >> syn_devmode >> om_devmode;
         int check;
         is >> check;
         if (check)  {
@@ -57,8 +57,8 @@ class GeneBranchStrandSymmetricSample : public Sample {
         is >> chainevery >> chainuntil >> chainsize;
 
         // make a new model depending on the type obtained from the file
-        if (modeltype == "GENEBRANCHCODON") {
-            model = new GeneBranchStrandSymmetricCodonModel(datafile, treefile, taxonfile, syn_devmode, om_devmode, nuc_devmode);
+        if (modeltype == "BRANCHCODON") {
+            model = new BranchStrandSymmetricCodonModel(datafile, treefile, taxonfile, syn_devmode, om_devmode);
         } else {
             cerr << "error when opening file " << name << '\n';
             exit(1);
@@ -88,14 +88,9 @@ class GeneBranchStrandSymmetricSample : public Sample {
         vector<double> mean_geneom_array(Ngene,0);
 
         double meanAC, meanAG, meanCA, meanCG, meanCT;
-        double geneAC, geneAG, geneCA, geneCG, geneCT;
-        double branchAC, branchAG, branchCA, branchCG, branchCT;
-        double devAC, devAG, devCA, devCG, devCT;
-
+        double varAC, varAG, varCA, varCG, varCT;
         meanAC = meanAG = meanCA = meanCG = meanCT = 0;
-        geneAC = geneAG = geneCA = geneCG = geneCT = 0;
-        branchAC = branchAG = branchCA = branchCG = branchCT = 0;
-        devAC = devAG = devCA = devCG = devCT = 0;
+        varAC = varAG = varCA = varCG = varCT = 0;
 
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
@@ -106,10 +101,8 @@ class GeneBranchStrandSymmetricSample : public Sample {
             GetModel()->GetOmegaModel()->AddSquaredBranchArrayTo(var_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
-            GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
-                    geneAC, geneAG, geneCA, geneCG, geneCT,
-                    branchAC, branchAG, branchCA, branchCG, branchCT,
-                    devAC, devAG, devCA, devCG, devCT);
+            GetModel()->AddNucStatsTo(meanAC, meanAG, meanCA, meanCG, meanCT,
+                    varAC, varAG, varCA, varCG, varCT);
         }
         cerr << '\n';
 
@@ -119,62 +112,20 @@ class GeneBranchStrandSymmetricSample : public Sample {
         meanCG /= size;
         meanCT /= size;
 
-        geneAC /= size;
-        geneAG /= size;
-        geneCA /= size;
-        geneCG /= size;
-        geneCT /= size;
-
-        branchAC /= size;
-        branchAG /= size;
-        branchCA /= size;
-        branchCG /= size;
-        branchCT /= size;
-
-        devAC /= size;
-        devAG /= size;
-        devCA /= size;
-        devCG /= size;
-        devCT /= size;
-
-        double totAC = devAC + branchAC + geneAC + branchAC*geneAC;
-        double pbranchAC = branchAC / totAC;
-        double pgeneAC = geneAC / totAC;
-        double pdevAC = devAC / totAC;
-
-        double totAG = devAG + branchAG + geneAG + branchAG*geneAG;
-        double pbranchAG = branchAG / totAG;
-        double pgeneAG = geneAG / totAG;
-        double pdevAG = devAG / totAG;
-
-        double totCA = devCA + branchCA + geneCA + branchCA*geneCA;
-        double pbranchCA = branchCA / totCA;
-        double pgeneCA = geneCA / totCA;
-        double pdevCA = devCA / totCA;
-
-        double totCG = devCG + branchCG + geneCG + branchCG*geneCG;
-        double pbranchCG = branchCG / totCG;
-        double pgeneCG = geneCG / totCG;
-        double pdevCG = devCG / totCG;
-
-        double totCT = devCT + branchCT + geneCT + branchCT*geneCT;
-        double pbranchCT = branchCT / totCT;
-        double pgeneCT = geneCT / totCT;
-        double pdevCT = devCT / totCT;
+        varAC /= size;
+        varAG /= size;
+        varCA /= size;
+        varCG /= size;
+        varCT /= size;
 
         ofstream nos((name + ".nucstats").c_str());
-        nos << "          \tmean\t\tc-gene\tc-brnch\tc-dev\tc-tot\t\tp-gene\tp-brnch\tp-dev\n";
+        nos << "          \tmean\trel-var\n";
         nos << fixed << setw(5) << setprecision(2);
-        nos << "A:T -> C:G\t" << meanAC << '\t' << '\t' << geneAC << '\t' << branchAC << '\t' << devAC << '\t';
-        nos << totAC << '\t' << '\t' << pgeneAC << '\t' << pbranchAC << '\t' << pdevAC << '\n';
-        nos << "A:T -> G:C\t" << meanAG << '\t' << '\t' << geneAG << '\t' << branchAG << '\t' << devAG << '\t';
-        nos << totAG << '\t' << '\t' << pgeneAG << '\t' << pbranchAG << '\t' << pdevAG << '\n';
-        nos << "C:G -> A:T\t" << meanCA << '\t' << '\t' << geneCA << '\t' << branchCA << '\t' << devCA << '\t';
-        nos << totCA << '\t' << '\t' << pgeneCA << '\t' << pbranchCA << '\t' << pdevCA << '\n';
-        nos << "C:G -> G:C\t" << meanCG << '\t' << '\t' << geneCG << '\t' << branchCG << '\t' << devCG << '\t';
-        nos << totCG << '\t' << '\t' << pgeneCG << '\t' << pbranchCG << '\t' << pdevCG << '\n';
-        nos << "C:G -> T:A\t" << meanCT << '\t' << '\t' << geneCT << '\t' << branchCT << '\t' << devCT << '\t';
-        nos << totCT << '\t' << '\t' << pgeneCT << '\t' << pbranchCT << '\t' << pdevCT << '\n';
+        nos << "A:T -> C:G\t" << meanAC << '\t' << varAC << '\n';
+        nos << "A:T -> G:C\t" << meanAG << '\t' << varAG << '\n';
+        nos << "C:G -> A:T\t" << meanCA << '\t' << varCA << '\n';
+        nos << "C:G -> G:C\t" << meanCG << '\t' << varCG << '\n';
+        nos << "C:G -> T:A\t" << meanCT << '\t' << varCT << '\n';
         cerr << "post mean nuc stats in " << name << ".nucstats\n";
 
         for (int j=0; j<Nbranch; j++)   {
@@ -251,6 +202,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    GeneBranchStrandSymmetricSample *sample = new GeneBranchStrandSymmetricSample(name, burnin, every, until);
+    BranchStrandSymmetricSample *sample = new BranchStrandSymmetricSample(name, burnin, every, until);
     sample->Read();
 }

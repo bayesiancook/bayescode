@@ -5,6 +5,7 @@
 #include "BranchArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PoissonSuffStat.hpp"
+#include "MeanPoissonSuffStat.hpp"
 #include "Random.hpp"
 
 /**
@@ -50,6 +51,14 @@ class IIDGamma : public SimpleArray<double> {
     void GibbsResample(const Selector<PoissonSuffStat> &suffstatarray) {
         for (int i = 0; i < GetSize(); i++) {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(i);
+            (*this)[i] =
+                Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
+        }
+    }
+
+    void GibbsResample(const Selector<MeanPoissonSuffStat> &suffstatarray) {
+        for (int i = 0; i < GetSize(); i++) {
+            const MeanPoissonSuffStat &suffstat = suffstatarray.GetVal(i);
             (*this)[i] =
                 Random::GammaSample(shape + suffstat.GetCount(), scale + suffstat.GetBeta());
         }
