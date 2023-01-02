@@ -82,10 +82,14 @@ class GeneBranchStrandSymmetricSample : public Sample {
         int Ngene = GetModel()->GetNgene();
         vector<double> mean_branchsyn_array(Nbranch,0);
         vector<double> mean_branchom_array(Nbranch,0);
-        vector<double> var_branchom_array(Nbranch,0);
-        vector<double> err_branchom_array(Nbranch,0);
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
+
+        vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
+
+        vector<vector<double>> gcbias(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> meangcbias(Ngene, vector<double>(Nbranch,0));
 
         double meanAC, meanAG, meanCA, meanCG, meanCT;
         double geneAC, geneAG, geneCA, geneCG, geneCT;
@@ -103,9 +107,14 @@ class GeneBranchStrandSymmetricSample : public Sample {
             GetNextPoint();
             GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
-            GetModel()->GetOmegaModel()->AddSquaredBranchArrayTo(var_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
+
+            GetModel()->GetSynModel()->AddZscoreTo(syn_z);
+            GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
+
+            GetModel()->AddGCBiasTo(gcbias, meangcbias);
+
             GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
                     geneAC, geneAG, geneCA, geneCG, geneCT,
                     branchAC, branchAG, branchCA, branchCG, branchCT,
@@ -177,12 +186,35 @@ class GeneBranchStrandSymmetricSample : public Sample {
         nos << totCT << '\t' << '\t' << pgeneCT << '\t' << pbranchCT << '\t' << pdevCT << '\n';
         cerr << "post mean nuc stats in " << name << ".nucstats\n";
 
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                syn_z[i][j] /= size;
+                om_z[i][j] /= size;
+            }
+        }
+
+        vector<vector<double>> zgc(Ngene, vector<double>(Nbranch,0));
+        double relvar = 0;
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                gcbias[i][j] /= size;
+                meangcbias[i][j] /= size;
+                double z = (gcbias[i][j] - meangcbias[i][j])/meangcbias[i][j];
+                zgc[i][j] = z;
+                relvar += z*z;
+            }
+        }
+        relvar /= Ngene*Nbranch;
+        double sigma = sqrt(relvar);
+        for (int i=0; i<Ngene; i++)   {
+            for (int j=0; j<Nbranch; j++)   {
+                zgc[i][j] /= sigma;
+            }
+        }
+            
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;
-            var_branchom_array[j] /= size;
-            var_branchom_array[j] -= mean_branchom_array[j] * mean_branchom_array[j];
-            err_branchom_array[j] = sqrt(var_branchom_array[j]);
         }
         for (int i=0; i<Ngene; i++) {
             mean_genesyn_array[i] /= size;
@@ -203,6 +235,14 @@ class GeneBranchStrandSymmetricSample : public Sample {
 
         cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
         cerr << "newick format in " << name << ".dsom.tre\n";
+
+        ofstream devos((name + ".postmeandev.tab").c_str());
+        devos << "#branchsynmean\tgenesynmean\tsynz\tbranchommean\tgeneommean\tomz\tgcbias\tgcbiasz\n";
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                devos << mean_branchsyn_array[j] << '\t' << mean_genesyn_array[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << mean_geneom_array[i] << '\t' << om_z[i][j] << '\t' << gcbias[i][j] << '\t' << zgc[i][j] << '\n';
+            }
+        }
     }
 };
 

@@ -24,22 +24,12 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     GeneBranchGammaEffects* om_model;
 
     // nucleotide models
-
-    // int reversible;
-
     // general strand-symmetric 
-    // reversible or irreversible
     GeneBranchGammaEffects* rho_AC_model;
     GeneBranchGammaEffects* rho_AG_model;
-    // GeneBranchGammaEffects* rho_AT_model;
-    GeneBranchGammaEffects* rho_CG_model;
-
-    // irreversible only
     GeneBranchGammaEffects* rho_CA_model;
+    GeneBranchGammaEffects* rho_CG_model;
     GeneBranchGammaEffects* rho_CT_model;
-
-    // eq. freqs (T92 or reversible)
-    // GeneBranchGammaEffects* gcbias_model;
 
     NucRatesGeneBranchArray* nucrates;
     NucMatrixGeneBranchArray* nucmat;
@@ -79,69 +69,28 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         Allocate();
 
         cerr << "read suff stat\n";
-        // read suff stats
-        // RelativePathSuffStatNodeArray tot(*tree, codonstatespace->GetNstate());
-        // tot.Clear();
         for (int gene=0; gene<Ngene; gene++)    {
             is >> gene_names[gene];
             cerr << gene_names[gene] << '\n';
             RelativePathSuffStatNodeArray tmp(*tree, codonstatespace->GetNstate());
             is >> tmp;
-            // tot.Add(tmp);
             pathss->Get(gene, tmp);
         }
-        /*
-        ofstream cos("tmp");
-        cos << tot << '\n';
-        cos.close();
-        */
-
-        /*
-        Update();
-
-        cerr << "dnds tree\n";
-        ComputeEmpiricaldNdSTree();
-        */
-    }
-
-    void ComputeEmpiricaldNdSTree()  {
-        CollectdSOmPathSuffStat();
-        dSOmegaPathSuffStatBranchArray totdsomss(*tree);
-        cerr << "add to\n";
-        dsomss->AddTo(totdsomss);
-        cerr << "dnds tree\n";
-        SimpleBranchArray<double> dnds(*tree);
-        totdsomss.GetdNdS(dnds);
-        SimpleBranchArray<double> ds(*tree);
-        totdsomss.GetdS(ds);
-
-        cerr << ds << '\n';
-        cerr << "to newick\n";
-        ofstream os("dsom.tree");
-        ToNewick(os, ds, dnds);
-        os.close();
-        cerr << "newick tree in dsom.tree\n";
-        exit(1);
     }
 
     void Allocate() {
 
         rho_AC_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
         rho_AG_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
-        // rho_AT_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
-        rho_CG_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
-
         rho_CA_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
+        rho_CG_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
         rho_CT_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
 
-        // gcbias_model = new GeneBranchGammaEffects(Ngene, Nbranch, nuc_devmode, 0, 1);
-            
         syn_model = new GeneBranchGammaEffects(Ngene, Nbranch, syn_devmode, 1, 0);
         om_model = new GeneBranchGammaEffects(Ngene, Nbranch, syn_devmode, 0, 1);
 
         nucrates = new NucRatesGeneBranchArray(Ngene, Nbranch, 
                 *rho_AC_model, *rho_AG_model, *rho_CA_model, *rho_CG_model, *rho_CT_model);
-                // *rho_AC_model, *rho_AG_model, *rho_AT_model, *rho_CA_model, *rho_CG_model, *rho_CT_model);
 
 
         nucmat = new NucMatrixGeneBranchArray(Ngene, Nbranch, *nucrates, false);
@@ -309,7 +258,6 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     void CollectdSOmPathSuffStat()  {
         dsomss->Clear();
         dsomss->AddSuffStat(*pathss, *codonmat, *om_model);
-        // dsomss->AddSuffStat(*pathss, *codonmat, *syn_model, *om_model);
     }
 
     double MoveNuc(int nrep, int nsmallrep) {
@@ -410,6 +358,32 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         }
         Update();
         return 1.0;
+    }
+
+    void AddNucZscoresTo(
+            vector<vector<double>>& zAC,
+            vector<vector<double>>& zAG,
+            vector<vector<double>>& zCA,
+            vector<vector<double>>& zCG,
+            vector<vector<double>>& zCT) const {
+            rho_AC_model->AddZscoreTo(zAC);
+            rho_AG_model->AddZscoreTo(zAG);
+            rho_CA_model->AddZscoreTo(zCA);
+            rho_CG_model->AddZscoreTo(zCG);
+            rho_CT_model->AddZscoreTo(zCT);
+    }
+
+    void AddGCBiasTo(vector<vector<double>>& gc, vector<vector<double>>& meangc) const  {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double bias = (rho_AC_model->GetVal(i,j) + rho_AG_model->GetVal(i,j)) /
+                    (rho_CA_model->GetVal(i,j) + rho_CT_model->GetVal(i,j));
+                double meanbias = (rho_AC_model->GetMeanVal(i,j) + rho_AG_model->GetMeanVal(i,j)) /
+                    (rho_CA_model->GetMeanVal(i,j) + rho_CT_model->GetMeanVal(i,j));
+                gc[i][j] += bias;
+                meangc[i][j] += meanbias;
+            }
+        }
     }
 
     void AddNucStats(double& meanAC, double& meanAG, double& meanCA, double& meanCG, double& meanCT,
