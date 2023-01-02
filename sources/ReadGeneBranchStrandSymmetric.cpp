@@ -244,12 +244,64 @@ class GeneBranchStrandSymmetricSample : public Sample {
             }
         }
     }
+
+    void ReadSuffStat() {
+
+        vector<dSOmegaPathSuffStatBranchArray> array(GetModel()->GetNgene(), dSOmegaPathSuffStatBranchArray(*GetModel()->GetTree()));
+        vector<GCConsdSOmegaPathSuffStatBranchArray> gcconsarray(GetModel()->GetNgene(), GCConsdSOmegaPathSuffStatBranchArray(*GetModel()->GetTree()));
+
+        cerr << size << " points to read\n";
+        for (int i=0; i<size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->CollectdSOmPathSuffStat();
+            GetModel()->CollectGCConsdSOmPathSuffStat();
+            GetModel()->GetdSOmPathSuffStat().AddTo(array);
+            GetModel()->GetGCConsdSOmPathSuffStat().AddTo(gcconsarray);
+        }
+        cerr << '\n';
+
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            array[i].Normalize(1.0/size);
+            gcconsarray[i].Normalize(1.0/size);
+        }
+
+        ofstream dsom_os((name + ".genedsomsuffstat").c_str());
+        dsom_os << GetModel()->GetNgene() << '\n';
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            dsom_os << GetModel()->GetGeneName(gene) << '\n';
+            dsom_os << "counts_dS\t";
+            array[gene].BranchToNewickSynCount(dsom_os);
+            dsom_os << "counts_dS_norm\t";
+            array[gene].BranchToNewickSynBeta(dsom_os);
+            dsom_os << "counts_dN\t";
+            array[gene].BranchToNewickNonSynCount(dsom_os);
+            dsom_os << "counts_dN_norm\t";
+            array[gene].BranchToNewickNonSynBeta(dsom_os);
+        }
+
+        ofstream gcdsom_os((name + ".genegcconsdsomsuffstat").c_str());
+        gcdsom_os << GetModel()->GetNgene() << '\n';
+        for (int gene=0; gene<GetModel()->GetNgene(); gene++) {
+            gcdsom_os << GetModel()->GetGeneName(gene) << '\n';
+            gcdsom_os << "counts_dS\t";
+            gcconsarray[gene].BranchToNewickSynCount(gcdsom_os);
+            gcdsom_os << "counts_dS_norm\t";
+            gcconsarray[gene].BranchToNewickSynBeta(gcdsom_os);
+            gcdsom_os << "counts_dN\t";
+            gcconsarray[gene].BranchToNewickNonSynCount(gcdsom_os);
+            gcdsom_os << "counts_dN_norm\t";
+            gcconsarray[gene].BranchToNewickNonSynBeta(gcdsom_os);
+        }
+    }
 };
 
 int main(int argc, char *argv[]) {
     int burnin = 0;
     int every = 1;
     int until = -1;
+    int dsomss = 0;
 
     string name;
 
@@ -261,7 +313,10 @@ int main(int argc, char *argv[]) {
         int i = 1;
         while (i < argc) {
             string s = argv[i];
-            if ((s == "-x") || (s == "-extract")) {
+            if (s == "-dsomss") {
+                dsomss = 1;
+            }
+            else if ((s == "-x") || (s == "-extract")) {
                 i++;
                 if (i == argc) throw(0);
                 s = argv[i];
@@ -292,5 +347,10 @@ int main(int argc, char *argv[]) {
     }
 
     GeneBranchStrandSymmetricSample *sample = new GeneBranchStrandSymmetricSample(name, burnin, every, until);
-    sample->Read();
+    if (dsomss) {
+        sample->ReadSuffStat();
+    }
+    else    {
+        sample->Read();
+    }
 }

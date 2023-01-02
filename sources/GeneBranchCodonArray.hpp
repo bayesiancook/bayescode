@@ -2,6 +2,7 @@
 #include "PathSuffStat.hpp"
 #include "CodonSuffStat.hpp"
 #include "dSOmegaPathSuffStat.hpp"
+#include "GCConsdSOmegaPathSuffStat.hpp"
 #include "CodonSubMatrix.hpp"
 #include "StrandSymmetricIrreversibleSubMatrix.hpp"
 #include "GeneBranchGammaEffects.hpp"
@@ -691,10 +692,98 @@ class dSOmegaPathSuffStatGeneBranchArray : public SimpleBidimArray<dSOmegaPathSu
         }
     }
 
-    void AddTo(dSOmegaPathSuffStatBranchArray& to)    {
+    void AddTo(dSOmegaPathSuffStatBranchArray& to)  const {
         for (int i=0; i<GetNrow(); i++) {
             for (int j=0; j<GetNcol(); j++) {
-                to[j].Add((*this)(i,j));
+                to[j].Add(GetVal(i,j));
+            }
+        }
+    }
+
+    void AddTo(vector<dSOmegaPathSuffStatBranchArray>& to)  const {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                to[i][j].Add(GetVal(i,j));
+            }
+        }
+    }
+
+    void Add(const dSOmegaPathSuffStatGeneBranchArray& from)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Add(from.GetVal(i,j));
+            }
+        }
+    }
+
+    void Normalize(double f)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Normalize(f);
+            }
+        }
+    }
+};
+
+class GCConsdSOmegaPathSuffStatGeneBranchArray : public SimpleBidimArray<GCConsdSOmegaPathSuffStat> {
+
+    public:
+
+    GCConsdSOmegaPathSuffStatGeneBranchArray(int Ngene, int Nbranch) : 
+        SimpleBidimArray<GCConsdSOmegaPathSuffStat>(Ngene, Nbranch, GCConsdSOmegaPathSuffStat()) {
+        Clear();
+    }
+
+    ~GCConsdSOmegaPathSuffStatGeneBranchArray() {}
+
+    void Clear()    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Clear();
+            }
+        }
+    }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const CodonMatrixGeneBranchArray& mat, 
+            const GeneBranchGammaEffects& om)  {
+            // const GeneBranchGammaEffects& ds, const GeneBranchGammaEffects& om)  {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).AddSuffStat(mat.GetVal(i,j), pathss.GetVal(i,j), om.GetVal(i,j));
+                        // ds.GetVal(i,j), om.GetVal(i,j));
+            }
+        }
+    }
+
+    void AddTo(GCConsdSOmegaPathSuffStatBranchArray& to) const {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                to[j].Add(GetVal(i,j));
+            }
+        }
+    }
+
+    void AddTo(vector<GCConsdSOmegaPathSuffStatBranchArray>& to)  const {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                to[i][j].Add(GetVal(i,j));
+            }
+        }
+    }
+
+    void Add(const GCConsdSOmegaPathSuffStatGeneBranchArray& from)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Add(from.GetVal(i,j));
+            }
+        }
+    }
+
+    void Normalize(double f)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                (*this)(i,j).Normalize(f);
             }
         }
     }

@@ -38,6 +38,7 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
 
     PathSuffStatGeneBranchArray *pathss;
     dSOmegaPathSuffStatGeneBranchArray *dsomss;
+    GCConsdSOmegaPathSuffStatGeneBranchArray *gcconsdsomss;
     NucPathSuffStatGeneBranchArray *nucss;
 
     vector<string> gene_names;
@@ -100,6 +101,7 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         pathss = new PathSuffStatGeneBranchArray(Ngene, Nbranch, codonstatespace->GetNstate());
         nucss = new NucPathSuffStatGeneBranchArray(Ngene, Nbranch);
         dsomss = new dSOmegaPathSuffStatGeneBranchArray(Ngene, Nbranch);
+        gcconsdsomss = new GCConsdSOmegaPathSuffStatGeneBranchArray(Ngene, Nbranch);
     }
 
     int GetNtaxa() const    {
@@ -128,6 +130,14 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
 
     const GeneBranchGammaEffects* GetOmegaModel() const {
         return om_model;
+    }
+
+    const dSOmegaPathSuffStatGeneBranchArray& GetdSOmPathSuffStat() const   {
+        return *dsomss;
+    }
+
+    const GCConsdSOmegaPathSuffStatGeneBranchArray& GetGCConsdSOmPathSuffStat() const   {
+        return *gcconsdsomss;
     }
 
     void TraceHeader(ostream &os) const override {
@@ -258,6 +268,11 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
     void CollectdSOmPathSuffStat()  {
         dsomss->Clear();
         dsomss->AddSuffStat(*pathss, *codonmat, *om_model);
+    }
+
+    void CollectGCConsdSOmPathSuffStat()  {
+        gcconsdsomss->Clear();
+        gcconsdsomss->AddSuffStat(*pathss, *codonmat, *om_model);
     }
 
     double MoveNuc(int nrep, int nsmallrep) {
