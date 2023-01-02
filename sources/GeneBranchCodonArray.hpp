@@ -727,6 +727,15 @@ class LengthPathSuffStatGeneBranchArray : public SimpleBidimArray<MeanPoissonSuf
             }
         }
     }
+
+    void AddSuffStat(const PathSuffStatGeneBranchArray& pathss, 
+            const NucMatrixBranchArray& mat)    {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++) {
+                pathss.GetVal(i,j).AddSuffStatTo((*this)(i,j), mat.GetVal(j));
+            }
+        }
+    }
 };
 
 class NucPathSuffStatBranchArray : public SimpleArray<MeanNucPathSuffStat> {

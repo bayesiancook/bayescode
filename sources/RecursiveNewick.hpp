@@ -1,5 +1,37 @@
 
 
+template<class Branch2Branch, class Branch2Node>
+void RecursiveToNewick(ostream& os, const Link* from, Branch2Branch branch2branch, Branch2Node branch2node)	{
+    if (from->isLeaf()) {
+        os << from->GetNode()->GetName();
+        os << "_";
+    }
+    else    {
+        os << "(";
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveToNewick(os, link->Out(), branch2branch, branch2node);
+            if (link->Next() != from)   {
+                os << ",";
+            }
+        }
+        os << ")";
+    }
+    if (! from->isRoot())	{
+        os << branch2node(from->GetBranch()->GetIndex());
+        os << ":";
+        os << branch2branch(from->GetBranch()->GetIndex());
+    }
+    else    {
+        os << branch2node(from->Next()->GetBranch()->GetIndex());
+    }
+}
+
+template<class Branch2Branch, class Branch2Node>
+void ToNewick(ostream& os, const Tree& tree, Branch2Branch branch2branch, Branch2Node branch2node)	{
+    RecursiveToNewick(os, tree.GetRoot(), branch2branch, branch2node);
+    os << ";\n";
+}
+
 void RecursiveToNewick(ostream& os, const Link* from, const BranchSelector<double>& ds, const BranchSelector<double>& dnds) {
     if (from->isLeaf()) {
         os << from->GetNode()->GetName();
