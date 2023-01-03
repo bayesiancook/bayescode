@@ -162,26 +162,32 @@ class FastGeneBranchOmegaSample : public Sample {
         }
 
         ofstream devos((name + ".postmeandev.tab").c_str());
-        devos << "#branchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsynz\tsynzerr\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tomz\tomzerr\n";
+        devos << "#genename\tbranchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsynz\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tomz\n";
+        // devos << "#branchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsynz\tsynzerr\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tomz\tomzerr\n";
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                devos << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j] << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << syn_z[i][j] << '\t' << syn_zerr[i][j] << '\t' << mean_branchom_array[j] << '\t' << branch_om_relvar[j] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\t' << om_z[i][j] << '\t' << om_zerr[i][j] << '\n';
+                devos << GetModel()->GetGeneName(i) << '\t' << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j] << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << branch_om_relvar[j] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\t' << om_z[i][j] << '\n';
+                // devos << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j] << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << syn_z[i][j] << '\t' << syn_zerr[i][j] << '\t' << mean_branchom_array[j] << '\t' << branch_om_relvar[j] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\t' << om_z[i][j] << '\t' << om_zerr[i][j] << '\n';
             }
         }
 
         ofstream gos((name + ".postmean.genesynom.tab").c_str());
+        gos << "#genename\tgenesynmean\tgenesynrelvar\tgeneommean\tgeneomrelvar\n";
         for (int i=0; i<Ngene; i++) {
             gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\n';
         }
-        cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean gene dS and dN/dS in " << name << ".postmean.geneom.tab\n";
 
         ofstream bsos((name + ".postmean.branchsyn.tab").c_str());
+        bsos << "#taxon1\ttaxon2\tbranchsynmean\tbranchsynrelvar\n";
         Tabulate(bsos, GetModel()->GetTree(), mean_branchsyn_array, branch_syn_relvar, false);
 
         ofstream boos((name + ".postmean.branchom.tab").c_str());
+        boos << "#taxon1\ttaxon2\tbranchommean\tbranchomrelvar\n";
         Tabulate(boos, GetModel()->GetTree(), mean_branchom_array, branch_om_relvar, false);
 
         ofstream os((name + ".postmean.leafdsom.tab").c_str());
+        os << "#taxon\tbranchsyn\tbranchom\n";
         Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
 
         ofstream tos((name + ".dsom.tre").c_str());
