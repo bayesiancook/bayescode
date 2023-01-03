@@ -220,15 +220,17 @@ class GeneBranchStrandSymmetricSample : public Sample {
             mean_genesyn_array[i] /= size;
             mean_geneom_array[i] /= size;
         }
-        ofstream gos((name + ".postmean.geneom.tab").c_str());
+
+        ofstream gos((name + ".postmean.genesynom.tab").c_str());
+        gos << "#genename\tgenesynmean\tgeneommean\n";
         for (int i=0; i<Ngene; i++) {
             gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\n';
         }
-        cerr << "post mean gene dN/dS in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean gene dS and dN/dS in " << name << ".postmean.geneom.tab\n";
 
         ofstream os((name + ".postmean.leafdsom.tab").c_str());
+        os << "#taxon\tbranchsyn\tbranchom\n";
         Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
-        // Tabulate(os, GetModel()->GetTree(), mean_branchom_array, err_branchom_array, true);
 
         ofstream tos((name + ".dsom.tre").c_str());
         ToNewick(tos, *GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array);
@@ -237,10 +239,10 @@ class GeneBranchStrandSymmetricSample : public Sample {
         cerr << "newick format in " << name << ".dsom.tre\n";
 
         ofstream devos((name + ".postmeandev.tab").c_str());
-        devos << "#branchsynmean\tgenesynmean\tsynz\tbranchommean\tgeneommean\tomz\tgcbias\tgcbiasz\n";
+        devos << "#genename\tbranchsynmean\tgenesynmean\tsynz\tbranchommean\tgeneommean\tomz\tgcbias\tgcbiasz\n";
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                devos << mean_branchsyn_array[j] << '\t' << mean_genesyn_array[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << mean_geneom_array[i] << '\t' << om_z[i][j] << '\t' << gcbias[i][j] << '\t' << zgc[i][j] << '\n';
+                devos << GetModel()->GetGeneName(i) << '\t' << mean_branchsyn_array[j] << '\t' << mean_genesyn_array[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << mean_geneom_array[i] << '\t' << om_z[i][j] << '\t' << gcbias[i][j] << '\t' << zgc[i][j] << '\n';
             }
         }
     }
