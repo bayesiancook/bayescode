@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= noisygenebranchdnds readnoisygenebranchdnds fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -83,13 +83,13 @@ readgenebranchdnds$(EXEEXT): $(PROGSDIR)/readgenebranchdnds$(EXEEXT)
 $(PROGSDIR)/readgenebranchdnds$(EXEEXT): ReadFastGeneBranchOmega.o $(OBJS)
 	$(CC) ReadFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-scaledgenebranchdnds$(EXEEXT): $(PROGSDIR)/scaledgenebranchdnds$(EXEEXT)
-$(PROGSDIR)/scaledgenebranchdnds$(EXEEXT): ScaledFastGeneBranchOmega.o $(OBJS)
-	$(CC) ScaledFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+noisygenebranchdnds$(EXEEXT): $(PROGSDIR)/noisygenebranchdnds$(EXEEXT)
+$(PROGSDIR)/noisygenebranchdnds$(EXEEXT): NoisyFastGeneBranchOmega.o $(OBJS)
+	$(CC) NoisyFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-readscaledgenebranchdnds$(EXEEXT): $(PROGSDIR)/readscaledgenebranchdnds$(EXEEXT)
-$(PROGSDIR)/readscaledgenebranchdnds$(EXEEXT): ReadScaledFastGeneBranchOmega.o $(OBJS)
-	$(CC) ReadScaledFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+readnoisygenebranchdnds$(EXEEXT): $(PROGSDIR)/readnoisygenebranchdnds$(EXEEXT)
+$(PROGSDIR)/readnoisygenebranchdnds$(EXEEXT): ReadNoisyFastGeneBranchOmega.o $(OBJS)
+	$(CC) ReadNoisyFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readbranchtree$(EXEEXT): $(PROGSDIR)/readbranchtree$(EXEEXT)
 $(PROGSDIR)/readbranchtree$(EXEEXT): ReadMeanBranchTree.o $(OBJS)

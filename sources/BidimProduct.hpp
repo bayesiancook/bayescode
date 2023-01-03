@@ -11,7 +11,9 @@ class BidimProduct {
         int GetNrow() const {return rows.GetSize();}
         int GetNcol() const {return cols.GetSize();}
 
-        double GetVal(int i, int j) const {return rows.GetVal(i) * cols.GetVal(j);}
+        double GetVal(int i, int j) const {
+            return rows.GetVal(i) * cols.GetVal(j);
+        }
 
     private:
         const Selector<double>& rows;
