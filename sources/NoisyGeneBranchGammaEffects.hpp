@@ -170,13 +170,6 @@ class NoisyGeneBranchGammaEffects    {
         return tot;
     }
 
-    void AddStats(double& mean, double& gene, double& branch, double& dev)  {
-        mean += branch_hypermean * gene_hypermean;
-        gene += gene_hyperinvshape;
-        branch += branch_hyperinvshape;
-        dev += dev_invshape;
-    }
-
     void AddGeneArrayTo(vector<double>& array) const {
         for (int i=0; i<Ngene; i++)   {
             array[i] += gene_array->GetVal(i);
@@ -206,7 +199,7 @@ class NoisyGeneBranchGammaEffects    {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp*tmp / dev_invshape;
+                array[i][j] += tmp*tmp;
             }
         }
     }
@@ -214,9 +207,8 @@ class NoisyGeneBranchGammaEffects    {
     void AddZscoreTo(vector<vector<double>>& array) const   {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                double mean = GetMeanVal(i,j);
-                double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp / sqrt(dev_invshape);
+                double tmp = GetVal(i,j) / GetMeanVal(i,j);
+                array[i][j] += tmp;
             }
         }
     }
@@ -225,11 +217,11 @@ class NoisyGeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
+                post[offset] = GetVal(i,j) / mean;
                 double alpha = 1.0 / dev_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = (tmp - mean) / mean / sqrt(dev_invshape);
+                ppred[offset] = tmp / mean;
                 offset++;
             }
         }
@@ -366,7 +358,7 @@ class NoisyGeneBranchGammaEffects    {
 
         postprob = 1.0;
 
-        double mean = gene_array->GetVal(gene) * branch_array->GetVal(branch);
+        double mean = GetMeanVal(gene,branch);
 
         if (dev_pi) {
             double alpha1 = 1.0 / dev_invshape;
@@ -521,9 +513,12 @@ class NoisyGeneBranchGammaEffects    {
             CompensatoryMove(1.0, 3, global_logprob, global_update);
 
             auto update = [this] () {
-                this->dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);};
+                this->dev_bidimarray->SetParams(dev_invshape, dev_mean2, dev_invshape2, dev_pi);
+            };
+
             auto logprob = [this] () {
-                return this->DevHyperLogPrior() + this->DevLogPrior();};
+                return this->DevHyperLogPrior() + this->DevLogPrior();
+            };
 
             ScalingMove(dev_invshape, 0.3, 1, logprob, update);
             ScalingMove(dev_mean2, 0.3, 1, 1.0, 50.0, logprob, update);
@@ -604,7 +599,6 @@ class NoisyGeneBranchGammaEffects    {
                 double m = tuning * (Random::Uniform() - 0.5);
                 double e = exp(m);
                 (*branch_array)[j] *= e;
-                // update(j);
                 deltalogprob += branch_array->GetLogProb(j);
                 deltalogprob += BranchSuffStatLogProb(j, get_suffstat);
                 deltalogprob += m;
@@ -613,7 +607,6 @@ class NoisyGeneBranchGammaEffects    {
                     nacc++;
                 } else {
                     (*branch_array)[j] /= e;
-                    // update(j);
                 }
             }
         }
@@ -631,7 +624,6 @@ class NoisyGeneBranchGammaEffects    {
                 double m = tuning * (Random::Uniform() - 0.5);
                 double e = exp(m);
                 (*gene_array)[i] *= e;
-                // update(i);
                 deltalogprob += gene_array->GetLogProb(i);
                 deltalogprob += GeneSuffStatLogProb(i, get_suffstat);
                 deltalogprob += m;
@@ -640,7 +632,6 @@ class NoisyGeneBranchGammaEffects    {
                     nacc++;
                 } else {
                     (*gene_array)[i] /= e;
-                    // update(i);
                 }
             }
         }
