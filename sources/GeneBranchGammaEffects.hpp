@@ -216,7 +216,8 @@ class GeneBranchGammaEffects    {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp*tmp / dev_invshape;
+                array[i][j] += tmp*tmp;
+                // array[i][j] += tmp*tmp / dev_invshape;
             }
         }
     }
@@ -225,8 +226,10 @@ class GeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp / sqrt(dev_invshape);
+                double tmp = GetVal(i,j) / mean;
+                // double tmp = (GetVal(i,j) - mean) / mean;
+                array[i][j] += tmp;
+                // array[i][j] += tmp / sqrt(dev_invshape);
             }
         }
     }
@@ -235,11 +238,13 @@ class GeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
+                post[offset] = (GetVal(i,j) - mean) / mean;
+                // post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
                 double alpha = 1.0 / dev_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = (tmp - mean) / mean / sqrt(dev_invshape);
+                ppred[offset] = (tmp - mean) / mean;
+                // ppred[offset] = (tmp - mean) / mean / sqrt(dev_invshape);
                 offset++;
             }
         }
@@ -249,7 +254,9 @@ class GeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                double z = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
+                double z = GetVal(i,j) / mean;
+                // double z = (GetVal(i,j) - mean) / mean;
+                // double z = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
                 array[i][j] += z;
             }
         }

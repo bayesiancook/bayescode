@@ -135,8 +135,8 @@ class FastGeneBranchOmegaSample : public Sample {
                 om_z[i][j] /= size;
                 syn_z2[i][j] /= size;
                 om_z2[i][j] /= size;
-                syn_zerr[i][j] = sqrt(syn_z2[i][j] - syn_z[i][j]*syn_z[i][j]);
-                om_zerr[i][j] = sqrt(om_z2[i][j] - om_z[i][j]*om_z[i][j]);
+                syn_zerr[i][j] = sqrt(syn_z2[i][j]);
+                om_zerr[i][j] = sqrt(om_z2[i][j]);
             }
         }
 

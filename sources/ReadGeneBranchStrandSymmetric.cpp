@@ -199,18 +199,22 @@ class GeneBranchStrandSymmetricSample : public Sample {
             for (int j=0; j<Nbranch; j++)   {
                 gcbias[i][j] /= size;
                 meangcbias[i][j] /= size;
-                double z = (gcbias[i][j] - meangcbias[i][j])/meangcbias[i][j];
+                double z = gcbias[i][j] / meangcbias[i][j];
+                // double z = (gcbias[i][j] - meangcbias[i][j])/meangcbias[i][j];
                 zgc[i][j] = z;
                 relvar += z*z;
             }
         }
         relvar /= Ngene*Nbranch;
+        relvar -= 1;
+        /*
         double sigma = sqrt(relvar);
         for (int i=0; i<Ngene; i++)   {
             for (int j=0; j<Nbranch; j++)   {
                 zgc[i][j] /= sigma;
             }
         }
+        */
             
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
