@@ -1,14 +1,14 @@
 #include <cmath>
 #include <fstream>
 #include "Chain.hpp"
-#include "NoisyFastGeneBranchOmegaModel.hpp"
+#include "NoisySumFastGeneBranchOmegaModel.hpp"
 using namespace std;
 
 /**
- * \brief Chain object for running an MCMC under NoisyFastGeneBranchOmegaModel
+ * \brief Chain object for running an MCMC under NoisySumFastGeneBranchOmegaModel
  */
 
-class NoisyFastGeneBranchOmegaChain : public Chain {
+class NoisySumFastGeneBranchOmegaChain : public Chain {
   private:
     // Chain parameters
     string modeltype;
@@ -17,7 +17,7 @@ class NoisyFastGeneBranchOmegaChain : public Chain {
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    NoisyFastGeneBranchOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
+    NoisySumFastGeneBranchOmegaChain(string indatafile, string intreefile, int inevery, int inuntil, string inname,
                      int force)
         : modeltype("FASTGENEBRANCHOMEGA"), datafile(indatafile), treefile(intreefile) {
         every = inevery;
@@ -28,14 +28,14 @@ class NoisyFastGeneBranchOmegaChain : public Chain {
 
     //! constructor for re-opening an already existing chain from file -- calls
     //! Open
-    NoisyFastGeneBranchOmegaChain(string filename) {
+    NoisySumFastGeneBranchOmegaChain(string filename) {
         name = filename;
         Open();
         Save();
     }
 
     void New(int force) override {
-        model = new NoisyFastGeneBranchOmegaModel(datafile, treefile);
+        model = new NoisySumFastGeneBranchOmegaModel(datafile, treefile);
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
@@ -60,7 +60,7 @@ class NoisyFastGeneBranchOmegaChain : public Chain {
         is >> every >> until >> size;
 
         if (modeltype == "FASTGENEBRANCHOMEGA") {
-            model = new NoisyFastGeneBranchOmegaModel(datafile, treefile);
+            model = new NoisySumFastGeneBranchOmegaModel(datafile, treefile);
         } else {
             cerr << "-- Error when opening file " << name
                  << " : does not recognise model type : " << modeltype << '\n';
@@ -95,7 +95,7 @@ class NoisyFastGeneBranchOmegaChain : public Chain {
     */
 
     //! return the model, with its derived type (unlike ProbModel::GetModel)
-    NoisyFastGeneBranchOmegaModel *GetModel() { return static_cast<NoisyFastGeneBranchOmegaModel *>(model); }
+    NoisySumFastGeneBranchOmegaModel *GetModel() { return static_cast<NoisySumFastGeneBranchOmegaModel *>(model); }
 
     //! return model type
     string GetModelType() override { return modeltype; }
@@ -103,12 +103,12 @@ class NoisyFastGeneBranchOmegaChain : public Chain {
 
 int main(int argc, char *argv[]) {
     string name = "";
-    NoisyFastGeneBranchOmegaChain *chain = 0;
+    NoisySumFastGeneBranchOmegaChain *chain = 0;
 
     // starting a chain from existing files
     if (argc == 2 && argv[1][0] != '-') {
         name = argv[1];
-        chain = new NoisyFastGeneBranchOmegaChain(name);
+        chain = new NoisySumFastGeneBranchOmegaChain(name);
     }
 
     // new chain
@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new NoisyFastGeneBranchOmegaChain(datafile, treefile, every, until, name, force);
+        chain = new NoisySumFastGeneBranchOmegaChain(datafile, treefile, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

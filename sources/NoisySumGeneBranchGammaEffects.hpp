@@ -2,13 +2,95 @@
 #include "GammaSuffStat.hpp"
 #include "GammaBidimArray.hpp"
 #include "MeanPoissonSuffStat.hpp"
-#include "BidimWeightedSum.hpp"
+#include "BidimSum.hpp"
 
-class NoisyGeneBranchGammaEffects    {
+class GammaScaledBidimArray : public SimpleBidimArray<double>   {
+
+  public:
+
+    GammaScaledBidimArray(int Ngene, int Nbranch, const Selector<double>* intimescale, double inmean, double ininvshape):
+        SimpleBidimArray(Ngene, Nbranch, 0),
+        timescale(intimescale), mean(inmean), invshape(ininvshape)  {
+            relative = 1;
+            if (! timescale)    {
+                relative = 0;
+            }
+            Sample();
+    }
+
+    ~GammaScaledBidimArray() {}
+
+    void SetParams(double inmean, double ininvshape)    {
+        mean = inmean;
+        invshape = ininvshape;
+    }
+
+    //! return total log prob (over all genes and over all branches)
+    double GetLogProb() const {
+        double total = 0;
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++)  {
+                total += GetLogProb(i,j);
+            }
+        }
+        return total;
+    }
+
+    double GetRowLogProb(int i) const    {
+        double total = 0;
+        for (int j=0; j<GetNcol(); j++) {
+            total += GetLogProb(i,j);
+        }
+        return total;
+    }
+
+    double GetColLogProb(int j) const   {
+        double total = 0;
+        for (int i=0; i<GetNrow(); i++) {
+            total += GetLogProb(i,j);
+        }
+        return total;
+    }
+
+    //! return log prob for one entry
+    double GetLogProb(int gene, int branch) const {
+        double shape = 1.0 / invshape;
+        double scale = shape / mean;
+        if (relative)   {
+            scale *= timescale->GetVal(branch);
+        }
+        return Random::logGammaDensity(GetVal(gene, branch), shape, scale);
+    }
+
+    void Sample()   {
+        for (int i=0; i<GetNrow(); i++) {
+            for (int j=0; j<GetNcol(); j++)  {
+                Sample(i,j);
+            }
+        }
+    }
+    
+    void Sample(int gene, int branch)   {
+        double shape = 1.0 / invshape;
+        double scale = shape / mean;
+        if (relative)   {
+            scale *= timescale->GetVal(branch);
+        }
+        (*this)(gene,branch) = Random::Gamma(shape, scale);
+    }
+
+  private:
+    const Selector<double>* timescale;
+    double mean;
+    double invshape;
+    int relative;
+};
+
+class NoisySumGeneBranchGammaEffects    {
 
     public:
 
-    NoisyGeneBranchGammaEffects(int inNgene, int inNbranch, const Selector<double>* intimescale,
+    NoisySumGeneBranchGammaEffects(int inNgene, int inNbranch, const Selector<double>* intimescale,
             int infixgene_hypermean, int infixbranch_hypermean) :
         Ngene(inNgene), Nbranch(inNbranch), timescale(intimescale),
         fixgene_hypermean(infixgene_hypermean), fixbranch_hypermean(infixbranch_hypermean)  {
@@ -24,12 +106,6 @@ class NoisyGeneBranchGammaEffects    {
             }
         }
 
-        relative = 1;
-        if (! timescale)    {
-            relative = 0;
-            timescale = branch_array;
-        }
-
         gene_hypermean = 1.0;
         gene_hyperinvshape = 1.0;
         double gene_alpha = 1.0 / gene_hyperinvshape;
@@ -43,18 +119,13 @@ class NoisyGeneBranchGammaEffects    {
 
         dev_invshape = 1.0;
         dev_invshape2 = 1.0;
-        dev_mean2 = 1.0;
-        refmean = 1.0;
+        dev_mean2 = 0.0001;
 
         mean_bidimarray = new BidimProduct(*gene_array, *branch_array);
-        mean2_bidimarray = new BidimHomogeneousSelector<double>(Ngene, Nbranch, refmean);
-        // mean2_bidimarray = new BidimHomogeneousSelector<double>(Ngene, Nbranch, dev_mean2);
-
         dev1_bidimarray = new GammaBidimArray<BidimProduct>(*mean_bidimarray, dev_invshape);
-        dev2_bidimarray = new GammaBidimArray<BidimHomogeneousSelector<double>>(
-                *mean2_bidimarray, dev_invshape2);
-        dev_bidimarray = new BidimWeightedSum(*dev1_bidimarray, *dev2_bidimarray, 
-                *timescale, dev_mean2, relative);
+        dev2_bidimarray = new GammaScaledBidimArray(Ngene, Nbranch, timescale,
+                dev_mean2, dev_invshape2);
+        dev_bidimarray = new BidimSum(*dev1_bidimarray, *dev2_bidimarray); 
 
     }
 
@@ -197,7 +268,7 @@ class NoisyGeneBranchGammaEffects    {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp*tmp / dev_invshape;
+                array[i][j] += tmp*tmp;
             }
         }
     }
@@ -205,9 +276,7 @@ class NoisyGeneBranchGammaEffects    {
     void AddZscoreTo(vector<vector<double>>& array) const   {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                double mean = GetMeanVal(i,j);
-                double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp / sqrt(dev_invshape);
+                array[i][j] += GetVal(i,j) / GetMeanVal(i,j);
             }
         }
     }
@@ -216,11 +285,11 @@ class NoisyGeneBranchGammaEffects    {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
-                post[offset] = (GetVal(i,j) - mean) / mean / sqrt(dev_invshape);
+                post[offset] = GetVal(i,j) / mean;
                 double alpha = 1.0 / dev_invshape;
                 double beta = alpha / mean;
                 double tmp = Random::Gamma(alpha, beta);
-                ppred[offset] = (tmp - mean) / mean / sqrt(dev_invshape);
+                ppred[offset] = tmp / mean;
                 offset++;
             }
         }
@@ -235,7 +304,7 @@ class NoisyGeneBranchGammaEffects    {
 
     void Update()   {
         dev1_bidimarray->SetInvShape(dev_invshape);
-        dev2_bidimarray->SetInvShape(dev_invshape2);
+        dev2_bidimarray->SetParams(dev_mean2, dev_invshape2);
         Update(*branch_array, branch_hypermean, branch_hyperinvshape);
         Update(*gene_array, gene_hypermean, gene_hyperinvshape);
     }
@@ -386,7 +455,7 @@ class NoisyGeneBranchGammaEffects    {
     }
 
     template<class SS, class LogProbF, class UpdateF, class GlobalLogProbF, class GlobalUpdateF>
-    double NonIntegratedMove(double tuning, int nrep, SS get_ss,
+    double Move(double tuning, int nrep, SS get_ss,
             LogProbF logprob, UpdateF update, 
             GlobalLogProbF global_logprob, GlobalUpdateF global_update)   {
 
@@ -394,43 +463,23 @@ class NoisyGeneBranchGammaEffects    {
 
             MoveDev1(1.0, 3, get_ss);
             MoveDev2(1.0, 3, get_ss);
-            // MoveDev12(1.0, 3, get_ss);
+            MoveDev12(1.0, 3, get_ss);
 
-            NonIntegratedMoveGeneArray(1.0, 1);
-            NonIntegratedMoveBranchArray(1.0, 1, logprob, update);
+            MoveGeneArray(1.0, 1);
+            MoveBranchArray(1.0, 1, logprob, update);
             CompensatoryMove(1.0, 3, global_logprob, global_update);
 
-            auto update = [this] () {
+            auto hyperupdate = [this] () {
                 this->Update();
             };
 
-            auto logprob = [this] () {
+            auto hyperlogprob = [this] () {
                 return this->DevHyperLogPrior() + this->DevLogPrior();
             };
 
-            ScalingMove(dev_invshape, 0.3, 1, logprob, update);
-            // ScalingMove(dev_mean2, 0.3, 1, logprob, update);
-            ScalingMove(dev_invshape2, 0.3, 1, logprob, update);
-
-            auto update2 = [this] () {
-                this->Update();
-            };
-
-            auto logprob2 = [this, get_ss] () {
-                return this->DevHyperLogPrior() + this->DevLogPrior() 
-                    + this->DevLogLikelihood(get_ss);
-            };
-
-            ScalingMove(dev_mean2, 0.3, 1, logprob2, update2);
-
-            /*
-            if (fixbranch_hypermean)    {
-                Mean2ArrayCompensatoryMove(*gene_array, 0.3, 1, logprob2, update2);
-            }
-            else    {
-                Mean2ArrayCompensatoryMove(*branch_array, 0.3, 1, logprob2, update2);
-            }
-            */
+            ScalingMove(dev_invshape, 0.3, 1, hyperlogprob, hyperupdate);
+            ScalingMove(dev_mean2, 0.3, 1, hyperlogprob, hyperupdate);
+            ScalingMove(dev_invshape2, 0.3, 1, hyperlogprob, hyperupdate);
         }
         return 1.0;
     }
@@ -497,7 +546,7 @@ class NoisyGeneBranchGammaEffects    {
     }
 
     template<class LogProbF, class UpdateF>
-    double NonIntegratedMoveBranchArray(double tuning, int nrep,
+    double MoveBranchArray(double tuning, int nrep,
             LogProbF logprob, UpdateF update)   {
 
         double nacc = 0;
@@ -527,7 +576,7 @@ class NoisyGeneBranchGammaEffects    {
         return ret;
     }
 
-    double NonIntegratedMoveGeneArray(double tuning, int nrep) {
+    double MoveGeneArray(double tuning, int nrep) {
         double nacc = 0;
         for (int rep=0; rep<nrep; rep++) {
             for (int i=0; i<Ngene; i++) {
@@ -603,7 +652,6 @@ class NoisyGeneBranchGammaEffects    {
         return nacc / Ngene / Nbranch / nrep;
     }
 
-    /*
     template<class SuffStat>
     double MoveDev12(double tuning, int nrep, SuffStat get_ss) {
         double nacc = 0;
@@ -615,13 +663,8 @@ class NoisyGeneBranchGammaEffects    {
                     double deltalogprob = -dev1_bidimarray->GetLogProb(i,j);
                     deltalogprob -= dev2_bidimarray->GetLogProb(i,j);
                     // deltalogprob -= GeneBranchDevLogLikelihood(i, j, get_ss);
-                    double q1 = 1.0;
-                    double q2 = 1.0 / timescale->GetVal(j);
-                    // q1*x1 + q2*x2 = cste
-                    double y1 = q1*(*dev1_bidimarray)(i,j);
-                    double y2 = q2*(*dev2_bidimarray)(i,j);
-                    double y = y1 + y2;
-                    double x = y1 / y;
+                    double y = bk1 + bk2;
+                    double x = bk1;
                     double m = tuning * (Random::Uniform() - 0.5);
                     x += m;
                     while ((x<0) || (x>y))  {
@@ -632,12 +675,10 @@ class NoisyGeneBranchGammaEffects    {
                             x = 2*y-x;
                         }
                     }
-                    (*dev1_bidimarray)(i,j) = x*y/q1;
-                    (*dev2_bidimarray)(i,j) = (1-x)*y/q2;
+                    (*dev1_bidimarray)(i,j) = x;
+                    (*dev2_bidimarray)(i,j) = (1-x);
                     deltalogprob += dev1_bidimarray->GetLogProb(i,j);
                     deltalogprob += dev2_bidimarray->GetLogProb(i,j);
-                    // deltalogprob += GeneBranchDevLogLikelihood(i, j, get_ss);
-                    // deltalogprob += m;
                     int acc = (log(Random::Uniform()) < deltalogprob);
                     if (acc) {
                         nacc++;
@@ -649,47 +690,6 @@ class NoisyGeneBranchGammaEffects    {
             }
         }
         return nacc / Ngene / Nbranch / nrep;
-    }
-    */
-
-    template<class Array, class LogProbF, class UpdateF>
-    double Mean2ArrayCompensatoryMove(Array& array, double tuning, int nrep,
-            LogProbF logprob = [] () {return 0;},
-            UpdateF update = [] () {}) {
-
-        double nacc = 0;
-        for (int rep=0; rep<nrep; rep++)    {
-
-            double deltalogprob = - array.GetLogProb();
-            deltalogprob -= logprob();
-            
-            double m = tuning * (Random::Uniform() - 0.5);
-            double e = exp(m);
-            for (int i=0; i<array.GetSize(); i++) {
-                array[i] *= e;
-            }
-            double m2 = tuning * (Random::Uniform() - 0.5);
-            double e2 = exp(m2);
-            dev_mean2 /= e2;
-
-            update();
-            deltalogprob += array.GetLogProb();
-            deltalogprob += array.GetSize() * m - m2;
-            deltalogprob += logprob();
-
-            int acc = (log(Random::Uniform()) < deltalogprob);
-            if (acc) {
-                nacc++;
-            } else {
-                for (int i=0; i<array.GetSize(); i++) {
-                    array[i] /= e;
-                }
-                dev_mean2 *= e2;
-                update();
-            }
-        }
-        double ret = nacc / nrep;
-        return ret;
     }
 
     template<class LogProbF, class UpdateF>
@@ -862,8 +862,6 @@ class NoisyGeneBranchGammaEffects    {
 
     const Selector<double>* timescale;
     
-    int relative;
-
     int fixgene_hypermean;
     int fixbranch_hypermean;
 
@@ -879,10 +877,9 @@ class NoisyGeneBranchGammaEffects    {
     IIDGamma *gene_array;
     IIDGamma *branch_array;
     BidimProduct* mean_bidimarray;
-    BidimHomogeneousSelector<double>* mean2_bidimarray;
     GammaBidimArray<BidimProduct>* dev1_bidimarray;
-    GammaBidimArray<BidimHomogeneousSelector<double>>* dev2_bidimarray;
-    BidimWeightedSum* dev_bidimarray;
+    GammaScaledBidimArray* dev2_bidimarray;
+    BidimSum* dev_bidimarray;
 
     GammaSuffStat gene_hypersuffstat;
     GammaSuffStat branch_hypersuffstat;

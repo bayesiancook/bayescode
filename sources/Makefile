@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= noisygenebranchdnds readnoisygenebranchdnds fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= noisysumgenebranchdnds readnoisysumgenebranchdnds noisygenebranchdnds readnoisygenebranchdnds fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -82,6 +82,14 @@ $(PROGSDIR)/genebranchdnds$(EXEEXT): FastGeneBranchOmega.o $(OBJS)
 readgenebranchdnds$(EXEEXT): $(PROGSDIR)/readgenebranchdnds$(EXEEXT)
 $(PROGSDIR)/readgenebranchdnds$(EXEEXT): ReadFastGeneBranchOmega.o $(OBJS)
 	$(CC) ReadFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+noisysumgenebranchdnds$(EXEEXT): $(PROGSDIR)/noisysumgenebranchdnds$(EXEEXT)
+$(PROGSDIR)/noisysumgenebranchdnds$(EXEEXT): NoisySumFastGeneBranchOmega.o $(OBJS)
+	$(CC) NoisySumFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readnoisysumgenebranchdnds$(EXEEXT): $(PROGSDIR)/readnoisysumgenebranchdnds$(EXEEXT)
+$(PROGSDIR)/readnoisysumgenebranchdnds$(EXEEXT): ReadNoisySumFastGeneBranchOmega.o $(OBJS)
+	$(CC) ReadNoisySumFastGeneBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 noisygenebranchdnds$(EXEEXT): $(PROGSDIR)/noisygenebranchdnds$(EXEEXT)
 $(PROGSDIR)/noisygenebranchdnds$(EXEEXT): NoisyFastGeneBranchOmega.o $(OBJS)

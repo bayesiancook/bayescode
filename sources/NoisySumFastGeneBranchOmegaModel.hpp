@@ -2,30 +2,26 @@
 #include "ProbModel.hpp"
 #include "dSOmegaPathSuffStatGeneBranchArray.hpp"
 #include "RecursiveNewick.hpp"
-#include "NoisyGeneBranchGammaEffects.hpp"
+#include "NoisySumGeneBranchGammaEffects.hpp"
 
-class NoisyFastGeneBranchOmegaModel : public ProbModel {
+class NoisySumFastGeneBranchOmegaModel : public ProbModel {
 
   private:
-
-    int integrated_move;
 
     Tree *tree;
     int Ntaxa;
     int Nbranch;
     int Ngene;
 
-    NoisyGeneBranchGammaEffects* syn_model;
-    NoisyGeneBranchGammaEffects* om_model;
+    NoisySumGeneBranchGammaEffects* syn_model;
+    NoisySumGeneBranchGammaEffects* om_model;
 
     dSOmegaPathSuffStatGeneBranchArray *dsomss;
     vector<string> gene_names;
 
   public:
 
-    NoisyFastGeneBranchOmegaModel(string datafile, string treefile) {
-
-        integrated_move = 1;
+    NoisySumFastGeneBranchOmegaModel(string datafile, string treefile) {
 
         tree = new Tree(treefile);
         tree->SetIndices();
@@ -36,8 +32,8 @@ class NoisyFastGeneBranchOmegaModel : public ProbModel {
         is >> Ngene;
         gene_names.assign(Ngene,"");
 
-        syn_model = new NoisyGeneBranchGammaEffects(Ngene, Nbranch, 0, 1, 0);
-        om_model = new NoisyGeneBranchGammaEffects(Ngene, Nbranch, syn_model->GetBranchArray(), 0, 1);
+        syn_model = new NoisySumGeneBranchGammaEffects(Ngene, Nbranch, 0, 1, 0);
+        om_model = new NoisySumGeneBranchGammaEffects(Ngene, Nbranch, syn_model->GetBranchArray(), 0, 1);
 
         dsomss = new dSOmegaPathSuffStatGeneBranchArray(*tree, Ngene);
 
@@ -82,10 +78,6 @@ class NoisyFastGeneBranchOmegaModel : public ProbModel {
         }
     }
 
-    void SetIntegratedMove(int in)  {
-        integrated_move = in;
-    }
-
     int GetNtaxa() const    {
         return Ntaxa;
     }
@@ -106,11 +98,11 @@ class NoisyFastGeneBranchOmegaModel : public ProbModel {
         return tree;
     }
 
-    const NoisyGeneBranchGammaEffects* GetSynModel() const   {
+    const NoisySumGeneBranchGammaEffects* GetSynModel() const   {
         return syn_model;
     }
 
-    const NoisyGeneBranchGammaEffects* GetOmegaModel() const {
+    const NoisySumGeneBranchGammaEffects* GetOmegaModel() const {
         return om_model;
     }
 
@@ -227,13 +219,13 @@ class NoisyFastGeneBranchOmegaModel : public ProbModel {
 
         for (int rep=0; rep<nrep; rep++) {
 
-            syn_model->NonIntegratedMove(1.0, nsmallrep, get_syn_ss,
+            syn_model->Move(1.0, nsmallrep, get_syn_ss,
                     get_branchdevlogprior, no_branch_update,
                     get_devlogprior, no_update);
 
             syn_model->MoveHyper(1.0, 1);
 
-            om_model->NonIntegratedMove(1.0, nsmallrep, get_om_ss,
+            om_model->Move(1.0, nsmallrep, get_om_ss,
                     no_branch_logprob, no_branch_update,
                     no_logprob, no_update);
 
