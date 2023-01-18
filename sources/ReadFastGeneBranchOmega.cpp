@@ -85,13 +85,21 @@ class FastGeneBranchOmegaSample : public Sample {
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
 
+        vector<vector<double>> syn_val(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_val(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> syn_z2(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> om_z2(Ngene, vector<double>(Nbranch,0));
 
-        double mean_syn_invshape = 0;
-        double mean_om_invshape = 0;
+        double mean_syn = 0;
+        double gene_syn = 0;
+        double branch_syn = 0;
+        double dev_syn = 0;
+        double mean_om = 0;
+        double gene_om = 0;
+        double branch_om = 0;
+        double dev_om = 0;
 
         cerr << size << " points to read\n";
         for (int i=0; i<size; i++) {
@@ -102,21 +110,34 @@ class FastGeneBranchOmegaSample : public Sample {
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
-            mean_syn_invshape += GetModel()->GetSynModel()->GetDevInvShape();
-            mean_om_invshape += GetModel()->GetOmegaModel()->GetDevInvShape();
 
+            GetModel()->GetSynModel()->AddValTo(syn_val);
+            GetModel()->GetOmegaModel()->AddValTo(om_val);
             GetModel()->GetSynModel()->AddZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
             GetModel()->GetSynModel()->AddRelVarTo(syn_z2);
             GetModel()->GetOmegaModel()->AddRelVarTo(om_z2);
+
+            GetModel()->GetSynModel()->AddStats(mean_syn, gene_syn, branch_syn, dev_syn);
+            GetModel()->GetOmegaModel()->AddStats(mean_om, gene_om, branch_om, dev_om);
         }
         cerr << '\n';
 
-        mean_syn_invshape /= size;
-        mean_om_invshape /= size;
-        cerr << "syn rel var : " << mean_syn_invshape << '\n';
-        cerr << "om rel var  : " << mean_om_invshape << '\n';
-        cerr << '\n';
+        mean_syn /= size;
+        gene_syn /= size;
+        branch_syn /= size;
+        dev_syn /= size;
+        mean_om /= size;
+        gene_om /= size;
+        branch_om /= size;
+        dev_om /= size;
+
+        ofstream nos((name + ".dsomstats").c_str());
+        nos << "    \tmean\t\tc-gene\tc-brnch\tc-dev\n";
+        nos << fixed << setw(5) << setprecision(2);
+        nos << "dS\t" << mean_syn << '\t' << '\t' << gene_syn << '\t' << branch_syn << '\t' << dev_syn << '\n';
+        nos << "dN/dS\t" << mean_om << '\t' << '\t' << gene_om << '\t' << branch_om << '\t' << dev_om << '\n';
+        cerr << "variance contributions for dS and dN/dS in " << name << ".dsomstats\n";
 
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
@@ -129,6 +150,8 @@ class FastGeneBranchOmegaSample : public Sample {
 
         for (int i=0; i<Ngene; i++)   {
             for (int j=0; j<Nbranch; j++)   {
+                syn_val[i][j] /= size;
+                om_val[i][j] /= size;
                 syn_z[i][j] /= size;
                 om_z[i][j] /= size;
                 syn_z2[i][j] /= size;
@@ -158,10 +181,32 @@ class FastGeneBranchOmegaSample : public Sample {
         }
 
         ofstream devos((name + ".postmeandev.tab").c_str());
-        devos << "#genename\tbranchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsynz\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tomz\n";
+        devos << "#genename";
+        devos << "\tbranchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsyn\tsynz";
+        devos << "\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tom\tomz";
+        devos << "\tdscount\tdsbeta\tempds";
+        devos << "\tdncount\tdnbeta\tempdn\tempdnds";
+        devos << '\n';
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                devos << GetModel()->GetGeneName(i) << '\t' << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j] << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << branch_om_relvar[j] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\t' << om_z[i][j] << '\n';
+                devos << GetModel()->GetGeneName(i); 
+                devos << '\t' << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j]; 
+                devos << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i]; 
+                devos << '\t' << syn_val[i][j] << '\t' << syn_z[i][j];
+                devos << '\t' << mean_branchom_array[j] << '\t' << branch_om_relvar[j]; 
+                devos << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i];
+                devos << '\t' << om_val[i][j] << '\t' << om_z[i][j];
+
+                devos << '\t' << GetModel()->GetSynCount(i,j);
+                devos << '\t' << GetModel()->GetSynBeta(i,j);
+                devos << '\t' << (GetModel()->GetSynCount(i,j)+1) / (GetModel()->GetSynBeta(i,j)+1);
+                devos << '\t' << GetModel()->GetNonSynCount(i,j);
+                devos << '\t' << GetModel()->GetNonSynBeta(i,j);
+                devos << '\t' << (GetModel()->GetNonSynCount(i,j)+1) / (GetModel()->GetNonSynBeta(i,j)+1);
+                devos << '\t' << 
+                    (GetModel()->GetNonSynCount(i,j)+1) / (GetModel()->GetNonSynBeta(i,j)+1) /
+                    (GetModel()->GetSynCount(i,j)+1) * (GetModel()->GetSynBeta(i,j)+1);
+                devos << '\n';
             }
         }
 

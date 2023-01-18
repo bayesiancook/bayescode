@@ -91,6 +91,22 @@ class FastGeneBranchOmegaModel : public ProbModel {
         }
     }
 
+    double GetSynCount(int i, int j) const  {
+        return dsomss->GetVal(i).GetVal(j).GetSynCount();
+    }
+
+    double GetNonSynCount(int i, int j) const  {
+        return dsomss->GetVal(i).GetVal(j).GetNonSynCount();
+    }
+
+    double GetSynBeta(int i, int j) const  {
+        return dsomss->GetVal(i).GetVal(j).GetSynBeta();
+    }
+
+    double GetNonSynBeta(int i, int j) const  {
+        return dsomss->GetVal(i).GetVal(j).GetNonSynBeta();
+    }
+
     void SetIntegratedMove(int in)  {
         integrated_move = in;
     }

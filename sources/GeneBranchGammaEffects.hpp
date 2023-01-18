@@ -180,7 +180,7 @@ class GeneBranchGammaEffects    {
         return tot;
     }
 
-    void AddStats(double& mean, double& gene, double& branch, double& dev)  {
+    void AddStats(double& mean, double& gene, double& branch, double& dev) const {
         mean += branch_hypermean * gene_hypermean;
         gene += gene_hyperinvshape;
         branch += branch_hyperinvshape;
@@ -211,13 +211,20 @@ class GeneBranchGammaEffects    {
         }
     }
 
+    void AddValTo(vector<vector<double>>& array) const   {
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                array[i][j] += GetVal(i,j);
+            }
+        }
+    }
+
     void AddRelVarTo(vector<vector<double>>& array) const   {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double mean = GetMeanVal(i,j);
                 double tmp = (GetVal(i,j) - mean) / mean;
                 array[i][j] += tmp*tmp;
-                // array[i][j] += tmp*tmp / dev_invshape;
             }
         }
     }
@@ -225,11 +232,7 @@ class GeneBranchGammaEffects    {
     void AddZscoreTo(vector<vector<double>>& array) const   {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                double mean = GetMeanVal(i,j);
-                double tmp = GetVal(i,j) / mean;
-                // double tmp = (GetVal(i,j) - mean) / mean;
-                array[i][j] += tmp;
-                // array[i][j] += tmp / sqrt(dev_invshape);
+                array[i][j] += GetVal(i,j) / GetMeanVal(i,j);
             }
         }
     }
