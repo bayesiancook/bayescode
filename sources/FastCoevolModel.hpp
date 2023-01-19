@@ -120,11 +120,25 @@ class FastCoevolModel: public ProbModel {
         nuds = nuom = 1.0;
         wnds = wnom = 0;
         if (wndsmode)   {
-            wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 3);
+            if (wndsmode == 2)  {
+                wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 3);
+            }
+            else if (wndsmode == 1) {
+                wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 4);
+            }
+            else    {
+                cerr << "error in jittering mode\n";
+                exit(1);
+            }
             wndssuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
         }
         if (wnommode)   {
-            wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 3);
+            if (wnommode == 2)   {
+                wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 3);
+            }
+            else if (wnommode == 1)  {
+                wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 4);
+            }
             wnomsuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
         }
 
@@ -343,7 +357,8 @@ class FastCoevolModel: public ProbModel {
         if (wnommode)   {
             om *= wnom->GetVal(index);
         }
-        return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nuds);
+        double nu = (wndsmode == 2) ? nuds : nuds / chronogram->GetDeltaTime(from);
+        return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nu);
     }
 
     double NodeSuffStatLogProbdSIntegrated(const Link* from) const {
@@ -363,7 +378,8 @@ class FastCoevolModel: public ProbModel {
         if (wndsmode)   {
             bl*= wnds->GetVal(index);
         }
-        return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nuom);
+        double nu = (wnommode == 2) ? nuom : nuom / chronogram->GetDeltaTime(from);
+        return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nu);
     }
 
     double NodeSuffStatLogProbOmIntegrated(const Link* from) const {
@@ -454,8 +470,12 @@ class FastCoevolModel: public ProbModel {
     // Times and Rates
 
     void MoveTimes()    {
-        if (wndsmode)   {
+        if (wndsmode == 2)   {
             chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            ResampleWNdS();
+        }
+        else if (wndsmode == 1)   {
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
             ResampleWNdS();
         }
         else    {
@@ -580,6 +600,7 @@ class FastCoevolModel: public ProbModel {
     }
 
     void Trace(ostream &os) const override {
+        os.precision(12);
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength();
@@ -602,6 +623,145 @@ class FastCoevolModel: public ProbModel {
             os << '\t' << kappa[i];
         }
         os << '\n';
+    }
+
+    double GetLongTermdS(const Link* from) const  {
+        int index = from->GetBranch()->GetIndex();
+        double bl = branchlength->GetVal(index);
+        double time = chronogram->GetDeltaTime(from);
+        return bl/time;
+    }
+
+    double GetShortTermdS(const Link* from) const {
+        int index = from->GetBranch()->GetIndex();
+        double bl = branchlength->GetVal(index);
+        if (wndsmode)   {
+            bl *= wnds->GetVal(index);
+        }
+        double time = chronogram->GetDeltaTime(from);
+        return bl/time;
+    }
+
+    double GetLongTermOmega(const Link* from) const    {
+        int index = from->GetBranch()->GetIndex();
+        return branchomega->GetVal(index);
+    }
+
+    double GetShortTermOmega(const Link* from) const   {
+        int index = from->GetBranch()->GetIndex();
+        double om = branchomega->GetVal(index);
+        if (wnommode)   {
+            om *= wnom->GetVal(index);
+        }
+        return om;
+    }
+
+    void RecursiveGetShortTermSynVariance(const Link* from, double& m1, double& m2) const    {
+        if (! from->isRoot())   {
+            double tmp = log(GetShortTermdS(from));
+            m1 += tmp;
+            m2 += tmp*tmp;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveGetShortTermSynVariance(link->Out(), m1, m2);
+        }
+    }
+
+    void RecursiveGetLongTermSynVariance(const Link* from, double& m1, double& m2) const    {
+        if (! from->isRoot())   {
+            double tmp = log(GetLongTermdS(from));
+            m1 += tmp;
+            m2 += tmp*tmp;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveGetLongTermSynVariance(link->Out(), m1, m2);
+        }
+    }
+
+    double GetShortTermSynVariance() const   {
+        double m1 = 0;
+        double m2 = 0;
+        RecursiveGetShortTermSynVariance(GetRoot(), m1, m2);
+        m1 /= Nbranch;
+        m2 /= Nbranch;
+        m2 -= m1*m1;
+        return m2;
+    }
+
+    double GetLongTermSynVariance() const    {
+        double m1 = 0;
+        double m2 = 0;
+        RecursiveGetLongTermSynVariance(GetRoot(), m1, m2);
+        m1 /= Nbranch;
+        m2 /= Nbranch;
+        m2 -= m1*m1;
+        return m2;
+    }
+
+    void RecursiveGetShortTermOmegaVariance(const Link* from, double& m1, double& m2) const    {
+        if (! from->isRoot())   {
+            double tmp = log(GetShortTermOmega(from));
+            m1 += tmp;
+            m2 += tmp*tmp;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveGetShortTermOmegaVariance(link->Out(), m1, m2);
+        }
+    }
+
+    void RecursiveGetLongTermOmegaVariance(const Link* from, double& m1, double& m2) const    {
+        if (! from->isRoot())   {
+            double tmp = log(GetLongTermOmega(from));
+            m1 += tmp;
+            m2 += tmp*tmp;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveGetLongTermOmegaVariance(link->Out(), m1, m2);
+        }
+    }
+
+    double GetShortTermOmegaVariance() const   {
+        double m1 = 0;
+        double m2 = 0;
+        RecursiveGetShortTermOmegaVariance(GetRoot(), m1, m2);
+        m1 /= Nbranch;
+        m2 /= Nbranch;
+        m2 -= m1*m1;
+        return m2;
+    }
+
+    double GetLongTermOmegaVariance() const    {
+        double m1 = 0;
+        double m2 = 0;
+        RecursiveGetLongTermOmegaVariance(GetRoot(), m1, m2);
+        m1 /= Nbranch;
+        m2 /= Nbranch;
+        m2 -= m1*m1;
+        return m2;
+    }
+
+    double GetLongTermSynPropVar() const    {
+        double ret = GetLongTermSynVariance() / GetShortTermSynVariance();
+        /*
+        if (ret > 1)    {
+            cerr << "error: proportion of variance > 1\n";
+            cerr << ret << '\n';
+            exit(1);
+        }
+        */
+        return ret;
+    }
+
+    double GetLongTermOmegaPropVar() const  {
+        double ret = GetLongTermOmegaVariance() / GetShortTermOmegaVariance();
+        /*
+        if (ret > 1)    {
+            cerr << "error: proportion of variance > 1\n";
+            cerr << ret << '\n';
+            exit(1);
+        }
+        */
+        return ret;
     }
 
     void Monitor(ostream &os) const override {}

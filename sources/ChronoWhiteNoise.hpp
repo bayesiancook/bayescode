@@ -19,6 +19,8 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     // mode 1/2 : wn of mean 1 and variance per unit of time = 1/shape
     // mode 1   : realized branch variable: integral of wn over time interval = blmean
     // mode 2   : realized branch variable: mean     of wn over time interval = blmean
+    // mode 3   : multiplier, ugam-type (same variance for all branches)
+    // mode 4   : multiplier, wn-type (variance inversely proportional to branch length)
 
     ChronoGammaWhiteNoise(const Tree &intree, const NodeSelector<double> &inchrono, double inshape, int inmode = 2)
         : SimpleBranchArray<double>(intree), chrono(inchrono), shape(inshape) {
@@ -37,6 +39,10 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     void SetShape(double inshape) { shape = inshape; }
 
     double GetAlpha(const Link* from) const {
+        if (mode == 4)  {
+            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
+            return shape*dt;
+        }
         if (mode == 3)  {
             return shape;
         }
@@ -52,6 +58,10 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     }
 
     double GetBeta(const Link* from) const {
+        if (mode == 4)  {
+            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
+            return shape*dt;
+        }
         if (mode == 3)  {
             return shape;
         }

@@ -140,10 +140,8 @@ int main(int argc, char *argv[]) {
                     rootfile = argv[i];
                 } else if (s == "-wn")  {
                     wndsmode = wnommode = 1;
-                } else if (s == "-wnds")    {
-                    wndsmode = 1;
-                } else if (s == "-wnom")    {
-                    wnommode = 1;
+                } else if (s == "-ugam")    {
+                    wndsmode = wnommode = 2;
                 } else if (s == "-f") {
                     force = 1;
                 } else if ((s == "-x") || (s == "-extract")) {

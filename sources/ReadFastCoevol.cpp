@@ -87,6 +87,9 @@ class FastCoevolSample : public Sample {
 		int dim = GetModel()->GetCovMatrix().GetDim();
 		MeanCovMatrix  mat(dim);
 
+        double pvar_syn = 0;
+        double pvar_om = 0;
+
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
@@ -94,8 +97,18 @@ class FastCoevolSample : public Sample {
             meansynrate.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 0);
             meanomega.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
 			mat.Add(GetModel()->GetCovMatrix());
+            pvar_syn += GetModel()->GetLongTermSynPropVar();
+            pvar_om += GetModel()->GetLongTermOmegaPropVar();
         }
         cerr << '\n';
+
+        pvar_syn /= size;
+        pvar_om /= size;
+        ofstream vos((name + ".propvar").c_str());
+        vos << "proportion of variance contributed by long term (Brownian) trends\n";
+        vos << "dS\t" << pvar_syn << '\n';
+        vos << "dN/dS\t" << pvar_om << '\n';
+        cerr << "proportion of variance contributed by long term trends in " << name << ".propvar\n";
     
         meansynrate.Sort();
         ofstream sos((name + ".postmeands.tre").c_str());
