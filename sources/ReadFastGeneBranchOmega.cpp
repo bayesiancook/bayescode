@@ -182,6 +182,7 @@ class FastGeneBranchOmegaSample : public Sample {
 
         ofstream devos((name + ".postmeandev.tab").c_str());
         devos << "#genename";
+        devos << "\tleft_taxon\tright_taxon";
         devos << "\tbranchsynmean\tbranchsynrelvar\tgenesynmean\tgenesynrelvar\tsyn\tsynz";
         devos << "\tbranchommean\tbranchomrelvar\tgeneommean\tgeneomrelvar\tom\tomz";
         devos << "\tdscount\tdsbeta\tempds";
@@ -190,6 +191,8 @@ class FastGeneBranchOmegaSample : public Sample {
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 devos << GetModel()->GetGeneName(i); 
+                devos << '\t' << GetModel()->GetTree()->GetLeftTaxon(j);
+                devos << '\t' << GetModel()->GetTree()->GetRightTaxon(j);
                 devos << '\t' << mean_branchsyn_array[j] << '\t' << branch_syn_relvar[j]; 
                 devos << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i]; 
                 devos << '\t' << syn_val[i][j] << '\t' << syn_z[i][j];

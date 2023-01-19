@@ -219,6 +219,9 @@ class Tree {
         nodemap.clear();
         branchmap.clear();
         SetIndices(GetRoot(), Nlink, Nnode, Nbranch);
+        lefttaxon.assign(Nbranch,"");
+        righttaxon.assign(Nbranch,"");
+        FillTaxonTable();
     }
 
     //! const access to the root link
@@ -471,10 +474,6 @@ class Tree {
     // recursive function called by RegisterWith
     bool RegisterWith(const TaxonSet *taxset, Link *from, int &tot);
 
-    map<int, const Node *> nodemap;
-    map<int, const Branch *> branchmap;
-    map<int, Link *> linkmap;
-
     // recursively set the system of node, branch and link indices
     void SetIndices(Link *from, int &linkindex, int &nodeindex, int &branchindex) {
         if (!from->isRoot()) {
@@ -632,6 +631,21 @@ class Tree {
 
   public:
 
+    void FillTaxonTable()   {
+        RecursiveFillTaxonTable(GetRoot());
+    }
+
+    void RecursiveFillTaxonTable(const Link* from)  {
+        if (! from->isRoot())   {
+            int index = from->GetBranch()->GetIndex();
+            lefttaxon[index] = GetLeftMost(from);
+            righttaxon[index] = GetRightMost(from);
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveFillTaxonTable(link->Out());
+        }
+    }
+
     const Link *GetLeftMostLink(const Link *from) const {
         if (from->isLeaf()) {
             return from;
@@ -648,6 +662,14 @@ class Tree {
             link = link->Next();
         }
         return GetRightMostLink(link->Out());
+    }
+
+    std::string GetLeftTaxon(int j) const   {
+        return lefttaxon.at(j);
+    }
+
+    std::string GetRightTaxon(int j) const  {
+        return righttaxon.at(j);
     }
 
     std::string GetLeftMost(const Link *from) const {
@@ -709,6 +731,13 @@ class Tree {
     int Nlink;
     int Nbranch;
     int Nnode;
+
+    map<int, const Node *> nodemap;
+    map<int, const Branch *> branchmap;
+    map<int, Link *> linkmap;
+    vector<string> lefttaxon;
+    vector<string> righttaxon;
+
 };
 
 #endif  // TREE_H
