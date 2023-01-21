@@ -110,18 +110,21 @@ class GeneBranchStrandSymmetricSample : public Sample {
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
-            GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
+            // GetModel()->GetSynModel()->AddBranchArrayTo(mean_branchsyn_array);
             GetModel()->GetOmegaModel()->AddBranchArrayTo(mean_branchom_array);
-            GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
+            // GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
 
-            GetModel()->GetSynModel()->AddValTo(syn_val);
+            // GetModel()->GetSynModel()->AddValTo(syn_val);
             GetModel()->GetOmegaModel()->AddValTo(om_val);
-            GetModel()->GetSynModel()->AddZscoreTo(syn_z);
+            // GetModel()->GetSynModel()->AddZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
 
             GetModel()->AddGCBiasTo(gc_val, gc_z, 
                     mean_branchgc_array, mean_genegc_array);
+
+            GetModel()->AddSynTo(syn_val, syn_z,
+                    mean_branchsyn_array, mean_genesyn_array);
 
             GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
                     geneAC, geneAG, geneCA, geneCG, geneCT,

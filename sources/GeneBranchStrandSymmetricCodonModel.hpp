@@ -388,6 +388,57 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
             rho_CT_model->AddZscoreTo(zCT);
     }
 
+    double GetNormalizationFactor(double rhoAC, double rhoAG, double rhoAT, double rhoCA, double rhoCG, double rhoCT) const {
+        double bias = (rhoAC + rhoAG) / (rhoCA + rhoCT);
+        double gamma = bias / (1 + bias);
+        double z = (1-gamma) * (rhoAC + rhoAG + rhoAT) + gamma * (rhoCA + rhoCG + rhoCT);
+        return z;
+    }
+
+    void AddSynTo(vector<vector<double>>& syn_val, vector<vector<double>>& syn_z, vector<double>& meanbranchsyn, vector<double>& meangenesyn) const  {
+        vector<double> branchmean(Nbranch, 0);
+        vector<double> genemean(Ngene,0);
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double syn = syn_model->GetVal(i,j);
+                double mean_syn = syn_model->GetMeanVal(i,j);
+                double z = GetNormalizationFactor(
+                        rho_AC_model->GetVal(i,j),
+                        rho_AG_model->GetVal(i,j),
+                        1.0,
+                        rho_CA_model->GetVal(i,j),
+                        rho_CG_model->GetVal(i,j),
+                        rho_CT_model->GetVal(i,j));
+                syn *= z;
+
+                /*
+                double meanz = GetNormalizationFactor(
+                        rho_AC_model->GetMeanVal(i,j),
+                        rho_AG_model->GetMeanVal(i,j),
+                        1.0,
+                        rho_CA_model->GetMeanVal(i,j),
+                        rho_CG_model->GetMeanVal(i,j),
+                        rho_CT_model->GetMeanVal(i,j));
+                mean_syn *= meanz;
+                */
+                mean_syn *= z;
+
+                syn_val[i][j] += syn;
+                syn_z[i][j] += syn/mean_syn;
+                branchmean[j] += syn;
+                genemean[i] += syn;
+            }
+        }
+        for (int i=0; i<Ngene; i++) {
+            genemean[i] /= Nbranch;
+            meangenesyn[i] += genemean[i];
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            branchmean[j] /= Ngene;
+            meanbranchsyn[j] += branchmean[j];
+        }
+    }
+
     void AddGCBiasTo(vector<vector<double>>& gc_val, vector<vector<double>>& gc_z, vector<double>& meanbranchgc, vector<double>& meangenegc) const  {
         vector<double> branchmean(Nbranch, 0);
         vector<double> genemean(Ngene,0);
