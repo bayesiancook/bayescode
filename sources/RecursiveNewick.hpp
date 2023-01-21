@@ -197,3 +197,23 @@ void Tabulate(ostream& os, const Tree* tree, const vector<double>& vs, const vec
     RecursiveTabulate(os, tree, tree->GetRoot(), vs, vn, leaf);
 }
 
+void RecursiveTabulate(ostream& os, const Tree* tree, const Link* from, const vector<double>& vs, const vector<double>& vn, const vector<double>& vg, bool leaf)  {
+    if (leaf)   {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << vs.at(from->GetBranch()->GetIndex()) << '\t' << vn.at(from->GetBranch()->GetIndex()) << '\t' << vg.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    else    {
+        if (! from->isRoot())   {
+            os << tree->GetLeftMost(from) << '\t' << tree->GetRightMost(from) << '\t' << vs.at(from->GetBranch()->GetIndex()) << '\t' << vn.at(from->GetBranch()->GetIndex()) << '\t' << vg.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulate(os, tree, link->Out(), vs, vn, vg, leaf);
+    }
+}
+
+void Tabulate(ostream& os, const Tree* tree, const vector<double>& vs, const vector<double>& vn, const vector<double>& vg, bool leaf) {
+    RecursiveTabulate(os, tree, tree->GetRoot(), vs, vn, vg, leaf);
+}
+

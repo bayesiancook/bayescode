@@ -213,14 +213,14 @@ class FastGeneBranchOmegaSample : public Sample {
             }
         }
 
-        ofstream gos((name + ".postmean.genesynom.tab").c_str());
+        ofstream gos((name + ".postmean.genedsom.tab").c_str());
         gos << "#genename\tgenesynmean\tgenesynrelvar\tgeneommean\tgeneomrelvar\n";
         for (int i=0; i<Ngene; i++) {
             gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\n';
         }
         cerr << "post mean gene dS and dN/dS in " << name << ".postmean.geneom.tab\n";
 
-        ofstream bsos((name + ".postmean.branchsyn.tab").c_str());
+        ofstream bsos((name + ".postmean.branchds.tab").c_str());
         bsos << "#taxon1\ttaxon2\tbranchsynmean\tbranchsynrelvar\n";
         Tabulate(bsos, GetModel()->GetTree(), mean_branchsyn_array, branch_syn_relvar, false);
 

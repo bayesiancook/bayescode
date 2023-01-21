@@ -388,16 +388,28 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
             rho_CT_model->AddZscoreTo(zCT);
     }
 
-    void AddGCBiasTo(vector<vector<double>>& gc, vector<vector<double>>& meangc) const  {
+    void AddGCBiasTo(vector<vector<double>>& gc_val, vector<vector<double>>& gc_z, vector<double>& meanbranchgc, vector<double>& meangenegc) const  {
+        vector<double> branchmean(Nbranch, 0);
+        vector<double> genemean(Ngene,0);
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
                 double bias = (rho_AC_model->GetVal(i,j) + rho_AG_model->GetVal(i,j)) /
                     (rho_CA_model->GetVal(i,j) + rho_CT_model->GetVal(i,j));
                 double meanbias = (rho_AC_model->GetMeanVal(i,j) + rho_AG_model->GetMeanVal(i,j)) /
                     (rho_CA_model->GetMeanVal(i,j) + rho_CT_model->GetMeanVal(i,j));
-                gc[i][j] += bias;
-                meangc[i][j] += meanbias;
+                gc_val[i][j] += bias;
+                gc_z[i][j] += bias/meanbias;
+                branchmean[j] += bias;
+                genemean[i] += bias;
             }
+        }
+        for (int i=0; i<Ngene; i++) {
+            genemean[i] /= Nbranch;
+            meangenegc[i] += genemean[i];
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            branchmean[j] /= Ngene;
+            meanbranchgc[j] += branchmean[j];
         }
     }
 

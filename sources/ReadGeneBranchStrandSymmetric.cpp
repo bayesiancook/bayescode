@@ -85,11 +85,16 @@ class GeneBranchStrandSymmetricSample : public Sample {
         vector<double> mean_genesyn_array(Ngene,0);
         vector<double> mean_geneom_array(Ngene,0);
 
+        vector<double> mean_branchgc_array(Nbranch,0);
+        vector<double> mean_genegc_array(Ngene,0);
+
         vector<vector<double>> syn_z(Ngene, vector<double>(Nbranch,0));
         vector<vector<double>> om_z(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> syn_val(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> om_val(Ngene, vector<double>(Nbranch,0));
 
-        vector<vector<double>> gcbias(Ngene, vector<double>(Nbranch,0));
-        vector<vector<double>> meangcbias(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> gc_val(Ngene, vector<double>(Nbranch,0));
+        vector<vector<double>> gc_z(Ngene, vector<double>(Nbranch,0));
 
         double meanAC, meanAG, meanCA, meanCG, meanCT;
         double geneAC, geneAG, geneCA, geneCG, geneCT;
@@ -110,10 +115,13 @@ class GeneBranchStrandSymmetricSample : public Sample {
             GetModel()->GetSynModel()->AddGeneArrayTo(mean_genesyn_array);
             GetModel()->GetOmegaModel()->AddGeneArrayTo(mean_geneom_array);
 
+            GetModel()->GetSynModel()->AddValTo(syn_val);
+            GetModel()->GetOmegaModel()->AddValTo(om_val);
             GetModel()->GetSynModel()->AddZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
 
-            GetModel()->AddGCBiasTo(gcbias, meangcbias);
+            GetModel()->AddGCBiasTo(gc_val, gc_z, 
+                    mean_branchgc_array, mean_genegc_array);
 
             GetModel()->AddNucStats(meanAC, meanAG, meanCA, meanCG, meanCT,
                     geneAC, geneAG, geneCA, geneCG, geneCT,
@@ -190,63 +198,63 @@ class GeneBranchStrandSymmetricSample : public Sample {
             for (int j=0; j<Nbranch; j++)   {
                 syn_z[i][j] /= size;
                 om_z[i][j] /= size;
+                syn_val[i][j] /= size;
+                om_val[i][j] /= size;
+                gc_z[i][j] /= size;
+                gc_val[i][j] /= size;
             }
         }
 
-        vector<vector<double>> zgc(Ngene, vector<double>(Nbranch,0));
-        double relvar = 0;
-        for (int i=0; i<Ngene; i++)   {
-            for (int j=0; j<Nbranch; j++)   {
-                gcbias[i][j] /= size;
-                meangcbias[i][j] /= size;
-                double z = gcbias[i][j] / meangcbias[i][j];
-                // double z = (gcbias[i][j] - meangcbias[i][j])/meangcbias[i][j];
-                zgc[i][j] = z;
-                relvar += z*z;
-            }
-        }
-        relvar /= Ngene*Nbranch;
-        relvar -= 1;
-        /*
-        double sigma = sqrt(relvar);
-        for (int i=0; i<Ngene; i++)   {
-            for (int j=0; j<Nbranch; j++)   {
-                zgc[i][j] /= sigma;
-            }
-        }
-        */
-            
         for (int j=0; j<Nbranch; j++)   {
             mean_branchsyn_array[j] /= size;
             mean_branchom_array[j] /= size;
+            mean_branchgc_array[j] /= size;
         }
         for (int i=0; i<Ngene; i++) {
             mean_genesyn_array[i] /= size;
             mean_geneom_array[i] /= size;
+            mean_genegc_array[i] /= size;
         }
 
-        ofstream gos((name + ".postmean.genesynom.tab").c_str());
-        gos << "#genename\tgenesynmean\tgeneommean\n";
+        ofstream gos((name + ".postmean.genedsomgc.tab").c_str());
+        gos << "#genename\tgenesyn\tgeneom\tgenegcbias\n";
         for (int i=0; i<Ngene; i++) {
-            gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\n';
+            gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\t' << mean_genegc_array[i] << '\n';
         }
-        cerr << "post mean gene dS and dN/dS in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean gene dS, dN/dS and eq. GC in " << name << ".postmean.geneom.tab\n";
 
-        ofstream os((name + ".postmean.leafdsom.tab").c_str());
-        os << "#taxon\tbranchsyn\tbranchom\n";
-        Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, true);
+        ofstream os((name + ".postmean.leafdsomgcbias.tab").c_str());
+        os << "#taxon\tbranchsyn\tbranchom\tbranchgcbias\n";
+        Tabulate(os, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, mean_branchgc_array, true);
+
+        ofstream allos((name + ".postmean.dsomgcbias.tab").c_str());
+        allos << "#taxon1\ttaxon2\tbranchsyn\tbranchom\tbranchgcbias\n";
+        Tabulate(allos, GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array, mean_branchgc_array, false);
 
         ofstream tos((name + ".dsom.tre").c_str());
         ToNewick(tos, *GetModel()->GetTree(), mean_branchsyn_array, mean_branchom_array);
 
-        cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsom.tab\n";
+        cerr << "post mean branch effects on dN/dS in " << name << ".postmean.leafdsomgcbias.tab and " << name << ".postmean.dsomgcbias.tab\n";
         cerr << "newick format in " << name << ".dsom.tre\n";
 
         ofstream devos((name + ".postmeandev.tab").c_str());
-        devos << "#genename\tbranchsynmean\tgenesynmean\tsynz\tbranchommean\tgeneommean\tomz\tgcbias\tgcbiasz\n";
+        devos << "#genename";
+        devos << "\tterminal\tleft_taxon\tright_taxon";
+        devos << "\tbranchsyn\tgenesyn\tsyn\tsynz";
+        devos << "\tbranchom\tgeneom\tom\tomz";
+        devos << "\tbranchgcbias\tgenegcbias\tgcbias\tgcbiasz";
+        devos << "\n";
+
         for (int i=0; i<Ngene; i++) {
             for (int j=0; j<Nbranch; j++)   {
-                devos << GetModel()->GetGeneName(i) << '\t' << mean_branchsyn_array[j] << '\t' << mean_genesyn_array[i] << '\t' << syn_z[i][j] << '\t' << mean_branchom_array[j] << '\t' << mean_geneom_array[i] << '\t' << om_z[i][j] << '\t' << gcbias[i][j] << '\t' << zgc[i][j] << '\n';
+                devos << GetModel()->GetGeneName(i); 
+                devos << '\t' << ((GetModel()->GetTree()->GetLeftTaxon(j) == GetModel()->GetTree()->GetRightTaxon(j)) ? 1 : 0);
+                devos << '\t' << GetModel()->GetTree()->GetLeftTaxon(j);
+                devos << '\t' << GetModel()->GetTree()->GetRightTaxon(j);
+                devos << '\t' << mean_branchsyn_array[j] << '\t' << mean_genesyn_array[i] << '\t' << syn_val[i][j] << '\t' << syn_z[i][j]; 
+                devos << '\t' << mean_branchom_array[j] << '\t' << mean_geneom_array[i] << '\t' << om_val[i][j] << '\t' << om_z[i][j]; 
+                devos << '\t' << mean_branchgc_array[j] << '\t' << mean_genegc_array[i] << '\t' << gc_val[i][j] << '\t' << gc_z[i][j]; 
+                devos << '\n';
             }
         }
     }
