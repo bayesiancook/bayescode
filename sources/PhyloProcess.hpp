@@ -124,6 +124,8 @@ class PhyloProcess {
     //! get data from tips (after simulation) and put in into sequence alignment
     void GetLeafData(SequenceAlignment *data);
 
+    void AddSubstitutionCounts(vector<vector<int>>& counts) const;
+
   private:
     //! \brief const access to substitution history (BranchSitePath) for given
     //! node and given site
@@ -249,6 +251,9 @@ class PhyloProcess {
                                   Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
     void LocalAddRateSuffStat(const Link *from,
                               Array<PoissonSuffStat> &siteratepathsuffstatarray) const;
+
+    void RecursiveAddSubstitutionCounts(const Link* from, vector<vector<int>>& counts) const;
+    void LocalAddSubstitutionCounts(const Link* from, vector<int>& counts) const;
 
     void PostPredSample(int site, bool rootprior = false);
     // rootprior == true : root state drawn from stationary probability of the

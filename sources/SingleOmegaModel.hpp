@@ -147,6 +147,10 @@ class SingleOmegaModel : public ProbModel {
         return Nsite;
     }
 
+    int GetNbranch() const  {
+        return Nbranch;
+    }
+
     const Tree* GetTree() const {
         return tree;
     }
@@ -679,6 +683,28 @@ class SingleOmegaModel : public ProbModel {
         relpathsuffstatarray.AddSuffStat(pathsuffstatarray, *branchlength);
 
         into.Add(relpathsuffstatarray);
+    }
+
+    void AddDoubleCounts(vector<double>& meancounts) const  {
+        vector<vector<int>> counts(GetNbranch(), vector<int>(GetNsite(),0));
+        phyloprocess->AddSubstitutionCounts(counts);
+        for (int j=0; j<GetNbranch(); j++)  {
+            int tot = 0;
+            int totdouble = 0;
+            for (int i=0; i<GetNsite(); i++)    {
+                if (counts[j][i])   {
+                    tot++;
+                    if (counts[j][i] > 1)   {
+                        totdouble++;
+                    }
+                }
+            }
+            double f = 0;
+            if (tot)    {
+                f = totdouble / tot;
+            }
+            meancounts[j] = f;
+        }
     }
 
     /*

@@ -226,6 +226,48 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         GetModel()->SlaveSendGeneArray(array);
     }
 
+    void MasterReadDoubleSubstitutions() {
+        vector<vector<double>> meancounts(GetModel()->GetNgene(), vector<double>(GetModel()->GetNbranch(),0));
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->MasterUpdate();
+        }
+        cerr << '\n';
+
+        GetModel()->MasterReceiveGeneArray(meancounts);
+        ofstream devos((name + ".postmeandoublecounts.tab").c_str());
+        devos << "#genename";
+        devos << "\tleft_taxon\tright_taxon";
+        devos << "\tdoublesub_frac";
+        devos << '\n';
+        for (int i=0; i<GetModel()->GetNgene(); i++) {
+            for (int j=0; j<GetModel()->GetNbranch(); j++)   {
+                devos << GetModel()->GetLocalGeneName(i); 
+                devos << '\t' << GetModel()->GetTree().GetLeftTaxon(j);
+                devos << '\t' << GetModel()->GetTree().GetRightTaxon(j);
+                devos << '\t' << meancounts[i][j];
+                devos << '\n';
+            }
+        }
+    }
+
+    void SlaveReadDoubleSubstitutions() {
+        int Nbranch = GetModel()->GetNbranch();
+        vector<vector<double>> meancounts(GetModel()->GetNgene(), vector<double>(Nbranch,0));
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            GetModel()->SlaveUpdate();
+            GetModel()->SlaveAddGeneDoubleCounts(meancounts);
+        }
+        for (int i=0; i<GetModel()->GetLocalNgene(); i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                meancounts[i][j] /= size;
+            }
+        }
+        GetModel()->SlaveSendGeneArray(meancounts);
+    }
 };
 
 int main(int argc, char *argv[]) {
@@ -243,6 +285,7 @@ int main(int argc, char *argv[]) {
     int ppred = 0;
     int dsomss = 0;
     int nodepathss = 0;
+    int doublesub = 0;
 
     try {
         if (argc == 1) {
@@ -282,6 +325,8 @@ int main(int argc, char *argv[]) {
                 dsomss = 1;
             } else if (s == "-nodepathss")	{
                 nodepathss = 1;
+            } else if (s == "-doublesub")   {
+                doublesub = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -321,6 +366,13 @@ int main(int argc, char *argv[]) {
         }
         else    {
             sample->SlaveReadGeneNodePathSuffStat();
+        }
+    } else if (doublesub)   {
+        if (! myid) {
+            sample->MasterReadDoubleSubstitutions();
+        }
+        else    {
+            sample->SlaveReadDoubleSubstitutions();
         }
     } else {
         if (!myid) {

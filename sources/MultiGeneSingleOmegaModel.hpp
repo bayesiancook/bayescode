@@ -1214,4 +1214,10 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
             geneprocess[gene]->AddGCConsdSOmegaPathSuffStat(array[gene]);
         }
     }
+
+    void SlaveAddGeneDoubleCounts(vector<vector<double>>& counts) const {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AddDoubleCounts(counts[gene]);
+        }
+    }
 };

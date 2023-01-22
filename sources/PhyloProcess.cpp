@@ -774,6 +774,25 @@ BranchSitePath *PhyloProcess::ResampleUniformized(int stateup, int statedown, do
     return path;
 }
 
+void PhyloProcess::AddSubstitutionCounts(vector<vector<int>>& counts) const  {
+    RecursiveAddSubstitutionCounts(GetRoot(), counts);
+}
+
+void PhyloProcess::RecursiveAddSubstitutionCounts(const Link* from, vector<vector<int>>& counts) const  {
+    if (! from->isRoot())   {
+        LocalAddSubstitutionCounts(from, counts[from->GetBranch()->GetIndex()]);
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveAddSubstitutionCounts(link->Out(), counts);
+    }
+}
+
+void PhyloProcess::LocalAddSubstitutionCounts(const Link* from, vector<int>& counts) const   {
+    for (int i=0; i<GetNsite(); i++) {
+        counts[i] = GetPath(from->GetNode(), i)->GetNsub();
+    }
+}
+
 void PhyloProcess::AddPathSuffStat(PathSuffStat &suffstat) const {
     RecursiveAddPathSuffStat(GetRoot(), suffstat);
 }
