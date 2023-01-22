@@ -326,7 +326,7 @@ class NucRatesGeneBranchArray : public SimpleBidimArray<vector<double>> {
             const GeneBranchGammaEffects& inrhoCA,
             const GeneBranchGammaEffects& inrhoCG,
             const GeneBranchGammaEffects& inrhoCT) :
-        SimpleBidimArray<vector<double>>(Ngene, Nbranch, vector<double>(5,0)),
+        SimpleBidimArray<vector<double>>(Ngene, Nbranch, vector<double>(6,0)),
         rhoAC(inrhoAC), rhoAG(inrhoAG), rhoCA(inrhoCA), rhoCG(inrhoCG), rhoCT(inrhoCT)  {
         // rhoAC(inrhoAC), rhoAG(inrhoAG), rhoAT(inrhoAT), rhoCA(inrhoCA), rhoCG(inrhoCG), rhoCT(inrhoCT)  {
         Update();
