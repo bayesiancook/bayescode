@@ -701,7 +701,7 @@ class SingleOmegaModel : public ProbModel {
             }
             double f = 0;
             if (tot)    {
-                f = totdouble / tot;
+                f = double(totdouble) / tot;
             }
             meancounts[j] = f;
         }
