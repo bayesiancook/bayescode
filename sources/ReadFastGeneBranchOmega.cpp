@@ -218,7 +218,7 @@ class FastGeneBranchOmegaSample : public Sample {
         for (int i=0; i<Ngene; i++) {
             gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << gene_syn_relvar[i] << '\t' << mean_geneom_array[i] << '\t' << gene_om_relvar[i] << '\n';
         }
-        cerr << "post mean gene dS and dN/dS in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean gene dS and dN/dS in " << name << ".postmean.genedsom.tab\n";
 
         ofstream bsos((name + ".postmean.branchds.tab").c_str());
         bsos << "#taxon1\ttaxon2\tbranchsynmean\tbranchsynrelvar\n";

@@ -219,12 +219,12 @@ class GeneBranchStrandSymmetricSample : public Sample {
             mean_genegc_array[i] /= size;
         }
 
-        ofstream gos((name + ".postmean.genedsomgc.tab").c_str());
+        ofstream gos((name + ".postmean.genedsomgcbias.tab").c_str());
         gos << "#genename\tgenesyn\tgeneom\tgenegcbias\n";
         for (int i=0; i<Ngene; i++) {
             gos << GetModel()->GetGeneName(i) << '\t' << mean_genesyn_array[i] << '\t' << mean_geneom_array[i] << '\t' << mean_genegc_array[i] << '\n';
         }
-        cerr << "post mean gene dS, dN/dS and eq. GC in " << name << ".postmean.geneom.tab\n";
+        cerr << "post mean gene dS, dN/dS and eq. GC in " << name << ".postmean.genedsomgcbias.tab\n";
 
         ofstream os((name + ".postmean.leafdsomgcbias.tab").c_str());
         os << "#taxon\tbranchsyn\tbranchom\tbranchgcbias\n";
