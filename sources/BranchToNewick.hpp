@@ -54,3 +54,23 @@ void BranchToNewick(ostream& os, const BranchSelector<double>& v)   {
     RecursiveBranchToNewick(os, v.GetTree().GetRoot(), v);
     os << ";\n";
 }
+
+void RecursiveTabulate(ostream& os, const Tree* tree, const Link* from, const vector<double>& v, bool leaf)  {
+    if (leaf)   {
+        if (from->isLeaf()) {
+            os << from->GetNode()->GetName() << '\t' << v.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    else    {
+        if (! from->isRoot())   {
+            os << tree->GetLeftMost(from) << '\t' << tree->GetRightMost(from) << '\t' << v.at(from->GetBranch()->GetIndex()) << '\n';
+        }
+    }
+    for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+        RecursiveTabulate(os, tree, link->Out(), v, leaf);
+    }
+}
+
+void Tabulate(ostream& os, const Tree* tree, const vector<double>& v, bool leaf) {
+    RecursiveTabulate(os, tree, tree->GetRoot(), v, leaf);
+}

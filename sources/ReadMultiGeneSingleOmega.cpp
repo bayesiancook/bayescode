@@ -236,6 +236,33 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
 
+        int Ngene = GetModel()->GetNgene();
+        int Nbranch = GetModel()->GetNbranch();
+        vector<double> branchcounts(Nbranch,0);
+        vector<double> genecounts(Ngene,0);
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                branchcounts[j] += meancounts[i][j];
+                genecounts[i] += meancounts[i][j];
+            }
+        }
+        for (int i=0; i<Ngene; i++) {
+            genecounts[i] /= Nbranch;
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            branchcounts[j] /= Ngene;
+        }
+
+        ofstream bos((name + ".branchdoublecounts.tab").c_str());
+        bos << "#taxon1\ttaxon2\tbranchdoublecounts\n";
+        Tabulate(bos, &GetModel()->GetTree(), branchcounts, true);
+
+        ofstream gos((name + ".genedoublecounts.tab").c_str());
+        gos << "#genename\tgenedoublecounts\n";
+        for (int i=0; i<Ngene; i++) {
+            gos << GetModel()->GetLocalGeneName(i) << '\t' << genecounts[i] << '\n';
+        }
+
         GetModel()->MasterReceiveGeneArray(meancounts);
         ofstream devos((name + ".postmeandoublecounts.tab").c_str());
         devos << "#genename";
@@ -251,6 +278,10 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
                 devos << '\n';
             }
         }
+
+        cerr << "gene-branch counts in " << name << ".postmeandoublecounts.tab\n";
+        cerr << "branch double counts in " << name << ".branchdoublecounts.tab\n";
+        cerr << "gene double counts in " << name << ".genedoublecounts.tab\n";
     }
 
     void SlaveReadDoubleSubstitutions() {
