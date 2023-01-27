@@ -236,6 +236,8 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
         cerr << '\n';
 
+        GetModel()->MasterReceiveGeneArray(meancounts);
+
         int Ngene = GetModel()->GetNgene();
         int Nbranch = GetModel()->GetNbranch();
         vector<double> branchcounts(Nbranch,0);
@@ -263,7 +265,6 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
             gos << GetModel()->GetLocalGeneName(i) << '\t' << genecounts[i] << '\n';
         }
 
-        GetModel()->MasterReceiveGeneArray(meancounts);
         ofstream devos((name + ".postmeandoublecounts.tab").c_str());
         devos << "#genename";
         devos << "\tleft_taxon\tright_taxon";
