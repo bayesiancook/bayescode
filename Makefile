@@ -48,6 +48,7 @@ clean:
 	@rm -rf bin
 	@rm -rf bin_coverage
 	@rm -rf _test
+	@rm -rf _build
 	@rm -rf _aamutsel
 	@rm -rf _mutseldm5
 	@rm -rf _mutselomega

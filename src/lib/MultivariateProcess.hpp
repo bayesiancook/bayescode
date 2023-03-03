@@ -65,9 +65,7 @@ class PriorCovariance : public EVector {
 
 class PrecisionMatrix : public EMatrix {
   public:
-    explicit PrecisionMatrix(int dimensions) : EMatrix(dimensions, dimensions) {
-        this->setZero();
-    };
+    explicit PrecisionMatrix(int dimensions) : EMatrix(dimensions, dimensions) { this->setZero(); };
 
     explicit PrecisionMatrix(PriorCovariance const &prior)
         : EMatrix(prior.GetPriorPrecisionMatrix()){};
@@ -77,6 +75,8 @@ class PrecisionMatrix : public EMatrix {
         return 0.5 * (std::log(this->determinant()) * (prior.GetDoF() - prior.GetDimensions() - 1) -
                          (cov * (*this)).trace() + prior.GetDoF() * std::log(cov.determinant()));
     }
+
+    void UpdateCovarianceMatrix(EMatrix &cov_matrix) const { cov_matrix = this->inverse(); }
 };
 
 /**

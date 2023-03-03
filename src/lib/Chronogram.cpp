@@ -147,7 +147,7 @@ bool NodeAges::Check() const {
         if (!GetTree().is_root(node)) {
             if (GetTree().is_leaf(node)) {
                 if (GetVal(node) != 0.0) {
-                    cerr << "The age of the leaf" << name << " is not 0." << endl;
+                    cerr << "The age of the leaf " << name << " is not 0." << endl;
                 }
             } else {
                 if (GetVal(node) == 0.0) {

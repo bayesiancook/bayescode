@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
-            double mean{};
+            double mean{0.0};
             for (int site = 0; site < model.GetNsite(); site++) {
                 double val = read_args.omega_knot.getValue() ? model.GetPredictedSiteOmegaKnot(site)
                                                              : model.GetSiteOmega(site);
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 
         string filename{chain_name + ".ci" + read_args.confidence_interval.getValue() + ".tsv"};
         ofstream os(filename.c_str());
-        os << "#site\tomega_lower\tgene_omega\tomega_upper\n";
+        os << "#site\tomega_lower\tomega\tomega_upper\n";
 
         double mean = accumulate(gene_omega.begin(), gene_omega.end(), 0.0) / size;
         sort(gene_omega.begin(), gene_omega.end());

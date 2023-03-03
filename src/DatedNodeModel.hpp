@@ -36,6 +36,7 @@ class DatedNodeModel : public ChainComponent {
     bool uniq_kappa;
     PriorCovariance *prior_matrix;
     PrecisionMatrix *precision_matrix;
+    EMatrix *cov_matrix;
     NodeMultivariateProcess *node_multivariate;
     ScatterSuffStat *scattersuffstat;
 
@@ -66,7 +67,7 @@ class DatedNodeModel : public ChainComponent {
         // Node ages
         nodeages = new NodeAges(*tree, fossilsfile);
         chronogram = new Chronogram(*nodeages);
-
+        chronogram->Scale();
         std::vector<std::string> leave_names;
         for (auto const &n : tree->root_to_leaves_iter()) {
             if (tree->is_leaf(n)) { leave_names.push_back(tree->node_name(n)); }
@@ -82,6 +83,7 @@ class DatedNodeModel : public ChainComponent {
         dimensions = taxon_traits->GetDim();
         prior_matrix = new PriorCovariance(dimensions, prior_cov_df, uniq_kappa);
         precision_matrix = new PrecisionMatrix(*prior_matrix);
+        cov_matrix = new EMatrix(dimensions, dimensions);
 
         node_multivariate = new NodeMultivariateProcess(*chronogram, *precision_matrix, dimensions);
         if (taxon_traits != nullptr) { node_multivariate->ClampLeaves(*taxon_traits, *taxonmap); }
@@ -95,17 +97,24 @@ class DatedNodeModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        model_stat(info, "lnprob", [&]() { return DatedNodeModel::GetLogProb(); });
         model_node(info, "nodeages", *nodeages);
         model_node(info, "node_multivariate", *node_multivariate);
         model_node(info, "prior_cov_matrix", *prior_matrix);
         model_node(info, "precision_matrix", *precision_matrix);
+        model_node(info, "cov_matrix", *cov_matrix);
 
+        model_stat(info, "lnprob", [&]() { return DatedNodeModel::GetLogProb(); });
+        model_stat(info, "priorLnprob", [&]() { return prior_matrix->GetLogProb(); });
+        model_stat(
+            info, "precisionLnprob", [&]() { return precision_matrix->GetLogProb(*prior_matrix); });
+        model_stat(info, "multiLnprob", [&]() { return node_multivariate->GetLogProb(); });
         for (int i = 0; i < dimensions; i++) {
             model_stat(info, "PriorSigma_" + std::to_string(i), prior_matrix->coeffRef(i));
             for (int j = 0; j <= i; j++) {
                 model_stat(info, "Precision_" + std::to_string(i) + "_" + std::to_string(j),
                     precision_matrix->coeffRef(i, j));
+                model_stat(info, "Cov_" + std::to_string(i) + "_" + std::to_string(j),
+                    cov_matrix->coeffRef(i, j));
             }
         }
         // Descriptive statistics - for each branch of the tree
@@ -124,8 +133,8 @@ class DatedNodeModel : public ChainComponent {
         return chronogram->GetVal(tree->branch_index(node));
     };
 
-    //! return precision matrix
-    PrecisionMatrix GetPrecisionMatrix() const { return *precision_matrix; };
+    //! return covariance matrix
+    EMatrix GetCovarianceMatrix() const { return *cov_matrix; };
 
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
@@ -151,9 +160,9 @@ class DatedNodeModel : public ChainComponent {
 
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
-    void Update(bool scale = false) {
+    void Update() {
         chronogram->Update();
-        if (scale) { chronogram->Scale(); }
+        chronogram->Scale();
     }
 
     //! return joint log prob (log prior + log likelihood)
@@ -194,6 +203,7 @@ class DatedNodeModel : public ChainComponent {
             MovePriorMatrix(0.1, 3);
             MovePriorMatrix(0.01, 3);
         }
+        precision_matrix->UpdateCovarianceMatrix(*cov_matrix);
     }
 
     void SamplePrecisionMatrix() {

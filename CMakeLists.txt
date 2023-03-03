@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
-project(bayescode CXX)
+project(BayesCode CXX)
 
 # Compilation options
 option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
@@ -9,14 +9,17 @@ set(ALWAYSON_CXX_FLAGS "--std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-
 if (COVERAGE_MODE)
     set(CMAKE_CXX_FLAGS "-O0 -fprofile-arcs -ftest-coverage ${ALWAYSON_CXX_FLAGS}") # coverage mode
     message("-- INFO: Compiling in coverage mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
-elseif (DEBUG_MODE)
-    set(CMAKE_CXX_FLAGS "-O2 -g ${ALWAYSON_CXX_FLAGS}") # debug mode
-    message("-- INFO: Compiling in debug mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
 else ()
-    set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG ${ALWAYSON_CXX_FLAGS}") # release mode
-    message("-- INFO: Compiling in release mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
+    if (DEBUG_MODE)
+        set(CMAKE_CXX_FLAGS "-O2 -g ${ALWAYSON_CXX_FLAGS}") # debug mode
+        message("-- INFO: Compiling in debug mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
+    else ()
+        set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG ${ALWAYSON_CXX_FLAGS}") # release mode
+        message("-- INFO: Compiling in release mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
+    endif (DEBUG_MODE)
 endif (COVERAGE_MODE)
 unset(COVERAGE_MODE CACHE)
+unset(DEBUG_MODE CACHE)
 
 if (TINY)
     message("-- INFO: Compiling without MPI.")
@@ -25,7 +28,7 @@ else ()
     # MPI
     find_package(MPI REQUIRED)
     include_directories(${MPI_INCLUDE_PATH})
-endif (NO_MPI)
+endif (TINY)
 
 include_directories("src")
 include_directories("src/lib")
@@ -84,9 +87,16 @@ target_link_libraries(nodemutsel ${BASE_LIBS})
 add_executable(readnodemutsel "src/ReadDatedNodeMutSel.cpp")
 target_link_libraries(readnodemutsel ${BASE_LIBS})
 
+# Read Node Brownian (readnodetraitsmutsel)
+add_executable(readnodetraits "src/ReadDatedNode.cpp")
+target_link_libraries(readnodetraits ${BASE_LIBS})
+
+# Node Brownian (nodetraitsmutsel)
+add_executable(nodetraits "src/DatedNode.cpp")
+target_link_libraries(nodetraits ${BASE_LIBS})
 
 if (TINY)
-    message("-- INFO: Compiling uniquely nodemutsel and mutselomega.")
+    message("-- INFO: Compiling uniquely nodetraits, nodemutsel and mutselomega.")
 else ()
     # Single omega (globom)
     add_executable(globom "src/SingleOmega.cpp")
@@ -95,14 +105,6 @@ else ()
     # Node omega (nodeomega)
     add_executable(nodeomegamutsel "src/DatedNodeOmega.cpp")
     target_link_libraries(nodeomegamutsel ${BASE_LIBS})
-
-    # Read Node Brownian (readnodetraitsmutsel)
-    add_executable(readnodetraitsmutsel "src/ReadDatedNode.cpp")
-    target_link_libraries(readnodetraitsmutsel ${BASE_LIBS})
-
-    # Node Brownian (nodetraitsmutsel)
-    add_executable(nodetraitsmutsel "src/DatedNode.cpp")
-    target_link_libraries(nodetraitsmutsel ${BASE_LIBS})
 
     # Read Node omega (readnodeomega)
     add_executable(readnodeomegamutsel "src/ReadDatedNodeOmega.cpp")

@@ -51,13 +51,18 @@ int main(int argc, char *argv[]) {
         for (int dim = 0; dim < model->GetDimension(); dim++) {
             os << model->GetDimensionName(dim) << endl;
         }
-
         EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         EMatrix cov_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
-            EMatrix cov_matrix_chain = model->GetPrecisionMatrix().inverse();
+            EMatrix cov_matrix_chain = model->GetCovarianceMatrix();
+            for (int i = 0; i < model->GetDimension(); i++) {
+                if (cov_matrix_chain(i, i) < 0) {
+                    std::cerr << "error: negative variance\n";
+                    exit(1);
+                }
+            }
             cov_matrix += cov_matrix_chain;
             for (int i = 0; i < model->GetDimension(); i++) {
                 for (int j = 0; j < model->GetDimension(); j++) {
@@ -93,7 +98,7 @@ int main(int argc, char *argv[]) {
             cerr << '.';
             cr.skip(every);
 
-            model->Update(true);
+            model->Update();
             for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
                  node++) {
                 if (!model->GetTree().is_root(node)) {

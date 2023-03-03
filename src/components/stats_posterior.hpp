@@ -71,8 +71,14 @@ string padding(string const &old_str, size_t n_zero) {
     auto new_str = std::string(n_zero - std::min(n_zero, old_str.length()), '0') + old_str;
     return new_str;
 }
-double round_off(double val, int n_decimal) {
-    return round(val * pow(10, n_decimal)) / pow(10, n_decimal);
+std::string round_off(double val, int n_decimal) {
+    // Create an output string stream
+    std::ostringstream streamObj;
+    //Add double to stream
+    streamObj << val;
+    // Get string from output string stream
+    std::string strObj = streamObj.str();
+    return strObj;
 }
 
 void export_matrix(
@@ -81,9 +87,9 @@ void export_matrix(
     for (int i = 0; i < dimensions; i++) {
         for (int j = 0; j < dimensions; j++) {
             if (i == j && !diag) {
-                os << std::setw(7) << std::setfill(' ') << '-';
+                os << std::setw(18) << std::setfill(' ') << '-';
             } else {
-                os << std::setw(7) << std::setfill(' ') << round_off(matrix.coeffRef(i, j), 3);
+                os << std::setw(18) << std::setfill(' ') << round_off(matrix.coeffRef(i, j), 3);
             }
         }
         os << std::endl;

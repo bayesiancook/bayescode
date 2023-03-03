@@ -23,6 +23,12 @@ void ScatterSuffStat::SamplePrecisionMatrix(
     precision_matrix.setZero();
 
     EMatrix cov = (prior_cov_matrix.GetPriorCovarianceMatrix() + scattermatrix).inverse();
+    for (int i = 0; i < dimensions; i++) {
+            if (cov(i, i) < 0) {
+                std::cerr << "error in SamplePrecisionMatrix: negative variance\n";
+                exit(1);
+            }
+    }
     Eigen::SelfAdjointEigenSolver<EMatrix> e_solver(cov);
     EMatrix A = e_solver.eigenvectors() * e_solver.eigenvalues().cwiseSqrt().asDiagonal();
     assert((A * A.transpose() - cov).norm() < 1e-8);
