@@ -156,7 +156,7 @@ bool NodeAges::Check() const {
                 }
             }
             auto p = GetTree().parent(node);
-            if (GetVal(p) <= GetVal(node)) {
+            if (GetVal(p) < GetVal(node)) {
                 cerr << "The node " << name << " is older (age=" << GetVal(node)
                      << ") than it's parent node " << GetTree().node_name(p)
                      << " (age=" << GetVal(p) << ")." << endl;
