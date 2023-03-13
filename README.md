@@ -426,7 +426,16 @@ You can use one of these options with `readnodemutsel` to compute a specific pos
 
 
 ## Citations
-- If you use `mutselomega` (ω<sub>∗</sub>, ω<sub>0</sub>, ω), please cite:
+
+- **If you use `mutselomega`/`readmutselomega` to compute ω<sub>A</sub><sup>phy</sup> = ω - ω<sub>0</sub>, please cite**:
+
+Thibault Latrille, Nicolas Rodrigue, Nicolas Lartillot,\
+Genes and sites under adaptation at the phylogenetic scale also exhibit adaptation at the population-genetic scale,\
+_Proceedings of the National Academy of Sciences_,
+Volume 120, Issue 11, March 2023, Pages e2214977120,\
+https://doi.org/10.1073/pnas.2214977120
+
+- **If you use `mutselomega`/`readmutselomega` to compute ω<sub>∗</sub>, please cite**:
 
 Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot,\
 A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes,\
@@ -434,7 +443,7 @@ _Molecular Biology and Evolution_,
 Volume 38, Issue 3, March 2021, Pages 1199–1208,\
 https://doi.org/10.1093/molbev/msaa265
 
-- If you use `nodemutsel` (_N<sub>e</sub>_, _μ_), please cite:
+- **If you use `nodemutsel`/`readnodemutsel` to compute branch/node specific _N<sub>e</sub>_ and/or _μ_, please cite**:
 
 Thibault Latrille, Vincent Lanore, Nicolas Lartillot,\
 Inferring Long-Term Effective Population Size with Mutation–Selection Models,\
