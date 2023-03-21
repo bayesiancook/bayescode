@@ -120,8 +120,8 @@ class GeneBranchStrandSymmetricSample : public Sample {
             // GetModel()->GetSynModel()->AddZscoreTo(syn_z);
             GetModel()->GetOmegaModel()->AddZscoreTo(om_z);
 
-            GetModel()->AddGCDiffTo(gc_val, gc_z, 
-            // GetModel()->AddGCBiasTo(gc_val, gc_z, 
+            // GetModel()->AddGCDiffTo(gc_val, gc_z, 
+            GetModel()->AddGCBiasTo(gc_val, gc_z, 
                     mean_branchgc_array, mean_genegc_array);
 
             GetModel()->AddSynTo(syn_val, syn_z,
