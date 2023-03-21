@@ -464,6 +464,32 @@ class GeneBranchStrandSymmetricCodonModel : public ProbModel {
         }
     }
 
+    void AddGCDiffTo(vector<vector<double>>& gc_diff, vector<vector<double>>& gc_z, vector<double>& meanbranchgc, vector<double>& meangenegc) const  {
+        vector<double> branchmean(Nbranch, 0);
+        vector<double> genemean(Ngene,0);
+        for (int i=0; i<Ngene; i++) {
+            for (int j=0; j<Nbranch; j++)   {
+                double diff = (rho_AC_model->GetVal(i,j) + rho_AG_model->GetVal(i,j)) -
+                    (rho_CA_model->GetVal(i,j) + rho_CT_model->GetVal(i,j));
+                double meandiff = (rho_AC_model->GetMeanVal(i,j) + rho_AG_model->GetMeanVal(i,j)) -
+                    (rho_CA_model->GetMeanVal(i,j) + rho_CT_model->GetMeanVal(i,j));
+                double vardiff = rho_AC_model->GetDevVar(i,j) + rho_AG_model->GetDevVar(i,j) + rho_CA_model->GetDevVar(i,j) + rho_CT_model->GetDevVar(i,j);
+                gc_diff[i][j] += diff/meandiff;
+                gc_z[i][j] += diff/sqrt(vardiff);
+                branchmean[j] += diff/meandiff;
+                genemean[i] += diff/meandiff;
+            }
+        }
+        for (int i=0; i<Ngene; i++) {
+            genemean[i] /= Nbranch;
+            meangenegc[i] += genemean[i];
+        }
+        for (int j=0; j<Nbranch; j++)   {
+            branchmean[j] /= Ngene;
+            meanbranchgc[j] += branchmean[j];
+        }
+    }
+
     void AddNucStats(double& meanAC, double& meanAG, double& meanCA, double& meanCG, double& meanCT,
             double& geneAC, double& geneAG, double& geneCA, double& geneCG, double& geneCT,
             double& branchAC, double& branchAG, double& branchCA, double& branchCG, double& branchCT,

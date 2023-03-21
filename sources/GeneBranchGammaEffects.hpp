@@ -79,6 +79,11 @@ class GeneBranchGammaEffects    {
         return dev_pi;
     }
 
+    double GetDevVar(int gene, int branch) const    {
+        double tmp = mean_bidimarray->GetVal(gene,branch);
+        return dev_invshape * tmp * tmp;
+    }
+
     void TraceHeader(ostream &os, string prefix) const {
         if (! fixgene_hypermean)    {
             os << "\t" << prefix << "_genemean";
