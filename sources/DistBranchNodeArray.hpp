@@ -91,27 +91,31 @@ class DistBranchNodeArray   {
         return *i;
     }
 
-    void MedianToStream(ostream& os) const {
-        RecursiveMedianToStream(os, GetRoot());
+    void MedianToStream(ostream& os, bool with_node_name = true) const {
+        RecursiveMedianToStream(os, GetRoot(), with_node_name);
         os << ";\n";
     }
 
-    void RecursiveMedianToStream(ostream& os, const Link* from) const {
+    void RecursiveMedianToStream(ostream& os, const Link* from, bool with_node_name) const {
         if (from->isLeaf()) {
             os << from->GetNode()->GetName();
-            os << "_";
+            if (with_node_name) {
+                os << "_";
+            }
         }
         else    {
             os << "(";
             for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-                RecursiveMedianToStream(os,link->Out());
+                RecursiveMedianToStream(os,link->Out(), with_node_name);
                 if (link->Next() != from)   {
                     os << ",";
                 }
             }
             os << ")";
         }
-        os << exp(GetNodeQuantile(from->GetNode()->GetIndex(), 0.5));
+        if (with_node_name) {
+            os << exp(GetNodeQuantile(from->GetNode()->GetIndex(), 0.5));
+        }
         if (! from->isRoot())    {
             os << ":";
             os << GetBranchMean(from->GetBranch()->GetIndex());

@@ -83,6 +83,7 @@ class FastCoevolSample : public Sample {
 
         DistBranchNodeArray meansynrate(GetModel()->GetTree());
         DistBranchNodeArray meanomega(GetModel()->GetTree());
+        // DistBranchArray<double> timetree(GetModel()->GetTree());
 
 		int dim = GetModel()->GetCovMatrix().GetDim();
 		MeanCovMatrix  mat(dim);
@@ -96,6 +97,7 @@ class FastCoevolSample : public Sample {
             GetModel()->Update();
             meansynrate.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 0);
             meanomega.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
+            // timetree.Add(GetModel()->GetChronogram());
 			mat.Add(GetModel()->GetCovMatrix());
             pvar_syn += GetModel()->GetLongTermSynPropVar();
             pvar_om += GetModel()->GetLongTermOmegaPropVar();
@@ -119,6 +121,11 @@ class FastCoevolSample : public Sample {
         ofstream omos((name + ".postmeanomega.tre").c_str());
         meanomega.MedianToStream(omos);
         cerr << "postmean omega tree in " << name << ".postmeanomega.tre\n"; 
+
+        // timetree.Sort();
+        ofstream tos((name + ".postmeanchrono.tre").c_str());
+        meanomega.MedianToStream(tos, false);
+        cerr << "postmean timetree in " << name << ".postmeanchrono.tre\n"; 
 
 		mat.Normalize();
 		ofstream mos((name + ".cov").c_str());
