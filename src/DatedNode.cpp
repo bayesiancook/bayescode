@@ -15,9 +15,7 @@ class DatedNodeOmegaArgParse : public BaseArgParse {
     explicit DatedNodeOmegaArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
 
     ValueArg<std::string> traitsfile{
-        "", "traitsfile", "Traits file for taxon at the leaves", false, "Null", "string", cmd};
-    ValueArg<std::string> fossils{
-        "", "fossils", "Fossils data (to clamp the node ages)", false, "Null", "string", cmd};
+        "", "traitsfile", "Traits file for taxon at the leaves", true, "Null", "string", cmd};
     ValueArg<int> prior_cov_df{"", "df", "Invert Wishart degree of freedom", false, 0, "int", cmd};
     SwitchArg uniq_kappa{"", "uniq_kappa",
         "Unique kappa for the invert Wishart matrix prior (otherwise 1 for each dimension)", cmd,
@@ -42,8 +40,7 @@ int main(int argc, char *argv[]) {
         chain_driver = new ChainDriver(
             cmd.chain_name(), inference_args.every.getValue(), inference_args.until.getValue());
         model = std::make_unique<DatedNodeModel>(inference_args.treefile.getValue(),
-            args.traitsfile.getValue(), args.fossils.getValue(), args.prior_cov_df.getValue(),
-            args.uniq_kappa.getValue());
+            args.traitsfile.getValue(), args.prior_cov_df.getValue(), args.uniq_kappa.getValue());
         model->Update();
     }
     ConsoleLogger console_logger;

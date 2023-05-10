@@ -149,7 +149,7 @@ aamutsel: bin
 	bin/readaamutsel --ss _aamutsel/gal4_poly
 
 .PHONY: mutselomega
-mutselomega: bin
+mutselomega: tiny
 	@cd bin ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
@@ -180,7 +180,7 @@ DM5: bin
 	bin/mutseldm5 _mutseldm5/bglobin
 
 .PHONY: dated
-dated: bin
+dated: tiny
 	@cd bin ; make --no-print-directory -j8 nodemutsel
 	@rm -rf _dated
 	@mkdir _dated
@@ -188,6 +188,16 @@ dated: bin
 	bin/nodemutsel _dated/node_gal4
 	bin/nodemutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --ncat 3 -u ${POINTS} -p _dated/node_poly_gal4
 	bin/nodemutsel _dated/node_poly_gal4
+
+.PHONY: traits
+traits: tiny
+	@cd bin ; make --no-print-directory -j8 nodetraits readnodetraits
+	@rm -rf _traits
+	@mkdir _traits
+	bin/nodetraits -t data/body_size/mammals.tree --traitsfile data/body_size/mammals.log.traits.tsv -u 20 _traits/bodySize
+	bin/nodetraits _traits/bodySize
+	bin/readnodetraits -b 10 --newick _traits/bodySize
+	bin/readnodetraits -b 10 --cov _traits/bodySize
 
 .PHONY: diffseldsparse
 diffseldsparse: all

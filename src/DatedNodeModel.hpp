@@ -16,15 +16,13 @@
 
 class DatedNodeModel : public ChainComponent {
     // tree and data
-    std::string treefile, traitsfile{"Null"}, fossilsfile{"Null"};
+    std::string treefile, traitsfile;
     std::unique_ptr<const Tree> tree;
     TaxonSet *taxonset{nullptr};
     TaxonMap *taxonmap{nullptr};
     TaxonTraits *taxon_traits{nullptr};
 
     int Ntaxa;
-    int Nbranch;
-
     // Node ages
     NodeAges *nodeages;
     // Chronogram (diff between node ages)
@@ -39,6 +37,7 @@ class DatedNodeModel : public ChainComponent {
     EMatrix *cov_matrix;
     NodeMultivariateProcess *node_multivariate;
     ScatterSuffStat *scattersuffstat;
+    std::vector<double> root_trait;
 
   public:
     friend std::ostream &operator<<(std::ostream &os, DatedNodeModel &m);
@@ -51,23 +50,20 @@ class DatedNodeModel : public ChainComponent {
     //!
     //! Note: in itself, the constructor does not allocate the model;
     //! It only reads the data and tree file and register them together.
-    DatedNodeModel(std::string intreefile, std::string intraitsfile, std::string infossilsfile,
-        int inprior_cov_df, bool inuniq_kappa)
+    DatedNodeModel(
+        std::string intreefile, std::string &intraitsfile, int inprior_cov_df, bool inuniq_kappa)
         : treefile(std::move(intreefile)),
           traitsfile(std::move(intraitsfile)),
-          fossilsfile(std::move(infossilsfile)),
           prior_cov_df{inprior_cov_df},
           uniq_kappa{inuniq_kappa} {
         // get tree from file (newick format)
         std::ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
-        Nbranch = tree->nb_branches();
 
         // Node ages
-        nodeages = new NodeAges(*tree, fossilsfile);
+        nodeages = new NodeAges(*tree, parser.get_tree());
         chronogram = new Chronogram(*nodeages);
-        chronogram->Scale();
         std::vector<std::string> leave_names;
         for (auto const &n : tree->root_to_leaves_iter()) {
             if (tree->is_leaf(n)) { leave_names.push_back(tree->node_name(n)); }
@@ -75,9 +71,7 @@ class DatedNodeModel : public ChainComponent {
         taxonset = new TaxonSet(leave_names);
         taxonmap = new TaxonMap(tree.get(), taxonset);
         Ntaxa = taxonmap->GetNtaxa();
-        if (traitsfile != "Null") {
-            taxon_traits = new TaxonTraits(traitsfile, *taxonset, false, 0);
-        }
+        taxon_traits = new TaxonTraits(traitsfile, *taxonset, false, 0);
 
         // Precision matrix and prior
         dimensions = taxon_traits->GetDim();
@@ -89,6 +83,7 @@ class DatedNodeModel : public ChainComponent {
         if (taxon_traits != nullptr) { node_multivariate->ClampLeaves(*taxon_traits, *taxonmap); }
         // Suff Stats
         scattersuffstat = new ScatterSuffStat(*tree);
+        root_trait = std::vector<double>(dimensions, 0);
     }
 
     virtual ~DatedNodeModel() = default;
@@ -97,30 +92,28 @@ class DatedNodeModel : public ChainComponent {
 
     template <class Info>
     void declare_interface(Info info) {
-        model_node(info, "nodeages", *nodeages);
         model_node(info, "node_multivariate", *node_multivariate);
         model_node(info, "prior_cov_matrix", *prior_matrix);
         model_node(info, "precision_matrix", *precision_matrix);
         model_node(info, "cov_matrix", *cov_matrix);
 
+        model_stat(info, "n_taxa", [&]() { return Ntaxa; });
         model_stat(info, "lnprob", [&]() { return DatedNodeModel::GetLogProb(); });
         model_stat(info, "priorLnprob", [&]() { return prior_matrix->GetLogProb(); });
         model_stat(
             info, "precisionLnprob", [&]() { return precision_matrix->GetLogProb(*prior_matrix); });
         model_stat(info, "multiLnprob", [&]() { return node_multivariate->GetLogProb(); });
         for (int i = 0; i < dimensions; i++) {
-            model_stat(info, "PriorSigma_" + std::to_string(i), prior_matrix->coeffRef(i));
-            for (int j = 0; j <= i; j++) {
-                model_stat(info, "Precision_" + std::to_string(i) + "_" + std::to_string(j),
+            model_stat(info, "PriorSigma_" + GetDimensionName(i), prior_matrix->coeffRef(i));
+            // Trait at the root of the tree
+            model_stat(info, "RootTrait_" + GetDimensionName(i), root_trait[i]);
+            model_stat(info, "Var_" + GetDimensionName(i), cov_matrix->coeffRef(i, i));
+            for (int j = 0; j < i; j++) {
+                model_stat(info, "Precision_" + GetDimensionName(i) + "_" + GetDimensionName(j),
                     precision_matrix->coeffRef(i, j));
-                model_stat(info, "Cov_" + std::to_string(i) + "_" + std::to_string(j),
+                model_stat(info, "Cov_" + GetDimensionName(i) + "_" + GetDimensionName(j),
                     cov_matrix->coeffRef(i, j));
             }
-        }
-        // Descriptive statistics - for each branch of the tree
-        for (Tree::BranchIndex branch = 0; branch < tree->nb_branches(); branch++) {
-            string b_name = tree->node_name(tree->node_index(branch));
-            model_stat(info, "*BranchTime_" + b_name, (*chronogram)[branch]);
         }
     }
 
@@ -158,11 +151,16 @@ class DatedNodeModel : public ChainComponent {
     //! pointer to be called after changing the value of the focal parameter.
     void NoUpdate() {}
 
+    void UpdateRoot() {
+        for (int i = 0; i < dimensions; i++) {
+            root_trait[i] = node_multivariate->GetVal(tree->root())(i);
+        }
+    }
     //! \brief global update function (includes the stochastic mapping of
     //! character history)
     void Update() {
         chronogram->Update();
-        chronogram->Scale();
+        UpdateRoot();
     }
 
     //! return joint log prob (log prior + log likelihood)
@@ -204,6 +202,7 @@ class DatedNodeModel : public ChainComponent {
             MovePriorMatrix(0.01, 3);
         }
         precision_matrix->UpdateCovarianceMatrix(*cov_matrix);
+        UpdateRoot();
     }
 
     void SamplePrecisionMatrix() {
@@ -266,7 +265,7 @@ class DatedNodeModel : public ChainComponent {
 };
 
 std::istream &operator>>(std::istream &is, std::unique_ptr<DatedNodeModel> &m) {
-    std::string model_name, treefile, traitsfile, fossilsfile;
+    std::string model_name, treefile, traitsfile;
     int prior_cov_df;
     bool uniq_kappa;
     is >> model_name;
@@ -275,9 +274,8 @@ std::istream &operator>>(std::istream &is, std::unique_ptr<DatedNodeModel> &m) {
         exit(1);
     }
 
-    is >> treefile >> traitsfile >> fossilsfile >> prior_cov_df >> uniq_kappa;
-    m = std::make_unique<DatedNodeModel>(
-        treefile, traitsfile, fossilsfile, prior_cov_df, uniq_kappa);
+    is >> treefile >> traitsfile >> prior_cov_df >> uniq_kappa;
+    m = std::make_unique<DatedNodeModel>(treefile, traitsfile, prior_cov_df, uniq_kappa);
     Tracer tracer{*m};
     tracer.read_line(is);
     m->Update();
@@ -288,10 +286,7 @@ std::ostream &operator<<(std::ostream &os, DatedNodeModel &m) {
     Tracer tracer{m};
     os << "DatedNode" << '\t';
     os << m.treefile << '\t';
-    assert(!m.traitsfile.empty());
     os << m.traitsfile << '\t';
-    assert(!m.fossilsfile.empty());
-    os << m.fossilsfile << '\t';
     os << m.prior_cov_df << '\t';
     os << m.uniq_kappa << '\t';
     tracer.write_line(os);

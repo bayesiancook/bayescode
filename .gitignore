@@ -3,12 +3,8 @@
 cmake-build-debug/
 *~
 tmp*
-*_bin
+_*/
 *.json
-_build*
 bin*
-_test/
-_aamutsel/
-_mutselomega/
 .vscode/
 *.profraw

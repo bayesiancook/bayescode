@@ -14,6 +14,8 @@
  */
 class NodeAges : public SimpleNodeArray<double> {
   public:
+    explicit NodeAges(const Tree& intree, const AnnotatedTree& annotated_tree);
+
     explicit NodeAges(const Tree& intree, const string& fossils);
 
     //! find the longest path from this node to the farthest leaf.

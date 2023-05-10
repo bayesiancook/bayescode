@@ -24,6 +24,5 @@ class Tree {
     virtual NodeIndex node_index(BranchIndex) const = 0;
     virtual const std::vector<NodeIndex>& root_to_leaves_iter() const = 0;
     virtual const std::vector<NodeIndex>& leaves_root_to_iter() const = 0;
-
     virtual ~Tree() = default;
 };

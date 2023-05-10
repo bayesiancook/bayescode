@@ -56,7 +56,7 @@ class TaxonTraits {
             getline(line_stream, taxon, sep);
             if (!taxon_set.TaxonPresent(taxon)) {
                 std::cerr << "Taxon " << taxon
-                          << " found in traits file was not found in the alignment (skipping line)."
+                          << " found in traits file (.tsv) does not have a match (skipping line)."
                           << std::endl;
                 continue;
             }
