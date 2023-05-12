@@ -9,7 +9,7 @@
 #include "components/Tracer.hpp"
 
 /**
- * \brief Traits are modeled as a browian process along the tree (like CoEvol)
+ * \brief Traits are modeled as a brownian process along the tree (like CoEvol)
  *
  */
 
@@ -64,10 +64,15 @@ class DatedNodeModel : public ChainComponent {
         // Node ages
         nodeages = new NodeAges(*tree, parser.get_tree());
         chronogram = new Chronogram(*nodeages);
+        chronogram->Scale();
         std::vector<std::string> leave_names;
         for (auto const &n : tree->root_to_leaves_iter()) {
             if (tree->is_leaf(n)) { leave_names.push_back(tree->node_name(n)); }
         }
+        std::cout << "Tree has " << tree->nb_nodes() << " nodes and " << leave_names.size()
+                  << " leaves\n";
+        std::cout << "Total tree size: " << chronogram->GetSum() << std::endl;
+
         taxonset = new TaxonSet(leave_names);
         taxonmap = new TaxonMap(tree.get(), taxonset);
         Ntaxa = taxonmap->GetNtaxa();
@@ -160,6 +165,7 @@ class DatedNodeModel : public ChainComponent {
     //! character history)
     void Update() {
         chronogram->Update();
+        chronogram->Scale();
         UpdateRoot();
     }
 
