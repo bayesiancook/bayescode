@@ -1,5 +1,8 @@
 # BayesCode
-[![Build Status](https://travis-ci.org/bayesiancook/bayescode.svg?branch=dev)](https://travis-ci.org/bayesiancook/bayescode)
+[![Version](https://anaconda.org/bioconda/bayescode/badges/version.svg)](https://anaconda.org/bioconda/bayescode)
+[![Release](https://anaconda.org/bioconda/bayescode/badges/latest_release_date.svg)](https://anaconda.org/bioconda/bayescode)
+[![Build Status](https://anaconda.org/bioconda/bayescode/badges/platforms.svg)](https://anaconda.org/bioconda/bayescode)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ThibaultLatrille/bayescode/blob/chronogram/License.MD)
 [![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
 
 ## Contents
@@ -37,7 +40,7 @@ Red pill method is preferred if you plan to tinker with the code.
 The two pills are mutually not exclusive, no overdose had ever been observed (though no statistical study had been performed).
 
 ### 1. Blue pill with conda
-The precompiled binaries for `nodemutsel`, `readnodemutsel`, `mutselomega`, `readmutselomega` and python scripts are available as the `bayescode` conda package from the channel `bioconda` ([https://anaconda.org/bioconda/bayescode](https://anaconda.org/bioconda/bayescode)).
+The precompiled binaries for `nodemutsel`, `readnodemutsel`, `mutselomega`, `readmutselomega` and python scripts are available as the `bayescode` conda package from the channel `bioconda` ([anaconda.org/bioconda/bayescode](https://anaconda.org/bioconda/bayescode)).
 
 ```bash
 conda install -c conda-forge -c bioconda bayescode
@@ -110,7 +113,7 @@ For example, the following file would be a valid tree file for _BayesCode_ match
 
 ### 3. Example files
 The `data` folder in the _BayesCode_ root folder contains examples of data files usable with _BayesCode_.
-The whole folder can be downloaded here: [https://github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip](https://github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip).
+The whole folder can be downloaded here: [github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip](https://github.com/ThibaultLatrille/bayescode/releases/download/v1.1.6/data.zip).
 
 ## Run BayesCode
 To get the help of the program and the possible options, type:
@@ -219,7 +222,7 @@ This will output the mean posterior ω<sup>(i)</sup> over the MCMC as well as th
 The value of `confidence_interval` used as input is considered for each side of the distribution, hence a factor 2 for the credible interval.
 
 ### III. Mutation-selection codon models with a multiplicative factor (ω<sub>∗</sub>)
-Mutation-selection codon models with a ω<sub>∗</sub> multiplicative factor (MutSel-M3, see [https://doi.org/10.1093/molbev/msaa265](https://doi.org/10.1093/molbev/msaa265)) are obtained by running `mutselomega` for 2000 points of MCMC with the options:
+Mutation-selection codon models with a ω<sub>∗</sub> multiplicative factor (MutSel-M3, see [doi.org/10.1093/molbev/msaa265](https://doi.org/10.1093/molbev/msaa265)) are obtained by running `mutselomega` for 2000 points of MCMC with the options:
 ```bash
 mutselomega --freeomega --omegancat 3 --ncat 30 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre -u 2000 run_mutselM3_bglobin
 ```
@@ -436,7 +439,9 @@ You can use one of these options with `readnodemutsel` to compute a specific pos
 T. Latrille, J. Joseph, D. A. Hartasánchez, N. Salamin,\
  Mammalian protein-coding genes exhibit widespread beneficial mutations that are not adaptive, \
 _bioRxiv_,\
-https://doi.org/10.1101/2023.05.03.538864
+[doi.org/10.1101/2023.05.03.538864](https://doi.org/10.1101/2023.05.03.538864)
+
+_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/SelCoeff](https://github.com/ThibaultLatrille/SelCoeff)._
 
 - **If you use `mutselomega`/`readmutselomega` to compute ω<sub>0</sub> or ω<sub>A</sub><sup>phy</sup> = ω - ω<sub>0</sub>, please cite**:
 
@@ -444,7 +449,9 @@ Thibault Latrille, Nicolas Rodrigue, Nicolas Lartillot,\
 Genes and sites under adaptation at the phylogenetic scale also exhibit adaptation at the population-genetic scale,\
 _Proceedings of the National Academy of Sciences_,
 Volume 120, Issue 11, March 2023, Pages e2214977120,\
-https://doi.org/10.1073/pnas.2214977120
+[doi.org/10.1073/pnas.2214977120](https://doi.org/10.1073/pnas.2214977120)
+
+_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/AdaptaPop](https://github.com/ThibaultLatrille/AdaptaPop)._
 
 - **If you use `mutselomega`/`readmutselomega` to compute ω<sub>∗</sub>, please cite**:
 
@@ -452,7 +459,7 @@ Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot,\
 A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes,\
 _Molecular Biology and Evolution_,
 Volume 38, Issue 3, March 2021, Pages 1199–1208,\
-https://doi.org/10.1093/molbev/msaa265
+[doi.org/10.1093/molbev/msaa265](https://doi.org/10.1093/molbev/msaa265)
 
 - **If you use `nodemutsel`/`readnodemutsel` to compute branch/node specific _N<sub>e</sub>_ and/or _μ_, please cite**:
 
@@ -460,9 +467,9 @@ Thibault Latrille, Vincent Lanore, Nicolas Lartillot,\
 Inferring Long-Term Effective Population Size with Mutation–Selection Models,\
 _Molecular Biology and Evolution_,
 Volume 38, Issue 10, October 2021, Pages 4573–4587,\
-https://doi.org/10.1093/molbev/msab160
+[doi.org/10.1093/molbev/msab160](https://doi.org/10.1093/molbev/msab160)
 
-The repository at https://github.com/ThibaultLatrille/MutationSelectionDrift is meant to provide the necessary scripts and data to reproduce the figures shown in the manuscript (please use [_BayesCode v1.0_](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0)).
+_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/MutationSelectionDrift](https://github.com/ThibaultLatrille/MutationSelectionDrift) (please use [BayesCode v1.0](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0))_.
 
 ## Authors
-Nicolas Lartillot (https://github.com/bayesiancook), Thibault Latrille (https://github.com/ThibaultLatrille), Vincent Lanore (https://github.com/vlanore), Philippe Veber (https://github.com/pveber) and Nicolas Rodrigue.
+Nicolas Lartillot ([github.com/bayesiancook](https://github.com/bayesiancook)), Thibault Latrille ([github.com/ThibaultLatrille](https://github.com/ThibaultLatrille)), Vincent Lanore ([github.com/vlanore](https://github.com/vlanore)), Philippe Veber ([github.com/pveber](https://github.com/pveber)) and Nicolas Rodrigue.
