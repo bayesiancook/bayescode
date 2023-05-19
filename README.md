@@ -441,7 +441,7 @@ T. Latrille, J. Joseph, D. A. Hartasánchez, N. Salamin,\
 _bioRxiv_,\
 [doi.org/10.1101/2023.05.03.538864](https://doi.org/10.1101/2023.05.03.538864)
 
-_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/SelCoeff](https://github.com/ThibaultLatrille/SelCoeff)._
+_Scripts and data necessary to reproduce the figures at [github.com/ThibaultLatrille/SelCoeff](https://github.com/ThibaultLatrille/SelCoeff)._
 
 - **If you use `mutselomega`/`readmutselomega` to compute ω<sub>0</sub> or ω<sub>A</sub><sup>phy</sup> = ω - ω<sub>0</sub>, please cite**:
 
@@ -451,7 +451,7 @@ _Proceedings of the National Academy of Sciences_,
 Volume 120, Issue 11, March 2023, Pages e2214977120,\
 [doi.org/10.1073/pnas.2214977120](https://doi.org/10.1073/pnas.2214977120)
 
-_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/AdaptaPop](https://github.com/ThibaultLatrille/AdaptaPop)._
+_Scripts and data necessary to reproduce the figures at [github.com/ThibaultLatrille/AdaptaPop](https://github.com/ThibaultLatrille/AdaptaPop)._
 
 - **If you use `mutselomega`/`readmutselomega` to compute ω<sub>∗</sub>, please cite**:
 
@@ -469,7 +469,7 @@ _Molecular Biology and Evolution_,
 Volume 38, Issue 10, October 2021, Pages 4573–4587,\
 [doi.org/10.1093/molbev/msab160](https://doi.org/10.1093/molbev/msab160)
 
-_Scripts and data necessary to reproduce the figures shown in the manuscript are available at [github.com/ThibaultLatrille/MutationSelectionDrift](https://github.com/ThibaultLatrille/MutationSelectionDrift) (please use [BayesCode v1.0](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0))_.
+_Scripts and data necessary to reproduce the figures at [github.com/ThibaultLatrille/MutationSelectionDrift](https://github.com/ThibaultLatrille/MutationSelectionDrift) (please use [BayesCode v1.0](https://github.com/ThibaultLatrille/bayescode/releases/tag/v1.0))_.
 
 ## Authors
 Nicolas Lartillot ([github.com/bayesiancook](https://github.com/bayesiancook)), Thibault Latrille ([github.com/ThibaultLatrille](https://github.com/ThibaultLatrille)), Vincent Lanore ([github.com/vlanore](https://github.com/vlanore)), Philippe Veber ([github.com/pveber](https://github.com/pveber)) and Nicolas Rodrigue.
