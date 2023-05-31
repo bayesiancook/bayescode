@@ -104,7 +104,7 @@ add_executable(readnodeomega "src/ReadDatedNodeOmega.cpp")
 target_link_libraries(readnodeomega ${BASE_LIBS})
 
 if (TINY)
-    message("-- INFO: Compiling uniquely nodetraits, nodemutsel and mutselomega.")
+    message("-- INFO: Compiling uniquely mutselomega, nodetraits, nodemutsel and nodeomega.")
 else ()
     # Single omega (globom)
     add_executable(globom "src/SingleOmega.cpp")

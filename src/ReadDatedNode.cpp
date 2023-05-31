@@ -11,16 +11,20 @@
 using namespace std;
 using namespace TCLAP;
 
+
 class ReadNodeOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadNodeOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
     SwitchArg newick{"t", "newick",
-        "Computes the mean posterior node-specific entries of the multivariate Brownian process",
+        "Computes the mean posterior node-specific entries of the multivariate Brownian process. "
+        "Each entry of the multivariate Brownian process is written in a newick extended (.nhx) "
+        "format file.",
         cmd};
 
-    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix", cmd};
+    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix.", cmd};
 };
+
 
 int main(int argc, char *argv[]) {
     CmdLine cmd{"DatedMutSel", ' ', "0.1"};
