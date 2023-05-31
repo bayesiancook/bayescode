@@ -5,7 +5,7 @@ project(BayesCode CXX)
 option(COVERAGE_MODE "For coverage mode using g++ " OFF) #OFF by default
 option(TINY "Compiling a subset of programs without MPI " OFF) #OFF by default
 option(DEBUG_MODE "Debug mode (with asserts and such) " OFF) #OFF by default
-set(ALWAYSON_CXX_FLAGS "--std=c++14 -Wall -Wextra -Wno-unused-parameter -Wfatal-errors ")
+set(ALWAYSON_CXX_FLAGS "--std=c++14 -Wfatal-errors ")
 if (COVERAGE_MODE)
     set(CMAKE_CXX_FLAGS "-O0 -fprofile-arcs -ftest-coverage ${ALWAYSON_CXX_FLAGS}") # coverage mode
     message("-- INFO: Compiling in coverage mode.\n-- INFO: flags are: " ${CMAKE_CXX_FLAGS})
@@ -95,20 +95,20 @@ target_link_libraries(readnodetraits ${BASE_LIBS})
 add_executable(nodetraits "src/DatedNode.cpp")
 target_link_libraries(nodetraits ${BASE_LIBS})
 
+# Node omega (nodeomega)
+add_executable(nodeomega "src/DatedNodeOmega.cpp")
+target_link_libraries(nodeomega ${BASE_LIBS})
+
+# Read Node omega (readnodeomega)
+add_executable(readnodeomega "src/ReadDatedNodeOmega.cpp")
+target_link_libraries(readnodeomega ${BASE_LIBS})
+
 if (TINY)
     message("-- INFO: Compiling uniquely nodetraits, nodemutsel and mutselomega.")
 else ()
     # Single omega (globom)
     add_executable(globom "src/SingleOmega.cpp")
     target_link_libraries(globom ${BASE_LIBS})
-
-    # Node omega (nodeomega)
-    add_executable(nodeomegamutsel "src/DatedNodeOmega.cpp")
-    target_link_libraries(nodeomegamutsel ${BASE_LIBS})
-
-    # Read Node omega (readnodeomega)
-    add_executable(readnodeomegamutsel "src/ReadDatedNodeOmega.cpp")
-    target_link_libraries(readnodeomegamutsel ${BASE_LIBS})
 
     # Read single omega (readglobom)
     add_executable(readglobom "src/ReadSingleOmega.cpp")

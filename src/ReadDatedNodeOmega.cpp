@@ -17,10 +17,12 @@ class ReadNodeOmegaArgParse : public ReadArgParse {
     explicit ReadNodeOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
     SwitchArg newick{"t", "newick",
-        "Computes the mean posterior node-specific entries of the multivariate Brownian process",
+        "Computes the mean posterior node-specific entries of the multivariate Brownian process. "
+        "Each entry of the multivariate Brownian process is written in a newick extended (.nhx) "
+        "format file.",
         cmd};
 
-    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix", cmd};
+    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix.", cmd};
 };
 
 
