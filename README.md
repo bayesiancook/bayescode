@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ThibaultLatrille/bayescode/blob/chronogram/License.MD)
 [![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
 
+Wiki and documentation at [github.com/ThibaultLatrille/bayescode/wiki](https://github.com/ThibaultLatrille/bayescode/wiki)
 ## Contents
 - [Installation](#installation)
   1. Blue pill with conda
@@ -20,12 +21,13 @@
   3. Mutation-selection codon models with a multiplicative factor (ω<sub>∗</sub>)
   4. Options for `mutselomega` and `readmutselomega`
 - [Inferring long-term effective population size](#inferring-long-term-effective-population-size)
-  1. Including life-history traits
+  1. Including quantitative traits
   2. Including fossil calibration
   3. Read annotated trees
   4. Read covariance matrix
   5. Fitness profiles
   6. Options for `nodemutsel` and `readnodemutsel`
+- [Inferring changes of selective strength along the phylogeny](#inferring-changes-of-selective-strength-along-the-phylogeny)
 - [Citations](#citations)
 - [Authors](#authors) 
 
@@ -295,14 +297,16 @@ You can use one of these options with `readmutselomega` to compute a specific po
 
 ## Inferring long-term effective population size
 If you want to use the Mutation-Selection framework for inferring long-term changes in effective population size (_N<sub>e</sub>_) and mutation rate (_μ_), use the program `nodemutsel` to run the MCMC and `readnodemutsel` to read the trace.
+Of note, the program does not scale well with many species, so it works best with trees from 50 to 120 species, and alignment with at least 900 nucleotides but not too large either (not north of 20,000 sites).
 
-For example, to run a _BayesCode_ chain called `run_nodemutsel_placentalia` on example placental mammals data (from the `data` folder), until 100 points have been written to disc (from the _BayesCode_ root folder):
+
+For example, to run a _BayesCode_ chain called `run_nodemutsel_placentalia` on example placental mammals data (from the `data` folder), until 2000 points have been written to disc (from the _BayesCode_ root folder):
 ```bash
-nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx -u 100 run_nodemutsel_placentalia
+nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx -u 2000 run_nodemutsel_placentalia
 ```
 
-### I. Including life-history traits (optional)
-To include life-history traits (optional), use the option `--traits` with the path to the file containing the traits (in log-space) in tsv format:
+### I. Including quantitative traits (optional)
+To include quantitative traits (optional), use the option `--traits` with the path to the file containing the traits (in log-space) in tsv format:
 ```bash
 nodemutsel --ncat 30 -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --traitsfile data/placentalia/plac.log.lht -u 2000 run_nodemutsel_placentalia
 ```
@@ -358,7 +362,7 @@ calibs_coevol_to_mutsel.py --input data/placentalia/plac.calibs --tree data/plac
 If the tree provided does not include name for internal nodes, the script will give them names and re-write the tree in the same file.
 
 ### III. Read annotated trees
-To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, life-history traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
+To obtain the annotated newick tree (_N<sub>e</sub>_, _μ_, quantitative traits if included) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
 readnodemutsel --burnin 1000 --until 2000 --newick run_nodemutsel_placentalia
 ```
@@ -370,7 +374,7 @@ plot_tree.py --input run_nodemutsel_placentalia
 ```
 
 ### IV. Read covariance matrix
-To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, life-history traits) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
+To obtain the covariance, correlation and posterior probabilities matrices (_N<sub>e</sub>_, _μ_, quantitative traits) from the chain `run_nodemutsel_placentalia`, discarding the first 1000 points:
 ```bash
 readnodemutsel --burnin 1000 --until 2000 --cov run_nodemutsel_placentalia
 ```
@@ -406,7 +410,7 @@ The options for `nodemutsel` are:
  of profiles in the file.
 
 --traitsfile <string> (default: None)
- File path to the life-history trait (in log-space) in tsv format. The
+ File path to the quantitative trait (in log-space) in tsv format. The
  First column is `TaxonName` (taxon matching the name in the alignment)
  and the next columns are traits.
 ```
@@ -430,11 +434,30 @@ You can use one of these options with `readnodemutsel` to compute a specific pos
  {chain_name}.siteprofiles as default.
 ```
 
+## Inferring changes of selective strength along the phylogeny
+If you want to use Bayescode to infer changes in ω and _μ_ along the phylogeny, use the program `nodeomega` to run the MCMC and `readnodeomega` to read the trace.
 
+
+Of note, this program runs faster than `nodemutsel` and scale better with a larger number of species, because is does not estimate site-specific fitness profiles.
+The results are not interpretable directly as changes in _N<sub>e</sub>_, but instead in the change of the global strength of selection (ω). ω is related to the underlying genetic drift if the genes are effectively constrained (no adaptation).
+So for examples species with large _N<sub>e</sub>_ will have stronger selection, so ω closer to 0.
+Contrarily, species with small _N<sub>e</sub>_ will have weak selection, so ω closer to 1.
+
+
+For example, to run a _BayesCode_ chain called `run_nodeomega_placentalia` on example placental mammals data (from the `data` folder) and plot the resulting trees with the commands:
+```bash
+nodeomega -a data/placentalia/plac.ali -t data/placentalia/plac.nhx --until 2000 run_nodeomega_placentalia
+readnodeomega --burnin 1000 --until 2000 --newick run_nodeomega_placentalia
+plot_tree.py --input run_nodeomega_placentalia
+```
+
+`nodeomega` also accepts quantitative traits (option `--traitsfile`) and fossil calibration (`--fossils`), see section on [nodemutsel](#inferring-long-term-effective-population-size) for the file format.
+However, it does not accept the option `--ncat` nor `--profiles` since `nodeomega` is not based on the mutation-selection framework and does not accept the amino-acid fitness profiles.
+Similarly, the `readnodeomega` can return covariance matrices (option `--cov`) and trees (option `--newick`), but not amino-acid fitness profiles (options `--ss` and `--profiles`).
 
 ## Citations
 
-- **The preprint for use of `mutselomega`/`readmutselomega` to compute S<sub>0</sub> is**:
+- **The preprint for use of `mutselomega` to compute S<sub>0</sub> is**:
 
 T. Latrille, J. Joseph, D. A. Hartasánchez, N. Salamin,\
  Mammalian protein-coding genes exhibit widespread beneficial mutations that are not adaptive, \
@@ -443,7 +466,7 @@ _bioRxiv_,\
 
 _Scripts and data necessary to reproduce the figures at [github.com/ThibaultLatrille/SelCoeff](https://github.com/ThibaultLatrille/SelCoeff)._
 
-- **If you use `mutselomega`/`readmutselomega` to compute ω<sub>0</sub> or ω<sub>A</sub><sup>phy</sup> = ω - ω<sub>0</sub>, please cite**:
+- **If you use `mutselomega` to compute ω<sub>0</sub> or ω<sub>A</sub><sup>phy</sup> = ω - ω<sub>0</sub>, please cite**:
 
 Thibault Latrille, Nicolas Rodrigue, Nicolas Lartillot,\
 Genes and sites under adaptation at the phylogenetic scale also exhibit adaptation at the population-genetic scale,\
@@ -453,7 +476,7 @@ Volume 120, Issue 11, March 2023, Pages e2214977120,\
 
 _Scripts and data necessary to reproduce the figures at [github.com/ThibaultLatrille/AdaptaPop](https://github.com/ThibaultLatrille/AdaptaPop)._
 
-- **If you use `mutselomega`/`readmutselomega` to compute ω<sub>∗</sub>, please cite**:
+- **If you use `mutselomega` to compute ω<sub>∗</sub>, please cite**:
 
 Nicolas Rodrigue, Thibault Latrille, Nicolas Lartillot,\
 A Bayesian Mutation–Selection Framework for Detecting Site-Specific Adaptive Evolution in Protein-Coding Genes,\
@@ -461,7 +484,7 @@ _Molecular Biology and Evolution_,
 Volume 38, Issue 3, March 2021, Pages 1199–1208,\
 [doi.org/10.1093/molbev/msaa265](https://doi.org/10.1093/molbev/msaa265)
 
-- **If you use `nodemutsel`/`readnodemutsel` to compute branch/node specific _N<sub>e</sub>_ and/or _μ_, please cite**:
+- **If you use `nodemutsel` to compute branch/node specific _N<sub>e</sub>_ and _μ_, or if you use `nodeomega` to compute branch/node specific ω and _μ_ please cite**:
 
 Thibault Latrille, Vincent Lanore, Nicolas Lartillot,\
 Inferring Long-Term Effective Population Size with Mutation–Selection Models,\
