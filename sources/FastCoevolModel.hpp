@@ -9,6 +9,8 @@
 #include "InverseWishart.hpp"
 #include "ChronoWhiteNoise.hpp"
 
+#include "PisArray.hpp"
+
 class FastCoevolModel: public ProbModel {
 
     int wndsmode;
@@ -38,6 +40,9 @@ class FastCoevolModel: public ProbModel {
     MultivariateBrownianTreeProcess* process;
     MVBranchExpoLengthArray* branchlength;
     MVBranchExpoMeanArray* branchomega;
+
+    double varfactor;
+    PisArray* pisarray;
 
     double nuds;
     ChronoGammaWhiteNoise* wnds;
@@ -113,6 +118,9 @@ class FastCoevolModel: public ProbModel {
 
         branchlength = new MVBranchExpoLengthArray(*process, *chronogram, dSindex);
         branchomega = new MVBranchExpoMeanArray(*process, omindex);
+
+        varfactor = 1.0;
+        pisarray = new PisArray(...);
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
@@ -256,6 +264,9 @@ class FastCoevolModel: public ProbModel {
             total += WNOmHyperLogPrior();
             total += WNOmLogPrior();
         }
+
+        total += VarFactorLogPrior();
+
         return total;
     }
 
@@ -267,6 +278,10 @@ class FastCoevolModel: public ProbModel {
 
     //! return joint log prob (log prior + log likelihood)
     double GetLogProb() const override { return GetLogPrior() + GetLogLikelihood(); }
+
+    double VarFactorLogPrior() const    {
+        return ...;
+    }
 
     double ChronoLogPrior() const   {
         return 0;
@@ -391,7 +406,8 @@ class FastCoevolModel: public ProbModel {
     }
 
     double NodeLogPrior(const Link* from) const  {
-        return process->GetNodeLogProb(from);
+        return process->GetNodeLogProb(from) + ... 
+        // add contribution of pisarray log prob for this node, of index from->GetNode()->GetIndex();
     }
 
     double NodeLogProb(const Link* from) const   {
@@ -456,6 +472,7 @@ class FastCoevolModel: public ProbModel {
         for (int rep=0; rep<5; rep++)   {
             MoveTimes();
             MoveBrownianProcess();
+            MoveVarFactor();
             if (wndsmode)   {
                 MoveNudS();
             }
