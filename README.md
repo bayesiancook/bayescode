@@ -5,6 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ThibaultLatrille/bayescode/blob/chronogram/License.MD)
 [![codecov](https://codecov.io/gh/bayesiancook/bayescode/branch/dev/graph/badge.svg)](https://codecov.io/gh/bayesiancook/bayescode)
 
+
+The precompiled binaries are available as the `bayescode` conda package from the channel `bioconda`:
+
+```bash
+conda install -c conda-forge -c bioconda bayescode
+```
+
 **Wiki and documentation at [github.com/ThibaultLatrille/bayescode/wiki](https://github.com/ThibaultLatrille/bayescode/wiki)**
 
 ## Wiki table of contents
