@@ -124,7 +124,7 @@ std::tuple<std::vector<std::vector<double>>, std::vector<size_t>> open_preferenc
         if (std::abs(std::accumulate(fitness_profil.begin(), fitness_profil.end(), 0.0) - 1.0) >
             1e-5) {
             std::cerr << "Fitness profile doesn't sum to 1 for line:\n" << line << std::endl;
-        };
+        }
         for (size_t i = 0; i < fitness_profiles.size(); i++) {
             if (distance(fitness_profiles[i], fitness_profil) < 1e-5) {
                 push = false;
@@ -154,7 +154,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
     int Nsite;
     int Ntaxa;
-    int Nbranch;
 
     // Branch lengths
     double blhypermean;
@@ -358,7 +357,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
                          "allocations are computed."
                       << std::endl;
             omegamode = 0;
-            omegaNcat = opened_delta_omega_array.size();
+            omegaNcat = static_cast<int>(opened_delta_omega_array.size());
         }
         std::cout << "Number of sites: " << Nsite << std::endl;
         std::cout << "Number of profile categories (cut-off for infinite mixture): " << Ncat
@@ -372,8 +371,6 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         std::ifstream tree_stream{treefile};
         NHXParser parser{tree_stream};
         tree = make_from_parser(parser);
-
-        Nbranch = tree->nb_branches();
 
         // Branch lengths
         blhypermean = 0.1;
@@ -466,7 +463,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         }
         if (clamp_profiles_allocation) {
             for (int site = 0; site < Nsite; site++) {
-                (*profile_alloc)[site] = static_cast<unsigned>(std::get<1>(prefs)[site]);
+                (*profile_alloc)[site] = static_cast<int>(std::get<1>(prefs)[site]);
                 assert(siteaafitnessarray->GetVal(site).size() == 20);
             }
         }
@@ -493,7 +490,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
 
         siteomegapathsuffstatarray = new OmegaPathSuffStatArray(Nsite);
         componentomegapathsuffstatarray = new OmegaPathSuffStatArray(omegaNcat);
-        tracer = std::unique_ptr<Tracer>(new Tracer(*this));
+        tracer = std::make_unique<Tracer>(*this);
     }
 
     void move(int it) override { Move(); }
@@ -563,6 +560,28 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return number of aligned sites
     int GetNsite() const { return Nsite; }
 
+    int GetNtaxa() const { return taxonset->GetNtaxa(); }
+
+    bool IsDataEqual(AAMutSelMultipleOmegaModel const &model) const {
+        if (this->GetNsite() != model.GetNsite()) {
+            std::cerr << "Non matching number of sites between the two models: " << this->GetNsite()
+                      << " and " << model.GetNsite() << '\n';
+            return false;
+        }
+        if (this->GetNtaxa() != model.GetNtaxa()) {
+            std::cerr << "Non matching number of taxa between the two models: " << this->GetNtaxa()
+                      << " and " << model.GetNtaxa() << '\n';
+            return false;
+        }
+        for (int i{0}; i < GetNtaxa(); i++) {
+            string taxa = taxonset->GetTaxon(i);
+            if (not model.taxonset->TaxonPresent(taxa)) {
+                std::cerr << "Taxon " << taxa << " is not present in the second model\n";
+                return false;
+            }
+        }
+        return true;
+    }
     //! return current omega value for omega mixture of component k
     double GetComponentOmega(int k) const { return omega_shift + delta_omega_array->GetVal(k); }
 
@@ -608,7 +627,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         ResampleSub(1.0);
     }
 
-    void PostPred(std::string name) {
+    void PostPred(std::string const &name) {
         UpdateBaseOccupancies();
         UpdateOmegaOccupancies();
         UpdateProfileOccupancies();
@@ -966,7 +985,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     }
 
     //! helper function: log density of 20 gammas
-    double GammaAALogPrior(
+    static double GammaAALogPrior(
         const std::vector<double> &x, const std::vector<double> &aacenter, double aaconc) {
         double total = 0;
         for (int l = 0; l < Naa; l++) {
@@ -1467,7 +1486,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         tracer->write_line(os);
     }
 
-    AAMutSelMultipleOmegaModel(std::istream &is) {
+    explicit AAMutSelMultipleOmegaModel(std::istream &is) {
         std::string model_name;
         is >> model_name;
         if (model_name != "AAMutSelMultipleOmega") {

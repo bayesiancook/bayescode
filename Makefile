@@ -153,16 +153,18 @@ mutselomega: tiny
 	@cd bin ; make --no-print-directory -j8 mutselomega readmutselomega
 	@rm -rf _mutselomega
 	@mkdir _mutselomega
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --ncat 30 -u 30 _mutselomega/mutsel_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --ncat 30 -u 30 _mutselomega/mutsel_bglobin
 	bin/mutselomega _mutselomega/mutsel_bglobin
 	bin/readmutselomega -b 10 --ss _mutselomega/mutsel_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --profiles _mutselomega/mutsel_bglobin.siteprofiles --omegaarray data/bglobin/omegaarray.csv -u 30 _mutselomega/clamped_bglobin
-	bin/mutselomega _mutselomega/clamped_bglobin
-	bin/readmutselomega -b 10 _mutselomega/clamped_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/MGM3_bglobin
+	bin/readmutselomega -b 10 --omega_0 _mutselomega/mutsel_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/MGM3_bglobin
 	bin/mutselomega _mutselomega/MGM3_bglobin
 	bin/readmutselomega -b 10 _mutselomega/MGM3_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --omegashift 0.0 --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/mutselM3_bglobin
+	bin/readmutselomega -b 10 _mutselomega/mutsel_bglobin --chain_omega _mutselomega/MGM3_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --profiles _mutselomega/mutsel_bglobin.siteprofiles --omegaarray data/bglobin/omegaarray.csv -u 30 _mutselomega/clamped_bglobin
+	bin/mutselomega _mutselomega/clamped_bglobin
+	bin/readmutselomega -b 10 _mutselomega/clamped_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/mutselM3_bglobin
 	bin/mutselomega _mutselomega/mutselM3_bglobin
 	bin/readmutselomega -b 10 _mutselomega/mutselM3_bglobin
 
@@ -171,7 +173,7 @@ DM5: bin
 	@cd bin ; make --no-print-directory -j8 mutseldm5 readmutseldm5
 	@rm -rf _mutseldm5
 	@mkdir _mutseldm5
-	bin/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --omegashift 0.0 --freeomega --omegancat 10 --flatfitness --fixp0 --p0 0.0 -u 30 --hypermean_threshold 0.0 --hyperinvshape_threshold 10.0 _mutseldm5/MGM3_bglobin
+	bin/mutseldm5 -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre  --freeomega --omegancat 10 --flatfitness --fixp0 --p0 0.0 -u 30 --hypermean_threshold 0.0 --hyperinvshape_threshold 10.0 _mutseldm5/MGM3_bglobin
 	bin/readmutseldm5 _mutseldm5/MGM3_bglobin
 	bin/mutseldm5 _mutseldm5/MGM3_bglobin
 	bin/readmutseldm5 --ss _mutseldm5/MGM3_bglobin
