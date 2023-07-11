@@ -21,7 +21,7 @@ conda install -c conda-forge -c bioconda bayescode
 - [Site-specific rate of evolution](https://github.com/ThibaultLatrille/bayescode/wiki/4.-site-specific-rate-of-evolution)
 - [Inferring long-term effective population size](https://github.com/ThibaultLatrille/bayescode/wiki/5.-inferring-long-term-effective-population-size)
 - [Inferring changes of selective strength along the phylogeny](https://github.com/ThibaultLatrille/bayescode/wiki/6.-inferring-changes-of-selective-strength-along-the-phylogeny)
-- [Citations](https://github.com/ThibaultLatrille/bayescode/wiki/7.-citations)
+- [Citations](https://github.com/ThibaultLatrille/bayescode/wiki/citations)
 
 ## References
 

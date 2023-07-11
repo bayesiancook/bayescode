@@ -53,6 +53,7 @@ clean:
 	@rm -rf _mutseldm5
 	@rm -rf _mutselomega
 	@rm -rf _dated
+	@rm -rf _traits
 
 # ==============================================================================================================
 #  CODE QUALITY
@@ -196,12 +197,11 @@ traits: tiny
 	@cd bin ; make --no-print-directory -j8 nodetraits readnodetraits
 	@rm -rf _traits
 	@mkdir _traits
-	python3 utils/neutrality_index.py --tree data/body_size/mammals.male.tree --traits data/body_size/mammals.male.traits.tsv --var_within data/body_size/mammals.male.var_within.tsv --output _traits/mammals.male.ML.tsv
-	bin/nodetraits -t data/body_size/mammals.male.tree --traitsfile data/body_size/mammals.male.traits.tsv -u 100 _traits/mammals.male
+	python3 utils/neutrality_index.py --tree data/body_size/mammals.male.tree --traitsfile data/body_size/mammals.male.traits.tsv --var_within data/body_size/mammals.male.var_within.tsv --output _traits/mammals.male.ML.tsv
+	bin/nodetraits --tree data/body_size/mammals.male.tree --traitsfile data/body_size/mammals.male.traits.tsv -u 100 _traits/mammals.male
 	bin/nodetraits _traits/mammals.male
-	bin/readnodetraits -b 50 --newick _traits/mammals.male
-	bin/readnodetraits -b 50 --cov _traits/mammals.male
-	python3 utils/ratio_pvalue.py --burn_in 50 --inference _traits/mammals.male.trace --var_within data/body_size/mammals.male.var_within.tsv --output _traits/mammals.male.Bayes.tsv
+	bin/readnodetraits -b 50 -u 100 --var_within data/body_size/mammals.male.var_within.tsv _traits/mammals.male --output _traits/mammals.male.Bayesian.tsv
+	bin/readnodetraits -b 50 -u 100 --cov _traits/mammals.male
 
 .PHONY: diffseldsparse
 diffseldsparse: all

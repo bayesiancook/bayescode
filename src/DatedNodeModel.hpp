@@ -134,10 +134,19 @@ class DatedNodeModel : public ChainComponent {
     //! return covariance matrix
     EMatrix GetCovarianceMatrix() const { return *cov_matrix; };
 
+    //! return the number of taxa
+    int GetNtaxa() const { return Ntaxa; }
+
+    //! return the exponentiated value of the multivariate brownian process for a given node and
+    //! a given dimensions of the process
+    double GetExpBrownianEntry(Tree::NodeIndex node, int dim) const {
+        return exp(GetBrownianEntry(node, dim));
+    }
+
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
-    double GetExpBrownianEntry(Tree::NodeIndex node, int dim) const {
-        return exp(node_multivariate->GetVal(node)(dim));
+    double GetBrownianEntry(Tree::NodeIndex node, int dim) const {
+        return node_multivariate->GetVal(node)(dim);
     }
 
     //! return number of dimensions of the multivariate brownian process
