@@ -133,7 +133,7 @@ def main(input_traits: str, input_tree: str, input_var_within: str, output_tsv: 
             print("Assuming heritability = 1.0.")
             var_pop_df[h] = 1.0
         notna = (np.isfinite(var_pop_df[f"{trait}_variance"]) & (var_pop_df[f"{trait}_variance"] > 0.0))
-        notna = (notna & (np.isfinite(var_pop_df[h]) & (var_pop_df[h] > 0.0) & (var_pop_df[h] < 1.0)))
+        notna = (notna & (np.isfinite(var_pop_df[h]) & (var_pop_df[h] >= 0.0) & (var_pop_df[h] <= 1.0)))
         # Computing the genetic variance (geno = h² * pheno)
         genetic_variance_array = var_pop_df[f"{trait}_heritability"][notna] * var_pop_df[f"{trait}_variance"][notna]
         var_within_array = genetic_variance_array / (var_pop_df["Nucleotide_diversity"][notna])
