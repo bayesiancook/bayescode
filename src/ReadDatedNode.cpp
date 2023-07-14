@@ -109,7 +109,7 @@ class VarWithinSample {
                 sum_var_within += r * (taxa_h_low + taxa_h_up) / 2.0;
             } else if (h_index != string::npos) {
                 double h = var_within.get_value_as_double(h_index, taxa);
-                if (h < 0.0 or h > 1.0) {
+                if (isnan(h) or h < 0.0 or h > 1.0) {
                     cerr << "Error: Heritability is not in [0, 1] for taxa "
                          << var_within.get_value(taxa_col_index, taxa) << ", skipping taxa."
                          << endl;
