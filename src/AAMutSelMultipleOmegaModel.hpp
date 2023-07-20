@@ -1486,7 +1486,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
         tracer->write_line(os);
     }
 
-    explicit AAMutSelMultipleOmegaModel(std::istream &is) {
+    AAMutSelMultipleOmegaModel(std::istream &is) {
         std::string model_name;
         is >> model_name;
         if (model_name != "AAMutSelMultipleOmega") {

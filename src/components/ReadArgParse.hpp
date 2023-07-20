@@ -13,8 +13,8 @@ class ReadArgParse {
   public:
     explicit ReadArgParse(TCLAP::CmdLine& cmd) : cmd{cmd} {}
 
-    TCLAP::ValueArg<int> every{
-        "e", "every", "Number of MCMC iterations between two saved point in the trace.", false, 1, "int", cmd};
+    TCLAP::ValueArg<int> every{"e", "every",
+        "Number of MCMC iterations between two saved point in the trace.", false, 1, "int", cmd};
     TCLAP::ValueArg<int> until_input{"u", "until",
         "Maximum number of (saved) iterations (-1 means unlimited).", false, -1, "int", cmd};
     TCLAP::ValueArg<int> burnin_input{
@@ -23,9 +23,15 @@ class ReadArgParse {
         "For each point of the chain (after burn-in), produces a data replicate simulated "
         "from the posterior predictive distribution",
         cmd};
-    TCLAP::SwitchArg trace{"", "trace", "Recompute the trace.", cmd};
+    TCLAP::SwitchArg trace{"", "trace",
+        "Recompute the trace."
+        "Trace is written in {chain_name}.trace.tsv by default (optionally "
+        "use the --output argument to specify a different output path).",
+        cmd};
     TCLAP::UnlabeledValueArg<std::string> chain_name{
         "chain_name", "Chain name (output file prefix).", true, "chain", "string", cmd};
+    TCLAP::ValueArg<string> output{
+        "o", "output", "Output file path (optional)", false, "", "string", cmd};
 
     std::string GetChainName() { return chain_name.getValue(); }
 
@@ -60,5 +66,16 @@ class ReadArgParse {
             assert(until > 0);
         }
         return until;
+    }
+
+
+    std::string OutputFile(const std::string& default_suffix = "") {
+        if (!output.getValue().empty()) {
+            return output.getValue();
+        } else {
+            std::cout << "No output file name specified, using default: "
+                      << GetChainName() + default_suffix << std::endl;
+            return GetChainName() + default_suffix;
+        }
     }
 };

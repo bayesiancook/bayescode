@@ -1,4 +1,3 @@
-#include <cmath>
 #include <fstream>
 #include "AAMutSelDSBDPOmegaModel.hpp"
 #include "components/ChainDriver.hpp"
@@ -13,19 +12,13 @@ using namespace TCLAP;
 class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
-    TCLAP::ValueArg<string> profiles{"o", "profiles",
-        "Output profiles name if desired (otherwise given by {chain_name}.siteprofiles)", false, "",
-        "string", cmd};
-    SwitchArg ss{
-        "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
 
-    string GetProfilesName() {
-        if (profiles.getValue().empty()) {
-            return GetChainName() + ".siteprofiles";
-        } else {
-            return profiles.getValue();
-        }
-    }
+    SwitchArg ss{"s", "ss",
+        "Computes the mean posterior site-specific amino-acid equilibrium frequencies"
+        "(amino-acid fitness profiles). "
+        "Results are written in {chain_name}.siteprofiles by default (optionally use the --output argument "
+        " to specify a different output path).",
+        cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -54,7 +47,8 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
     } else if (read_args.trace.getValue()) {
-        recompute_trace<AAMutSelDSBDPOmegaModel>(model, cr, chain_name, every, size);
+        string file_name = read_args.OutputFile(".trace.tsv");
+        recompute_trace<AAMutSelDSBDPOmegaModel>(model, cr, file_name, every, size);
     } else if (read_args.ss.getValue()) {
         std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
 
@@ -71,7 +65,8 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
 
-        ofstream os(read_args.GetProfilesName().c_str());
+        string file_name = read_args.OutputFile(".siteprofiles");
+        ofstream os(file_name);
         os << "site\tA\tC\tD\tE\tF\tG\tH\tI\tK\tL\tM\tN\tP\tQ\tR\tS\tT\tV\tW\tY\n";
 
         for (int i = 0; i < model.GetNsite(); i++) {
@@ -82,7 +77,7 @@ int main(int argc, char *argv[]) {
             }
             os << '\n';
         }
-        cerr << "mean site-specific profiles in " << read_args.GetProfilesName() << "\n";
+        cerr << "mean site-specific profiles in " << file_name << "\n";
         cerr << '\n';
     } else {
         stats_posterior<AAMutSelDSBDPOmegaModel>(model, cr, every, size);

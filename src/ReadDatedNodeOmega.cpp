@@ -19,10 +19,15 @@ class ReadNodeOmegaArgParse : public ReadArgParse {
     SwitchArg newick{"t", "newick",
         "Computes the mean posterior node-specific entries of the multivariate Brownian process. "
         "Each entry of the multivariate Brownian process is written in a newick extended (.nhx) "
-        "format file.",
+        "format file."
+        "For each trait, results are written in {chain_name}.{trait}.nhx by default (optionally "
+        "use the --output argument to specify a different output path).",
         cmd};
-
-    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix.", cmd};
+    SwitchArg cov{"c", "cov",
+        "Computes the mean posterior covariance matrix, precision matrix and correlation matrix. "
+        "Results are written in {chain_name}.cov by default (optionally use the --output argument "
+        "to specify a different output path).",
+        cmd};
 };
 
 
@@ -37,9 +42,8 @@ int main(int argc, char *argv[]) {
     int size = read_args.GetSize();
 
     ifstream is{chain_name + ".param"};
-    ChainDriver *fake_read = nullptr;
     unique_ptr<DatedNodeOmegaModel> model = nullptr;
-    fake_read = new ChainDriver(is);
+    new ChainDriver(is);
     is >> model;
     ChainReader cr(*model, chain_name + ".chain");
 
@@ -54,9 +58,11 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
     } else if (read_args.trace.getValue()) {
-        recompute_trace<DatedNodeOmegaModel>(*model, cr, chain_name, every, size);
+        string file_name = read_args.OutputFile(".trace");
+        recompute_trace<DatedNodeOmegaModel>(*model, cr, file_name, every, size);
     } else if (read_args.cov.getValue()) {
-        ofstream os(read_args.GetChainName() + ".cov");
+        string file_name = read_args.OutputFile(".cov");
+        ofstream os(file_name);
         os << "entries are in the following order:" << endl;
 
         for (int dim = 0; dim < model->GetDimension(); dim++) {
@@ -91,7 +97,7 @@ int main(int argc, char *argv[]) {
         export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
         export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
 
-        cerr << endl << "matrices in " << read_args.GetChainName() << ".cov" << endl;
+        cerr << endl << "matrices in " << file_name << "." << endl;
     } else if (read_args.newick.getValue()) {
         vector<vector<vector<double>>> dim_node_traces(model->GetDimension());
         vector<vector<double>> branch_times(model->GetTree().nb_nodes());
@@ -129,10 +135,10 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        export_tree(base_export_tree, "BranchLength", read_args.GetChainName(), branch_length);
-        export_tree(base_export_tree, "BranchTime", read_args.GetChainName(), branch_times);
+        export_tree(base_export_tree, "BranchLength", read_args.OutputFile(), branch_length);
+        export_tree(base_export_tree, "BranchTime", read_args.OutputFile(), branch_times);
         for (int dim{0}; dim < model->GetDimension(); dim++) {
-            export_tree(base_export_tree, model->GetDimensionName(dim), read_args.GetChainName(),
+            export_tree(base_export_tree, model->GetDimensionName(dim), read_args.OutputFile(),
                 dim_node_traces[dim]);
         }
     } else {

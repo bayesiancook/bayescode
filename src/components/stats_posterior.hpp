@@ -53,9 +53,9 @@ void stats_posterior(Model &model, ChainReader &cr, int const &every, int const 
 
 template <class Model>
 void recompute_trace(
-    Model &model, ChainReader &cr, std::string const &name, int const &every, int const &size) {
+    Model &model, ChainReader &cr, std::string const &file_name, int const &every, int const &size) {
     Tracer tracer(model, processing::HasTag<Stat>());
-    std::ofstream os(name + ".trace.tsv");
+    std::ofstream os(file_name);
     tracer.write_header(os);
 
     for (int step = 0; step < size; step++) {

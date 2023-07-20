@@ -20,26 +20,19 @@ class ReadNodeArgParse : public ReadArgParse {
     SwitchArg newick{"t", "newick",
         "Computes the mean posterior node-specific entries of the multivariate Brownian process. "
         "Each entry of the multivariate Brownian process is written in a newick extended (.nhx) "
-        "format file.",
+        "format file."
+        "For each trait, results are written in {chain_name}.{trait}.nhx by default (optionally "
+        "use the --output argument to specify a different output path).",
         cmd};
-
-    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix.", cmd};
-
+    SwitchArg cov{"c", "cov",
+        "Computes the mean posterior covariance matrix, precision matrix and correlation matrix. "
+        "Results are written in {chain_name}.cov by default (optionally use the --output argument "
+        "to specify a different output path).",
+        cmd};
     ValueArg<string> var_within{"", "var_within",
-        "A .tsv file containing the within-population variance of each trait.", false, "", "string",
-        cmd};
-
-    ValueArg<string> output{"o", "output", "Output file name (optional)", false, "", "string", cmd};
-
-    string OutputFile(const string& default_suffix = "") {
-        if (!output.getValue().empty()) {
-            return output.getValue();
-        } else {
-            cout << "No output file name specified, using default: "
-                 << GetChainName() + default_suffix << endl;
-            return GetChainName() + default_suffix;
-        }
-    }
+        "An input .tsv file containing the within-population variance of each trait (see "
+        "documentation for file format).",
+        false, "", "string", cmd};
 };
 
 class VarWithinSample {
@@ -189,9 +182,8 @@ int main(int argc, char* argv[]) {
     int size = read_args.GetSize();
 
     ifstream is{chain_name + ".param"};
-    ChainDriver* fake_read = nullptr;
     unique_ptr<DatedNodeModel> model = nullptr;
-    fake_read = new ChainDriver(is);
+    new ChainDriver(is);
     is >> model;
     ChainReader cr(*model, chain_name + ".chain");
 
@@ -199,7 +191,8 @@ int main(int argc, char* argv[]) {
     cerr << size << " points to read\n";
 
     if (read_args.trace.getValue()) {
-        recompute_trace<DatedNodeModel>(*model, cr, chain_name, every, size);
+        string file_name = read_args.OutputFile(".trace.tsv");
+        recompute_trace<DatedNodeModel>(*model, cr, file_name, every, size);
     } else if (not read_args.var_within.getValue().empty()) {
         CSVParser tsv_war_within(read_args.var_within.getValue(), '\t');
         unordered_map<string, VarWithinSample> var_within_dict;

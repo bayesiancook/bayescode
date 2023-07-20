@@ -93,15 +93,15 @@ run-app-tests: all
 	@echo "\n\e[35m\e[1m== CodonM2a restart =========================================================\e[0m"
 	bin/codonm2a _test/codonM2a_gal4
 	@echo "\n\e[35m\e[1m== CodonM2a read ============================================================\e[0m"
-	bin/readcodonm2a _test/codonM2a_gal4
+	bin/readcodonm2a _test/codonM2a_gal4 -u ${POINTS}
 	@echo "\n\e[35m\e[1m== MutSel run ===============================================================\e[0m"
 	bin/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel restart ===========================================================\e[0m"
 	bin/aamutsel _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel read ==============================================================\e[0m"
-	bin/readaamutsel _test/aamutsel_gal4
+	bin/readaamutsel _test/aamutsel_gal4 -u ${POINTS}
 	@echo "\n\e[35m\e[1m== MutSel read site-profiles ================================================\e[0m"
-	bin/readaamutsel --ss _test/aamutsel_gal4
+	bin/readaamutsel --ss --output _test/aamutsel_gal4_ss.tsv _test/aamutsel_gal4
 	@echo "\n\e[35m\e[1m== MutSel with polymorphism run =============================================\e[0m"
 	bin/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -p -u ${POINTS} _test/aamutsel_gal4_poly
 	@echo "\n\e[35m\e[1m== MutSel Multiple omega run ================================================\e[0m"
@@ -121,7 +121,7 @@ run-app-tests: all
 	@echo "\n\e[35m\e[1m== Node MutSel restart ======================================================\e[0m"
 	bin/nodemutsel _test/nodemutsel_gal4
 	@echo "\n\e[35m\e[1m== Node MutSel read =========================================================\e[0m"
-	bin/readnodemutsel --ss _test/nodemutsel_gal4
+	bin/readnodemutsel --ss --output _test/nodemutsel_gal4_ss.tsv _test/nodemutsel_gal4
 
 # @make --no-print-directory run-multigeneglobom-test
 .PHONY: run-multigeneglobom-test
@@ -129,8 +129,8 @@ run-multigeneglobom-test: all
 	@echo "\n\e[35m\e[1m== Multigene Single Omega ===================================================\e[0m"
 	cd data/small_multigene && mpirun -np 2 ../../bin/multigeneglobom -t tree.nwk -a verysmall.list  -u ${POINTS} tmp
 
-.PHONY: testpr
-test:
+.PHONY: test
+test: bin
 	@make --no-print-directory run-unit-tests
 	@make --no-print-directory run-unit-tests-mpi
 	@make --no-print-directory run-app-tests
@@ -142,12 +142,12 @@ aamutsel: bin
 	@mkdir _aamutsel
 	bin/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 _aamutsel/gal4
 	bin/aamutsel _aamutsel/gal4
-	bin/readaamutsel _aamutsel/gal4
-	bin/readaamutsel --ss _aamutsel/gal4
+	bin/readaamutsel _aamutsel/gal4 -u 10
+	bin/readaamutsel --ss --output _aamutsel/gal4_ss.tsv _aamutsel/gal4
 	bin/aamutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 10 -p _aamutsel/gal4_poly
 	bin/aamutsel _aamutsel/gal4_poly
-	bin/readaamutsel _aamutsel/gal4_poly
-	bin/readaamutsel --ss _aamutsel/gal4_poly
+	bin/readaamutsel _aamutsel/gal4_poly -u 10
+	bin/readaamutsel --ss --output _aamutsel/gal4_poly_ss.tsv _aamutsel/gal4_poly
 
 .PHONY: mutselomega
 mutselomega: tiny
@@ -156,18 +156,19 @@ mutselomega: tiny
 	@mkdir _mutselomega
 	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --ncat 30 -u 30 _mutselomega/mutsel_bglobin
 	bin/mutselomega _mutselomega/mutsel_bglobin
-	bin/readmutselomega -b 10 --ss _mutselomega/mutsel_bglobin
-	bin/readmutselomega -b 10 --omega_0 _mutselomega/mutsel_bglobin
+	bin/readmutselomega -b 10 _mutselomega/mutsel_bglobin
+	bin/readmutselomega -b 10 --ss --output _mutselomega/mutsel_bglobin_ss.tsv _mutselomega/mutsel_bglobin
+	bin/readmutselomega -b 10 --omega_0 --output _mutselomega/mutsel_bglobin_omega_0.tsv _mutselomega/mutsel_bglobin
 	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/MGM3_bglobin
 	bin/mutselomega _mutselomega/MGM3_bglobin
-	bin/readmutselomega -b 10 _mutselomega/MGM3_bglobin
-	bin/readmutselomega -b 10 _mutselomega/mutsel_bglobin --chain_omega _mutselomega/MGM3_bglobin
-	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --profiles _mutselomega/mutsel_bglobin.siteprofiles --omegaarray data/bglobin/omegaarray.csv -u 30 _mutselomega/clamped_bglobin
+	bin/readmutselomega -b 10 --omega --output _mutselomega/MGM3_bglobin_omega.tsv _mutselomega/MGM3_bglobin
+	bin/readmutselomega -b 10 --chain_omega _mutselomega/MGM3_bglobin _mutselomega/mutsel_bglobin
+	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --profiles _mutselomega/mutsel_bglobin_ss.tsv --omegaarray data/bglobin/omegaarray.csv -u 30 _mutselomega/clamped_bglobin
 	bin/mutselomega _mutselomega/clamped_bglobin
 	bin/readmutselomega -b 10 _mutselomega/clamped_bglobin
 	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --freeomega --omegancat 3 --ncat 30 -u 30 _mutselomega/mutselM3_bglobin
 	bin/mutselomega _mutselomega/mutselM3_bglobin
-	bin/readmutselomega -b 10 _mutselomega/mutselM3_bglobin
+	bin/readmutselomega -b 10 --omega_threshold 1.0 --output _mutselomega/mutselM3_bglobin_omega_pp.tsv _mutselomega/mutselM3_bglobin
 
 .PHONY: DM5
 DM5: bin
@@ -189,8 +190,9 @@ dated: tiny
 	@mkdir _dated
 	bin/nodemutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --ncat 3 -u ${POINTS} _dated/node_gal4
 	bin/nodemutsel _dated/node_gal4
-	bin/nodemutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --ncat 3 -u ${POINTS} -p _dated/node_poly_gal4
-	bin/nodemutsel _dated/node_poly_gal4
+	bin/readnodemutsel _dated/node_gal4
+	# bin/nodemutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --ncat 3 -u ${POINTS} -p _dated/node_poly_gal4
+	# bin/nodemutsel _dated/node_poly_gal4
 
 .PHONY: traits
 traits: tiny
@@ -200,8 +202,8 @@ traits: tiny
 	python3 utils/neutrality_index.py --tree data/body_size/mammals.male.tree --traitsfile data/body_size/mammals.male.traits.tsv --var_within data/body_size/mammals.male.var_within.tsv --output _traits/mammals.male.ML.tsv
 	bin/nodetraits --tree data/body_size/mammals.male.tree --traitsfile data/body_size/mammals.male.traits.tsv -u 100 _traits/mammals.male
 	bin/nodetraits _traits/mammals.male
-	bin/readnodetraits -b 50 -u 100 --var_within data/body_size/mammals.male.var_within.tsv _traits/mammals.male --output _traits/mammals.male.Bayesian.tsv
-	bin/readnodetraits -b 50 -u 100 --cov _traits/mammals.male
+	bin/readnodetraits -b 50 -u 100 --var_within data/body_size/mammals.male.var_within.tsv --output _traits/mammals.male.Bayesian.tsv _traits/mammals.male
+	bin/readnodetraits -b 50 -u 100 --cov --output _traits/mammals.male.cov _traits/mammals.male
 
 .PHONY: diffseldsparse
 diffseldsparse: all

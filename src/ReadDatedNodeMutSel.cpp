@@ -17,30 +17,23 @@ class ReadNodeMutSelArgParse : public ReadArgParse {
     explicit ReadNodeMutSelArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
     SwitchArg ss{"s", "ss",
-        "Computes the mean posterior site-specific amino-acid equilibrium frequencies "
-        " (amino-acid fitness profiles).",
+        "Computes the mean posterior site-specific amino-acid equilibrium frequencies"
+        "(amino-acid fitness profiles). "
+        "Results are written in {chain_name}.siteprofiles by default (optionally use the --output argument "
+        " to specify a different output path).",
         cmd};
-
-    TCLAP::ValueArg<string> profiles{"o", "profiles",
-        "Change the profiles filename if desired, "
-        "otherwise given by {chain_name}.siteprofiles as default.", false,
-        "", "string", cmd};
-
-    SwitchArg cov{"c", "cov", "Computes the mean posterior covariance matrix.", cmd};
-
     SwitchArg newick{"t", "newick",
         "Computes the mean posterior node-specific entries of the multivariate Brownian process. "
         "Each entry of the multivariate Brownian process is written in a newick extended (.nhx) "
-        "format file.",
+        "format file."
+        "For each trait, results are written in {chain_name}.{trait}.nhx by default (optionally "
+        "use the --output argument to specify a different output path).",
         cmd};
-
-    string GetProfilesName() {
-        if (profiles.getValue().empty()) {
-            return GetChainName() + ".siteprofiles";
-        } else {
-            return profiles.getValue();
-        }
-    }
+    SwitchArg cov{"c", "cov",
+        "Computes the mean posterior covariance matrix, precision matrix and correlation matrix. "
+        "Results are written in {chain_name}.cov by default (optionally use the --output argument "
+        "to specify a different output path).",
+        cmd};
 };
 
 
@@ -55,9 +48,8 @@ int main(int argc, char *argv[]) {
     int size = read_args.GetSize();
 
     ifstream is{chain_name + ".param"};
-    ChainDriver *fake_read = nullptr;
     unique_ptr<DatedNodeMutSelModel> model = nullptr;
-    fake_read = new ChainDriver(is);
+    new ChainDriver(is);
     is >> model;
     ChainReader cr(*model, chain_name + ".chain");
 
@@ -71,9 +63,11 @@ int main(int argc, char *argv[]) {
             model->PostPred("ppred_" + chain_name + "_" + to_string(i) + ".ali");
         }
         cerr << '\n';
-    } else if (read_args.trace.getValue()) {
-        recompute_trace<DatedNodeMutSelModel>(*model, cr, chain_name, every, size);
+    } if (read_args.trace.getValue()) {
+        string file_name = read_args.OutputFile(".trace.tsv");
+        recompute_trace<DatedNodeMutSelModel>(*model, cr, file_name, every, size);
     } else if (read_args.ss.getValue()) {
+        string file_name = read_args.OutputFile(".siteprofiles");
         vector<vector<double>> sitestat(model->GetNsite(), {0});
 
         for (int step = 0; step < size; step++) {
@@ -87,9 +81,8 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
 
-        ofstream os(read_args.GetProfilesName().c_str());
+        ofstream os(file_name);
         os << "site\tA\tC\tD\tE\tF\tG\tH\tI\tK\tL\tM\tN\tP\tQ\tR\tS\tT\tV\tW\tY\n";
-
         for (int i = 0; i < model->GetNsite(); i++) {
             os << i + 1;
             for (auto &aa : sitestat[i]) {
@@ -98,10 +91,11 @@ int main(int argc, char *argv[]) {
             }
             os << '\n';
         }
-        cerr << "mean site-specific profiles in " << read_args.GetProfilesName() << "\n";
+        cerr << "mean site-specific profiles in " << file_name << "\n";
         cerr << '\n';
     } else if (read_args.cov.getValue()) {
-        ofstream os(read_args.GetChainName() + ".cov");
+        string file_name = read_args.OutputFile(".cov");
+        ofstream os(file_name);
         os << "entries are in the following order:" << endl;
 
         for (int dim = 0; dim < model->GetDimension(); dim++) {
@@ -136,7 +130,7 @@ int main(int argc, char *argv[]) {
         export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
         export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
 
-        cerr << endl << "matrices in " << read_args.GetChainName() << ".cov" << endl;
+        cerr << endl << "matrices in " << file_name << "." << endl;
     } else if (read_args.newick.getValue()) {
         vector<vector<vector<double>>> dim_node_traces(model->GetDimension());
         vector<vector<double>> branch_times(model->GetTree().nb_nodes());
@@ -180,15 +174,15 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        export_tree(base_export_tree, "ContrastPopulationSize", read_args.GetChainName(),
-            contrast_pop_size);
-        export_tree(base_export_tree, "BranchLength", read_args.GetChainName(), branch_length);
-        export_tree(base_export_tree, "BranchTime", read_args.GetChainName(), branch_times);
+        export_tree(
+            base_export_tree, "ContrastPopulationSize", read_args.OutputFile(), contrast_pop_size);
+        export_tree(base_export_tree, "BranchLength", read_args.OutputFile(), branch_length);
+        export_tree(base_export_tree, "BranchTime", read_args.OutputFile(), branch_times);
         if (model->PolymorphismAware()) {
-            export_tree(base_export_tree, "Theta", read_args.GetChainName(), leaves_theta);
+            export_tree(base_export_tree, "Theta", read_args.OutputFile(), leaves_theta);
         }
         for (int dim{0}; dim < model->GetDimension(); dim++) {
-            export_tree(base_export_tree, model->GetDimensionName(dim), read_args.GetChainName(),
+            export_tree(base_export_tree, model->GetDimensionName(dim), read_args.OutputFile(),
                 dim_node_traces[dim]);
         }
     } else {

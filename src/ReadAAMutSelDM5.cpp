@@ -1,4 +1,3 @@
-#include <cmath>
 #include <fstream>
 #include "AAMutSelDM5Model.hpp"
 #include "components/ChainDriver.hpp"
@@ -14,10 +13,20 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
   public:
     explicit ReadAAMutSelDSBDPOmegaArgParse(CmdLine &cmd) : ReadArgParse(cmd) {}
 
-    SwitchArg ss{
-        "s", "ss", "Computes the mean posterior site-specific state equilibrium frequencies", cmd};
-    ValueArg<double> omega_pp{
-        "", "omega_threshold", "the threshold for omega", false, 1.0, "double", cmd};
+    SwitchArg ss{"s", "ss",
+        "Computes the mean posterior site-specific amino-acid equilibrium frequencies"
+        "(amino-acid fitness profiles). "
+        "Results are written in {chain_name}.siteprofiles by default (optionally use the --output "
+        "argument "
+        " to specify a different output path).",
+        cmd};
+    ValueArg<string> omega_pp{"", "omega_threshold",
+        "Threshold to compute the mean posterior probability that ω⁎ "
+        "(or ω if option `flatfitness` is used in `mutselomega`) is greater than a given value "
+        "(1.0 to test for adaptation). "
+        "Results are written in {chain_name}.omegappgt{omega_pp}.tsv by default (optionally use "
+        "the --output argument to specify a different output path).",
+        false, "", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -45,6 +54,9 @@ int main(int argc, char *argv[]) {
             model.PostPred("ppred_" + chain_name + "_" + std::to_string(i) + ".ali");
         }
         cerr << '\n';
+    } else if (read_args.trace.getValue()) {
+        string file_name = read_args.OutputFile(".trace.tsv");
+        recompute_trace<AAMutSelDM5Model>(model, cr, file_name, every, size);
     } else if (read_args.ss.getValue()) {
         std::vector<std::vector<double>> sitestat(model.GetNsite(), {0});
 
@@ -61,7 +73,8 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
 
-        ofstream os((chain_name + ".siteprofiles").c_str());
+        string file_name = read_args.OutputFile(".siteprofiles");
+        ofstream os(file_name);
         os << "site\tA\tC\tD\tE\tF\tG\tH\tI\tK\tL\tM\tN\tP\tQ\tR\tS\tT\tV\tW\tY\n";
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1;
@@ -71,9 +84,10 @@ int main(int argc, char *argv[]) {
             }
             os << '\n';
         }
-        cerr << "mean site-specific profiles in " << chain_name << ".siteprofiles\n";
+        cerr << "mean site-specific profiles in " << file_name << "\n";
         cerr << '\n';
-    } else {
+    } else if (!read_args.omega_pp.getValue().empty()) {
+        double omega_pp = stod(read_args.omega_pp.getValue());
         std::vector<double> omegappgto(model.GetNsite(), 0);
         std::vector<double> omega(model.GetNsite(), 0);
 
@@ -82,20 +96,21 @@ int main(int argc, char *argv[]) {
             cr.skip(every);
             for (int site = 0; site < model.GetNsite(); site++) {
                 omega[site] += model.GetSiteOmega(site);
-                if (model.GetSiteOmega(site) > read_args.omega_pp.getValue()) {
-                    omegappgto[site]++;
-                }
+                if (model.GetSiteOmega(site) > omega_pp) { omegappgto[site]++; }
             }
         }
         cerr << '\n';
 
-        string filename{chain_name + ".omegappgt" + to_string(read_args.omega_pp.getValue())};
-        ofstream os(filename.c_str());
+        string filename =
+            read_args.OutputFile(".omegappgt" + read_args.omega_pp.getValue() + ".tsv");
+        ofstream os(filename);
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1 << '\t' << omegappgto[i] / size << '\t' << omega[i] / size << '\n';
         }
         cerr << "Posterior prob of omega greater than " << read_args.omega_pp.getValue() << " in "
              << filename << "\n";
         cerr << '\n';
+    } else {
+        stats_posterior<AAMutSelDM5Model>(model, cr, every, size);
     }
 }

@@ -16,27 +16,31 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
 
     SwitchArg nuc{"n", "nuc",
         "Mean posterior 4x4 nucleotide matrix."
-        "Results are written in {chain_name}.nucmatrix.tsv.",
+        "Results are written in {chain_name}.nucmatrix.tsv by default (optionally use the --output argument "
+        " to specify a different output path).",
         cmd};
     ValueArg<string> chain_omega{"", "chain_omega",
         "A second chain ran with the option --freeomega and --flatfitness to obtain the classical "
         "ω-based codon model (Muse & Gaut). "
         "These two chains allow to compute posterior of ω, ω₀, ωᴬ=ω-ω₀ and p(ωᴬ>0) for each site "
         "and at the gene level. "
-        "Results are written in {chain_name}.omegaA.tsv.",
+        "Results are written in {chain_name}.omegaA.tsv by default (optionally use the --output argument "
+        " to specify a different output path).",
         false, "", "string", cmd};
     SwitchArg omega{"", "omega",
         "Compute posterior credible interval for ω for each site and at the gene level. "
         "Can be combined with the option `confidence_interval` to change the default value (0.025 "
         "at each side of the distribution). "
-        "Results are written in {chain_name}.ci{confidence_interval}.tsv.",
+        "Results are written in {chain_name}.ci{confidence_interval}.tsv by default (optionally "
+        "use the --output argument to specify a different output path).",
         cmd};
     SwitchArg omega_knot{"", "omega_0",
         "Compute posterior credible interval for ω₀ predicted at the mutation-selection "
         "equilibrium from the fitness profiles, for each site and at the gene level. "
         "Can be combined with the option `confidence_interval` to change the default value (0.025 "
         "at each side of the distribution). "
-        "Results are written in {chain_name}.ci{confidence_interval}.tsv.",
+        "Results are written in {chain_name}.ci{confidence_interval}.tsv by default (optionally "
+        "use the --output argument to specify a different output path).",
         cmd};
     ValueArg<string> confidence_interval{"c", "confidence_interval",
         "Boundary for posterior credible interval of ω and ω₀ (per site and at the gene level). "
@@ -45,25 +49,16 @@ class ReadAAMutSelDSBDPOmegaArgParse : public ReadArgParse {
     SwitchArg ss{"s", "ss",
         "Computes the mean posterior site-specific amino-acid equilibrium frequencies"
         "(amino-acid fitness profiles). "
-        "Results are written in {chain_name}.siteprofiles.",
+        "Results are written in {chain_name}.siteprofiles by default (optionally use the --output argument "
+        " to specify a different output path).",
         cmd};
-    TCLAP::ValueArg<string> profiles{"", "profiles",
-        "Change the profiles filename if desired, "
-        "otherwise given by {chain_name}.siteprofiles as default.", false,
-        "", "string", cmd};
     ValueArg<string> omega_pp{"", "omega_threshold",
         "Threshold to compute the mean posterior probability that ω⁎ "
-        "(or ω if option `flatfitness` is used in `mutselomega`) is greater than a given value. "
-        "Results are written in {chain_name}.omegappgt{omega_pp}.tsv.",
-        false, "1.0", "string", cmd};
-
-    string GetProfilesName() {
-        if (profiles.getValue().empty()) {
-            return GetChainName() + ".siteprofiles";
-        } else {
-            return profiles.getValue();
-        }
-    }
+        "(or ω if option `flatfitness` is used in `mutselomega`) is greater than a given value "
+        "(1.0 to test for adaptation). "
+        "Results are written in {chain_name}.omegappgt{omega_pp}.tsv by default (optionally use "
+        "the --output argument to specify a different output path).",
+        false, "", "string", cmd};
 };
 
 int main(int argc, char *argv[]) {
@@ -91,6 +86,9 @@ int main(int argc, char *argv[]) {
             model.PostPred("ppred_" + chain_name + "_" + to_string(i) + ".ali");
         }
         cerr << '\n';
+    } else if (read_args.trace.getValue()) {
+        string file_name = read_args.OutputFile(".trace.tsv");
+        recompute_trace<AAMutSelMultipleOmegaModel>(model, cr, file_name, every, size);
     } else if (read_args.ss.getValue()) {
         vector<vector<double>> sitestat(model.GetNsite(), {0});
 
@@ -99,15 +97,14 @@ int main(int argc, char *argv[]) {
             cr.skip(every);
             for (int i = 0; i < model.GetNsite(); i++) {
                 vector<double> const &profile = model.GetProfile(i);
-                if (sitestat[i].size() != profile.size()) {
-                    sitestat[i].resize(profile.size(), 0);
-                };
+                if (sitestat[i].size() != profile.size()) { sitestat[i].resize(profile.size(), 0); }
                 for (unsigned k{0}; k < profile.size(); k++) { sitestat[i][k] += profile[k]; }
             }
         }
         cerr << '\n';
 
-        ofstream os(read_args.GetProfilesName().c_str());
+        string file_name = read_args.OutputFile(".siteprofiles");
+        ofstream os(file_name);
         os << "site\tA\tC\tD\tE\tF\tG\tH\tI\tK\tL\tM\tN\tP\tQ\tR\tS\tT\tV\tW\tY\n";
         for (int i = 0; i < model.GetNsite(); i++) {
             os << i + 1;
@@ -117,7 +114,7 @@ int main(int argc, char *argv[]) {
             }
             os << '\n';
         }
-        cerr << "mean site-specific profiles in " << read_args.GetProfilesName() << "\n";
+        cerr << "mean site-specific profiles in " << file_name << "\n";
         cerr << '\n';
     } else if (!read_args.chain_omega.getValue().empty()) {
         string chain_omega = read_args.chain_omega.getValue();
@@ -163,8 +160,8 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
 
-        string filename{chain_name + ".omegaA.tsv"};
-        ofstream os(filename.c_str());
+        string filename = read_args.OutputFile(".omegaA.tsv");
+        ofstream os(filename);
         os << "site\tω\tω₀\tωᴬ=ω-ω₀\tp(ωᴬ>0)\n";
 
         double post_w = accumulate(gene_w.begin(), gene_w.end(), 0.0) / size;
@@ -210,8 +207,9 @@ int main(int argc, char *argv[]) {
             gene_omega.push_back(mean / model.GetNsite());
         }
         cerr << '\n';
-        string filename{chain_name + ".ci" + read_args.confidence_interval.getValue() + ".tsv"};
-        ofstream os(filename.c_str());
+        string filename =
+            read_args.OutputFile(".ci" + read_args.confidence_interval.getValue() + ".tsv");
+        ofstream os(filename);
         string omega_str = read_args.omega_knot.getValue() ? "ω₀" : "ω";
         string lower_str = "CI[" + to_string(lower) + "]";
         string upper_str = "CI[" + to_string(upper) + "]";
@@ -250,8 +248,9 @@ int main(int argc, char *argv[]) {
             }
         }
         cerr << '\n';
-        string filename{chain_name + ".nucmatrix.tsv"};
-        ofstream os(filename.c_str());
+
+        string filename = read_args.OutputFile(".nucmatrix.tsv");
+        ofstream os(filename);
         os << "Name\tRate\n";
         for (int i = 0; i < Nnuc; i++) {
             for (int j = 0; j < Nnuc; j++) {
@@ -263,7 +262,7 @@ int main(int argc, char *argv[]) {
             }
         }
         cerr << '\n';
-    } else {
+    } else if (!read_args.omega_pp.getValue().empty()) {
         double omega_pp = stod(read_args.omega_pp.getValue());
         vector<double> omegappgto(model.GetNsite(), 0);
         vector<double> omega(model.GetNsite(), 0);
@@ -278,8 +277,9 @@ int main(int argc, char *argv[]) {
         }
         cerr << '\n';
 
-        string filename{chain_name + ".omegappgt" + read_args.omega_pp.getValue() + ".tsv"};
-        ofstream os(filename.c_str());
+        string filename =
+            read_args.OutputFile(".omegappgt" + read_args.omega_pp.getValue() + ".tsv");
+        ofstream os(filename);
         if (model.FlatFitness()) {
             os << "site\tω\tp(ω>" << read_args.omega_pp.getValue() << ")\n";
         } else {
@@ -292,5 +292,7 @@ int main(int argc, char *argv[]) {
         cerr << "Posterior prob of omega greater than " << read_args.omega_pp.getValue() << " in "
              << filename << "\n";
         cerr << '\n';
+    } else {
+        stats_posterior<AAMutSelMultipleOmegaModel>(model, cr, every, size);
     }
 }
