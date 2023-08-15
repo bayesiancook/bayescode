@@ -53,6 +53,8 @@ void AAMutSelOmegaCodonSubMatrix::ComputeArray(int i) const {
 }
 
 std::tuple<double, double> AAMutSelOmegaCodonSubMatrix::GetFlowDNDS() const {
+    NucMatrix->UpdateMatrix();
+    UpdateMatrix();
     UpdateStationary();
     double totom = 0;
     double totweight = 0;

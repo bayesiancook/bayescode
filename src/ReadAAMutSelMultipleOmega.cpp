@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
             cerr << '.';
             cr.skip(every);
             cr_omega.skip(every);
+            model.UpdateMatrices();
             double tot_w{0.0}, tot_w0{0.0}, tot_wA{0.0};
             for (int site = 0; site < model.GetNsite(); site++) {
                 double w = model_omega.GetSiteOmega(site);
@@ -197,6 +198,7 @@ int main(int argc, char *argv[]) {
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
+            model.UpdateMatrices();
             double mean{0.0};
             for (int site = 0; site < model.GetNsite(); site++) {
                 double val = read_args.omega_knot.getValue() ? model.GetPredictedSiteOmegaKnot(site)

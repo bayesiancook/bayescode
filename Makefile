@@ -3,7 +3,7 @@
 # ==============================================================================================================
 .PHONY: all # Requires: cmake 3.1.0 or better
 all: bin
-	@cd bin ; make --no-print-directory -j8
+	@cd bin ; make --no-print-directory -j 8
 
 bin: CMakeLists.txt # default mode is release
 	@rm -rf bin
