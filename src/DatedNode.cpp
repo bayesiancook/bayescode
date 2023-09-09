@@ -10,9 +10,9 @@
 
 using namespace std;
 
-class DatedNodeOmegaArgParse : public BaseArgParse {
+class DatedNodeArgParse : public BaseArgParse {
   public:
-    explicit DatedNodeOmegaArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
+    explicit DatedNodeArgParse(ChainCmdLine &cmd) : BaseArgParse(cmd) {}
 
     ValueArg<std::string> traitsfile{
         "", "traitsfile", "Traits file for taxon at the leaves", true, "Null", "string", cmd};
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         check_restart(*model, cmd.chain_name() + ".trace");
     } else {
         TreeAppArgParse inference_args(cmd);
-        DatedNodeOmegaArgParse args(cmd);
+        DatedNodeArgParse args(cmd);
         cmd.parse();
         chain_driver = new ChainDriver(
             cmd.chain_name(), inference_args.every.getValue(), inference_args.until.getValue());

@@ -71,12 +71,15 @@ class TaxonTraits {
             int dim_counter = 0;
             while (getline(line_stream, word, sep)) {
                 if (!word.empty() and convertible_to_float(word)) {
-                    if (counter == gentime_dim) {
-                        taxon_gentime_presence.at(id) = true;
-                        taxon_gentime.at(id) = std::stod(word);
-                    } else {
-                        taxon_traits_presence.at(id).at(dim_counter) = true;
-                        taxon_traits.at(id).at(dim_counter) = std::stod(word);
+                    double val = std::stod(word);
+                    if (!std::isnan(val)) {
+                        if (counter == gentime_dim) {
+                            taxon_gentime_presence.at(id) = true;
+                            taxon_gentime.at(id) = val;
+                        } else {
+                            taxon_traits_presence.at(id).at(dim_counter) = true;
+                            taxon_traits.at(id).at(dim_counter) = val;
+                        }
                     }
                 }
                 if (counter != gentime_dim) { dim_counter++; }

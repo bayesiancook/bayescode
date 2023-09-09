@@ -8,3 +8,4 @@ _*/
 bin*
 .vscode/
 *.profraw
+.DS_Store

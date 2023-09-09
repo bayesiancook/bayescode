@@ -121,7 +121,12 @@ class NodeMultivariateProcess : public SimpleNodeArray<EVector> {
             for (int trait_dim = 0; trait_dim < taxon_traits.GetDim(); trait_dim++) {
                 int dim = taxon_traits.TraitDimToMultivariateDim(trait_dim);
                 if (taxon_traits.DataPresence(taxon, trait_dim)) {
-                    (*this)[node](dim) = taxon_traits.Data(taxon, trait_dim);
+                    double val = taxon_traits.Data(taxon, trait_dim);
+                    if (std::isnan(val)) {
+                        std::cerr << "Clamp NaN in node " << node << " dim " << dim << std::endl;
+                        continue;
+                    }
+                    (*this)[node](dim) = val;
                 }
             }
         }
@@ -136,7 +141,26 @@ class NodeMultivariateProcess : public SimpleNodeArray<EVector> {
                         sum_children += (*this)[child](dim) * branch;
                         sum_branch += branch;
                     }
-                    (*this)[node](dim) = sum_children / sum_branch;
+                    if (sum_branch == 0 and sum_children == 0) {
+                        (*this)[node](dim) = 0;
+                    } else if (sum_branch == 0) {
+                        (*this)[node](dim) =
+                            sum_children / static_cast<double>(GetTree().children(node).size());
+                    } else {
+                        (*this)[node](dim) = sum_children / sum_branch;
+                    }
+                }
+            }
+        }
+        for (Tree::NodeIndex node : GetTree().root_to_leaves_iter()) {
+            for (int trait_dim = 0; trait_dim < taxon_traits.GetDim(); trait_dim++) {
+                int dim = taxon_traits.TraitDimToMultivariateDim(trait_dim);
+                if (std::isnan((*this)[node](dim))) {
+                    std::cerr << "NaN in node " << node << " dim " << dim << std::endl;
+                    exit(1);
+                }
+                if (((*this)[node](dim) == 0) and !GetTree().is_root(node)) {
+                    (*this)[node](dim) = (*this)[GetTree().parent(node)](dim);
                 }
             }
         }
