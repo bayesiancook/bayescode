@@ -1,10 +1,11 @@
 #pragma once
 
 #include <iostream>
-#include "spdlog/fmt/ostr.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/fmt/fmt.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
-#include "spdlog/spdlog.h"
+
 using std::string;
 
 // Type for logger pointers
@@ -18,18 +19,18 @@ const string colored_pattern_prefix{"[" + dim_code + "%Y-%m-%d %H:%M:%S.%e" + no
                                     normal_code + "] [" + dim_code + "%^%l%$" + normal_code + "] "};
 
 // Factory functions to create loggers
-inline logger_t stdout_logger(string name) {
+inline logger_t stdout_logger(const string& name) {
     auto result = spdlog::get(name);
-    if (result.get() == nullptr) {
+    if (result == nullptr) {
         result = spdlog::stdout_color_mt(name);
         result->set_pattern(colored_pattern_prefix + "%v");
     }
     return result;
 }
 
-inline logger_t file_logger(string name, string filename) {
+inline logger_t file_logger(const string& name, const string& filename) {
     auto result = spdlog::get(name);
-    if (result.get() == nullptr) {
+    if (result == nullptr) {
         result = spdlog::basic_logger_mt(name, filename);
         result->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%P] [%n] [%^%l%$] %v");
     }
