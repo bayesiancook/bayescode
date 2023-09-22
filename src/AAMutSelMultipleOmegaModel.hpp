@@ -1387,7 +1387,7 @@ class AAMutSelMultipleOmegaModel : public ChainComponent {
     //! return mutation rate between nucleotides from the mutation matrix
     double GetNucRate(int i, int j) const {
         nucmatrix->UpdateMatrix();
-        return nucmatrix->RelativeRate(i, j);
+        return (*nucmatrix)(i, j);
     }
 
 

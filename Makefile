@@ -116,6 +116,8 @@ run-app-tests: all
 	bin/nodeomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/nodeomega_gal4
 	@echo "\n\e[35m\e[1m== Node Omega restart =======================================================\e[0m"
 	bin/nodeomega _test/nodeomega_gal4
+	@echo "\n\e[35m\e[1m== Read Node Omega  =========================================================\e[0m"
+	bin/readnodeomega --newick --output _test/nodeomega_gal4_trees _test/nodeomega_gal4
 	@echo "\n\e[35m\e[1m== Node MutSel run ==========================================================\e[0m"
 	bin/nodemutsel --ncat 3 -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u ${POINTS} _test/nodemutsel_gal4
 	@echo "\n\e[35m\e[1m== Node MutSel restart ======================================================\e[0m"
@@ -159,6 +161,7 @@ mutselomega: tiny
 	bin/readmutselomega -b 10 _mutselomega/mutsel_bglobin
 	bin/readmutselomega -b 10 --ss --output _mutselomega/mutsel_bglobin_ss.tsv _mutselomega/mutsel_bglobin
 	bin/readmutselomega -b 10 --omega_0 --output _mutselomega/mutsel_bglobin_omega_0.tsv _mutselomega/mutsel_bglobin
+	bin/readmutselomega -b 10 --nuc --output _mutselomega/mutsel_bglobin_nuc.tsv _mutselomega/mutsel_bglobin
 	bin/mutselomega -a data/bglobin/bglobin.phy -t data/bglobin/bglobin.tre --freeomega --omegancat 3 -u 30 --flatfitness _mutselomega/MGM3_bglobin
 	bin/mutselomega _mutselomega/MGM3_bglobin
 	bin/readmutselomega -b 10 --omega --output _mutselomega/MGM3_bglobin_omega.tsv _mutselomega/MGM3_bglobin
@@ -188,6 +191,10 @@ dated: tiny
 	@cd bin ; make --no-print-directory -j8 nodemutsel
 	@rm -rf _dated
 	@mkdir _dated
+	bin/nodeomega -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick -u 20 _dated/nodeomega_gal4
+	bin/nodeomega _dated/nodeomega_gal4
+	bin/readnodeomega --newick -b 10 -u 20 _dated/nodeomega_gal4
+	bin/readnodeomega --cov -b 10 -u 20 _dated/nodeomega_gal4
 	bin/nodemutsel -a data/polymorphism/gal4.ali -t data/polymorphism/gal4.newick --ncat 3 -u ${POINTS} _dated/node_gal4
 	bin/nodemutsel _dated/node_gal4
 	bin/readnodemutsel _dated/node_gal4
