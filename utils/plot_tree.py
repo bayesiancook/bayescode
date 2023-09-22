@@ -144,7 +144,7 @@ def plot_tree(path, feature, font_size=14, line_type="-", vt_line_width=0.5, hz_
 
     ax.set_axis_off()
     # plt.tight_layout()
-    cbar = fig.colorbar(color_map, orientation='horizontal', pad=0, shrink=0.6)
+    cbar = fig.colorbar(color_map, orientation='horizontal', pad=0, shrink=0.6, ax=ax)
     cbar.ax.xaxis.set_tick_params('major', labelsize=font_size * 1.8)
     cbar.ax.xaxis.set_tick_params('minor', labelsize=font_size)
     cbar.ax.set_xlabel(label_transform(feature), labelpad=5, size=font_size * 1.8)
