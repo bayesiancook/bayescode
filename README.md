@@ -18,7 +18,7 @@ conda install -c conda-forge -c bioconda bayescode
 - [Installation](https://github.com/ThibaultLatrille/bayescode/wiki/1.-installation)
 - [Format your data](https://github.com/ThibaultLatrille/bayescode/wiki/2.-format-your-data)
 - [Run BayesCode](https://github.com/ThibaultLatrille/bayescode/wiki/3.-run-bayescode)
-- [`mutselomega` - Gene and site-specific rate of evolution (ω, ω<sub>0</sub>, ω<sub>A</sub><sup>phy</sup>, S<sub>0</sub>)](https://github.com/ThibaultLatrille/bayescode/wiki/4.-mutselomega)
+- [`mutselomega` - Gene and site-specific rates of evolution (ω, ω<sub>0</sub>, ω<sub>A</sub><sup>phy</sup>, ω<sub>∗</sub>) and selection coefficients (S<sub>0</sub>)](https://github.com/ThibaultLatrille/bayescode/wiki/4.-mutselomega)
 - [`nodemutsel` - Changes of effective population size (_N<sub>e</sub>_) and mutation rate (_μ_) along the phylogeny](https://github.com/ThibaultLatrille/bayescode/wiki/5.-nodemutsel)
 - [`nodeomega` - Changes of ω along the phylogeny](https://github.com/ThibaultLatrille/bayescode/wiki/6.-nodeomega)
 - [`nodetraits` - Test of diversifying selection for a quantitative trait](https://github.com/ThibaultLatrille/bayescode/wiki/7.-nodetraits)
