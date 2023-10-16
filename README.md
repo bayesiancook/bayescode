@@ -26,6 +26,15 @@ conda install -c conda-forge -c bioconda bayescode
 
 ## References
 
+- **The preprint for use of `nodetraits` to compute ρ is**:
+
+T. Latrille, M. Bastian, T. Gaboriau, N. Salamin,\
+ Detecting diversifying selection for a trait from within and between-species genotypes and phenotypes, \
+_bioRxiv_,\
+[doi.org/10.1101/2023.10.02.559886](https://doi.org/10.1101/2023.10.02.559886)
+
+_Scripts and data necessary to reproduce figures at [github.com/ThibaultLatrille/MicMac](https://github.com/ThibaultLatrille/MicMac)._
+
 - **The preprint for use of `mutselomega` to compute S<sub>0</sub> is**:
 
 T. Latrille, J. Joseph, D. A. Hartasánchez, N. Salamin,\
