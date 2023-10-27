@@ -31,6 +31,15 @@ Requirements: mpic++
 $ cd ./bayescode/sources
 $ make
 ```
+### Compile BayesCode with meson
+You can install meson with `brew install meson` (Mac) or `apt install meson` (Linux).
+
+```
+$ cd ./bayescode sources
+$ meson build -Dprefix=$HOME/Applications/bayescode
+$ ninja -C build install
+
+The binaries will end up as e.g. <prefix>/bin/multigeneaamutselddp.
 
 ### Run BayesCode
 
