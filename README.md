@@ -38,6 +38,7 @@ You can install meson with `brew install meson` (Mac) or `apt install meson` (Li
 $ cd ./bayescode sources
 $ meson build -Dprefix=$HOME/Applications/bayescode
 $ ninja -C build install
+```
 
 The binaries will end up as e.g. <prefix>/bin/multigeneaamutselddp.
 
