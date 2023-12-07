@@ -251,6 +251,10 @@ class Tree {
     double GetBranchLength(const Link *link) const { return atof(GetBranchName(link).c_str()); }
     double GetBranchLength(int index) const { return atof(GetBranchName(index).c_str()); }
 
+    void GetRecentGroups(double cutoff, ostream& os)    {
+        RecursiveGetRecentGroups(GetRoot(), cutoff, os);
+    }
+
   private:
     // return const pointer to node with given index
     const Node *GetNode(int index) const {
@@ -399,32 +403,16 @@ class Tree {
 
     void Subdivide(Link *from, int Ninterpol);
 
-    std::string Reduce(const Link *from = nullptr) {
-        if (from == nullptr) {
-            from = GetRoot();
-        }
+    void GetPendingTaxa(const Link* from, vector<string>& set)  {
         if (from->isLeaf()) {
-            std::cerr << from->GetNode()->GetName() << '\n';
-            ;
-            return from->GetNode()->GetName();
+            set.push_back(GetNodeName(from));
         }
-        std::string name = "None";
         for (Link *link = from->Next(); link != from; link = link->Next()) {
-            std::string tmp = Reduce(link->Out());
-            if (tmp == "diff") {
-                name = "diff";
-            } else if (name == "None") {
-                name = tmp;
-            } else if (name != tmp) {
-                name = "diff";
-            }
+            GetPendingTaxa(link->Out(), set);
         }
-        std::cerr << '\t' << name << '\n';
-        from->GetNode()->SetName(name);
-        return name;
-
-        return "";
     }
+
+    double RecursiveGetRecentGroups(const Link* from, double cutoff, ostream& os);
 
     void PrintReduced(std::ostream &os, const Link *from = nullptr) {
         if (from == nullptr) {

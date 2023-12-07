@@ -24,6 +24,37 @@ void Tree::ToStreamWithBranchIndex(ostream &os) const {
     os << ";\n";
 }
 
+double Tree::RecursiveGetRecentGroups(const Link* from, double cutoff, ostream& os) {
+    if (from->isLeaf()) {
+        double height = 0;
+        double parent_height = GetBranchLength(from);
+        if ((height < cutoff) && (parent_height > cutoff))  {
+            os << GetNodeName(from) << '\n';
+        }
+        return 0;
+    }
+    double height = 0;
+    for (const Link *link = from->Next(); link != from; link = link->Next()) {
+        double tmp = RecursiveGetRecentGroups(link->Out(), cutoff, os);
+        tmp += GetBranchLength(link->Out());
+        if (height < tmp)  {
+            height = tmp;
+        }
+    }
+    if (! from->isRoot())   {
+        double parent_height = height + GetBranchLength(from);
+        if ((height < cutoff) && (parent_height > cutoff))  {
+            vector<string> taxonlist;
+            GetPendingTaxa(from, taxonlist);
+            for (size_t i=0; i<taxonlist.size(); i++)   {
+                os << taxonlist[i] << '\t';
+            }
+            os << '\n';
+        }
+    }
+    return height;
+}
+
 double Tree::ToStreamSimplified(ostream &os, const Link *from) const {
     if (!from->isLeaf()) {
         if (from->Next()->Next() == from) {
