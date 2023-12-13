@@ -122,6 +122,14 @@ class FastCoevolSample : public Sample {
         meanomega.MedianToStream(omos);
         cerr << "postmean omega tree in " << name << ".postmeanomega.tre\n"; 
 
+        ofstream node_omos((name + ".postmeannodeomega.tab").c_str());
+        meanomega.TabulateNodeMedianToStream(node_omos);
+        cerr << "tabulated node omega median values in " << name << ".postmeannodeomega.tab\n"; 
+
+        ofstream branch_omos((name + ".postmeanbranchomega.tab").c_str());
+        meanomega.TabulateBranchMedianToStream(branch_omos);
+        cerr << "tabulated branch omega median values in " << name << ".postmeanbranchomega.tab\n"; 
+
         // timetree.Sort();
         ofstream tos((name + ".postmeanchrono.tre").c_str());
         meanomega.MedianToStream(tos, false);
