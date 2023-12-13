@@ -183,6 +183,14 @@ class FastCoevolSample : public Sample {
         meansynrate.MedianToStream(sos);
         cerr << "postmean dS tree in " << name << ".postmeands.tre\n"; 
 
+        ofstream node_sos((name + ".postmeannodeds.tab").c_str());
+        meansynrate.TabulateNodeMedianToStream(node_sos);
+        cerr << "tabulated node dS median values in " << name << ".postmeannodeds.tab\n"; 
+
+        ofstream branch_sos((name + ".postmeanbranchds.tab").c_str());
+        meansynrate.TabulateBranchMedianToStream(branch_sos);
+        cerr << "tabulated branch dS median values in " << name << ".postmeanbranchds.tab\n"; 
+
         meanomega.Sort();
         ofstream omos((name + ".postmeanomega.tre").c_str());
         meanomega.MedianToStream(omos);
