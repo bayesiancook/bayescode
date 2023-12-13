@@ -82,6 +82,43 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             }
     }
 
+    void GetIndependentContrasts(map<const Link*, vector<double>>& contrasts,
+            map<const Link*, double>& lengths) const {
+        RecursiveGetIndependentContrasts(GetRoot(), contrasts, lengths);
+    }
+
+    vector<double> RecursiveGetIndependentContrasts(const Link* from, 
+            map<const Link*, vector<double>>& contrasts,
+            map<const Link*, double>& lengths) const    {
+        if (from->isLeaf()) {
+            return GetVal(from->GetNode()->GetIndex());
+        }
+        if (from->Next()->Next()->Next() != from)   {
+            cerr << "error in get independent contrasts: tree is not binary\n";
+            exit(1);
+        }
+
+        const Link* leftlink = from->Next();
+        vector<double> leftval = RecursiveGetIndependentContrasts(leftlink->Out(), contrasts, lengths);
+        double leftdt = timetree.GetVal(leftlink->GetNode()->GetIndex()) - timetree.GetVal(leftlink->Out()->GetNode()->GetIndex());
+
+        const Link* rightlink = from->Next()->Next();
+        vector<double> rightval = RecursiveGetIndependentContrasts(rightlink->Out(), contrasts, lengths);
+        double rightdt = timetree.GetVal(rightlink->GetNode()->GetIndex()) - timetree.GetVal(rightlink->Out()->GetNode()->GetIndex());
+
+        vector<double> nodeval(GetDim(),0);
+        for (int i=0; i<GetDim(); i++)  {
+            nodeval[i] = (leftval[i]/leftdt + rightval[i]/rightdt) / (1.0/leftdt + 1.0/rightdt);
+        }
+        double length = leftdt + rightdt;
+        vector<double>& contrast = contrasts[from];
+        for (int i=0; i<GetDim(); i++)  {
+            contrast[i] += (leftval[i] - rightval[i]) / sqrt(leftdt + rightdt);
+        }
+        lengths[from] += length;
+        return nodeval;
+    }
+
     void Sample()   {
         RecursiveSample(GetRoot());
     }

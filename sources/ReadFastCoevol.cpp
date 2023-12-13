@@ -76,6 +76,72 @@ class FastCoevolSample : public Sample {
         // points can be accessed to (only once) by repeated calls to GetNextPoint()
     }
 
+    void InitializeContrasts(const Link* from, 
+            map<const Link*, vector<double>>& contrasts,
+            map<const Link*, double>& lengths) {
+        if (! from->isLeaf())   {
+            contrasts[from] = vector<double>(GetModel()->GetCovMatrix().GetDim(), 0);
+            lengths[from] = 0;
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                InitializeContrasts(link->Out(), contrasts, lengths);
+            }
+        }
+    }
+
+    void NormalizeContrasts(const Link* from,
+            map<const Link*, vector<double>>& contrasts,
+            map<const Link*, double>& lengths,
+            int size)   {
+        if (! from->isLeaf())   {
+            lengths[from] /= size;
+            vector<double>& cons = contrasts[from];
+            for (size_t i=0; i<cons.size(); i++)    {
+                cons[i] /= size;
+            }
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                NormalizeContrasts(link->Out(), contrasts, lengths, size);
+            }
+        }
+    }
+
+    void OutputContrasts(const Link* from,
+            map<const Link*, vector<double>>& contrasts,
+            map<const Link*, double>& lengths,
+            ostream& os)    {
+        if (! from->isLeaf())   {
+            os << lengths[from];
+            vector<double>& cons = contrasts[from];
+            for (size_t i=0; i<cons.size(); i++)    {
+                os << '\t' << cons[i];
+            }
+            os << '\n';
+            for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+                OutputContrasts(link->Out(), contrasts, lengths, os);
+            }
+        }
+    }
+
+    void ReadIndependentContrasts() {
+        cerr << size << " points to read\n";
+
+        map<const Link*, vector<double>> contrasts;
+        map<const Link*, double> lengths;
+        InitializeContrasts(GetModel()->GetTree().GetRoot(), contrasts, lengths);
+
+        for (int i=0; i<size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->GetProcess().GetIndependentContrasts(contrasts, lengths);
+        }
+        cerr << '\n';
+
+        NormalizeContrasts(GetModel()->GetTree().GetRoot(), contrasts, lengths, size);
+        ofstream os((name + ".ic").c_str());
+        OutputContrasts(GetModel()->GetTree().GetRoot(), contrasts, lengths, os);
+        cerr << "independent contrasts tabulated in " << name << ".ic\n";
+    }
+
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
@@ -152,6 +218,7 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int ppred = 0;
+    int ic = 0;
 
     string name;
 
@@ -178,6 +245,8 @@ int main(int argc, char *argv[]) {
                 until = atoi(argv[i]);
             } else if (s == "-ppred") {
                 ppred = 1;
+            } else if (s == "-ic")  {
+                ic = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -198,6 +267,8 @@ int main(int argc, char *argv[]) {
     FastCoevolSample *sample = new FastCoevolSample(name, burnin, every, until);
     if (ppred) {
         sample->PostPred();
+    } else if (ic)  {
+        sample->ReadIndependentContrasts();
     } else {
         sample->Read();
     }
