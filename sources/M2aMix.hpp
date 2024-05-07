@@ -2,6 +2,7 @@
 #define M2AMIX_H
 
 #include "Array.hpp"
+#include "dSOmegaPathSuffStat.hpp"
 
 class M2aMix : public SimpleArray<double> {
   public:
@@ -85,6 +86,67 @@ class M2aMix : public SimpleArray<double> {
         double total = 0;
         for (int i = 0; i < suffstatarray.GetSize(); i++) {
             total += GetPostProbArray(suffstatarray.GetVal(i), postprobarray[i]);
+        }
+        return total;
+    }
+
+    double GetPostProbArray(const dSOmegaPathSuffStat &suffstat, double ds, vector<double> &postprob) const {
+        double logp[GetSize()];
+        double max = 0;
+        int first = 1;
+        for (int cat = 0; cat < GetSize(); cat++) {
+            logp[cat] = suffstat.GetLogProb(ds, GetVal(cat));
+            if (first || (max < logp[cat])) {
+                if (weight[cat]) {
+                    max = logp[cat];
+                    first = 0;
+                }
+            }
+        }
+        double tot = 0;
+        for (int cat = 0; cat < GetSize(); cat++) {
+            if (weight[cat]) {
+                postprob[cat] = weight[cat] * exp(logp[cat] - max);
+            } else {
+                postprob[cat] = 0;
+            }
+            tot += postprob[cat];
+        }
+        for (int cat = 0; cat < GetSize(); cat++) {
+            postprob[cat] /= tot;
+        }
+        double ret = log(tot) + max;
+        /*
+        if (std::isinf(ret)) {
+            cerr << "in M2aMix::GetPostProbArray\n";
+            cerr << "ret is inf: " << tot << '\t' << max << '\n';
+            cerr << "omega suff stat: " << suffstat.GetCount() << '\t' << suffstat.GetBeta()
+                 << '\n';
+            for (int cat = 0; cat < GetSize(); cat++) {
+                cerr << GetVal(cat) << '\t' << weight[cat] << '\t' << logp[cat] << '\t'
+                     << postprob[cat] << '\n';
+            }
+            cerr << tot << '\t' << log(tot) << '\t' << max << '\n';
+            exit(1);
+        }
+        */
+        if (std::isnan(ret)) {
+            cerr << "ret is nan: " << tot << '\t' << max << '\n';
+            for (int cat = 0; cat < GetSize(); cat++) {
+                cerr << GetVal(cat) << '\t' << weight[cat] << '\t' << logp[cat] << '\t'
+                     << postprob[cat] << '\n';
+            }
+            cerr << tot << '\t' << log(tot) << '\t' << max << '\n';
+            exit(1);
+        }
+        return ret;
+    }
+
+    double GetPostProbArray(const dSOmegaPathSuffStatArray &suffstatarray, double ds, 
+                            vector<vector<double>> &postprobarray) const {
+        double total = 0;
+        for (int i = 0; i < suffstatarray.GetSize(); i++) {
+            total += GetPostProbArray(suffstatarray.GetVal(i), ds, postprobarray[i]);
         }
         return total;
     }
