@@ -92,10 +92,11 @@ class SingleOmegaSample : public Sample {
         cerr << '\n';
         array.Normalize(1.0/size);
         ofstream os((name + ".sitedsomss").c_str());
+        // os << array.GetSize() << '\n';
         os << "site\tMs\tMn\tLs\tLn\tom\n";
         for (int i=0; i<array.GetSize(); i++)   {
+            // os << array[i] << '\n';
             os << i << '\t' << array[i] << '\n';
-            // os << i << '\t' << array[i] << '\t' << array[i].GetdNdS(0.1) << '\n';
         }
         cout << "site dsom suffstat written in : " << name << ".sitedsomss\n";
     }
