@@ -488,21 +488,60 @@ class FastCoevolModel: public ProbModel {
         if (wndsmode)   {
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+
+            if (Random::Uniform() < 0.1)    {
+                int nspan = 10;
+                double min_delta = 0.01;
+                double max_delta = 0.2;
+                process->FilterMove(0, nspan, min_delta, max_delta, 
+                        [this] (const Link* from) {NodeUpdate(from);},
+                        [this] (const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            }
+
             ResampleWNdS();
         }
         else    {
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+
+            if (Random::Uniform() < 0.1)    {
+                int nspan = 10;
+                double min_delta = 0.01;
+                double max_delta = 0.2;
+                process->FilterMove(0, nspan, min_delta, max_delta, 
+                        [this] (const Link* from) {NodeUpdate(from);},
+                        [this] (const Link* from) {return NodeLogProb(from);} );
+            }
         }
 
         if (wnommode)   {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
+
+            if (Random::Uniform() < 0.1)    {
+                int nspan = 10;
+                double min_delta = 0.01;
+                double max_delta = 0.2;
+                process->FilterMove(1, nspan, min_delta, max_delta, 
+                        [this] (const Link* from) {NodeUpdate(from);},
+                        [this] (const Link* from) {return NodeLogProbOmIntegrated(from);} );
+            }
+
             ResampleWNOm();
         }
         else    {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+
+            if (Random::Uniform() < 0.1)    {
+                int nspan = 10;
+                double min_delta = 0.01;
+                double max_delta = 0.2;
+                process->FilterMove(1, nspan, min_delta, max_delta, 
+                        [this] (const Link* from) {NodeUpdate(from);},
+                        [this] (const Link* from) {return NodeLogProb(from);} );
+            }
+
         }
 
         for (int i=L; i<L+Ncont; i++)   {

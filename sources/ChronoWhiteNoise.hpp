@@ -100,9 +100,13 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(from->GetBranch()->GetIndex());
             double tmp = Random::GammaSample(GetAlpha(from) + suffstat.GetCount(), GetBeta(from) + suffstat.GetBeta());
             if (! tmp)  {
+                tmp = (GetAlpha(from) + suffstat.GetCount()) / (GetBeta(from) + suffstat.GetBeta());
+                /*
                 cerr << "null sample in white noise: " << GetAlpha(from) << '\t' << GetBeta(from) << '\t' << suffstat.GetCount() << '\t' << suffstat.GetBeta() << '\n';
+                cerr << (GetAlpha(from) + suffstat.GetCount()) / (GetBeta(from) + suffstat.GetBeta()) << '\n';
                 cerr << mode << '\t' << shape << '\n';
                 exit(1);
+                */
             }
             (*this)[from->GetBranch()->GetIndex()] = tmp;
         }

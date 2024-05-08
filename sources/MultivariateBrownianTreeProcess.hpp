@@ -293,6 +293,244 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
         return ((double) accepted);
     }
 
+    template<class Update, class LogProb>
+    void FilterMove(int index, int nspan, double min_delta, double max_delta, Update update, LogProb logprob)   {
+        std::vector<std::vector<double>> proposal(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
+        std::vector<std::vector<double>> logcondl(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
+        for (int i=0; i<GetTree().GetNnode(); i++)  {
+            double delta = min_delta + (max_delta - min_delta)*Random::Uniform();
+            double center = (*this)[i][index];
+            for (int k=0; k<2*nspan+1; k++)   {
+                proposal[i][k] = center + delta*(k - nspan);
+            }
+        }
+        BackwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl);
+        FilterSampleRoot(index, nspan, update, logprob, proposal, logcondl);
+        ForwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl);
+    }
+
+    template<class Update, class LogProb>
+    void BackwardFilterMove(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        int from_index = from->GetNode()->GetIndex();
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            BackwardFilterMove(link->Out(), index, nspan, update, logprob, proposal, logcondl);
+            std::vector<double> tmp = BackwardPropagate(link->Out(), index, nspan, update, logprob, proposal, logcondl);
+            for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+                logcondl[from_index][k] += tmp[k];
+            }
+        }
+
+        if (from->isRoot()) {
+            for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+                (*this)[from_index][index] = proposal[from_index][k];
+                logcondl[from_index][k] += GetLocalLogProb(from);
+            }
+            (*this)[from_index][index] = proposal[from_index][nspan];
+        }
+    }
+
+    template<class Update, class LogProb>
+    void ForwardFilterMove(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            if (clamp[link->Out()->GetNode()->GetIndex()][index])    {
+                if (! link->Out()->isLeaf())   {
+                    std::cerr << "error in forward filter: only tips can be clamped\n";
+                    exit(1);
+                }
+                update(link->Out());
+            }
+            else    {
+                ForwardPropagate(link->Out(), index, nspan, update, logprob, proposal, logcondl);
+                ForwardFilterMove(link->Out(), index, nspan, update, logprob, proposal, logcondl);
+            }
+        }
+    }
+
+    template<class Update, class LogProb>
+    std::vector<double> ClampedBackwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        int from_index = from->GetNode()->GetIndex();
+        int parent_index = from->Out()->GetNode()->GetIndex();
+
+        std::vector<double> tmp(logcondl[from_index].size(), 0);
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            (*this)[parent_index][index] = proposal[from_index][k];
+            update(from);
+            tmp[k] = GetLocalLogProb(from) + logprob(from);
+            if (std::isnan(tmp[k])) {
+                cerr << "in ClampedBackward: return value is nan\n";
+                exit(1);
+            }
+        }
+        (*this)[parent_index][index] = proposal[parent_index][nspan];
+        update(from);
+        return tmp;
+    }
+
+
+    template<class Update, class LogProb>
+    std::vector<double> UnclampedBackwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        // up[k] = sum_l q_kl * down[l]
+
+        int from_index = from->GetNode()->GetIndex();
+        int parent_index = from->Out()->GetNode()->GetIndex();
+
+        std::vector<std::vector<double>> logl(logcondl[from_index].size(), std::vector<double>(logcondl[from_index].size(), 0));
+
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            (*this)[parent_index][index] = proposal[parent_index][k];
+            for (size_t l=0; l<logcondl[from_index].size(); l++)    {
+                (*this)[from_index][index] = proposal[from_index][l];
+                update(from);
+                logl[k][l] = GetLocalLogProb(from) + logprob(from) + logcondl[from_index][l];
+                /*
+                if (std::isinf(logl[k][l]))  {
+                    cerr << "logl is inf\n";
+                    cerr << GetLocalLogProb(from) << '\t' << logprob(from) << '\t' << logcondl[from_index][l] << '\n';
+                    exit(1);
+                }
+                */
+                if (std::isnan(logl[k][l]))  {
+                    cerr << "logl is nan\n";
+                    cerr << GetLocalLogProb(from) << '\t' << logprob(from) << '\t' << logcondl[from_index][l] << '\n';
+                    exit(1);
+                }
+            }
+        }
+        double max = logl[0][0];
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            for (size_t l=0; l<logcondl[from_index].size(); l++)    {
+                if (max < logl[k][l])   {
+                    max = logl[k][l];
+                }
+            }
+        }
+
+        std::vector<double> tmp(logcondl[from_index].size(), 0);
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            for (size_t l=0; l<logcondl[from_index].size(); l++)    {
+                tmp[k] += exp(logl[k][l] - max);
+                if (std::isnan(tmp[k])) {
+                    cerr << "in unclamped backward: nan\n";
+                    cerr << logl[k][l] << '\t' << max << '\n';
+                    exit(1);
+                }
+            }
+        }
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            if (std::isinf(tmp[k]))    {
+                std::cerr << "tmp[k] is inf\n";
+                exit(1);
+            }
+            if (std::isnan(max))    {
+                std::cerr << "max is nan\n";
+                exit(1);
+            }
+        }
+
+        double max2 = tmp[0];
+        for (size_t k=1; k<logcondl[from_index].size(); k++)    {
+            if (max2 < tmp[k])   {
+                max2 = tmp[k];
+            }
+        }
+        if (max2 <= 0)   {
+            std::cerr << "non positive propagate\n";
+            exit(1);
+        }
+
+        std::vector<double> logtmp(logcondl[from_index].size(), 0);
+        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            logtmp[k] = log(tmp[k]);
+            if (std::isnan(logtmp[k])) {
+                cerr << "in UnclampedBackward: return value is nan\n";
+                cerr << tmp[k] << '\n';
+                exit(1);
+            }
+        }
+
+        (*this)[from_index][index] = proposal[from_index][nspan];
+        (*this)[parent_index][index] = proposal[parent_index][nspan];
+        update(from);
+
+        return logtmp;
+    }
+
+    template<class Update, class LogProb>
+    std::vector<double> BackwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+        if (clamp[from->GetNode()->GetIndex()][index]) {
+            return ClampedBackwardPropagate(from, index, nspan, update, logprob, proposal, logcondl);
+        }
+        return UnclampedBackwardPropagate(from, index, nspan, update, logprob, proposal, logcondl);
+    }
+
+    template<class Update, class LogProb>
+    void ForwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        int from_index = from->GetNode()->GetIndex();
+        std::vector<double> logtmp(logcondl[from_index].size(), 0);
+        for (size_t l=0; l<logcondl[from_index].size(); l++) {
+            (*this)[from_index][index] = proposal[from_index][l];
+            update(from);
+            logtmp[l] = GetLocalLogProb(from) + logprob(from) + logcondl[from_index][l];
+        }
+        double max = logtmp[0];
+        for (size_t l=0; l<logcondl[from_index].size(); l++) {
+            if (max < logtmp[l])    {
+                max = logtmp[l];
+            }
+        }
+        double tot = 0;
+        std::vector<double> tmp(logcondl[from_index].size(), 0);
+        for (size_t l=0; l<logcondl[from_index].size(); l++) {
+            tmp[l] = exp(logtmp[l] - max);
+            tot += tmp[l];
+        }
+        for (size_t l=0; l<logcondl[from_index].size(); l++) {
+            tmp[l] /= tot;
+        }
+        int choose = Random::DrawFromDiscreteDistribution(tmp);
+        if ((choose < 0) || (choose >= int(logcondl[from_index].size()))) {
+            std::cerr << "error: choose out of range\n";
+            exit(1);
+        }
+        (*this)[from_index][index] = proposal[from_index][choose];
+        update(from);
+    }
+
+    template<class Update, class LogProb>
+    void FilterSampleRoot(int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+
+        int root_index = GetRoot()->GetIndex();
+
+        double max = logcondl[root_index][0];
+        for (size_t k=0; k<logcondl[root_index].size(); k++)    {
+            if (max < logcondl[root_index][k])    {
+                max = logcondl[root_index][k];
+            }
+        }
+
+        std::vector<double> tmp(logcondl[root_index].size(), 0);
+        double tot = 0;
+        for (size_t k=0; k<logcondl[root_index].size(); k++)    {
+            tmp[k] = exp(logcondl[root_index][k] - max);
+            tot += tmp[k];
+        }
+        for (size_t k=0; k<logcondl[root_index].size(); k++)    {
+            tmp[k] /= tot;
+        }
+
+        int choose = Random::DrawFromDiscreteDistribution(tmp);
+        if ((choose < 0) || (choose >= int(logcondl[root_index].size()))) {
+            std::cerr << "error: choose out of range\n";
+            exit(1);
+        }
+        (*this)[root_index][index] = proposal[root_index][choose];
+    }
+
     private:
 
     const NodeSelector<double>& timetree;
