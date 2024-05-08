@@ -394,6 +394,10 @@ class FastCoevolModel: public ProbModel {
         return process->GetNodeLogProb(from);
     }
 
+    double BranchLogPrior(const Link* from) const   {
+        return process->GetLocalLogProb(from);
+    }
+
     double NodeLogProb(const Link* from) const   {
         return NodeLogPrior(from) + NodeSuffStatLogProb(from);
     }
@@ -409,6 +413,11 @@ class FastCoevolModel: public ProbModel {
     void NodeUpdate(const Link* from) {
         branchlength->LocalNodeUpdate(from);
         branchomega->LocalNodeUpdate(from);
+    }
+
+    void BranchUpdate(const Link* from) {
+        branchlength->LocalUpdate(from);
+        branchomega->LocalUpdate(from);
     }
 
     double KappaSuffStatLogProb() const {
@@ -494,8 +503,8 @@ class FastCoevolModel: public ProbModel {
                 double min_delta = 0.01;
                 double max_delta = 0.2;
                 process->FilterMove(0, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {NodeUpdate(from);},
-                        [this] (const Link* from) {return NodeLogProbdSIntegrated(from);} );
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProbdSIntegrated(from);} );
             }
 
             ResampleWNdS();
@@ -509,8 +518,8 @@ class FastCoevolModel: public ProbModel {
                 double min_delta = 0.01;
                 double max_delta = 0.2;
                 process->FilterMove(0, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {NodeUpdate(from);},
-                        [this] (const Link* from) {return NodeLogProb(from);} );
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
             }
         }
 
@@ -523,8 +532,8 @@ class FastCoevolModel: public ProbModel {
                 double min_delta = 0.01;
                 double max_delta = 0.2;
                 process->FilterMove(1, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {NodeUpdate(from);},
-                        [this] (const Link* from) {return NodeLogProbOmIntegrated(from);} );
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProbOmIntegrated(from);} );
             }
 
             ResampleWNOm();
@@ -538,8 +547,8 @@ class FastCoevolModel: public ProbModel {
                 double min_delta = 0.01;
                 double max_delta = 0.2;
                 process->FilterMove(1, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {NodeUpdate(from);},
-                        [this] (const Link* from) {return NodeLogProb(from);} );
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
             }
 
         }
