@@ -1,5 +1,5 @@
 CC=mpic++
-CPPFLAGS= -std=c++11 -Wall -O3
+CPPFLAGS= -std=c++14 -Wall -O3
 LDFLAGS= -O3
 SRCS= BranchSitePath.cpp Chrono.cpp CodonSequenceAlignment.cpp CodonStateSpace.cpp CodonSubMatrix.cpp AAMutSelOmegaCodonSubMatrix.cpp GTRSubMatrix.cpp AASubSelSubMatrix.cpp AAMutSelSubMatrix.cpp T92SubMatrix.cpp StrandSymmetricIrreversibleSubMatrix.cpp PhyloProcess.cpp Random.cpp SequenceAlignment.cpp StateSpace.cpp SubMatrix.cpp TaxonSet.cpp Tree.cpp linalg.cpp cdf.cpp Chain.cpp MultiGeneChain.cpp Sample.cpp MultiGeneSample.cpp MPIBuffer.cpp MultiGeneMPIModule.cpp CovMatrix.cpp PathSuffStat.cpp
 
@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree coevol readcoevol multigenecoevol globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -210,6 +210,10 @@ $(PROGSDIR)/multigenecodonm8$(EXEEXT): MultiGeneCodonM8.o $(OBJS)
 codonm2a$(EXEEXT): $(PROGSDIR)/codonm2a$(EXEEXT)
 $(PROGSDIR)/codonm2a$(EXEEXT): CodonM2a.o $(OBJS)
 	$(CC) CodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+fastcodonm2a$(EXEEXT): $(PROGSDIR)/fastcodonm2a$(EXEEXT)
+$(PROGSDIR)/fastcodonm2a$(EXEEXT): FastCodonM2a.o $(OBJS)
+	$(CC) FastCodonM2a.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readcodonm2a$(EXEEXT): $(PROGSDIR)/readcodonm2a$(EXEEXT)
 $(PROGSDIR)/readcodonm2a$(EXEEXT): ReadCodonM2a.o $(OBJS)
