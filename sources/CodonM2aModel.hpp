@@ -1067,4 +1067,17 @@ class CodonM2aModel : public ProbModel {
         exit(1);
         // nucstat = data->GetEmpiricalFreq();
     }
+
+    void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatArray& into) const {
+        PathSuffStatArray pathsuffstatarray(Nsite);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        double totlength = branchlength->GetTotalLength();
+        into.AddSuffStat(
+               [this](int i) -> const MGOmegaCodonSubMatrix& {return sitecodonmatrixarray->GetVal(i);},
+               [&path = pathsuffstatarray](int i) {return path.GetVal(i);},
+               [&l = totlength](int i) {return l;},
+               [this] (int i) {return componentomegaarray->GetVal(sitealloc->GetVal(i));});
+    }
+
 };

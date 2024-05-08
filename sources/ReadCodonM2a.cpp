@@ -112,6 +112,32 @@ class CodonM2aSample : public Sample {
         }
         cerr << '\n';
     }
+
+    void ReadSiteSuffStat() {
+        cerr << size << " points to read\n";
+
+        dSOmegaPathSuffStatArray array(GetModel()->GetNsite());
+        array.Clear();
+
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AdddSOmegaPathSuffStat(array);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        ofstream os((name + ".sitedsomss").c_str());
+        os << array.GetSize() << '\n';
+        // os << "site\tMs\tMn\tLs\tLn\tom\n";
+        for (int i=0; i<array.GetSize(); i++)   {
+            os << array[i] << '\n';
+            // os << i << '\t' << array[i] << '\n';
+        }
+        cout << "site dsom suffstat written in : " << name << ".sitedsomss\n";
+    }
+
+
 };
 
 int main(int argc, char *argv[]) {
@@ -122,6 +148,8 @@ int main(int argc, char *argv[]) {
     int ppred = 0;
     double shrinkposw = 1.0;
     double shrinkdposom = 1.0;
+
+    int sitess = 0;
 
     string name;
 
@@ -159,6 +187,8 @@ int main(int argc, char *argv[]) {
             } else if (s == "-shrinkdposom")  {
                 i++;
                 shrinkdposom = atof(argv[i]);
+            } else if (s == "-sitedsomss")    {
+                sitess = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -179,6 +209,8 @@ int main(int argc, char *argv[]) {
     CodonM2aSample *sample = new CodonM2aSample(newpath, name, burnin, every, until);
     if (ppred) {
         sample->PostPredSimu(shrinkposw,shrinkdposom);
+    } else if (sitess)  {
+        sample->ReadSiteSuffStat();
     } else {
         sample->Read();
     }
