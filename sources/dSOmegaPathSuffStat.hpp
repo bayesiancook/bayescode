@@ -600,7 +600,13 @@ class dSOmegaPathSuffStatArray : public SimpleArray<dSOmegaPathSuffStat>    {
         }
     }
 
-    /*
+    template<class Mat, class Path, class Length, class Omega>
+    void AddSuffStat(Mat mat, Path path, Length length, Omega omega)    {
+        for (int i=0; i<GetSize(); i++) {
+            (*this)[i].AddSuffStat(mat(i), path(i), length(i), omega(i));
+        }
+    }
+
     void AddSuffStat(const Selector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
                      const Selector<PathSuffStat> &pathsuffstatarray,
                      double length, const Selector<double>& omega) {
@@ -613,7 +619,6 @@ class dSOmegaPathSuffStatArray : public SimpleArray<dSOmegaPathSuffStat>    {
                 omega.GetVal(i));
         }
     }
-    */
 
     void AddSuffStat(const MGOmegaCodonSubMatrix& codonsubmatrix,
                      const Selector<PathSuffStat> &pathsuffstatarray,

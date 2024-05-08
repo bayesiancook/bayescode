@@ -656,8 +656,22 @@ class SingleOmegaModel : public ProbModel {
         pathsuffstatarray.Clear();
         pathsuffstatarray.AddSuffStat(*phyloprocess);
         double totlength = branchlength->GetTotalLength();
+        into.AddSuffStat(
+               [this](int i) -> const MGOmegaCodonSubMatrix& {return *codonmatrix;},
+               [&path = pathsuffstatarray](int i) {return path.GetVal(i);},
+               [&l = totlength](int i) {return l;},
+               [&om = omega](int i) {return om;});
+    }
+
+    /*
+    void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatArray& into) const {
+        PathSuffStatArray pathsuffstatarray(Nsite);
+        pathsuffstatarray.Clear();
+        pathsuffstatarray.AddSuffStat(*phyloprocess);
+        double totlength = branchlength->GetTotalLength();
         into.AddSuffStat(*codonmatrix, pathsuffstatarray, totlength, omega);
     }
+    */
 
     void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatBranchArray& into) const {
         PathSuffStatNodeArray pathsuffstatarray(*tree);
