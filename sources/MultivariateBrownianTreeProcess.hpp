@@ -297,11 +297,11 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
     void FilterMove(int index, int nspan, double min_delta, double max_delta, Update update, LogProb logprob)   {
         std::vector<std::vector<double>> proposal(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
         std::vector<std::vector<double>> logcondl(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
+        double delta = min_delta + (max_delta - min_delta)*Random::Uniform();
         for (int i=0; i<GetTree().GetNnode(); i++)  {
-            double delta = min_delta + (max_delta - min_delta)*Random::Uniform();
             double center = (*this)[i][index];
             for (int k=0; k<2*nspan+1; k++)   {
-                proposal[i][k] = center + delta*(k - nspan);
+                proposal[i][k] = center + delta*(k - nspan)/nspan;
             }
         }
         BackwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl);
@@ -386,13 +386,6 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
                 (*this)[from_index][index] = proposal[from_index][l];
                 update(from);
                 logl[k][l] = GetLocalLogProb(from) + logprob(from) + logcondl[from_index][l];
-                /*
-                if (std::isinf(logl[k][l]))  {
-                    cerr << "logl is inf\n";
-                    cerr << GetLocalLogProb(from) << '\t' << logprob(from) << '\t' << logcondl[from_index][l] << '\n';
-                    exit(1);
-                }
-                */
                 if (std::isnan(logl[k][l]))  {
                     cerr << "logl is nan\n";
                     cerr << GetLocalLogProb(from) << '\t' << logprob(from) << '\t' << logcondl[from_index][l] << '\n';
@@ -400,56 +393,36 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
                 }
             }
         }
-        double max = logl[0][0];
+        // double max = logl[0][0];
+        std::vector<double> logtmp(logcondl[from_index].size(), 0);
+        std::vector<double> tmp(logcondl[from_index].size(), 0);
         for (size_t k=0; k<logcondl[from_index].size(); k++)    {
+            double max = logl[k][0];
             for (size_t l=0; l<logcondl[from_index].size(); l++)    {
                 if (max < logl[k][l])   {
                     max = logl[k][l];
                 }
             }
-        }
-
-        std::vector<double> tmp(logcondl[from_index].size(), 0);
-        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
             for (size_t l=0; l<logcondl[from_index].size(); l++)    {
                 tmp[k] += exp(logl[k][l] - max);
-                if (std::isnan(tmp[k])) {
-                    cerr << "in unclamped backward: nan\n";
-                    cerr << logl[k][l] << '\t' << max << '\n';
-                    exit(1);
-                }
             }
+            logtmp[k] = log(tmp[k]) + max;
         }
+
+        double max = logtmp[0];
         for (size_t k=0; k<logcondl[from_index].size(); k++)    {
-            if (std::isinf(tmp[k]))    {
-                std::cerr << "tmp[k] is inf\n";
-                exit(1);
-            }
-            if (std::isnan(max))    {
-                std::cerr << "max is nan\n";
-                exit(1);
+            if (max < logtmp[k])    {
+                max = logtmp[k];
             }
         }
 
-        double max2 = tmp[0];
-        for (size_t k=1; k<logcondl[from_index].size(); k++)    {
-            if (max2 < tmp[k])   {
-                max2 = tmp[k];
-            }
-        }
-        if (max2 <= 0)   {
-            std::cerr << "non positive propagate\n";
+        if (std::isnan(max))    {
+            cerr << "max is nan\n";
             exit(1);
         }
-
-        std::vector<double> logtmp(logcondl[from_index].size(), 0);
-        for (size_t k=0; k<logcondl[from_index].size(); k++)    {
-            logtmp[k] = log(tmp[k]);
-            if (std::isnan(logtmp[k])) {
-                cerr << "in UnclampedBackward: return value is nan\n";
-                cerr << tmp[k] << '\n';
-                exit(1);
-            }
+        if (std::isinf(max))    {
+            cerr << "max is inf\n";
+            exit(1);
         }
 
         (*this)[from_index][index] = proposal[from_index][nspan];

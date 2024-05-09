@@ -498,26 +498,21 @@ class FastCoevolModel: public ProbModel {
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
 
-            if (Random::Uniform() < 0.1)    {
-                int nspan = 10;
-                double min_delta = 0.01;
-                double max_delta = 0.2;
-                process->FilterMove(0, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProbdSIntegrated(from);} );
-            }
-
             ResampleWNdS();
         }
         else    {
+            process->SingleNodeMove(0, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
 
-            if (Random::Uniform() < 0.1)    {
-                int nspan = 10;
-                double min_delta = 0.01;
-                double max_delta = 0.2;
-                process->FilterMove(0, nspan, min_delta, max_delta, 
+            if (Random::Uniform() < 0.3)    {
+                process->FilterMove(0, 10, 0, 1,
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                process->FilterMove(0, 10, 0, 0.1, 
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                process->FilterMove(0, 10, 0, 0.01, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
             }
@@ -527,26 +522,21 @@ class FastCoevolModel: public ProbModel {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
 
-            if (Random::Uniform() < 0.1)    {
-                int nspan = 10;
-                double min_delta = 0.01;
-                double max_delta = 0.2;
-                process->FilterMove(1, nspan, min_delta, max_delta, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProbOmIntegrated(from);} );
-            }
-
             ResampleWNOm();
         }
         else    {
+            process->SingleNodeMove(1, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
 
-            if (Random::Uniform() < 0.1)    {
-                int nspan = 10;
-                double min_delta = 0.01;
-                double max_delta = 0.2;
-                process->FilterMove(1, nspan, min_delta, max_delta, 
+            if (Random::Uniform() < 0.3)    {
+                process->FilterMove(1, 10, 0, 1, 
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                process->FilterMove(1, 10, 0, 0.1, 
+                        [this] (const Link* from) {BranchUpdate(from);},
+                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                process->FilterMove(1, 10, 0, 0.01, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
             }
