@@ -294,7 +294,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
     }
 
     template<class Update, class LogProb>
-    void FilterMove(int index, int nspan, double min_delta, double max_delta, Update update, LogProb logprob)   {
+    double FilterMove(int index, int nspan, double min_delta, double max_delta, Update update, LogProb logprob)   {
         std::vector<std::vector<double>> proposal(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
         std::vector<std::vector<double>> logcondl(GetTree().GetNnode(), std::vector<double>(2*nspan+1, 0));
         double delta = min_delta + (max_delta - min_delta)*Random::Uniform();
@@ -305,8 +305,11 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             }
         }
         BackwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl);
-        FilterSampleRoot(index, nspan, update, logprob, proposal, logcondl);
-        ForwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl);
+        double nacc = 0;
+        double ntry = 0;
+        FilterSampleRoot(index, nspan, update, logprob, proposal, logcondl, nacc, ntry);
+        ForwardFilterMove(GetRoot(), index, nspan, update, logprob, proposal, logcondl, nacc, ntry);
+        return nacc/ntry;
     }
 
     template<class Update, class LogProb>
@@ -331,7 +334,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
     }
 
     template<class Update, class LogProb>
-    void ForwardFilterMove(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+    void ForwardFilterMove(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl, double& nacc, double& ntry)  {
 
         for (const Link *link = from->Next(); link != from; link = link->Next()) {
             if (clamp[link->Out()->GetNode()->GetIndex()][index])    {
@@ -342,8 +345,8 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
                 update(link->Out());
             }
             else    {
-                ForwardPropagate(link->Out(), index, nspan, update, logprob, proposal, logcondl);
-                ForwardFilterMove(link->Out(), index, nspan, update, logprob, proposal, logcondl);
+                ForwardPropagate(link->Out(), index, nspan, update, logprob, proposal, logcondl, nacc, ntry);
+                ForwardFilterMove(link->Out(), index, nspan, update, logprob, proposal, logcondl, nacc, ntry);
             }
         }
     }
@@ -441,7 +444,7 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
     }
 
     template<class Update, class LogProb>
-    void ForwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+    void ForwardPropagate(const Link* from, int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl, double& nacc, double& ntry)  {
 
         int from_index = from->GetNode()->GetIndex();
         std::vector<double> logtmp(logcondl[from_index].size(), 0);
@@ -471,11 +474,15 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             exit(1);
         }
         (*this)[from_index][index] = proposal[from_index][choose];
+        if (choose != nspan)    {
+            nacc++;
+        }
+        ntry++;
         update(from);
     }
 
     template<class Update, class LogProb>
-    void FilterSampleRoot(int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl)  {
+    void FilterSampleRoot(int index, int nspan, Update update, LogProb logprob, std::vector<std::vector<double>>& proposal, std::vector<std::vector<double>>& logcondl, double& nacc, double& ntry)  {
 
         int root_index = GetRoot()->GetIndex();
 
@@ -501,6 +508,10 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
             std::cerr << "error: choose out of range\n";
             exit(1);
         }
+        if (choose != nspan)    {
+            nacc++;
+        }
+        ntry++;
         (*this)[root_index][index] = proposal[root_index][choose];
     }
 

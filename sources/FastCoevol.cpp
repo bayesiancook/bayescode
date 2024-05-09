@@ -15,11 +15,12 @@ class FastCoevolChain : public Chain {
     string contdatafile, treefile, rootfile;
     string dsomsuffstatfile;
     int wndsmode, wnommode;
+    double beta, dbeta;
 
   public:
-    FastCoevolChain(string incontdatafile, string intreefile, string inrootfile, string indsomsuffstatfile, int inwndsmode, int inwnommode, int inevery, int inuntil, string inname,
+    FastCoevolChain(string incontdatafile, string intreefile, string inrootfile, string indsomsuffstatfile, int inwndsmode, int inwnommode, double inbeta, double indbeta, int inevery, int inuntil, string inname,
                      int force)
-        : modeltype("FASTCOEVOLDNDS"), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), dsomsuffstatfile(indsomsuffstatfile), wndsmode(inwndsmode), wnommode(inwnommode) {
+        : modeltype("FASTCOEVOLDNDS"), contdatafile(incontdatafile), treefile(intreefile), rootfile(inrootfile), dsomsuffstatfile(indsomsuffstatfile), wndsmode(inwndsmode), wnommode(inwnommode), beta(inbeta), dbeta(indbeta) {
         every = inevery;
         until = inuntil;
         name = inname;
@@ -40,6 +41,7 @@ class FastCoevolChain : public Chain {
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
+        GetModel()->SetBeta(0);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
@@ -54,6 +56,7 @@ class FastCoevolChain : public Chain {
         is >> contdatafile >> treefile >> rootfile;
         is >> dsomsuffstatfile;
         is >> wndsmode >> wnommode;
+        is >> beta >> dbeta;
         int tmp;
         is >> tmp;
         if (tmp) {
@@ -71,6 +74,7 @@ class FastCoevolChain : public Chain {
         }
         GetModel()->Allocate();
         model->FromStream(is);
+        GetModel()->SetBeta(beta);
         model->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
@@ -82,9 +86,26 @@ class FastCoevolChain : public Chain {
         param_os << contdatafile << '\t' << treefile << '\t' << rootfile << '\n';
         param_os << dsomsuffstatfile << '\n';
         param_os << wndsmode << '\t' << wnommode << '\n';
+        param_os << beta << '\t' << dbeta << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
+    }
+
+    void Move() override    {
+        for (int i = 0; i < every; i++) {
+            model->Move();
+        }
+        if (beta < 1.0) {
+            beta += dbeta;
+            if (beta > 1.0) {
+                beta = 1.0;
+            }
+            GetModel()->SetBeta(beta);
+        }
+        SavePoint();
+        Save();
+        Monitor();
     }
 
     //! return the model, with its derived type (unlike ProbModel::GetModel)
@@ -117,6 +138,9 @@ int main(int argc, char *argv[]) {
         int wndsmode = 0;
         int wnommode = 0;
 
+        double beta = 1.0;
+        double dbeta = 0;
+
         try {
             if (argc == 1) {
                 throw(0);
@@ -142,6 +166,11 @@ int main(int argc, char *argv[]) {
                     wndsmode = wnommode = 1;
                 } else if (s == "-ugam")    {
                     wndsmode = wnommode = 2;
+                } else if (s == "-annealing")   {
+                    i++;
+                    beta = atof(argv[i]);
+                    i++;
+                    dbeta = atof(argv[i]);
                 } else if (s == "-f") {
                     force = 1;
                 } else if ((s == "-x") || (s == "-extract")) {
@@ -168,7 +197,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new FastCoevolChain(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode, every, until, name, force);
+        chain = new FastCoevolChain(contdatafile, treefile, rootfile, dsomsuffstatfile, wndsmode, wnommode, beta, dbeta, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

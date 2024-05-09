@@ -11,6 +11,18 @@
 
 class FastCoevolModel: public ProbModel {
 
+    // annealing parameter
+    double beta;
+
+    double dsacc1;
+    double dsacc01;
+    double dsacc001;
+    double dsntry;
+    double omacc1;
+    double omacc01;
+    double omacc001;
+    double omntry;
+
     int wndsmode;
     int wnommode;
 
@@ -57,6 +69,9 @@ class FastCoevolModel: public ProbModel {
 
     FastCoevolModel(string contdatafile, string treefile, string rootfile, string indsomsuffstatfile, int inwndsmode, int inwnommode)   {
 
+        dsntry = dsacc1 = dsacc01 = dsacc001 = 0;
+        omntry = omacc1 = omacc01 = omacc001 = 0;
+
         wndsmode = inwndsmode;
         wnommode = inwnommode;
 
@@ -99,6 +114,8 @@ class FastCoevolModel: public ProbModel {
     void Allocate() {
 
         cerr << "allocate\n";
+
+        beta = 1.0;
 
         chronogram = new Chronogram(*tree);
 
@@ -216,6 +233,10 @@ class FastCoevolModel: public ProbModel {
         return tree->GetRoot();
     }
 
+    void SetBeta(double inbeta) {
+        beta = inbeta;
+    }
+
     void NoUpdate() {}
 
     void Update() override {
@@ -319,7 +340,7 @@ class FastCoevolModel: public ProbModel {
             if (wnommode)   {
                 om *= wnom->GetVal(index);
             }
-            total += dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om);
+            total += dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om, beta);
         }
         return total;
     }
@@ -337,7 +358,7 @@ class FastCoevolModel: public ProbModel {
         if (wnommode)   {
             om *= wnom->GetVal(index);
         }
-        return dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om);
+        return dsompathsuffstatarray->GetVal(index).GetLogProb(bl, om, beta);
     }
 
     double NodeSuffStatLogProb(const Link* from) const {
@@ -358,7 +379,7 @@ class FastCoevolModel: public ProbModel {
             om *= wnom->GetVal(index);
         }
         double nu = (wndsmode == 2) ? nuds : nuds / chronogram->GetDeltaTime(from);
-        return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nu);
+        return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nu, beta);
     }
 
     double NodeSuffStatLogProbdSIntegrated(const Link* from) const {
@@ -379,7 +400,7 @@ class FastCoevolModel: public ProbModel {
             bl*= wnds->GetVal(index);
         }
         double nu = (wnommode == 2) ? nuom : nuom / chronogram->GetDeltaTime(from);
-        return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nu);
+        return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nu, beta);
     }
 
     double NodeSuffStatLogProbOmIntegrated(const Link* from) const {
@@ -505,16 +526,17 @@ class FastCoevolModel: public ProbModel {
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
 
-            if (Random::Uniform() < 0.3)    {
-                process->FilterMove(0, 10, 0, 1,
+            if ((beta == 1.0) && (Random::Uniform() < 0.3))    {
+                dsacc1 += process->FilterMove(0, 10, 0, 1,
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                process->FilterMove(0, 10, 0, 0.1, 
+                dsacc01 += process->FilterMove(0, 10, 0, 0.1, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                process->FilterMove(0, 10, 0, 0.01, 
+                dsacc001 += process->FilterMove(0, 10, 0, 0.01, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                dsntry ++;
             }
         }
 
@@ -529,18 +551,18 @@ class FastCoevolModel: public ProbModel {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
 
-            if (Random::Uniform() < 0.3)    {
-                process->FilterMove(1, 10, 0, 1, 
+            if ((beta == 1.0) && (Random::Uniform() < 0.3))    {
+                omacc1 += process->FilterMove(1, 10, 0, 1, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                process->FilterMove(1, 10, 0, 0.1, 
+                omacc01 += process->FilterMove(1, 10, 0, 0.1, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                process->FilterMove(1, 10, 0, 0.01, 
+                omacc001 += process->FilterMove(1, 10, 0, 0.01, 
                         [this] (const Link* from) {BranchUpdate(from);},
                         [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
+                omntry ++;
             }
-
         }
 
         for (int i=L; i<L+Ncont; i++)   {
@@ -588,13 +610,13 @@ class FastCoevolModel: public ProbModel {
     void ResampleWNdS() {
         wndssuffstatbrancharray->Clear();
         dsompathsuffstatarray->AddWNdSSuffStat(*wndssuffstatbrancharray, *branchlength, *branchomega, *wnom);
-        wnds->GibbsResample(*wndssuffstatbrancharray);
+        wnds->GibbsResample(*wndssuffstatbrancharray, beta);
     }
 
     void ResampleWNOm() {
         wnomsuffstatbrancharray->Clear();
         dsompathsuffstatarray->AddWNOmSuffStat(*wnomsuffstatbrancharray, *branchlength, *branchomega, *wnds);
-        wnom->GibbsResample(*wnomsuffstatbrancharray);
+        wnom->GibbsResample(*wnomsuffstatbrancharray, beta);
     }
 
     //-------------------
@@ -802,7 +824,14 @@ class FastCoevolModel: public ProbModel {
         return ret;
     }
 
-    void Monitor(ostream &os) const override {}
+    void Monitor(ostream &os) const override {
+        os << dsacc1 / dsntry << '\t';
+        os << dsacc01 / dsntry << '\t';
+        os << dsacc001 / dsntry << '\t';
+        os << omacc1 / omntry << '\t';
+        os << omacc01 / omntry << '\t';
+        os << omacc001 / omntry << '\n';
+    }
 
     void ToStream(ostream &os) const override {
         os << *chronogram;

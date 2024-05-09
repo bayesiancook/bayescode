@@ -108,24 +108,24 @@ class dSOmegaPathSuffStat : public SuffStat {
         }
     }
 
-    double GetLogProb(double l, double omega) const { 
-        return (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega) - l*(bsyn + bnonsyn*omega);
+    double GetLogProb(double l, double omega, double b=1) const { 
+        return b*(nsyn + nnonsyn)*log(l) + b*nnonsyn*log(omega) - l*(b*bsyn + b*bnonsyn*omega);
     }
 
-    double GetLogProbdSIntegrated(double l, double omega, double dt, double nu) const   {
+    double GetLogProbdSIntegrated(double l, double omega, double dt, double nu, double b=1) const   {
         //double alpha = dt / nu;
         double alpha = 1.0 / nu;
-        double alphapost = alpha + nsyn + nnonsyn;
-        double betapost = alpha + l*(bsyn + bnonsyn*omega);
-        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega);
+        double alphapost = alpha + b*(nsyn + nnonsyn);
+        double betapost = alpha + l*(b*bsyn + b*bnonsyn*omega);
+        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + b*(nsyn + nnonsyn)*log(l) + b*nnonsyn*log(omega);
     }
 
-    double GetLogProbOmIntegrated(double l, double omega, double dt, double nu) const   {
+    double GetLogProbOmIntegrated(double l, double omega, double dt, double nu, double b) const   {
         // double alpha = dt / nu;
         double alpha = 1.0 / nu;
-        double alphapost = alpha + nnonsyn;
-        double betapost = alpha + l*bnonsyn*omega;
-        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + (nsyn + nnonsyn)*log(l) + nnonsyn*log(omega) - l*bsyn;
+        double alphapost = alpha + b*nnonsyn;
+        double betapost = alpha + l*b*bnonsyn*omega;
+        return alpha*log(alpha) - Random::logGamma(alpha) - alphapost*log(betapost) + Random::logGamma(alphapost) + b*(nsyn + nnonsyn)*log(l) + b*nnonsyn*log(omega) - l*b*bsyn;
     }
 
     void Add(const dSOmegaPathSuffStat &from) {
@@ -446,10 +446,10 @@ class dSOmegaPathSuffStatBranchArray : public SimpleBranchArray<dSOmegaPathSuffS
     }
 
     //! return total log prob over array, given an array of omega_i's of same size
-    double GetLogProb(const BranchSelector<double>& branchlength, const BranchSelector<double>& branchomega) const  {
+    double GetLogProb(const BranchSelector<double>& branchlength, const BranchSelector<double>& branchomega, double b=1) const  {
         double total = 0;
         for (int i=0; i<GetNbranch(); i++) {
-            total += GetVal(i).GetLogProb(branchlength.GetVal(i), branchomega.GetVal(i));
+            total += GetVal(i).GetLogProb(branchlength.GetVal(i), branchomega.GetVal(i), b);
         }
         return total;
     }

@@ -91,16 +91,16 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     }
 
     //! resample entries based on a BranchArray of PoissonSuffStat
-    void GibbsResample(const PoissonSuffStatBranchArray &suffstatarray) {
-        RecursiveGibbsResample(GetTree().GetRoot(), suffstatarray);
+    void GibbsResample(const PoissonSuffStatBranchArray &suffstatarray, double b=1) {
+        RecursiveGibbsResample(GetTree().GetRoot(), suffstatarray, b);
     }
 
-    void RecursiveGibbsResample(const Link* from, const PoissonSuffStatBranchArray &suffstatarray) {
+    void RecursiveGibbsResample(const Link* from, const PoissonSuffStatBranchArray &suffstatarray, double b=1) {
         if (! from->isRoot())   {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(from->GetBranch()->GetIndex());
-            double tmp = Random::GammaSample(GetAlpha(from) + suffstat.GetCount(), GetBeta(from) + suffstat.GetBeta());
+            double tmp = Random::GammaSample(GetAlpha(from) + b*suffstat.GetCount(), GetBeta(from) + b*suffstat.GetBeta());
             if (! tmp)  {
-                tmp = (GetAlpha(from) + suffstat.GetCount()) / (GetBeta(from) + suffstat.GetBeta());
+                tmp = (GetAlpha(from) + b*suffstat.GetCount()) / (GetBeta(from) + b*suffstat.GetBeta());
                 /*
                 cerr << "null sample in white noise: " << GetAlpha(from) << '\t' << GetBeta(from) << '\t' << suffstat.GetCount() << '\t' << suffstat.GetBeta() << '\n';
                 cerr << (GetAlpha(from) + suffstat.GetCount()) / (GetBeta(from) + suffstat.GetBeta()) << '\n';
