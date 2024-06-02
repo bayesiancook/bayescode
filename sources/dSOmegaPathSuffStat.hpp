@@ -113,7 +113,6 @@ class dSOmegaPathSuffStat : public SuffStat {
     }
 
     double GetLogProbdSIntegrated(double l, double omega, double dt, double nu, double b=1) const   {
-        //double alpha = dt / nu;
         double alpha = 1.0 / nu;
         double alphapost = alpha + b*(nsyn + nnonsyn);
         double betapost = alpha + l*(b*bsyn + b*bnonsyn*omega);
@@ -121,7 +120,6 @@ class dSOmegaPathSuffStat : public SuffStat {
     }
 
     double GetLogProbOmIntegrated(double l, double omega, double dt, double nu, double b) const   {
-        // double alpha = dt / nu;
         double alpha = 1.0 / nu;
         double alphapost = alpha + b*nnonsyn;
         double betapost = alpha + l*b*bnonsyn*omega;

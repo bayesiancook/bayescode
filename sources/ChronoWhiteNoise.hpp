@@ -5,77 +5,58 @@
 
 /**
  * \brief A tree-structured branch-wise array of Gamma variables, with
- * branch-specific means but same shape parameter
+ * branch-specific means but same variance parameter
  *
- * One should be careful about the fact that the shape parameter is given by
- * copy (not by ref) to the array. Thus, each time the shape parameter is
+ * One should be careful about the fact that the var parameter is given by
+ * copy (not by ref) to the array. Thus, each time the var parameter is
  * modified during the MCMC, the new value should be given to the array (using
  * the SetShape method).
  */
 class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
   public:
 
-    // mode 0   : ugam
-    // mode 1/2 : wn of mean 1 and variance per unit of time = 1/shape
-    // mode 1   : realized branch variable: integral of wn over time interval = blmean
-    // mode 2   : realized branch variable: mean     of wn over time interval = blmean
-    // mode 3   : multiplier, ugam-type (same variance for all branches)
-    // mode 4   : multiplier, wn-type (variance inversely proportional to branch length)
+    // mode 1   : variance var1
+    // mode 2   : variance var1*dt
+    // mode 3   : variance var1/dt
+    // mode 4   : variance var1/dt + var2 + var3*dt
 
-    ChronoGammaWhiteNoise(const Tree &intree, const NodeSelector<double> &inchrono, double inshape, int inmode = 2)
-        : SimpleBranchArray<double>(intree), chrono(inchrono), shape(inshape) {
+    ChronoGammaWhiteNoise(const Tree &intree, const NodeSelector<double> &inchrono, int inmode)
+        : SimpleBranchArray<double>(intree), chrono(inchrono), var1(1.0), var2(1.0), var3(1.0)  {
         mode = inmode;
         Sample();
     }
 
     ~ChronoGammaWhiteNoise() {}
 
-    void SetMode(int inmode)    {
-        mode = inmode;
+    void SetVar(double invar) { var1 = invar; }
+
+    void SetVar(double in1, double in2, double in3) {
+        var1 = in1;
+        var2 = in2;
+        var3 = in3;
     }
-
-    double GetShape() const { return shape; }
-
-    void SetShape(double inshape) { shape = inshape; }
 
     double GetAlpha(const Link* from) const {
-        if (mode == 4)  {
-            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-            return shape*dt;
+        double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
+        switch(mode)    {
+            case 1:
+                return 1.0/var1;
+                break;
+            case 2:
+                return 1.0 / (var1/dt);
+                break;
+            case 3:
+                return 1.0 / (var1*dt);
+                break;
+            case 4:
+                return 1.0 / (var1/dt + var2 + var3*dt);
+                break;
+            default:
+                cerr << "unrecognized mode in white noise\n";
+                exit(1);
         }
-        if (mode == 3)  {
-            return shape;
-        }
-        if (mode == 2)  {
-            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-            return shape * dt;
-        }
-        if (mode == 1)   {
-            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-            return shape * dt;
-        }
-        return shape;
     }
 
-    double GetBeta(const Link* from) const {
-        if (mode == 4)  {
-            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-            return shape*dt;
-        }
-        if (mode == 3)  {
-            return shape;
-        }
-        if (mode == 2)  {
-            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-            return shape * dt;
-        }
-        if (mode == 1)   {
-            return shape;
-        }
-        double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
-        return shape / dt;
-    }
-        
     //! sample all entries from prior
     void Sample() {
         RecursiveSample(GetTree().GetRoot());
@@ -83,7 +64,7 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
 
     void RecursiveSample(const Link* from)  {
         if (! from->isRoot())   {
-            (*this)[from->GetBranch()->GetIndex()] = Random::GammaSample(GetAlpha(from), GetBeta(from));
+            (*this)[from->GetBranch()->GetIndex()] = Random::GammaSample(GetAlpha(from), GetAlpha(from));
         }
         for (const Link* link=from->Next(); link!=from; link=link->Next())  {
             RecursiveSample(link->Out());
@@ -98,13 +79,12 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     void RecursiveGibbsResample(const Link* from, const PoissonSuffStatBranchArray &suffstatarray, double b=1) {
         if (! from->isRoot())   {
             const PoissonSuffStat &suffstat = suffstatarray.GetVal(from->GetBranch()->GetIndex());
-            double tmp = Random::GammaSample(GetAlpha(from) + b*suffstat.GetCount(), GetBeta(from) + b*suffstat.GetBeta());
+            double tmp = Random::GammaSample(GetAlpha(from) + b*suffstat.GetCount(), GetAlpha(from) + b*suffstat.GetBeta());
             if (! tmp)  {
-                tmp = (GetAlpha(from) + b*suffstat.GetCount()) / (GetBeta(from) + b*suffstat.GetBeta());
+                tmp = (GetAlpha(from) + b*suffstat.GetCount()) / (GetAlpha(from) + b*suffstat.GetBeta());
                 /*
-                cerr << "null sample in white noise: " << GetAlpha(from) << '\t' << GetBeta(from) << '\t' << suffstat.GetCount() << '\t' << suffstat.GetBeta() << '\n';
-                cerr << (GetAlpha(from) + suffstat.GetCount()) / (GetBeta(from) + suffstat.GetBeta()) << '\n';
-                cerr << mode << '\t' << shape << '\n';
+                cerr << "null sample in white noise: " << GetAlpha(from) << '\t' << suffstat.GetCount() << '\t' << suffstat.GetBeta() << '\n';
+                cerr << (GetAlpha(from) + suffstat.GetCount()) / (GetAlpha(from) + suffstat.GetBeta()) << '\n';
                 exit(1);
                 */
             }
@@ -114,6 +94,28 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
             RecursiveGibbsResample(link->Out(), suffstatarray);
         }
     }
+
+    void VariancePartition(double& v1, double& v2, double& v3)  {
+        RecursiveVariancePartition(GetTree().GetRoot(), v1, v2, v3);
+    }
+
+    void RecursiveVariancePartition(const Link* from, double& v1, double& v2, double& v3)   {
+        if (! from->isRoot())   {
+            double dt = chrono.GetVal(from->Out()->GetNode()->GetIndex()) - chrono.GetVal(from->GetNode()->GetIndex());
+            double tmp1 = var1/dt;
+            double tmp2 = var2;
+            double tmp3 = var3*dt;
+            double tot = tmp1 + tmp2 + tmp3;
+            v1 += tmp1/tot;
+            v2 += tmp2/tot;
+            v3 += tmp3/tot;
+        }
+        for (const Link* link=from->Next(); link!=from; link=link->Next())  {
+            RecursiveVariancePartition(link->Out(), v1, v2, v3);
+        }
+
+    }
+
 
     //! return total log prob summed over all entries
     double GetLogProb() {
@@ -133,7 +135,7 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
 
     //! return log prob for one entry
     double GetBranchLogProb(const Link* from) const {
-        return Random::logGammaDensity(GetVal(from->GetBranch()->GetIndex()), GetAlpha(from), GetBeta(from));
+        return Random::logGammaDensity(GetVal(from->GetBranch()->GetIndex()), GetAlpha(from), GetAlpha(from));
     }
 
     double GetTotalLength() const {
@@ -154,7 +156,7 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
 
   protected:
     const NodeSelector<double> &chrono;
-    double shape;
+    double var1, var2, var3;
     int mode;
 };
 

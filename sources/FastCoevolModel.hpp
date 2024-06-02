@@ -52,10 +52,14 @@ class FastCoevolModel: public ProbModel {
     MVBranchExpoMeanArray* branchomega;
 
     double nuds;
+    double nuds2;
+    double nuds3;
     ChronoGammaWhiteNoise* wnds;
     PoissonSuffStatBranchArray* wndssuffstatbrancharray;
 
     double nuom;
+    double nuom2;
+    double nuom3;
     ChronoGammaWhiteNoise* wnom;
     PoissonSuffStatBranchArray* wnomsuffstatbrancharray;
 
@@ -74,6 +78,10 @@ class FastCoevolModel: public ProbModel {
 
         wndsmode = inwndsmode;
         wnommode = inwnommode;
+        if (wndsmode != wnommode)   {
+            cerr << "error: currently, same overdispersion mode for dS and dN/dS\n";
+            exit(1);
+        }
 
         dsomsuffstatfile = indsomsuffstatfile;
 
@@ -134,28 +142,14 @@ class FastCoevolModel: public ProbModel {
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
 
-        nuds = nuom = 1.0;
+        nuds = nuds2 = nuds3 = nuom = nuom2 = nuom3 = 1.0;
         wnds = wnom = 0;
         if (wndsmode)   {
-            if (wndsmode == 2)  {
-                wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 3);
-            }
-            else if (wndsmode == 1) {
-                wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, nuds, 4);
-            }
-            else    {
-                cerr << "error in jittering mode\n";
-                exit(1);
-            }
+            wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, wndsmode);
             wndssuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
         }
         if (wnommode)   {
-            if (wnommode == 2)   {
-                wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 3);
-            }
-            else if (wnommode == 1)  {
-                wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, nuom, 4);
-            }
+            wnom = new ChronoGammaWhiteNoise(*tree, *chronogram, wnommode);
             wnomsuffstatbrancharray = new PoissonSuffStatBranchArray(*tree);
         }
 
@@ -242,11 +236,17 @@ class FastCoevolModel: public ProbModel {
     void Update() override {
         branchlength->Update();
         branchomega->Update();
-        if (wndsmode)   {
-            wnds->SetShape(1.0 / nuds);
+        if (wndsmode == 4)  {
+            wnds->SetVar(nuds, nuds2, nuds3);
         }
-        if (wnommode)  {
-            wnom->SetShape(1.0 / nuom);
+        else if (wndsmode)   {
+            wnds->SetVar(nuds);
+        }
+        if (wnommode == 4)  {
+            wnom->SetVar(nuom, nuom2, nuom3);
+        }
+        else if (wnommode)  {
+            wnom->SetVar(nuom);
         }
     }
 
@@ -310,6 +310,9 @@ class FastCoevolModel: public ProbModel {
     }
 
     double WNdSHyperLogPrior() const    {
+        if (wndsmode == 4)  {
+            return - (nuds + nuds2 + nuds3)/100;
+        }
         return -nuds/100;
     }
 
@@ -318,6 +321,9 @@ class FastCoevolModel: public ProbModel {
     }
 
     double WNOmHyperLogPrior() const    {
+        if (wnommode == 4)  {
+            return - (nuom + nuom2 + nuom3)/100;
+        }
         return -nuom/100;
     }
 
@@ -378,7 +384,26 @@ class FastCoevolModel: public ProbModel {
         if (wnommode)   {
             om *= wnom->GetVal(index);
         }
-        double nu = (wndsmode == 2) ? nuds : nuds / chronogram->GetDeltaTime(from);
+        double nu = 0;
+        double dt = chronogram->GetDeltaTime(from);
+        switch(wndsmode)    {
+            case 1:
+                nu = nuds;
+                break;
+            case 2:
+                nu = nuds/dt;
+                break;
+            case 3:
+                nu = nuds*dt;
+                break;
+            case 4:
+                nu = nuds/dt + nuds2 + nuds3*dt;
+                break;
+            default:
+                cerr << "error: unrecocgnized variance mode for overdispersion\n";
+                cerr << wndsmode << '\n';
+                exit(1);
+        }
         return dsompathsuffstatarray->GetVal(index).GetLogProbdSIntegrated(branchlength->GetVal(index), om, chronogram->GetDeltaTime(from), nu, beta);
     }
 
@@ -399,7 +424,26 @@ class FastCoevolModel: public ProbModel {
         if (wndsmode)   {
             bl*= wnds->GetVal(index);
         }
-        double nu = (wnommode == 2) ? nuom : nuom / chronogram->GetDeltaTime(from);
+        double nu = 0;
+        double dt = chronogram->GetDeltaTime(from);
+        switch(wnommode)    {
+            case 1:
+                nu = nuom;
+                break;
+            case 2:
+                nu = nuom/dt;
+                break;
+            case 3:
+                nu = nuom*dt;
+                break;
+            case 4:
+                nu = nuom/dt + nuom2 + nuom3*dt;
+                break;
+            default:
+                cerr << "error: unrecocgnized variance mode for overdispersion\n";
+                cerr << wnommode << '\n';
+                exit(1);
+        }
         return dsompathsuffstatarray->GetVal(index).GetLogProbOmIntegrated(bl, branchomega->GetVal(index), chronogram->GetDeltaTime(from), nu, beta);
     }
 
@@ -450,11 +494,21 @@ class FastCoevolModel: public ProbModel {
     }
 
     void NudSUpdate()   {
-        wnds->SetShape(1.0 / nuds);
+        if (wndsmode == 4)  {
+            wnds->SetVar(nuds, nuds2, nuds3);
+        }
+        else    {
+            wnds->SetVar(nuds);
+        }
     }
 
     void NuOmUpdate()   {
-        wnom->SetShape(1.0 / nuom);
+        if (wnommode == 4)  {
+            wnom->SetVar(nuom, nuom2, nuom3);
+        }
+        else    {
+            wnom->SetVar(nuom);
+        }
     }
 
     double NudSHyperLogProb() const {
@@ -500,13 +554,14 @@ class FastCoevolModel: public ProbModel {
     // Times and Rates
 
     void MoveTimes()    {
-        if (wndsmode == 2)   {
-            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-            ResampleWNdS();
-        }
-        else if (wndsmode == 1)   {
-            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
-            ResampleWNdS();
+        if (wndsmode)   {
+           if (wndsmode == 1)   {
+                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+           }
+           else {
+                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
+           }
+           ResampleWNdS();
         }
         else    {
             chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
@@ -600,11 +655,23 @@ class FastCoevolModel: public ProbModel {
     void MoveNudS()  {
         ScalingMove(nuds, 1.0, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
         ScalingMove(nuds, 0.3, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+        if (wndsmode == 4)  {
+            ScalingMove(nuds2, 1.0, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+            ScalingMove(nuds2, 0.3, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+            ScalingMove(nuds3, 1.0, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+            ScalingMove(nuds3, 0.3, 10, &FastCoevolModel::NudSHyperLogProb, &FastCoevolModel::NudSUpdate, this);
+        }
     }
 
     void MoveNuOm()  {
         ScalingMove(nuom, 1.0, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
         ScalingMove(nuom, 0.3, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+        if (wnommode == 4)  {
+            ScalingMove(nuom2, 1.0, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+            ScalingMove(nuom2, 0.3, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+            ScalingMove(nuom3, 1.0, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+            ScalingMove(nuom3, 0.3, 10, &FastCoevolModel::NuOmHyperLogProb, &FastCoevolModel::NuOmUpdate, this);
+        }
     }
 
     void ResampleWNdS() {
@@ -635,10 +702,16 @@ class FastCoevolModel: public ProbModel {
         os << "#logprior\tlnL";
         os << "\tlength";
         os << "\tmeanomega";
-        if (wndsmode)   {
+        if (wndsmode == 4)  {
+            os << "\tds_va\tds_vb\tds_vc";
+        }
+        else if (wndsmode)   {
             os << "\tnuds";
         }
-        if (wnommode)   {
+        if (wnommode == 4)  {
+            os << "\tom_va\tom_vb\tom_vc";
+        }
+        else if (wnommode)   {
             os << "\tnuom";
         }
         for (int i=0; i<process->GetDim(); i++) {
@@ -659,16 +732,40 @@ class FastCoevolModel: public ProbModel {
         return *process;
     }
 
+    const ChronoGammaWhiteNoise& GetSynDev() const  {
+        return *wnds;
+    }
+
+    const ChronoGammaWhiteNoise& GetOmDev() const  {
+        return *wnom;
+    }
+
     void Trace(ostream &os) const override {
         os.precision(12);
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
         os << branchlength->GetTotalLength();
         os << '\t' << branchomega->GetMean();
-        if (wndsmode)   {
+        if (wndsmode == 4)  {
+            double v1,v2,v3;
+            v1 = v2 = v3 = 0;
+            wnds->VariancePartition(v1,v2,v3);
+            double tot = v1 + v2 + v3;
+            os << '\t' << nuds << '\t' << nuds2 << '\t' << nuds3;
+            os << '\t' << v1/tot << '\t' << v2/tot << '\t' << v3/tot;
+        }
+        else if (wndsmode)   {
             os << '\t' << nuds;
         }
-        if (wnommode)   {
+        if (wnommode == 4)  {
+            double v1,v2,v3;
+            v1 = v2 = v3 = 0;
+            wnom->VariancePartition(v1,v2,v3);
+            double tot = v1 + v2 + v3;
+            os << '\t' << nuom << '\t' << nuom2 << '\t' << nuom3;
+            os << '\t' << v1/tot << '\t' << v2/tot << '\t' << v3/tot;
+        }
+        else if (wnommode)   {
             os << '\t' << nuom;
         }
         for (int i=0; i<process->GetDim(); i++) {
@@ -839,11 +936,17 @@ class FastCoevolModel: public ProbModel {
         os << '\t' << *sigma;
         os << '\t' << *process;
         if (wndsmode)   {
-            os << '\t' << nuds ;
+            os << '\t' << nuds;
+            if (wndsmode == 4)  {
+                os << '\t' << nuds2 << '\t' << nuds3;
+            }
             os << '\t' << *wnds;
         }
         if (wnommode)   {
             os << '\t' << nuom;
+            if (wnommode == 4)  {
+                os << '\t' << nuom2 << '\t' << nuom3;
+            }
             os << '\t' << *wnom;
         }
         os << '\n';
@@ -856,10 +959,16 @@ class FastCoevolModel: public ProbModel {
         is >> *process;
         if (wndsmode)   {
             is >> nuds;
+            if (wndsmode == 4)  {
+                is >> nuds2 >> nuds3;
+            }
             is >> *wnds;
         }
         if (wnommode)   {
             is >> nuom;
+            if (wnommode == 4)  {
+                is >> nuom2 >> nuom3;
+            }
             is >> *wnom;
         }
     }

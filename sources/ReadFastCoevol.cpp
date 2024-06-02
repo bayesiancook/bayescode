@@ -4,6 +4,7 @@
 #include "Sample.hpp"
 #include "FastCoevolModel.hpp"
 #include "DistBranchNodeArray.hpp"
+#include "DistChronoBranchArray.hpp"
 #include "MeanCovMatrix.hpp"
 using namespace std;
 
@@ -20,6 +21,7 @@ class FastCoevolSample : public Sample {
     string contdatafile, treefile, rootfile;
     string dsomsuffstatfile;
     int wndsmode, wnommode;
+    double beta, dbeta;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -51,8 +53,12 @@ class FastCoevolSample : public Sample {
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
+            is >> beta >> dbeta;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "-- Error when reading model\n";
+                exit(1);
+            }
         }
         is >> chainevery >> chainuntil >> chainsize;
 
@@ -142,6 +148,33 @@ class FastCoevolSample : public Sample {
         cerr << "independent contrasts tabulated in " << name << ".ic\n";
     }
 
+    void ReadDeviations()   {
+        cerr << size << " points to read\n";
+        DistChronoBranchArray<double> meansyndev(GetModel()->GetTree());
+        DistChronoBranchArray<double> meanomdev(GetModel()->GetTree());
+
+        for (int i=0; i<size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+
+            meansyndev.Add(GetModel()->GetChronogram(), GetModel()->GetSynDev());
+            meanomdev.Add(GetModel()->GetChronogram(), GetModel()->GetOmDev());
+
+        }
+        cerr << '\n';
+
+        meansyndev.Normalize();
+        ofstream synos((name + ".postmeansyndev.tab").c_str());
+        meansyndev.Tabulate(synos);
+        cerr << "postmean syn devs in " << name << ".postmeansyndev.tab\n"; 
+
+        meanomdev.Normalize();
+        ofstream omos((name + ".postmeanomdev.tab").c_str());
+        meanomdev.Tabulate(omos);
+        cerr << "postmean om devs in " << name << ".postmeanomdev.tab\n"; 
+    }
+
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
@@ -227,6 +260,7 @@ int main(int argc, char *argv[]) {
     int until = -1;
     int ppred = 0;
     int ic = 0;
+    int dev = 0;
 
     string name;
 
@@ -255,6 +289,8 @@ int main(int argc, char *argv[]) {
                 ppred = 1;
             } else if (s == "-ic")  {
                 ic = 1;
+            } else if (s == "-dev") {
+                dev = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -277,6 +313,8 @@ int main(int argc, char *argv[]) {
         sample->PostPred();
     } else if (ic)  {
         sample->ReadIndependentContrasts();
+    } else if (dev) {
+        sample->ReadDeviations();
     } else {
         sample->Read();
     }

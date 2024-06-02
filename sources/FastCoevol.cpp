@@ -41,7 +41,7 @@ class FastCoevolChain : public Chain {
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
-        GetModel()->SetBeta(0);
+        GetModel()->SetBeta(beta);
         cerr << "-- initial ln prob = " << GetModel()->GetLogProb() << "\n";
         model->Trace(cerr);
     }
@@ -56,12 +56,15 @@ class FastCoevolChain : public Chain {
         is >> contdatafile >> treefile >> rootfile;
         is >> dsomsuffstatfile;
         is >> wndsmode >> wnommode;
-        is >> beta >> dbeta;
         int tmp;
         is >> tmp;
         if (tmp) {
-            cerr << "-- Error when reading model\n";
-            exit(1);
+            is >> beta >> dbeta;
+            is >> tmp;
+            if (tmp)    {
+                cerr << "-- Error when reading model\n";
+                exit(1);
+            }
         }
         is >> every >> until >> size;
 
@@ -86,6 +89,7 @@ class FastCoevolChain : public Chain {
         param_os << contdatafile << '\t' << treefile << '\t' << rootfile << '\n';
         param_os << dsomsuffstatfile << '\n';
         param_os << wndsmode << '\t' << wnommode << '\n';
+        param_os << 1 << '\n';
         param_os << beta << '\t' << dbeta << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
@@ -162,10 +166,14 @@ int main(int argc, char *argv[]) {
                 } else if (s == "-r")   {
                     i++;
                     rootfile = argv[i];
-                } else if (s == "-wn")  {
+                } else if (s == "-ugam")  {
                     wndsmode = wnommode = 1;
-                } else if (s == "-ugam")    {
+                } else if (s == "-wn")    {
                     wndsmode = wnommode = 2;
+                } else if (s == "-vlin")  {
+                    wndsmode = wnommode = 3;
+                } else if (s == "-v3")  {
+                    wndsmode = wnommode = 4;
                 } else if (s == "-annealing")   {
                     i++;
                     beta = atof(argv[i]);
