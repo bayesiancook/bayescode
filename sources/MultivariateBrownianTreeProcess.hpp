@@ -64,6 +64,25 @@ class MultivariateBrownianTreeProcess : public SimpleNodeArray<vector<double> > 
 		}
 	}
 
+    double GetMean(int idx) const  {
+        return GetTotal(idx) / GetTree().GetNbranch();
+    }
+
+    double GetTotal(int idx) const {
+        return RecursiveGetTotal(idx, GetRoot());
+    }
+
+    double RecursiveGetTotal(int idx, const Link* from) const {
+        double tot = 0;
+        if (! from->isRoot())   {
+            tot += GetVal(from->GetBranch()->GetIndex()).at(idx);
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            tot += RecursiveGetTotal(idx, link->Out());
+        }
+        return tot;
+    }
+
     void Shift(int index, double delta) {
         for (int i=0; i<GetNnode(); i++)   {
             if (! clamp[i][index])  {
