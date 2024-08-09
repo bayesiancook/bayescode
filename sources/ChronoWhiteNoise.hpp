@@ -23,6 +23,9 @@ class ChronoGammaWhiteNoise : public SimpleBranchArray<double> {
     ChronoGammaWhiteNoise(const Tree &intree, const NodeSelector<double> &inchrono, int inmode)
         : SimpleBranchArray<double>(intree), chrono(inchrono), var1(1.0), var2(1.0), var3(1.0)  {
         mode = inmode;
+        if (mode == 2)  {
+            var1 = 0.01;
+        }
         Sample();
     }
 

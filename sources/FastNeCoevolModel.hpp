@@ -66,6 +66,13 @@ class BranchdSArray : public SimpleBranchArray<double>    {
 
     void LocalUpdate(const Link* from)  {
         if (!from->isRoot()) {
+
+            // dt is in Mya
+            // rate should be in # subs per Mya = # subs per gen / # Mya per gen
+            // # Mya per gen = # years per gen / 1e6
+            // assuming gen time tau is measured in days:
+            // dS = (u / tau * 1e6 * 365) * (dt * root_age)
+
             const vector<double>&  xup = nodetree.GetVal(from->GetNode()->GetIndex());
             const vector<double>& xdown = nodetree.GetVal(from->Out()->GetNode()->GetIndex());
 
@@ -78,13 +85,6 @@ class BranchdSArray : public SimpleBranchArray<double>    {
                 exit(1);
             }
             (*this)[from->GetBranch()->GetIndex()] = syn * dt;
-            // dt is in Mya
-            // rate should be in # subs per Mya = # subs per gen / # Mya per gen
-            // # Mya per gen = # years per gen / 1e6
-            // assuming gen time tau is measured in years:
-            // dS = (u / tau * 1e6) * (dt * root_age)
-            //
-            // scale is : rate_scale * root_age
         }
     }
 
@@ -110,7 +110,7 @@ class BranchdNdSArray : public SimpleBranchArray<double>    {
     BranchdNdSArray(const NodeSelector<vector<double>>& innodetree, int inNe_idx, double inA, double inalpha) :
         SimpleBranchArray<double>(innodetree.GetTree()),
         nodetree(innodetree),
-        Ne_idx(inNe_idx), A(inA), alpha(inalpha)  {
+        Ne_idx(inNe_idx), A(inA), alpha(inalpha), om_min(1e-4)  {
             Update();
     }
 
@@ -155,9 +155,8 @@ class BranchdNdSArray : public SimpleBranchArray<double>    {
         if (!from->isRoot()) {
             double om_up = A * exp(-alpha * nodetree.GetVal(from->GetNode()->GetIndex())[Ne_idx]);
             double om_down = A * exp(-alpha * nodetree.GetVal(from->Out()->GetNode()->GetIndex())[Ne_idx]);
-            double mean = 0.5 * (exp(om_up) + exp(om_down));
-            // double mean = (exp(up) - exp(down)) / (up - down);
-            (*this)[from->GetBranch()->GetIndex()] = mean;
+            double mean = 0.5 * (om_up + om_down);
+            (*this)[from->GetBranch()->GetIndex()] = mean + om_min;
         }
     }
 
@@ -172,6 +171,7 @@ class BranchdNdSArray : public SimpleBranchArray<double>    {
     const NodeSelector<vector<double>>& nodetree;
     int Ne_idx;
     double A, alpha;
+    double om_min;
 };
 
 class TipNe : public SimpleArray<double> {
@@ -190,6 +190,14 @@ class TipNe : public SimpleArray<double> {
 
     void SetInvShape(double in) {
         invshape = in;
+    }
+
+    double GetMeanLog() const   {
+        double tot = 0;
+        for (int i=0; i<GetSize(); i++) {
+            tot += log(GetVal(i));
+        }
+        return tot / GetSize();
     }
 
     void Sample()   {
@@ -283,7 +291,13 @@ class TipTheta {
     ~TipTheta() {}
 
     double GetVal(int node_index) const {
-        return exp(4 * u_scale * nodetree.GetVal(node_index)[u_idx] * tipNe.GetVal(node_index));
+        double ret = 4 * u_scale * exp(nodetree.GetVal(node_index)[u_idx]) * tipNe.GetVal(node_index);
+        if (! ret)  {
+            cerr << "in tiptheta: null value\n";
+            cerr << u_scale << '\t' << nodetree.GetVal(node_index)[u_idx] << '\t' << tipNe.GetVal(node_index) << '\n';
+            exit(1);
+        }
+        return ret;
     }
 
     private:
@@ -311,7 +325,14 @@ class TipGamma {
     }
 
     double GetVal(int node_index) const {
-        return A * exp(-alpha *  tipNe.GetVal(node_index));
+        double ret = A * exp(-alpha *  log(tipNe.GetVal(node_index)));
+        if (! ret)  {
+            cerr << "tip gamma: null value\n";
+            cerr << tipNe.GetVal(node_index) << '\t' << A << '\t' << alpha << '\n';
+            cerr << alpha * log(tipNe.GetVal(node_index)) << '\n';
+            exit(1);
+        }
+        return ret;
     }
 
     private:
@@ -362,6 +383,7 @@ class pNpS  {
 				Ls[idx] = data.GetState(tax, 1);
 				Kn[idx] = data.GetState(tax, 2);
 				Ln[idx] = data.GetState(tax, 3);
+                // cerr << from->GetNode()->GetName() << '\t' << double(Ks[idx]) / double(Ls[idx]) << '\t' << double(Kn[idx]) / double(Ln[idx]) / (double(Ks[idx]) / double(Ls[idx])) << '\n';
                 k++;
 			}
 			else	{
@@ -386,8 +408,13 @@ class pNpS  {
         double f = error.GetVal(tax);
         double theta = tiptheta.GetVal(tax);
         double gamma = tipgamma.GetVal(tax);
-        ret += -Ls[tax]*f*theta + Ks[tax]*(Ls[tax]*f*theta);
-        ret += -Ln[tax]*f*theta*gamma + Kn[tax]*(Ls[tax]*f*theta*gamma);
+        ret += -Ls[tax]*f*theta + Ks[tax]*log(Ls[tax]*f*theta);
+        ret += -Ln[tax]*f*theta*gamma + Kn[tax]*log(Ln[tax]*f*theta*gamma);
+        if (std::isinf(ret))    {
+            cerr << "in pnps get log prob: inf\n";
+            cerr << f << '\t' << theta << '\t' << gamma << '\n';
+            exit(1);
+        }
         return ret;
     }
 
@@ -512,7 +539,7 @@ class FastCoevolModel: public ProbModel {
         // check that
         root_age = inroot_age;
         u_scale = 1.0;
-        rate_scale = 1e6 * root_age;
+        rate_scale = 1e6 * 365.0 * root_age;
 
         // get tree from file (newick format)
         Tree* tmptree = new Tree(treefile);
@@ -564,6 +591,13 @@ class FastCoevolModel: public ProbModel {
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
 
         nuds = nuds2 = nuds3 = nuom = nuom2 = nuom3 = 1.0;
+        if (wndsmode == 2)  {
+            nuds = 0.01;
+        }
+        if (wnommode == 2)  {
+            nuom = 0.01;
+        }
+
         wnds = wnom = 0;
         if (wndsmode)   {
             wnds = new ChronoGammaWhiteNoise(*tree, *chronogram, wndsmode);
@@ -585,6 +619,9 @@ class FastCoevolModel: public ProbModel {
 
         callable_invshape = 1.0;
         callable_error = new IIDGamma(Ntaxa, 1.0, 1.0);
+        for (int i=0; i<Ntaxa; i++) {
+            (*callable_error)[i] = 1.0;
+        }
 
         pnps = new pNpS(*tree, *polydata, *callable_error, *tiptheta, *tipgamma);
 
@@ -713,12 +750,28 @@ class FastCoevolModel: public ProbModel {
         total += KappaLogPrior();
         total += SigmaLogPrior();
         total += BrownianProcessLogPrior();
+        if (std::isinf(total))  {
+            cerr << "log prior is inf before macro\n";
+            exit(1);
+        }
         total += MacroHyperLogPrior();
         total += MicroHyperLogPrior();
+        if (std::isinf(total))  {
+            cerr << "log prior is inf before tip\n";
+            exit(1);
+        }
         total += TipNeHyperLogPrior();
         total += TipNeLogPrior();
+        if (std::isinf(total))  {
+            cerr << "log prior is before callable\n";
+            exit(1);
+        }
         total += CallableHyperLogPrior();
         total += CallableLogPrior();
+        if (std::isinf(total))  {
+            cerr << "log prior is inf before wn\n";
+            exit(1);
+        }
         if (wndsmode)   {
             total += WNdSHyperLogPrior();
             total += WNdSLogPrior();
@@ -726,6 +779,18 @@ class FastCoevolModel: public ProbModel {
         if (wnommode)   {
             total += WNOmHyperLogPrior();
             total += WNOmLogPrior();
+        }
+        if (std::isinf(total))  {
+            cerr << "log prior is inf\n";
+            cerr << WNdSHyperLogPrior() << '\n';
+            cerr << WNdSLogPrior() << '\n';
+            cerr << WNOmHyperLogPrior() << '\n';
+            cerr << WNOmLogPrior() << '\n';
+            exit(1);
+        }
+        if (std::isnan(total))  {
+            cerr << "log prior is nan\n";
+            exit(1);
         }
         return total;
     }
@@ -737,11 +802,29 @@ class FastCoevolModel: public ProbModel {
     }
 
     double GetMacroLogLikelihood() const    {
-        return dSOmPathSuffStatLogProb();
+        double ret = dSOmPathSuffStatLogProb();
+        if (std::isinf(ret))    {
+            cerr << "macro log likelihood is inf\n";
+            exit(1);
+        }
+        if (std::isnan(ret))    {
+            cerr << "macro log likelihood is nan\n";
+            exit(1);
+        }
+        return ret;
     }
     
     double GetMicroLogLikelihood() const    {
-        return pnps->GetLogProb();
+        double ret = pnps->GetLogProb();
+        if (std::isinf(ret))    {
+            cerr << "micro log likelihood is inf\n";
+            exit(1);
+        }
+        if (std::isnan(ret))    {
+            cerr << "micro log likelihood is nan\n";
+            exit(1);
+        }
+        return ret;
     }
 
     //! return joint log prob (log prior + log likelihood)
@@ -776,11 +859,11 @@ class FastCoevolModel: public ProbModel {
     }
 
     double MacroHyperLogPrior() const   {
-        return - macro_A - macro_alpha;
+        return - macro_A - 10*macro_alpha;
     }
 
     double MicroHyperLogPrior() const   {
-        return  - micro_A - micro_alpha;
+        return  - micro_A - 10*micro_alpha;
     }
 
     double CallableHyperLogPrior() const    {
@@ -1098,9 +1181,11 @@ class FastCoevolModel: public ProbModel {
             MoveKappa();
             MoveTipNe();
             MoveTipNeHyper();
+            /*
             MoveCallableErrors(1.0, 10);
             MoveCallableErrors(0.1, 10);
             MoveCallableErrorsHyper();
+            */
             MoveMacroHyper();
             MoveMicroHyper();
         }
@@ -1150,8 +1235,8 @@ class FastCoevolModel: public ProbModel {
 
     void MoveMicroHyper()    {
         // move micro_A and alpha
-        ScalingMove(micro_A, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
-        ScalingMove(micro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(micro_A, 1.0, 10, &FastCoevolModel::MicroHyperLogProb, &FastCoevolModel::UpdateMicro, this);
+        ScalingMove(micro_alpha, 1.0, 10, &FastCoevolModel::MicroHyperLogProb, &FastCoevolModel::UpdateMicro, this);
     }
 
     void MoveMacroHyper()    {
@@ -1327,6 +1412,11 @@ class FastCoevolModel: public ProbModel {
         os << "#logprior\tlnLmacro\tlnLmicro";
         os << "\tlength";
         os << "\tmeanomega";
+        os << "\tmeanlog10Nelong";
+        os << "\tmeanlog10Neshort";
+        os << "\tmeanlog10u";
+        os << "\tmacro_A\tmacro_alpha";
+        os << "\tmicro_A\tmicro_alpha";
         if (wndsmode == 4)  {
             os << "\tds_va\tds_vb\tds_vc";
         }
@@ -1372,6 +1462,11 @@ class FastCoevolModel: public ProbModel {
         os << GetMicroLogLikelihood() << '\t';
         os << branchlength->GetTotalLength();
         os << '\t' << branchomega->GetMean();
+        os << '\t' << process->GetMean(0) / log(10.0);
+        os << '\t' << tipNe->GetMeanLog() / log(10.0);
+        os << '\t' << process->GetMean(1) / log(10.0);
+        os << '\t' << macro_A << '\t' << macro_alpha;
+        os << '\t' << micro_A << '\t' << micro_alpha;
         if (wndsmode == 4)  {
             double v1,v2,v3;
             v1 = v2 = v3 = 0;
