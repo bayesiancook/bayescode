@@ -409,7 +409,7 @@ class pNpS  {
         double theta = tiptheta.GetVal(tax);
         double gamma = tipgamma.GetVal(tax);
         ret += -Ls[tax]*f*theta + Ks[tax]*log(Ls[tax]*f*theta);
-        ret += -Ln[tax]*f*theta*gamma + Kn[tax]*log(Ln[tax]*f*theta*gamma);
+        // ret += -Ln[tax]*f*theta*gamma + Kn[tax]*log(Ln[tax]*f*theta*gamma);
         if (std::isinf(ret))    {
             cerr << "in pnps get log prob: inf\n";
             cerr << f << '\t' << theta << '\t' << gamma << '\n';
@@ -584,7 +584,7 @@ class FastCoevolModel: public ProbModel {
         branchlength = new BranchdSArray(*process, *chronogram, u_idx, gentime_idx, rate_scale);
 
         macro_A = 1.0;
-        macro_alpha = 1.0;
+        macro_alpha = 0.08;
         branchomega = new BranchdNdSArray(*process, Ne_idx, macro_A, macro_alpha);
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
@@ -1181,11 +1181,11 @@ class FastCoevolModel: public ProbModel {
             MoveKappa();
             MoveTipNe();
             MoveTipNeHyper();
-            /*
+	    /*
             MoveCallableErrors(1.0, 10);
             MoveCallableErrors(0.1, 10);
             MoveCallableErrorsHyper();
-            */
+	    */
             MoveMacroHyper();
             MoveMicroHyper();
         }
@@ -1242,7 +1242,7 @@ class FastCoevolModel: public ProbModel {
     void MoveMacroHyper()    {
         // move macro_A and alpha
         ScalingMove(macro_A, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
-        ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        // ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
     }
 
     // Times and Rates
@@ -1401,8 +1401,8 @@ class FastCoevolModel: public ProbModel {
     // ------------------
 
     void PrintEntries(ostream& os) const   {
-        os << "dS\n";
-        os << "dN/dS\n";
+        os << "longtermNe\n";
+        os << "u\n";
         for (int i=0; i<GetNcont(); i++)    {
             os << contdata->GetCharacterName(i) << '\n';
         }
@@ -1417,6 +1417,8 @@ class FastCoevolModel: public ProbModel {
         os << "\tmeanlog10u";
         os << "\tmacro_A\tmacro_alpha";
         os << "\tmicro_A\tmicro_alpha";
+	os << "\ttipNeinvshape";
+	// os << "\tcallinvshape\tcallmean";
         if (wndsmode == 4)  {
             os << "\tds_va\tds_vb\tds_vc";
         }
@@ -1467,6 +1469,8 @@ class FastCoevolModel: public ProbModel {
         os << '\t' << process->GetMean(1) / log(10.0);
         os << '\t' << macro_A << '\t' << macro_alpha;
         os << '\t' << micro_A << '\t' << micro_alpha;
+	os << '\t' << tipNe_invshape;
+	// os << '\t' << callable_invshape << '\t' << callable_error->GetMean();
         if (wndsmode == 4)  {
             double v1,v2,v3;
             v1 = v2 = v3 = 0;
