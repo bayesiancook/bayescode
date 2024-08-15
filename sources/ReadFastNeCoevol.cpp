@@ -91,6 +91,14 @@ class FastCoevolSample : public Sample {
 		int dim = GetModel()->GetCovMatrix().GetDim();
 		MeanCovMatrix  mat(dim);
 
+        int Ntaxa = GetModel()->GetNtaxa();
+
+        vector<vector<double>> stats(6, vector<double>(Ntaxa,0));
+        vector<vector<double>> tmpstats(6, vector<double>(Ntaxa,0));
+
+        vector<string> taxlist(Ntaxa,"");
+        GetModel()->GetTaxonList(taxlist);
+
         for (int i=0; i<size; i++) {
             cerr << '.';
             GetNextPoint();
@@ -98,8 +106,31 @@ class FastCoevolSample : public Sample {
             meanne.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 0);
             meanu.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
 			mat.Add(GetModel()->GetCovMatrix());
+
+            GetModel()->GetStats(tmpstats);
+            for (int i=0; i<6; i++) {
+                for (int j=0; j<Ntaxa; j++) {
+                    stats[i][j] += tmpstats[i][j];
+                }
+            }
         }
         cerr << '\n';
+
+        for (int i=0; i<6; i++) {
+            for (int j=0; j<Ntaxa; j++) {
+                stats[i][j] /= size;
+            }
+        }
+        ofstream sos((name + ".postmeanlogstats.tab").c_str());
+        sos << "tax\tNl\tNs\tu\ttheta\tps\tpnps\n";
+        for (int j=0; j<Ntaxa; j++) {
+            sos << taxlist[j];
+            for (int i=0; i<6; i++) {
+                sos << '\t' << stats[i][j];
+            }
+           sos << '\n';
+        } 
+        cerr << "postmean log stats in " << name << ".postmeanlogstats.tab\n"; 
 
         meanne.Sort();
         ofstream nos((name + ".postmeanlongtermNe.tre").c_str());

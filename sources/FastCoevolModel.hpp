@@ -555,12 +555,15 @@ class FastCoevolModel: public ProbModel {
 
     void MoveTimes()    {
         if (wndsmode)   {
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
+           /*
            if (wndsmode == 1)   {
                 chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
            }
            else {
                 chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
            }
+           */
            ResampleWNdS();
         }
         else    {

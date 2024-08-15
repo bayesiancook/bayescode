@@ -13,10 +13,8 @@
 // 
 // X_1: log Ne
 // X_2: log u
-// X_3: log tau
-// theta = 4 Ne u = 4 exp(X_1 + X_2)
-// pnps = A Ne^-alpha = A * exp(-alpha * X_1)
-// dnds = 
+// X_3: log dN/dS
+// X_4: log tau
 
 // changing Brownian process at a tip
 // changing a global parameter: requires to scan over all tips
@@ -103,259 +101,20 @@ class BranchdSArray : public SimpleBranchArray<double>    {
     double scale;
 };
 
-class BranchdNdSArray : public SimpleBranchArray<double>    {
+class pNpS {
 
     public:
 
-    BranchdNdSArray(const NodeSelector<vector<double>>& innodetree, int inNe_idx, double inA, double inalpha) :
-        SimpleBranchArray<double>(innodetree.GetTree()),
+    pNpS(int inNtaxa, const NodeSelector<vector<double>>& innodetree, int inNe_idx, int inu_idx, double ininvshape, const IntegerData& from) :
         nodetree(innodetree),
-        Ne_idx(inNe_idx), A(inA), alpha(inalpha), om_min(1e-4)  {
-            Update();
-    }
-
-    void SetParameters(double inA, double inalpha)  {
-        A = inA;
-        alpha = inalpha;
-    }
-
-    const Link *GetRoot() const { return GetTree().GetRoot(); }
-
-    double GetMean() const  {
-        return GetTotal() / GetTree().GetNbranch();
-    }
-
-    double GetTotal() const {
-        return RecursiveGetTotal(GetRoot());
-    }
-
-    double RecursiveGetTotal(const Link* from) const {
-        double tot = 0;
-        if (! from->isRoot())   {
-            tot += GetVal(from->GetBranch()->GetIndex());
-        }
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            tot += RecursiveGetTotal(link->Out());
-        }
-        return tot;
-    }
-
-    void Update()   {
-        RecursiveUpdate(GetRoot());
-    }
-
-    void RecursiveUpdate(const Link* from)  {
-        LocalUpdate(from);
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            RecursiveUpdate(link->Out());
-        }
-    }
-
-    void LocalUpdate(const Link* from)  {
-        if (!from->isRoot()) {
-            double om_up = A * exp(-alpha * nodetree.GetVal(from->GetNode()->GetIndex())[Ne_idx]);
-            double om_down = A * exp(-alpha * nodetree.GetVal(from->Out()->GetNode()->GetIndex())[Ne_idx]);
-            double mean = 0.5 * (om_up + om_down);
-            (*this)[from->GetBranch()->GetIndex()] = mean + om_min;
-        }
-    }
-
-    void LocalNodeUpdate(const Link* from)  {
-        LocalUpdate(from);
-        for (const Link *link = from->Next(); link != from; link = link->Next()) {
-            LocalUpdate(link->Out());
-        }
-    }
-
-    private:
-    const NodeSelector<vector<double>>& nodetree;
-    int Ne_idx;
-    double A, alpha;
-    double om_min;
-};
-
-class TipNe : public SimpleArray<double> {
-
-    public:
-
-    TipNe(const NodeSelector<vector<double>>& innodetree, int inNe_idx, double ininvshape) :
-        SimpleArray<double>((innodetree.GetNnode()+1)/2,0),
-        nodetree(innodetree),
-        Ne_idx(inNe_idx),
-        invshape(ininvshape) {
-            Sample();
-    }
-
-    ~TipNe() {}
-
-    void SetInvShape(double in) {
-        invshape = in;
-    }
-
-    double GetMeanLog() const   {
-        double tot = 0;
-        for (int i=0; i<GetSize(); i++) {
-            tot += log(GetVal(i));
-        }
-        return tot / GetSize();
-    }
-
-    void Sample()   {
-        for (int i=0; i<GetSize(); i++) {
-            Sample(i);
-        }
-    }
-
-    void Sample(int i)  {
-        double longtermNe = exp(nodetree.GetVal(i)[Ne_idx]);
-        double shape = 1.0 / invshape;
-        double scale = shape / longtermNe;
-        (*this)[i] = Random::Gamma(shape, scale);
-    }
-
-    double GetLogProb() {
-        double tot = 0;
-        for (int i=0; i<GetSize(); i++) {
-            tot += GetLogProb(i);
-        }
-        return tot;
-    }
-
-    double GetLogProb(int i)    {
-        double longtermNe = exp(nodetree.GetVal(i)[Ne_idx]);
-        double shape = 1.0 / invshape;
-        double scale = shape / longtermNe;
-        return Random::logGammaDensity(GetVal(i), shape, scale);
-    }
-
-    // Ns ~ Gamma(mean = Nl, shape = a)
-    // Ns/Nl ~ Gamma(mean = 1, shape = a)
-    void AddSuffStat(GammaSuffStat& suffstat) const {
-        for (int i=0; i<GetSize(); i++) {
-            double longtermNe = exp(nodetree.GetVal(i)[Ne_idx]);
-            double x = GetVal(i) / longtermNe;
-            suffstat.AddSuffStat(x, log(x));
-        }
-    }
-
-    template<class Update, class LogProb> 
-    double ScalingMove(double tuning, int nrep, Update update, LogProb logprob) {
-        double acc = 0;
-        for (int i=0; i<GetSize(); i++) {
-            acc += ScalingMove(i, tuning, nrep, update, logprob);
-        }
-        return acc/GetSize()/nrep;
-    }
-
-    template<class Update, class LogProb> 
-    double ScalingMove(int i, double tuning, int nrep, Update update, LogProb logprob)  {
-        double nacc = 0;
-        double ntot = 0;
-        for (int rep = 0; rep < nrep; rep++) {
-            double deltalogprob = - GetLogProb(i) - logprob(i);
-            double m = tuning * (Random::Uniform() - 0.5);
-            double e = exp(m);
-            (*this)[i] *= e;
-            update(i);
-            deltalogprob += GetLogProb(i) + logprob(i);
-            deltalogprob += m;
-            int accepted = (log(Random::Uniform()) < deltalogprob);
-            if (accepted) {
-                nacc++;
-            } else {
-                (*this)[i] /= e;
-                update(i);
-            }
-            ntot++;
-        }
-        return nacc / ntot;
-    }
-
-    private:
-
-    const NodeSelector<vector<double>>& nodetree;
-    int Ne_idx;
-    double invshape;
-};
-
-class TipTheta {
-
-    public:
-
-    TipTheta(const Selector<double>& intipNe, const NodeSelector<vector<double>>& innodetree, int inu_idx, double inu_scale) : 
-        tipNe(intipNe),
-        nodetree(innodetree),
-        u_idx(inu_idx), u_scale(inu_scale) {
-    }
-
-    ~TipTheta() {}
-
-    double GetVal(int node_index) const {
-        double ret = 4 * u_scale * exp(nodetree.GetVal(node_index)[u_idx]) * tipNe.GetVal(node_index);
-        if (! ret)  {
-            cerr << "in tiptheta: null value\n";
-            cerr << u_scale << '\t' << nodetree.GetVal(node_index)[u_idx] << '\t' << tipNe.GetVal(node_index) << '\n';
-            exit(1);
-        }
-        return ret;
-    }
-
-    private:
-
-    const Selector<double>& tipNe;
-    const NodeSelector<vector<double>>& nodetree;
-    int u_idx;
-    double u_scale;
-};
-
-class TipGamma {
-
-    public:
-
-    TipGamma(const Selector<double>& intipNe, double inA, double inalpha) :
-        tipNe(intipNe),
-        A(inA), alpha(inalpha) {
-    }
-
-    ~TipGamma() {}
-
-    void SetParameters(double inA, double inalpha)  {
-        A = inA;
-        alpha = inalpha;
-    }
-
-    double GetVal(int node_index) const {
-        double ret = A * exp(-alpha *  log(tipNe.GetVal(node_index)));
-        if (! ret)  {
-            cerr << "tip gamma: null value\n";
-            cerr << tipNe.GetVal(node_index) << '\t' << A << '\t' << alpha << '\n';
-            cerr << alpha * log(tipNe.GetVal(node_index)) << '\n';
-            exit(1);
-        }
-        return ret;
-    }
-
-    private:
-
-    const Selector<double>& tipNe;
-    double A, alpha;
-};
-
-class pNpS  {
-
-    public:
-
-    pNpS(const Tree& intree, const IntegerData& from, const Selector<double>& inerror, 
-            const TipTheta& intiptheta, const TipGamma& intipgamma) :
-        tree(intree),
-        Ntaxa(from.GetNtaxa()),
+        Ne_idx(inNe_idx), u_idx(inu_idx),
+        Ntaxa(inNtaxa),
         Ks(Ntaxa, 0),
         Kn(Ntaxa, 0),
         Ls(Ntaxa, 0),
         Ln(Ntaxa, 0),
-        error(inerror),
-        tiptheta(intiptheta),
-        tipgamma(intipgamma) {
+        taxon(Ntaxa, ""),
+        invshape(ininvshape)    {
             RegisterWithData(from);
     }
 
@@ -366,10 +125,14 @@ class pNpS  {
         return Ntaxa;
     }
 
+    void SetInvShape(double ininvshape)    {
+        invshape = ininvshape;
+    }
+
     void RegisterWithData(const IntegerData& data)   {
         int k = 0;
         int n = 0;
-        RecursiveRegisterWithData(tree.GetRoot(), data, k, n);
+        RecursiveRegisterWithData(nodetree.GetTree().GetRoot(), data, k, n);
 		cerr << " polymorphism data: " << n-k << " out of " << n << " missing\n";
     }
 
@@ -383,7 +146,7 @@ class pNpS  {
 				Ls[idx] = data.GetState(tax, 1);
 				Kn[idx] = data.GetState(tax, 2);
 				Ln[idx] = data.GetState(tax, 3);
-                // cerr << from->GetNode()->GetName() << '\t' << double(Ks[idx]) / double(Ls[idx]) << '\t' << double(Kn[idx]) / double(Ln[idx]) / (double(Ks[idx]) / double(Ls[idx])) << '\n';
+                taxon[idx] = from->GetNode()->GetName();
                 k++;
 			}
 			else	{
@@ -405,28 +168,77 @@ class pNpS  {
 
     double GetLogProb(int tax)  {
         double ret = 0;
-        double f = error.GetVal(tax);
-        double theta = tiptheta.GetVal(tax);
-        double gamma = tipgamma.GetVal(tax);
-        ret += -Ls[tax]*f*theta + Ks[tax]*log(Ls[tax]*f*theta);
-        // ret += -Ln[tax]*f*theta*gamma + Kn[tax]*log(Ln[tax]*f*theta*gamma);
+        double Nl = exp(nodetree.GetVal(tax)[Ne_idx]);
+        double u = exp(nodetree.GetVal(tax)[u_idx]);
+        double alpha = 1.0 / invshape;
+        ret += alpha * log(alpha/Nl) - Random::logGamma(alpha);
+        ret -= (alpha + Ks[tax]) * log(alpha/Nl + 4*u*Ls[tax]) - Random::logGamma(alpha + Ks[tax]);
+        ret += Ks[tax] * log(4*u*Ls[tax]);
         if (std::isinf(ret))    {
             cerr << "in pnps get log prob: inf\n";
-            cerr << f << '\t' << theta << '\t' << gamma << '\n';
             exit(1);
         }
         return ret;
     }
 
-    const Tree& tree;
+    double GetMeanLogNs() const {
+        vector<double> Ns(Ntaxa,0);
+        ResampleNe(Ns);
+        double tot = 0;
+        for (int i=0; i<Ntaxa; i++) {
+            tot += log(Ns[i]);
+        }
+        tot /= Ntaxa;
+        return tot;
+    }
+
+    void ResampleNe(vector<double>& Ns) const {
+    // void ResampleNe(vector<double>& Nl, vector<double>& Ns)    {
+        for (int tax=0; tax<Ntaxa; tax++) {
+            double shape = 1.0 / invshape + Ks[tax];
+            double N = exp(nodetree.GetVal(tax)[Ne_idx]);
+            double u = exp(nodetree.GetVal(tax)[u_idx]);
+            double scale = shape/N + 4*u*Ls[tax];
+            // Nl[tax] = N;
+            Ns[tax] = Random::GammaSample(shape,scale);
+        }
+    }
+
+    void GetTaxonList(vector<string>& taxlist) const    {
+        for (int tax=0; tax<Ntaxa; tax++) {
+            taxlist[tax] = taxon[tax];
+        }
+    }
+
+    void GetStats(vector<vector<double>>& stats) const   {
+        for (int tax=0; tax<Ntaxa; tax++) {
+            double shape = 1.0 / invshape + Ks[tax];
+            double Nl = exp(nodetree.GetVal(tax)[Ne_idx]);
+            double u = exp(nodetree.GetVal(tax)[u_idx]);
+            double scale = shape/Nl + 4*u*Ls[tax];
+            double Ns = Random::GammaSample(shape,scale);
+            double ps = double(Ks[tax]) / double(Ls[tax]);
+            double pnps = (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
+            stats[0][tax] = log(Nl) / log(10.0);
+            stats[1][tax] = log(Ns) / log(10.0);
+            stats[2][tax] = log(u) / log(10.0);
+            stats[3][tax] = log(4*Ns*u) / log(10.0);
+            stats[4][tax] = log(ps) / log(10.0);
+            stats[5][tax] = log(pnps) / log(10.0);
+        }
+    }
+
+
+    const NodeSelector<vector<double>>& nodetree;
+    int Ne_idx;
+    int u_idx;
     int Ntaxa;
     vector<int> Ks;
     vector<int> Kn;
     vector<int> Ls;
     vector<int> Ln;
-    const Selector<double>& error;
-    const TipTheta& tiptheta;
-    const TipGamma& tipgamma;
+    vector<string> taxon;
+    double invshape;
 };
 
 class FastCoevolModel: public ProbModel {
@@ -451,12 +263,11 @@ class FastCoevolModel: public ProbModel {
     // includes generation time (first trait in data matrix of continuous characters)
     int Ncont;
 
-    int u_idx, Ne_idx, gentime_idx;
+    int u_idx, Ne_idx, omega_idx, gentime_idx;
 
     // age of the root, in Mya
     double root_age;
     // u is measured in mutation rate per gen and per base pair 
-    double u_scale;
     // generations are measured in years: rate_scale is 10^6 * root_age
     double rate_scale;
 
@@ -471,34 +282,13 @@ class FastCoevolModel: public ProbModel {
 
     MultivariateBrownianTreeProcess* process;
     BranchdSArray* branchlength;
-    BranchdNdSArray* branchomega;
+    MVBranchExpoMeanArray* branchomega;
 
     double nuds;
     double nuds2;
     double nuds3;
     ChronoGammaWhiteNoise* wnds;
     PoissonSuffStatBranchArray* wndssuffstatbrancharray;
-
-    // short-term fluctuations of Ne
-    double tipNe_invshape;
-    TipNe* tipNe;
-    GammaSuffStat tipNe_hypersuffstat;
-
-    // uncertainty about number of callable positions
-    double callable_invshape;
-    IIDGamma* callable_error; 
-    GammaSuffStat callable_hypersuffstat;
-
-    // dN/dS = A N_e ^ -alpha 
-    double macro_A;
-    double macro_alpha;
-
-    // pN/pS = A N_e ^ -alpha
-    double micro_A;
-    double micro_alpha;
-
-    TipTheta* tiptheta;
-    TipGamma* tipgamma;
 
     double nuom;
     double nuom2;
@@ -508,6 +298,8 @@ class FastCoevolModel: public ProbModel {
 
     dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
     MultivariateNormalSuffStat* browniansuffstat;
+
+    double tipNe_invshape;
 
   public:
     //-------------------
@@ -534,11 +326,10 @@ class FastCoevolModel: public ProbModel {
         
         Ne_idx = 0;
         u_idx = 1;
-        gentime_idx = 2;
+        omega_idx = 2;
+        gentime_idx = 3;
 
-        // check that
         root_age = inroot_age;
-        u_scale = 1.0;
         rate_scale = 1e6 * 365.0 * root_age;
 
         // get tree from file (newick format)
@@ -553,7 +344,7 @@ class FastCoevolModel: public ProbModel {
         ifstream is(rootfile.c_str());
         int dim;
         is >> dim;
-        if (dim != Ncont + 2)   {
+        if (dim != Ncont + 3)   {
             cerr << "error in root file: non matching dimension\n";
             cerr << dim << '\t' << Ncont << '\n';
             exit(1);
@@ -572,20 +363,17 @@ class FastCoevolModel: public ProbModel {
 
         chronogram = new Chronogram(*tree);
 
-        kappa.assign(Ncont+2, 1.0);
+        kappa.assign(Ncont+3, 1.0);
         df = 0;
         sigma = new InverseWishart(kappa, df);
 
         process = new MultivariateBrownianTreeProcess(*chronogram, *sigma, rootmean, rootvar);
         for (int i=0; i<Ncont; i++)	{
-            process->SetAndClamp(*contdata, 2+i, i);
+            process->SetAndClamp(*contdata, 3+i, i);
         }
 
         branchlength = new BranchdSArray(*process, *chronogram, u_idx, gentime_idx, rate_scale);
-
-        macro_A = 1.0;
-        macro_alpha = 0.08;
-        branchomega = new BranchdNdSArray(*process, Ne_idx, macro_A, macro_alpha);
+        branchomega = new MVBranchExpoMeanArray(*process, omega_idx);
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
@@ -609,21 +397,7 @@ class FastCoevolModel: public ProbModel {
         }
 
         tipNe_invshape = 1.0;
-        tipNe = new TipNe(*process, Ne_idx, tipNe_invshape);
-
-        micro_A = 1.0;
-        micro_alpha = 1.0;
-
-        tiptheta = new TipTheta(*tipNe, *process, u_idx, u_scale);
-        tipgamma = new TipGamma(*tipNe, micro_A, micro_alpha);
-
-        callable_invshape = 1.0;
-        callable_error = new IIDGamma(Ntaxa, 1.0, 1.0);
-        for (int i=0; i<Ntaxa; i++) {
-            (*callable_error)[i] = 1.0;
-        }
-
-        pnps = new pNpS(*tree, *polydata, *callable_error, *tiptheta, *tipgamma);
+        pnps = new pNpS(Ntaxa, *process, Ne_idx, u_idx, tipNe_invshape, *polydata);
 
         browniansuffstat = new MultivariateNormalSuffStat(process->GetDim());
 
@@ -687,6 +461,10 @@ class FastCoevolModel: public ProbModel {
         return sigma->GetDim();
     }
 
+    int GetNtaxa() const    {
+        return Ntaxa;
+    }
+
     const CovMatrix& GetCovMatrix() const   {
         return *sigma;
     }
@@ -720,15 +498,11 @@ class FastCoevolModel: public ProbModel {
 
     void UpdateMacro()  {
         branchlength->Update();
-        branchomega->SetParameters(macro_A, macro_alpha);
         branchomega->Update();
     }
 
     void UpdateMicro()  {
-        tipgamma->SetParameters(micro_A, micro_alpha);
-        tipNe->SetInvShape(1.0/tipNe_invshape);
-        callable_error->SetShape(1.0 / callable_invshape);
-        callable_error->SetScale(1.0 / callable_invshape);
+        pnps->SetInvShape(tipNe_invshape);
     }
 
     void PostPred(string name) override {
@@ -754,24 +528,11 @@ class FastCoevolModel: public ProbModel {
             cerr << "log prior is inf before macro\n";
             exit(1);
         }
-        total += MacroHyperLogPrior();
-        total += MicroHyperLogPrior();
         if (std::isinf(total))  {
             cerr << "log prior is inf before tip\n";
             exit(1);
         }
         total += TipNeHyperLogPrior();
-        total += TipNeLogPrior();
-        if (std::isinf(total))  {
-            cerr << "log prior is before callable\n";
-            exit(1);
-        }
-        total += CallableHyperLogPrior();
-        total += CallableLogPrior();
-        if (std::isinf(total))  {
-            cerr << "log prior is inf before wn\n";
-            exit(1);
-        }
         if (wndsmode)   {
             total += WNdSHyperLogPrior();
             total += WNdSLogPrior();
@@ -854,26 +615,6 @@ class FastCoevolModel: public ProbModel {
         return - tipNe_invshape;
     }
 
-    double TipNeLogPrior() const    {
-        return tipNe->GetLogProb();
-    }
-
-    double MacroHyperLogPrior() const   {
-        return - macro_A - 10*macro_alpha;
-    }
-
-    double MicroHyperLogPrior() const   {
-        return  - micro_A - 10*micro_alpha;
-    }
-
-    double CallableHyperLogPrior() const    {
-        return -callable_invshape;
-    }
-
-    double CallableLogPrior() const {
-        return callable_error->GetLogProb();
-    }
-
     double WNdSHyperLogPrior() const    {
         if (wndsmode == 4)  {
             return - (nuds + nuds2 + nuds3)/100;
@@ -902,53 +643,15 @@ class FastCoevolModel: public ProbModel {
 
     // when moving tipNe_invshape
     double TipNeHyperLogProb() const    {
-        return TipNeHyperLogPrior() + TipNeHyperSuffStatLogProb();
+        return TipNeHyperLogPrior() + pnps->GetLogProb();
     }
 
-    double TipNeHyperSuffStatLogProb()  const   {
-        double alpha = 1.0 / tipNe_invshape;
-        return tipNe_hypersuffstat.GetLogProb(alpha, alpha);
-    }
-
-    // when moving tip callable_errors or tip Ne
-    double PnPsLogProb(int tax) const   {
-        return pnps->GetLogProb(tax);
-    }
-
-    // when moving callable error invshape
-    double CallableHyperLogProb() const {
-        return CallableHyperLogPrior() + CallableHyperSuffStatLogProb();
-    }
-
-    double CallableHyperSuffStatLogProb() const {
-        double alpha = 1.0 / callable_invshape;
-        return callable_hypersuffstat.GetLogProb(alpha, alpha);
-    }
-
-    // when moving Brownian long-term Ne
-    double TipNeLogProb(const Link* from) const {
-        if (! from->isLeaf())   {
-            return 0;
-        }
-        return tipNe->GetLogProb(from->GetNode()->GetIndex());
-    }
-
-    // when  moving Brownian u: changes theta
+    // when moving long term Ne or u 
     double PnPsLogProb(const Link* from) const  {
         if (! from->isLeaf())   {
             return 0;
         }
         return pnps->GetLogProb(from->GetNode()->GetIndex());
-    }
-
-    // when moving macro_A and macro_alpha
-    double MacroHyperLogProb() const    {
-        return MacroHyperLogPrior() + SuffStatLogProbOmIntegrated(); 
-    }
-
-    // when moving micro_A and micro_alpha
-    double MicroHyperLogProb() const    {
-        return MicroHyperLogPrior() + pnps->GetLogProb();
     }
 
     double dSOmPathSuffStatLogProb() const {
@@ -1179,82 +882,30 @@ class FastCoevolModel: public ProbModel {
             }
             MoveSigma();
             MoveKappa();
-            MoveTipNe();
             MoveTipNeHyper();
-	    /*
-            MoveCallableErrors(1.0, 10);
-            MoveCallableErrors(0.1, 10);
-            MoveCallableErrorsHyper();
-	    */
-            MoveMacroHyper();
-            MoveMicroHyper();
         }
-    }
-
-    void MoveTipNe()    {
-        tipNe->ScalingMove(1.0, 10, [] (int i) {}, [this] (int i) {return PnPsLogProb(i);});
-        tipNe->ScalingMove(0.1, 10, [] (int i) {}, [this] (int i) {return PnPsLogProb(i);});
     }
 
     void MoveTipNeHyper()   {
-        tipNe_hypersuffstat.Clear();
-        tipNe->AddSuffStat(tipNe_hypersuffstat);
         ScalingMove(tipNe_invshape, 1.0, 10, &FastCoevolModel::TipNeHyperLogProb,
-                    &FastCoevolModel::NoUpdate, this);
+                    &FastCoevolModel::UpdateMicro, this);
         ScalingMove(tipNe_invshape, 0.1, 10, &FastCoevolModel::TipNeHyperLogProb,
-                    &FastCoevolModel::NoUpdate, this);
-        UpdateMicro();
-
-    }
-
-    void MoveCallableErrors(double tuning, int nrep)   {
-        for (int rep=0; rep<nrep; rep++)    {
-            for (int i=0; i<Ntaxa; i++) {
-                double logprob1 = PnPsLogProb(i);
-                double m = tuning * (Random::Uniform() - 0.5);
-                double e = exp(m);
-                (*callable_error)[i] *= e;
-                double logprob2 = PnPsLogProb(i);
-                double loghastings = m;
-                double deltalogprob = logprob2 - logprob1 + loghastings;
-                int accept = (log(Random::Uniform()) < deltalogprob);
-                if (! accept)   {
-                    (*callable_error)[i] /= e;
-                }
-            }
-        }
-    }
-
-    void MoveCallableErrorsHyper()  {
-        callable_hypersuffstat.Clear();
-        callable_hypersuffstat.AddSuffStat(*callable_error);
-        ScalingMove(callable_invshape, 1.0, 10, &FastCoevolModel::CallableHyperLogProb,
-                    &FastCoevolModel::NoUpdate, this);
-        UpdateMicro();
-    }
-
-    void MoveMicroHyper()    {
-        // move micro_A and alpha
-        ScalingMove(micro_A, 1.0, 10, &FastCoevolModel::MicroHyperLogProb, &FastCoevolModel::UpdateMicro, this);
-        ScalingMove(micro_alpha, 1.0, 10, &FastCoevolModel::MicroHyperLogProb, &FastCoevolModel::UpdateMicro, this);
-    }
-
-    void MoveMacroHyper()    {
-        // move macro_A and alpha
-        ScalingMove(macro_A, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
-        // ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+                    &FastCoevolModel::UpdateMicro, this);
     }
 
     // Times and Rates
 
     void MoveTimes()    {
         if (wndsmode)   {
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
+            /*
            if (wndsmode == 1)   {
                 chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
            }
            else {
                 chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
            }
+           */
            ResampleWNdS();
         }
         else    {
@@ -1266,71 +917,53 @@ class FastCoevolModel: public ProbModel {
 
         // 0 : long-term Ne
         // 1 : u
-        // 2 : gen time
+        // 2 : dN/dS
+        // 3 : gen time
         //
-        // long-term Ne impacts: log prob of short term Ne, value of dN/dS
-
+        // long-term Ne impacts: log prob of pS
+        // u impacts: value of dS, log prob of pS
         // gen time impacts: value of dS
-        // u impacts: value of dS, log prob of pS 
 
+        // moving long-term Ne
+        process->SingleNodeMove(0, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
+        process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
+        process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
+
+        // moving u and gen time
         if (wndsmode)   {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
 
-            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            process->SingleNodeMove(3, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            process->SingleNodeMove(3, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
 
             ResampleWNdS();
         }
         else    {
+            cerr << "moves without white noise not yet implemented\n";
+            exit(1);
             process->SingleNodeMove(1, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-
-            /*
-            if (Random::Uniform() < 0.3)    {
-                dsacc1 += process->FilterMove(0, 10, 0, 1,
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsacc01 += process->FilterMove(0, 10, 0, 0.1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsacc001 += process->FilterMove(0, 10, 0, 0.01, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsntry ++;
-            }
-            */
         }
 
+        // moving dN/dS
         if (wnommode)   {
-            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
+            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
+            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
 
             ResampleWNOm();
         }
         else    {
-            process->SingleNodeMove(0, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-
-            /*
-            if (Random::Uniform() < 0.3)    {
-                omacc1 += process->FilterMove(1, 10, 0, 1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omacc01 += process->FilterMove(1, 10, 0, 0.1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omacc001 += process->FilterMove(1, 10, 0, 0.01, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omntry ++;
-            }
-            */
+            cerr << "moves without white noise not yet implemented\n";
+            exit(1);
+            process->SingleNodeMove(2, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
         }
 
-        for (int i=3; i<2+Ncont; i++)   {
+        // moving other quantitative traits
+        for (int i=4; i<2+Ncont; i++)   {
             process->SingleNodeMove(i, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
             process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
         }
@@ -1400,9 +1033,18 @@ class FastCoevolModel: public ProbModel {
     // Traces and Monitors
     // ------------------
 
+    void GetStats(vector<vector<double>>& stats) const  {
+        pnps->GetStats(stats);
+    }
+
+    void GetTaxonList(vector<string>& taxlist) const    {
+        pnps->GetTaxonList(taxlist);
+    }
+
     void PrintEntries(ostream& os) const   {
         os << "longtermNe\n";
         os << "u\n";
+        os << "dNdS\n";
         for (int i=0; i<GetNcont(); i++)    {
             os << contdata->GetCharacterName(i) << '\n';
         }
@@ -1415,10 +1057,7 @@ class FastCoevolModel: public ProbModel {
         os << "\tmeanlog10Nelong";
         os << "\tmeanlog10Neshort";
         os << "\tmeanlog10u";
-        os << "\tmacro_A\tmacro_alpha";
-        os << "\tmicro_A\tmicro_alpha";
-	os << "\ttipNeinvshape";
-	// os << "\tcallinvshape\tcallmean";
+        os << "\ttipNeinvshape";
         if (wndsmode == 4)  {
             os << "\tds_va\tds_vb\tds_vc";
         }
@@ -1465,12 +1104,9 @@ class FastCoevolModel: public ProbModel {
         os << branchlength->GetTotalLength();
         os << '\t' << branchomega->GetMean();
         os << '\t' << process->GetMean(0) / log(10.0);
-        os << '\t' << tipNe->GetMeanLog() / log(10.0);
+        os << '\t' << pnps->GetMeanLogNs() / log(10.0);
         os << '\t' << process->GetMean(1) / log(10.0);
-        os << '\t' << macro_A << '\t' << macro_alpha;
-        os << '\t' << micro_A << '\t' << micro_alpha;
-	os << '\t' << tipNe_invshape;
-	// os << '\t' << callable_invshape << '\t' << callable_error->GetMean();
+        os << '\t' << tipNe_invshape;
         if (wndsmode == 4)  {
             double v1,v2,v3;
             v1 = v2 = v3 = 0;
@@ -1529,6 +1165,7 @@ class FastCoevolModel: public ProbModel {
             }
             os << '\t' << *wnom;
         }
+        os << '\t' << tipNe_invshape;
         os << '\n';
     }
 
@@ -1551,5 +1188,6 @@ class FastCoevolModel: public ProbModel {
             }
             is >> *wnom;
         }
+        is >> tipNe_invshape;
     }
 };
