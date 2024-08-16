@@ -101,6 +101,77 @@ class BranchdSArray : public SimpleBranchArray<double>    {
     double scale;
 };
 
+class BranchdNdSArray : public SimpleBranchArray<double>    {
+
+    public:
+
+    BranchdNdSArray(const NodeSelector<vector<double>>& innodetree, int inNe_idx, double inA, double inalpha) :
+        SimpleBranchArray<double>(innodetree.GetTree()),
+        nodetree(innodetree),
+        Ne_idx(inNe_idx), A(inA), alpha(inalpha), om_min(1e-4)  {
+            Update();
+    }
+
+    void SetParameters(double inA, double inalpha)  {
+        A = inA;
+        alpha = inalpha;
+    }
+
+    const Link *GetRoot() const { return GetTree().GetRoot(); }
+
+    double GetMean() const  {
+        return GetTotal() / GetTree().GetNbranch();
+    }
+
+    double GetTotal() const {
+        return RecursiveGetTotal(GetRoot());
+    }
+
+    double RecursiveGetTotal(const Link* from) const {
+        double tot = 0;
+        if (! from->isRoot())   {
+            tot += GetVal(from->GetBranch()->GetIndex());
+        }
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            tot += RecursiveGetTotal(link->Out());
+        }
+        return tot;
+    }
+
+    void Update()   {
+        RecursiveUpdate(GetRoot());
+    }
+
+    void RecursiveUpdate(const Link* from)  {
+        LocalUpdate(from);
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            RecursiveUpdate(link->Out());
+        }
+    }
+
+    void LocalUpdate(const Link* from)  {
+        if (!from->isRoot()) {
+            double om_up = A * exp(-alpha * nodetree.GetVal(from->GetNode()->GetIndex())[Ne_idx]);
+            double om_down = A * exp(-alpha * nodetree.GetVal(from->Out()->GetNode()->GetIndex())[Ne_idx]);
+            double mean = 0.5 * (om_up + om_down);
+            (*this)[from->GetBranch()->GetIndex()] = mean + om_min;
+        }
+    }
+
+    void LocalNodeUpdate(const Link* from)  {
+        LocalUpdate(from);
+        for (const Link *link = from->Next(); link != from; link = link->Next()) {
+            LocalUpdate(link->Out());
+        }
+    }
+
+    private:
+    const NodeSelector<vector<double>>& nodetree;
+    int Ne_idx;
+    double A, alpha;
+    double om_min;
+};
+
 class pNpS {
 
     public:
@@ -263,7 +334,7 @@ class FastCoevolModel: public ProbModel {
     // includes generation time (first trait in data matrix of continuous characters)
     int Ncont;
 
-    int u_idx, Ne_idx, omega_idx, gentime_idx;
+    int u_idx, Ne_idx, gentime_idx;
 
     // age of the root, in Mya
     double root_age;
@@ -282,7 +353,7 @@ class FastCoevolModel: public ProbModel {
 
     MultivariateBrownianTreeProcess* process;
     BranchdSArray* branchlength;
-    MVBranchExpoMeanArray* branchomega;
+    BranchdNdSArray* branchomega;
 
     double nuds;
     double nuds2;
@@ -298,6 +369,9 @@ class FastCoevolModel: public ProbModel {
 
     dSOmegaPathSuffStatBranchArray* dsompathsuffstatarray;
     MultivariateNormalSuffStat* browniansuffstat;
+
+    double macro_A;
+    double macro_alpha;
 
     double tipNe_invshape;
 
@@ -326,8 +400,7 @@ class FastCoevolModel: public ProbModel {
         
         Ne_idx = 0;
         u_idx = 1;
-        omega_idx = 2;
-        gentime_idx = 3;
+        gentime_idx = 2;
 
         root_age = inroot_age;
         rate_scale = 1e6 * 365.0 * root_age;
@@ -344,7 +417,7 @@ class FastCoevolModel: public ProbModel {
         ifstream is(rootfile.c_str());
         int dim;
         is >> dim;
-        if (dim != Ncont + 3)   {
+        if (dim != Ncont + 2)   {
             cerr << "error in root file: non matching dimension\n";
             cerr << dim << '\t' << Ncont << '\n';
             exit(1);
@@ -363,17 +436,20 @@ class FastCoevolModel: public ProbModel {
 
         chronogram = new Chronogram(*tree);
 
-        kappa.assign(Ncont+3, 1.0);
+        kappa.assign(Ncont+2, 1.0);
         df = 0;
         sigma = new InverseWishart(kappa, df);
 
         process = new MultivariateBrownianTreeProcess(*chronogram, *sigma, rootmean, rootvar);
         for (int i=0; i<Ncont; i++)	{
-            process->SetAndClamp(*contdata, 3+i, i);
+            process->SetAndClamp(*contdata, 2+i, i);
         }
 
         branchlength = new BranchdSArray(*process, *chronogram, u_idx, gentime_idx, rate_scale);
-        branchomega = new MVBranchExpoMeanArray(*process, omega_idx);
+
+        macro_A = 1.0;
+        macro_alpha = 0.08;
+        branchomega = new BranchdNdSArray(*process, Ne_idx, macro_A, macro_alpha);
 
         cerr << "total length : " << branchlength->GetTotalLength() << '\n';
         cerr << "mean omega   : " << branchomega->GetMean() << '\n';
@@ -498,6 +574,7 @@ class FastCoevolModel: public ProbModel {
 
     void UpdateMacro()  {
         branchlength->Update();
+        branchomega->SetParameters(macro_A, macro_alpha);
         branchomega->Update();
     }
 
@@ -532,6 +609,7 @@ class FastCoevolModel: public ProbModel {
             cerr << "log prior is inf before tip\n";
             exit(1);
         }
+        total += MacroHyperLogPrior();
         total += TipNeHyperLogPrior();
         if (wndsmode)   {
             total += WNdSHyperLogPrior();
@@ -611,6 +689,10 @@ class FastCoevolModel: public ProbModel {
         return process->GetLogProb();
     }
 
+    double MacroHyperLogPrior() const   {
+        return - macro_A - 10*macro_alpha;
+    }
+
     double TipNeHyperLogPrior() const   {
         return - tipNe_invshape;
     }
@@ -652,6 +734,11 @@ class FastCoevolModel: public ProbModel {
             return 0;
         }
         return pnps->GetLogProb(from->GetNode()->GetIndex());
+    }
+
+    // when moving macro_A and macro_alpha
+    double MacroHyperLogProb() const    {
+        return MacroHyperLogPrior() + SuffStatLogProbOmIntegrated(); 
     }
 
     double dSOmPathSuffStatLogProb() const {
@@ -859,7 +946,7 @@ class FastCoevolModel: public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
-        MoveParameters(30);
+        MoveParameters(300);
         return 1.0;
     }
 
@@ -882,8 +969,18 @@ class FastCoevolModel: public ProbModel {
             }
             MoveSigma();
             MoveKappa();
+            MoveMacroHyper();
             MoveTipNeHyper();
         }
+    }
+
+    void MoveMacroHyper()    {
+        // move macro_A and alpha
+        ScalingMove(macro_A, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_A, 0.3, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_alpha, 0.3, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ResampleWNOm();
     }
 
     void MoveTipNeHyper()   {
@@ -898,18 +995,11 @@ class FastCoevolModel: public ProbModel {
     void MoveTimes()    {
         if (wndsmode)   {
             chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
-            /*
-           if (wndsmode == 1)   {
-                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-           }
-           else {
-                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
-           }
-           */
            ResampleWNdS();
         }
         else    {
-            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            cerr << "moves without white noise not yet implemented\n";
+            exit(1);
         }
     }
 
@@ -917,53 +1007,41 @@ class FastCoevolModel: public ProbModel {
 
         // 0 : long-term Ne
         // 1 : u
-        // 2 : dN/dS
-        // 3 : gen time
+        // 2 : gen time
         //
-        // long-term Ne impacts: log prob of pS
+        // long-term Ne impacts: log prob of pS and value of omega
         // u impacts: value of dS, log prob of pS
         // gen time impacts: value of dS
 
         // moving long-term Ne
-        process->SingleNodeMove(0, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-        process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-        process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-
-        // moving u and gen time
-        if (wndsmode)   {
-            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
-            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
-
-            process->SingleNodeMove(3, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-            process->SingleNodeMove(3, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-
-            ResampleWNdS();
-        }
-        else    {
-            cerr << "moves without white noise not yet implemented\n";
-            exit(1);
-            process->SingleNodeMove(1, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-        }
-
-        // moving dN/dS
         if (wnommode)   {
-            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
-            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from);} );
+            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + PnPsLogProb(from);} );
+            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + PnPsLogProb(from);} );
 
             ResampleWNOm();
         }
         else    {
             cerr << "moves without white noise not yet implemented\n";
             exit(1);
-            process->SingleNodeMove(2, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
-            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
-            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+        }
+
+        // moving u and gen time
+        if (wndsmode)   {
+            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
+            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
+
+            process->SingleNodeMove(2, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+            process->SingleNodeMove(2, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
+
+            ResampleWNdS();
+        }
+        else    {
+            cerr << "moves without white noise not yet implemented\n";
+            exit(1);
         }
 
         // moving other quantitative traits
-        for (int i=4; i<2+Ncont; i++)   {
+        for (int i=3; i<2+Ncont; i++)   {
             process->SingleNodeMove(i, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
             process->SingleNodeMove(i, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogPrior(from);} );
         }
@@ -1044,7 +1122,6 @@ class FastCoevolModel: public ProbModel {
     void PrintEntries(ostream& os) const   {
         os << "longtermNe\n";
         os << "u\n";
-        os << "dNdS\n";
         for (int i=0; i<GetNcont(); i++)    {
             os << contdata->GetCharacterName(i) << '\n';
         }
@@ -1057,6 +1134,7 @@ class FastCoevolModel: public ProbModel {
         os << "\tmeanlog10Nelong";
         os << "\tmeanlog10Neshort";
         os << "\tmeanlog10u";
+        os << "\tmacroA\tmacroalpha";
         os << "\ttipNeinvshape";
         if (wndsmode == 4)  {
             os << "\tds_va\tds_vb\tds_vc";
@@ -1106,6 +1184,7 @@ class FastCoevolModel: public ProbModel {
         os << '\t' << process->GetMean(0) / log(10.0);
         os << '\t' << pnps->GetMeanLogNs() / log(10.0);
         os << '\t' << process->GetMean(1) / log(10.0);
+        os << '\t' << macro_A << '\t' << macro_alpha;
         os << '\t' << tipNe_invshape;
         if (wndsmode == 4)  {
             double v1,v2,v3;
@@ -1165,6 +1244,7 @@ class FastCoevolModel: public ProbModel {
             }
             os << '\t' << *wnom;
         }
+        os << '\t' << macro_A << '\t' << macro_alpha;
         os << '\t' << tipNe_invshape;
         os << '\n';
     }
@@ -1188,6 +1268,7 @@ class FastCoevolModel: public ProbModel {
             }
             is >> *wnom;
         }
+        is >> macro_A >> macro_alpha;
         is >> tipNe_invshape;
     }
 };
