@@ -1017,7 +1017,6 @@ class FastCoevolModel: public ProbModel {
         if (wnommode)   {
             process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + PnPsLogProb(from);} );
             process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + PnPsLogProb(from);} );
-
             ResampleWNOm();
         }
         else    {
