@@ -134,7 +134,7 @@ class FastCoevolSample : public Sample {
 
         meanne.Sort();
         ofstream nos((name + ".postmeanlongtermNe.tre").c_str());
-        meanne.MedianToStream(nos);
+        meanne.MedianToStream(nos, true, true);
         cerr << "postmean Ne tree in " << name << ".postmeanlongtermNe.tre\n"; 
 
         ofstream node_nos((name + ".postmeannodelongtermNe.tab").c_str());
