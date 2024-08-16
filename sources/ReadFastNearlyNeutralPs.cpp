@@ -2,7 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include "Sample.hpp"
-#include "FastNeCoevolModel.hpp"
+#include "FastNearlyNeutralPsModel.hpp"
 #include "DistBranchNodeArray.hpp"
 #include "DistChronoBranchArray.hpp"
 #include "MeanCovMatrix.hpp"

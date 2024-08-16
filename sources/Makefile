@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= readfastcoevolne fastcoevolne fastcoevol coevol readcoevol multigenecoevol fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= fastnearlyneutralps readfastnearlyneutralps fastcoevol coevol readcoevol multigenecoevol fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -135,17 +135,17 @@ fastbranchom$(EXEEXT): $(PROGSDIR)/fastbranchom$(EXEEXT)
 $(PROGSDIR)/fastbranchom$(EXEEXT): FastBranchOmega.o $(OBJS)
 	$(CC) FastBranchOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
-fastcoevolne$(EXEEXT): $(PROGSDIR)/fastcoevolne$(EXEEXT)
-$(PROGSDIR)/fastcoevolne$(EXEEXT): FastNeCoevol.o $(OBJS)
-	$(CC) FastNeCoevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+fastnearlyneutralps$(EXEEXT): $(PROGSDIR)/fastnearlyneutralps$(EXEEXT)
+$(PROGSDIR)/fastnearlyneutralps$(EXEEXT): FastNearlyNeutralPs.o $(OBJS)
+	$(CC) FastNearlyNeutralPs.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readfastnearlyneutralps$(EXEEXT): $(PROGSDIR)/readfastnearlyneutralps$(EXEEXT)
+$(PROGSDIR)/readfastnearlyneutralps$(EXEEXT): ReadFastNearlyNeutralPs.o $(OBJS)
+	$(CC) ReadFastNearlyNeutralPs.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 fastcoevol$(EXEEXT): $(PROGSDIR)/fastcoevol$(EXEEXT)
 $(PROGSDIR)/fastcoevol$(EXEEXT): FastCoevol.o $(OBJS)
 	$(CC) FastCoevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
-
-readfastcoevolne$(EXEEXT): $(PROGSDIR)/readfastcoevolne$(EXEEXT)
-$(PROGSDIR)/readfastcoevolne$(EXEEXT): ReadFastNeCoevol.o $(OBJS)
-	$(CC) ReadFastNeCoevol.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 readfastcoevol$(EXEEXT): $(PROGSDIR)/readfastcoevol$(EXEEXT)
 $(PROGSDIR)/readfastcoevol$(EXEEXT): ReadFastCoevol.o $(OBJS)

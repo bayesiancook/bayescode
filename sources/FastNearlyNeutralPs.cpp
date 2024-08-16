@@ -1,7 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include "Chain.hpp"
-#include "FastNeCoevolModel.hpp"
+#include "FastNearlyNeutralPsModel.hpp"
 using namespace std;
 
 /**
