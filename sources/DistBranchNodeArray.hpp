@@ -107,12 +107,12 @@ class DistBranchNodeArray   {
         return *i;
     }
 
-    void MedianToStream(ostream& os, bool with_node_name = true) const {
-        RecursiveMedianToStream(os, GetRoot(), with_node_name);
+    void MedianToStream(ostream& os, bool with_node_name = true, bool with_log = false) const {
+        RecursiveMedianToStream(os, GetRoot(), with_node_name, with_log);
         os << ";\n";
     }
 
-    void RecursiveMedianToStream(ostream& os, const Link* from, bool with_node_name) const {
+    void RecursiveMedianToStream(ostream& os, const Link* from, bool with_node_name, bool with_log) const {
         if (from->isLeaf()) {
             os << from->GetNode()->GetName();
             if (with_node_name) {
@@ -122,7 +122,7 @@ class DistBranchNodeArray   {
         else    {
             os << "(";
             for (const Link* link=from->Next(); link!=from; link=link->Next())  {
-                RecursiveMedianToStream(os,link->Out(), with_node_name);
+                RecursiveMedianToStream(os,link->Out(), with_node_name, with_log);
                 if (link->Next() != from)   {
                     os << ",";
                 }
@@ -130,7 +130,12 @@ class DistBranchNodeArray   {
             os << ")";
         }
         if (with_node_name) {
-            os << exp(GetNodeQuantile(from->GetNode()->GetIndex(), 0.5));
+            if (with_log)   {
+                os << GetNodeQuantile(from->GetNode()->GetIndex(), 0.5) / log(10.0);
+            }
+            else    {
+                os << exp(GetNodeQuantile(from->GetNode()->GetIndex(), 0.5));
+            }
         }
         if (! from->isRoot())    {
             os << ":";
