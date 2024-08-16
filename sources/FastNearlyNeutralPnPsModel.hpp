@@ -1156,7 +1156,7 @@ class FastCoevolModel: public ProbModel {
 
     //! \brief complete MCMC move schedule
     double Move() override {
-        MoveParameters(30);
+        MoveParameters(100);
         return 1.0;
     }
 
@@ -1179,15 +1179,17 @@ class FastCoevolModel: public ProbModel {
             }
             MoveSigma();
             MoveKappa();
-            MoveTipNe();
-            MoveTipNeHyper();
+            for (int i=0; i<10; i++)    {
+                MoveTipNe();
+                MoveTipNeHyper();
+                MoveMicroHyper();
+            }
+            MoveMacroHyper();
 	    /*
             MoveCallableErrors(1.0, 10);
             MoveCallableErrors(0.1, 10);
             MoveCallableErrorsHyper();
 	    */
-            MoveMacroHyper();
-            MoveMicroHyper();
         }
     }
 
@@ -1242,23 +1244,22 @@ class FastCoevolModel: public ProbModel {
     void MoveMacroHyper()    {
         // move macro_A and alpha
         ScalingMove(macro_A, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
-        // ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_A, 0.3, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_alpha, 1.0, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ScalingMove(macro_alpha, 0.3, 10, &FastCoevolModel::MacroHyperLogProb, &FastCoevolModel::UpdateMacro, this);
+        ResampleWNOm();
     }
 
     // Times and Rates
 
     void MoveTimes()    {
         if (wndsmode)   {
-           if (wndsmode == 1)   {
-                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from);} );
-           }
-           else {
-                chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
-           }
-           ResampleWNdS();
+            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + wnom->GetBranchLogProb(from);} );
+            ResampleWNdS();
         }
         else    {
-            chronogram->MoveTimes([this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from);} );
+            cerr << "moves without white noise not yet implemented\n";
+            exit(1);
         }
     }
 
@@ -1273,6 +1274,15 @@ class FastCoevolModel: public ProbModel {
         // gen time impacts: value of dS
         // u impacts: value of dS, log prob of pS 
 
+        // moving long-term Ne
+        if (wnommode)   {
+            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
+            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
+            ResampleWNOm();
+        }
+        else    {
+        }
+
         if (wndsmode)   {
             process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
             process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbdSIntegrated(from) + PnPsLogProb(from);} );
@@ -1283,51 +1293,6 @@ class FastCoevolModel: public ProbModel {
             ResampleWNdS();
         }
         else    {
-            process->SingleNodeMove(1, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-            process->SingleNodeMove(1, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-            process->SingleNodeMove(1, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + PnPsLogProb(from);} );
-
-            /*
-            if (Random::Uniform() < 0.3)    {
-                dsacc1 += process->FilterMove(0, 10, 0, 1,
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsacc01 += process->FilterMove(0, 10, 0, 0.1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsacc001 += process->FilterMove(0, 10, 0, 0.01, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                dsntry ++;
-            }
-            */
-        }
-
-        if (wnommode)   {
-            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProbOmIntegrated(from) + TipNeLogProb(from);} );
-
-            ResampleWNOm();
-        }
-        else    {
-            process->SingleNodeMove(0, 0.01, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 0.1, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-            process->SingleNodeMove(0, 1.0, [this](const Link* from) {NodeUpdate(from);}, [this](const Link* from) {return NodeLogProb(from) + TipNeLogProb(from);} );
-
-            /*
-            if (Random::Uniform() < 0.3)    {
-                omacc1 += process->FilterMove(1, 10, 0, 1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omacc01 += process->FilterMove(1, 10, 0, 0.1, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omacc001 += process->FilterMove(1, 10, 0, 0.01, 
-                        [this] (const Link* from) {BranchUpdate(from);},
-                        [this] (const Link* from) {return BranchSuffStatLogProb(from);} );
-                omntry ++;
-            }
-            */
         }
 
         for (int i=3; i<2+Ncont; i++)   {
