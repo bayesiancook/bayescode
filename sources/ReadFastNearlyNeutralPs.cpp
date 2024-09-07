@@ -81,8 +81,10 @@ class FastCoevolSample : public Sample {
 
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
-    void Read() {
+    void Read(bool withlog) {
         cerr << size << " points to read\n";
+
+        int Nstats = 7;
 
         DistBranchNodeArray meanne(GetModel()->GetTree());
         DistBranchNodeArray meanu(GetModel()->GetTree());
@@ -93,8 +95,8 @@ class FastCoevolSample : public Sample {
 
         int Ntaxa = GetModel()->GetNtaxa();
 
-        vector<vector<double>> stats(6, vector<double>(Ntaxa,0));
-        vector<vector<double>> tmpstats(6, vector<double>(Ntaxa,0));
+        vector<vector<double>> stats(Nstats, vector<double>(Ntaxa,0));
+        vector<vector<double>> tmpstats(Nstats, vector<double>(Ntaxa,0));
 
         vector<string> taxlist(Ntaxa,"");
         GetModel()->GetTaxonList(taxlist);
@@ -107,8 +109,8 @@ class FastCoevolSample : public Sample {
             meanu.AddFromChrono(GetModel()->GetChronogram(), GetModel()->GetProcess(), 1);
 			mat.Add(GetModel()->GetCovMatrix());
 
-            GetModel()->GetStats(tmpstats);
-            for (int i=0; i<6; i++) {
+            GetModel()->GetStats(tmpstats, withlog);
+            for (int i=0; i<Nstats; i++) {
                 for (int j=0; j<Ntaxa; j++) {
                     stats[i][j] += tmpstats[i][j];
                 }
@@ -116,17 +118,24 @@ class FastCoevolSample : public Sample {
         }
         cerr << '\n';
 
-        for (int i=0; i<6; i++) {
+        for (int i=0; i<Nstats; i++) {
             for (int j=0; j<Ntaxa; j++) {
                 stats[i][j] /= size;
             }
         }
         ofstream sos((name + ".postmeanlogstats.tab").c_str());
-        sos << "tax\tNl\tNs\tu\ttheta\tps\tpnps\n";
+        sos << "tax\tNl\tNs\tu\ttheta\tps\tpnps\tdnds\n";
         for (int j=0; j<Ntaxa; j++) {
             sos << taxlist[j];
-            for (int i=0; i<6; i++) {
-                sos << '\t' << stats[i][j];
+            if (withlog)    {
+                for (int i=0; i<Nstats; i++) {
+                    sos << '\t' << stats[i][j];
+                }
+            }
+            else    {
+                for (int i=0; i<Nstats; i++) {
+                    sos << '\t' << log(stats[i][j]) / log(10.0);
+                }
             }
            sos << '\n';
         } 
@@ -169,6 +178,7 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int ppred = 0;
+    int withlog = 0;
 
     string name;
 
@@ -195,6 +205,10 @@ int main(int argc, char *argv[]) {
                 until = atoi(argv[i]);
             } else if (s == "-ppred") {
                 ppred = 1;
+            } else if (s == "+log") {
+                withlog = 1;
+            } else if (s == "-log") {
+                withlog = 0;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -216,6 +230,6 @@ int main(int argc, char *argv[]) {
     if (ppred) {
         sample->PostPred();
     } else {
-        sample->Read();
+        sample->Read(withlog);
     }
 }

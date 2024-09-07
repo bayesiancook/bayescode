@@ -242,9 +242,11 @@ class pNpS {
         double Nl = exp(nodetree.GetVal(tax)[Ne_idx]);
         double u = exp(nodetree.GetVal(tax)[u_idx]);
         double alpha = 1.0 / invshape;
-        ret += alpha * log(alpha/Nl) - Random::logGamma(alpha);
-        ret -= (alpha + Ks[tax]) * log(alpha/Nl + 4*u*Ls[tax]) - Random::logGamma(alpha + Ks[tax]);
+        double beta = alpha / Nl;
+        ret += alpha * log(beta) - Random::logGamma(alpha);
+        ret -= (alpha + Ks[tax]) * log(beta + 4*u*Ls[tax]) - Random::logGamma(alpha + Ks[tax]);
         ret += Ks[tax] * log(4*u*Ls[tax]);
+        ret += Random::logGamma(Ks[tax] + 1);
         if (std::isinf(ret))    {
             cerr << "in pnps get log prob: inf\n";
             exit(1);
@@ -264,13 +266,11 @@ class pNpS {
     }
 
     void ResampleNe(vector<double>& Ns) const {
-    // void ResampleNe(vector<double>& Nl, vector<double>& Ns)    {
         for (int tax=0; tax<Ntaxa; tax++) {
             double shape = 1.0 / invshape + Ks[tax];
             double N = exp(nodetree.GetVal(tax)[Ne_idx]);
             double u = exp(nodetree.GetVal(tax)[u_idx]);
             double scale = shape/N + 4*u*Ls[tax];
-            // Nl[tax] = N;
             Ns[tax] = Random::GammaSample(shape,scale);
         }
     }
@@ -281,7 +281,7 @@ class pNpS {
         }
     }
 
-    void GetStats(vector<vector<double>>& stats) const   {
+    void GetStats(vector<vector<double>>& stats, bool withlog, double macro_A, double macro_alpha) const   {
         for (int tax=0; tax<Ntaxa; tax++) {
             double shape = 1.0 / invshape + Ks[tax];
             double Nl = exp(nodetree.GetVal(tax)[Ne_idx]);
@@ -289,13 +289,26 @@ class pNpS {
             double scale = shape/Nl + 4*u*Ls[tax];
             double Ns = Random::GammaSample(shape,scale);
             double ps = double(Ks[tax]) / double(Ls[tax]);
-            double pnps = (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
-            stats[0][tax] = log(Nl) / log(10.0);
-            stats[1][tax] = log(Ns) / log(10.0);
-            stats[2][tax] = log(u) / log(10.0);
-            stats[3][tax] = log(4*Ns*u) / log(10.0);
-            stats[4][tax] = log(ps) / log(10.0);
-            stats[5][tax] = log(pnps) / log(10.0);
+            double pnps = 0.5 * (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
+            double dnds = macro_A * exp(-macro_alpha*nodetree.GetVal(tax)[Ne_idx]);
+            if (withlog)    {
+                stats[0][tax] = log(Nl) / log(10.0);
+                stats[1][tax] = log(Ns) / log(10.0);
+                stats[2][tax] = log(u) / log(10.0);
+                stats[3][tax] = log(4*Ns*u) / log(10.0);
+                stats[4][tax] = log(ps) / log(10.0);
+                stats[5][tax] = log(pnps) / log(10.0);
+                stats[6][tax] = log(dnds) / log(10.0);
+            }
+            else    {
+                stats[0][tax] = Nl;
+                stats[1][tax] = Ns;
+                stats[2][tax] = u;
+                stats[3][tax] = 4*Ns*u;
+                stats[4][tax] = ps;
+                stats[5][tax] = pnps;
+                stats[6][tax] = dnds;
+            }
         }
     }
 
@@ -690,7 +703,7 @@ class FastCoevolModel: public ProbModel {
     }
 
     double MacroHyperLogPrior() const   {
-        return - macro_A - 10*macro_alpha;
+        return - macro_A/10 - macro_alpha/10;
     }
 
     double TipNeHyperLogPrior() const   {
@@ -1110,8 +1123,8 @@ class FastCoevolModel: public ProbModel {
     // Traces and Monitors
     // ------------------
 
-    void GetStats(vector<vector<double>>& stats) const  {
-        pnps->GetStats(stats);
+    void GetStats(vector<vector<double>>& stats, bool withlog) const  {
+        pnps->GetStats(stats, withlog, macro_A, macro_alpha);
     }
 
     void GetTaxonList(vector<string>& taxlist) const    {
