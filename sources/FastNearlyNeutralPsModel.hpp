@@ -289,7 +289,7 @@ class pNpS {
             double scale = shape/Nl + 4*u*Ls[tax];
             double Ns = Random::GammaSample(shape,scale);
             double ps = double(Ks[tax]) / double(Ls[tax]);
-            double pnps = 0.5 * (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
+            double pnps = (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
             double dnds = macro_A * exp(-macro_alpha*nodetree.GetVal(tax)[Ne_idx]);
             if (withlog)    {
                 stats[0][tax] = log(Nl) / log(10.0);
