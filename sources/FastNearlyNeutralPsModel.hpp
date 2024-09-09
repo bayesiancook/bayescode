@@ -213,10 +213,12 @@ class pNpS {
 			int tax = data.GetTaxonSet()->GetTaxonIndex(from->GetNode()->GetName());
 			if (tax != -1)	{
                 int idx = from->GetNode()->GetIndex();
-				Ks[idx] = data.GetState(tax, 0);
-				Ls[idx] = data.GetState(tax, 1);
-				Kn[idx] = data.GetState(tax, 2);
-				Ln[idx] = data.GetState(tax, 3);
+                if (Ks[idx] != -1)  {
+                    Ks[idx] = data.GetState(tax, 0);
+                    Ls[idx] = data.GetState(tax, 1);
+                    Kn[idx] = data.GetState(tax, 2);
+                    Ln[idx] = data.GetState(tax, 3);
+                }
                 taxon[idx] = from->GetNode()->GetName();
                 k++;
 			}
@@ -245,7 +247,9 @@ class pNpS {
         double beta = alpha / Nl;
         ret += alpha * log(beta) - Random::logGamma(alpha);
         ret -= (alpha + Ks[tax]) * log(beta + 4*u*Ls[tax]) - Random::logGamma(alpha + Ks[tax]);
-        ret += Ks[tax] * log(4*u*Ls[tax]);
+        if (Ks[tax])    {
+            ret += Ks[tax] * log(4*u*Ls[tax]);
+        }
         ret += Random::logGamma(Ks[tax] + 1);
         if (std::isinf(ret))    {
             cerr << "in pnps get log prob: inf\n";
@@ -283,14 +287,23 @@ class pNpS {
 
     void GetStats(vector<vector<double>>& stats, bool withlog, double macro_A, double macro_alpha) const   {
         for (int tax=0; tax<Ntaxa; tax++) {
-            double shape = 1.0 / invshape + Ks[tax];
             double Nl = exp(nodetree.GetVal(tax)[Ne_idx]);
             double u = exp(nodetree.GetVal(tax)[u_idx]);
-            double scale = shape/Nl + 4*u*Ls[tax];
-            double Ns = Random::GammaSample(shape,scale);
-            double ps = double(Ks[tax]) / double(Ls[tax]);
-            double pnps = (double(Kn[tax])/double(Ln[tax])) / (double(Ks[tax])/double(Ls[tax]));
+
+            double shape0 = 1.0 / invshape;
+            double scale0 = shape0/Nl;
+
+            double shapeS = shape0 + Ks[tax];
+            double scaleS = scale0 + 4*u*Ls[tax];
+            double Ns = Random::GammaSample(shapeS,scaleS);
+
+            double shapeN = shape0 + Kn[tax];
+            double scaleN = scale0 + 4*u*Ln[tax];
+            double ps = shapeS/scaleS;
+            double pnps = (shapeN/scaleN) / (shapeS/scaleS);
+
             double dnds = macro_A * exp(-macro_alpha*nodetree.GetVal(tax)[Ne_idx]);
+
             if (withlog)    {
                 stats[0][tax] = log(Nl) / log(10.0);
                 stats[1][tax] = log(Ns) / log(10.0);
