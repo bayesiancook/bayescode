@@ -30,17 +30,19 @@ conda install -c conda-forge -c bioconda bayescode
 
 T. Latrille, M. Bastian, T. Gaboriau, N. Salamin,\
  Detecting diversifying selection for a trait from within and between-species genotypes and phenotypes, \
-_bioRxiv_,\
-[doi.org/10.1101/2023.10.02.559886](https://doi.org/10.1101/2023.10.02.559886)
+_Journal of Evolutionary Biology_,\
+Volume 37, Issue 12, December 2024, Pages 1538-1550,\
+[doi.org/10.1093/jeb/voae084](https://doi.org/10.1093/jeb/voae084)
 
 _Scripts and data necessary to reproduce figures at [github.com/ThibaultLatrille/MicMac](https://github.com/ThibaultLatrille/MicMac)._
 
 - **The preprint for use of `mutselomega` to compute S<sub>0</sub> is**:
 
 T. Latrille, J. Joseph, D. A. Hartasánchez, N. Salamin,\
- Mammalian protein-coding genes exhibit widespread beneficial mutations that are not adaptive, \
-_bioRxiv_,\
-[doi.org/10.1101/2023.05.03.538864](https://doi.org/10.1101/2023.05.03.538864)
+Estimating the proportion of beneficial mutations that are not adaptive in mammals, \
+_PLoS Genetics_,\
+Volume 20, Issue 12, December 2024, Pages e1011536,\
+[doi.org/10.1371/journal.pgen.1011536](https://doi.org/10.1371/journal.pgen.1011536)
 
 _Scripts and data necessary to reproduce figures at [github.com/ThibaultLatrille/SelCoeff](https://github.com/ThibaultLatrille/SelCoeff)._
 
