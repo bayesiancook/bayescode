@@ -26,7 +26,7 @@ class PriorCovariance : public EVector {
           uniq_kappa{uniq_kappa} {};
 
     double GetLogProb(int dim) const {
-        if (0.00001 > (*this)(dim) or (*this)(dim) > 100000) {
+        if ((*this)(dim) < 1e-8 or (*this)(dim) > 1e8) {
             return -std::numeric_limits<double>::infinity();
         } else {
             return -std::log((*this)(dim));
@@ -68,14 +68,19 @@ class PrecisionMatrix : public EMatrix {
     explicit PrecisionMatrix(int dimensions) : EMatrix(dimensions, dimensions) { this->setZero(); };
 
     explicit PrecisionMatrix(PriorCovariance const &prior)
-        : EMatrix(prior.GetPriorPrecisionMatrix()){};
+        : EMatrix(prior.GetPriorPrecisionMatrix()) {};
 
     double GetLogProb(PriorCovariance const &prior) const {
         EMatrix cov = prior.GetPriorCovarianceMatrix();
         return 0.5 * (std::log(this->determinant()) * (prior.GetDoF() - prior.GetDimensions() - 1) -
                          (cov * (*this)).trace() + prior.GetDoF() * std::log(cov.determinant()));
     }
-
+    void SetMatrix(EMatrix const &matrix) {
+        this->setZero();
+        for (int i = 0; i < matrix.rows(); i++) {
+            for (int j = 0; j < matrix.cols(); j++) { (*this)(i, j) = matrix(i, j); }
+        }
+    }
     void UpdateCovarianceMatrix(EMatrix &cov_matrix) const { cov_matrix = this->inverse(); }
 };
 
@@ -138,8 +143,8 @@ class NodeMultivariateProcess : public SimpleNodeArray<EVector> {
                     double sum_branch = 0;
                     for (Tree::NodeIndex child : GetTree().children(node)) {
                         double branch = chronogram.GetVal(tree.branch_index(node));
-                        sum_children += (*this)[child](dim) * branch;
-                        sum_branch += branch;
+                        sum_children += (*this)[child](dim) * sqrt(branch);
+                        sum_branch += sqrt(branch);
                     }
                     if (sum_branch == 0 and sum_children == 0) {
                         (*this)[node](dim) = 0;

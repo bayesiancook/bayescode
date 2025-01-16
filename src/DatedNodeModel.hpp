@@ -80,9 +80,11 @@ class DatedNodeModel : public ChainComponent {
 
         // Precision matrix and prior
         dimensions = taxon_traits->GetDim();
+        if (dimensions == 1) { uniq_kappa = true; }
         prior_matrix = new PriorCovariance(dimensions, prior_cov_df, uniq_kappa);
         precision_matrix = new PrecisionMatrix(*prior_matrix);
         cov_matrix = new EMatrix(dimensions, dimensions);
+        precision_matrix->UpdateCovarianceMatrix(*cov_matrix);
 
         node_multivariate = new NodeMultivariateProcess(*chronogram, *precision_matrix, dimensions);
         if (taxon_traits != nullptr) { node_multivariate->ClampLeaves(*taxon_traits, *taxonmap); }
@@ -113,13 +115,14 @@ class DatedNodeModel : public ChainComponent {
             // Trait at the root of the tree
             model_stat(info, "RootTrait_" + GetDimensionName(i), root_trait[i]);
             model_stat(info, "Var_" + GetDimensionName(i), cov_matrix->coeffRef(i, i));
-            for (int j = 0; j < i; j++) {
+            for (int j = 0; j <= i; j++) {
                 model_stat(info, "Precision_" + GetDimensionName(i) + "_" + GetDimensionName(j),
                     precision_matrix->coeffRef(i, j));
                 model_stat(info, "Cov_" + GetDimensionName(i) + "_" + GetDimensionName(j),
                     cov_matrix->coeffRef(i, j));
             }
         }
+        model_stat(info, "ChronogramLength", [&]() { return GetChronogramLength(); });
     }
 
     //! return tree
@@ -130,6 +133,9 @@ class DatedNodeModel : public ChainComponent {
         assert(!tree->is_root(node));
         return chronogram->GetVal(tree->branch_index(node));
     };
+
+    //! return precision matrix
+    PrecisionMatrix GetPrecisionMatrix() const { return *precision_matrix; };
 
     //! return covariance matrix
     EMatrix GetCovarianceMatrix() const { return *cov_matrix; };
@@ -186,10 +192,17 @@ class DatedNodeModel : public ChainComponent {
         return node_multivariate->GetLocalLogProb(node);
     }
 
+    //! log prior of branch rate (brownian process) around of focal node
+    double GetNodeLogProb(Tree::NodeIndex node) const {
+        return node_multivariate->GetLogProb(node);
+    }
+
     //! log prob of precision matrix
     double PrecisionMatrixLogProb() const {
         return prior_matrix->GetLogProb() + precision_matrix->GetLogProb(*prior_matrix);
     }
+
+    double GetChronogramLength() const { return chronogram->GetSum(); }
 
     // Scatter (brownian process)
     void CollectScatterSuffStat() {

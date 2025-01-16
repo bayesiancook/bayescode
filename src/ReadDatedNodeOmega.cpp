@@ -68,34 +68,59 @@ int main(int argc, char *argv[]) {
         for (int dim = 0; dim < model->GetDimension(); dim++) {
             os << model->GetDimensionName(dim) << endl;
         }
-
-        EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         EMatrix cov_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix precision_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix partial_posterior_prob =
+            EMatrix::Zero(model->GetDimension(), model->GetDimension());
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
-            EMatrix cov_matrix_chain = model->GetPrecisionMatrix().inverse();
+            EMatrix cov_matrix_chain = model->GetCovarianceMatrix();
+            EMatrix precision_matrix_chain = model->GetPrecisionMatrix();
+            for (int i = 0; i < model->GetDimension(); i++) {
+                if (cov_matrix_chain(i, i) <= 0) {
+                    std::cerr << "error: negative or null variance\n";
+                    exit(1);
+                }
+            }
             cov_matrix += cov_matrix_chain;
+            precision_matrix += precision_matrix_chain;
             for (int i = 0; i < model->GetDimension(); i++) {
                 for (int j = 0; j < model->GetDimension(); j++) {
                     if (cov_matrix_chain.coeffRef(i, j) > 0) { posterior_prob.coeffRef(i, j) += 1; }
+                    if (precision_matrix_chain.coeffRef(i, j) < 0) {
+                        partial_posterior_prob.coeffRef(i, j) += 1;
+                    }
                 }
             }
         }
-        posterior_prob /= size;
         cov_matrix /= size;
+        posterior_prob /= size;
+        precision_matrix /= size;
+        partial_posterior_prob /= size;
 
-        export_matrix(os, model->GetDimension(), cov_matrix, "covariances");
-        EMatrix cor_matrix = cov_matrix;
+        EMatrix cor_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix partial_cor_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         for (int i = 0; i < model->GetDimension(); i++) {
             for (int j = 0; j < model->GetDimension(); j++) {
                 cor_matrix.coeffRef(i, j) =
                     cov_matrix.coeffRef(i, j) /
                     sqrt(cov_matrix.coeffRef(i, i) * cov_matrix.coeffRef(j, j));
+                partial_cor_matrix.coeffRef(i, j) =
+                    -precision_matrix.coeffRef(i, j) /
+                    sqrt(precision_matrix.coeffRef(i, i) * precision_matrix.coeffRef(j, j));
             }
         }
+        export_matrix(os, model->GetDimension(), cov_matrix, "covariances");
         export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
-        export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
+        export_matrix(os, model->GetDimension(), posterior_prob,
+            "posterior probabilities of a positive coefficient", false);
+        export_matrix(os, model->GetDimension(), precision_matrix, "precisions");
+        export_matrix(
+            os, model->GetDimension(), partial_cor_matrix, "partial correlation coefficients");
+        export_matrix(os, model->GetDimension(), partial_posterior_prob,
+            "posterior probabilities of a positive partial coefficient", false);
 
         cerr << endl << "matrices in " << file_name << "." << endl;
     } else if (read_args.newick.getValue()) {
@@ -113,7 +138,7 @@ int main(int argc, char *argv[]) {
 
             model->UpdateBranches(true);
             for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
-                 node++) {
+                node++) {
                 if (!model->GetTree().is_root(node)) {
                     double branch_time = model->GetBranchTime(node);
                     assert(branch_time >= 0);
@@ -129,7 +154,7 @@ int main(int argc, char *argv[]) {
 
         ExportTree base_export_tree(model->GetTree());
         for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
-             node++) {
+            node++) {
             if (!model->GetTree().is_root(node)) {
                 base_export_tree.set_tag(node, "length", to_string(mean(branch_times[node])));
             }

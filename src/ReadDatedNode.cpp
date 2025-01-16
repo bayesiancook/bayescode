@@ -24,6 +24,11 @@ class ReadNodeArgParse : public ReadArgParse {
         "For each trait, results are written in {chain_name}.{trait}.nhx by default (optionally "
         "use the --output argument to specify a different output path).",
         cmd};
+    SwitchArg wAIC{"w", "wAIC",
+        "Computes the wAIC for the model."
+        "Results are written in {chain_name}.wAIC.txt by default (optionally "
+        "use the --output argument to specify a different output path).",
+        cmd};
     SwitchArg cov{"c", "cov",
         "Computes the mean posterior covariance matrix, precision matrix and correlation matrix. "
         "Results are written in {chain_name}.cov by default (optionally use the --output argument "
@@ -269,39 +274,60 @@ int main(int argc, char* argv[]) {
         for (int dim = 0; dim < model->GetDimension(); dim++) {
             os << model->GetDimensionName(dim) << endl;
         }
-        EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         EMatrix cov_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix posterior_prob = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix precision_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix partial_posterior_prob =
+            EMatrix::Zero(model->GetDimension(), model->GetDimension());
         for (int step = 0; step < size; step++) {
             cerr << '.';
             cr.skip(every);
             EMatrix cov_matrix_chain = model->GetCovarianceMatrix();
+            EMatrix precision_matrix_chain = model->GetPrecisionMatrix();
             for (int i = 0; i < model->GetDimension(); i++) {
-                if (cov_matrix_chain(i, i) < 0) {
-                    std::cerr << "error: negative variance\n";
+                if (cov_matrix_chain(i, i) <= 0) {
+                    std::cerr << "error: negative or null variance\n";
                     exit(1);
                 }
             }
             cov_matrix += cov_matrix_chain;
+            precision_matrix += precision_matrix_chain;
             for (int i = 0; i < model->GetDimension(); i++) {
                 for (int j = 0; j < model->GetDimension(); j++) {
                     if (cov_matrix_chain.coeffRef(i, j) > 0) { posterior_prob.coeffRef(i, j) += 1; }
+                    if (precision_matrix_chain.coeffRef(i, j) < 0) {
+                        partial_posterior_prob.coeffRef(i, j) += 1;
+                    }
                 }
             }
         }
-        posterior_prob /= size;
         cov_matrix /= size;
+        posterior_prob /= size;
+        precision_matrix /= size;
+        partial_posterior_prob /= size;
 
-        export_matrix(os, model->GetDimension(), cov_matrix, "covariances");
-        EMatrix cor_matrix = cov_matrix;
+        EMatrix cor_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
+        EMatrix partial_cor_matrix = EMatrix::Zero(model->GetDimension(), model->GetDimension());
         for (int i = 0; i < model->GetDimension(); i++) {
             for (int j = 0; j < model->GetDimension(); j++) {
                 cor_matrix.coeffRef(i, j) =
                     cov_matrix.coeffRef(i, j) /
                     sqrt(cov_matrix.coeffRef(i, i) * cov_matrix.coeffRef(j, j));
+                partial_cor_matrix.coeffRef(i, j) =
+                    -precision_matrix.coeffRef(i, j) /
+                    sqrt(precision_matrix.coeffRef(i, i) * precision_matrix.coeffRef(j, j));
             }
         }
+        export_matrix(os, model->GetDimension(), cov_matrix, "covariances");
         export_matrix(os, model->GetDimension(), cor_matrix, "correlation coefficients");
-        export_matrix(os, model->GetDimension(), posterior_prob, "posterior probs", false);
+        export_matrix(os, model->GetDimension(), posterior_prob,
+            "posterior probabilities of a positive coefficient", false);
+        export_matrix(os, model->GetDimension(), precision_matrix, "precisions");
+        export_matrix(
+            os, model->GetDimension(), partial_cor_matrix, "partial correlation coefficients");
+        export_matrix(os, model->GetDimension(), partial_posterior_prob,
+            "posterior probabilities of a positive partial coefficient", false);
+
 
         cerr << endl << "matrices in " << file_name << "." << endl;
     } else if (read_args.newick.getValue()) {
@@ -318,7 +344,7 @@ int main(int argc, char* argv[]) {
 
             model->Update();
             for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
-                 node++) {
+                node++) {
                 if (!model->GetTree().is_root(node)) {
                     double branch_time = model->GetBranchTime(node);
                     assert(branch_time >= 0);
@@ -333,7 +359,7 @@ int main(int argc, char* argv[]) {
 
         ExportTree base_export_tree(model->GetTree());
         for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
-             node++) {
+            node++) {
             if (!model->GetTree().is_root(node)) {
                 base_export_tree.set_tag(node, "length", to_string(mean(branch_times[node])));
             }
@@ -341,6 +367,52 @@ int main(int argc, char* argv[]) {
         for (int dim{0}; dim < model->GetDimension(); dim++) {
             export_tree(base_export_tree, model->GetDimensionName(dim), read_args.OutputFile(),
                 dim_node_traces[dim]);
+        }
+    } else if (read_args.wAIC.getValue()) {
+        vector<vector<double>> leaf_log_probs(model->GetTree().nb_nodes());
+
+        int n_taxa = model->GetNtaxa();
+        leaf_log_probs.resize(n_taxa);
+
+        for (int step = 0; step < size; step++) {
+            cerr << '.';
+            cr.skip(every);
+
+            model->Update();
+            int i = 0;
+            for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
+                node++) {
+                if (model->GetTree().is_leaf(node)) {
+                    leaf_log_probs.at(i).push_back(model->GetNodeLogProb(node));
+                    i++;
+                }
+            }
+        }
+        cerr << endl;
+        string file_name = read_args.OutputFile(".wAIC.tsv");
+        ofstream os(file_name);
+        vector<double> expectation;
+        vector<double> variance;
+
+        for (int taxa = 0; taxa < n_taxa; taxa++) {
+            // exponential of the log prob
+            vector<double> leaf_probs = leaf_log_probs.at(taxa);
+            for (double& leaf_prob : leaf_probs) { leaf_prob = exp(leaf_prob); }
+
+            expectation.push_back(log(nan_mean(leaf_probs)));
+            variance.push_back(nan_var(leaf_log_probs.at(taxa)));
+        }
+        double wAIC = nan_mean(expectation) - nan_mean(variance);
+        os << "name\tExp\tVar\n";
+        os << "wAIC\t" << wAIC << '\t' << nan_mean(variance) << '\n';
+        int i = 0;
+        for (Tree::NodeIndex node = 0; node < Tree::NodeIndex(model->GetTree().nb_nodes());
+            node++) {
+            if (model->GetTree().is_leaf(node)) {
+                os << model->GetTree().node_name(node) << '\t' << expectation.at(i) << '\t'
+                   << variance.at(i) << '\n';
+                i++;
+            }
         }
     } else {
         stats_posterior<DatedNodeModel>(*model, cr, every, size);

@@ -9,12 +9,42 @@ double mean(std::vector<double> const &v) {
     return std::accumulate(v.begin(), v.end(), 0.0) / v.size();
 }
 
+// Mean of a vector with NaN values
+double nan_mean(std::vector<double> const &v) {
+    double sum = 0;
+    int count = 0;
+    for (auto const &val : v) {
+        if (!std::isnan(val)) {
+            sum += val;
+            count++;
+        }
+    }
+    return sum / count;
+}
+
 // Variance of a vector
 double var(std::vector<double> const &v) {
     double s2 = std::accumulate(v.begin(), v.end(), 0.0, [](double a, double const &b) {
         return a + b * b;
     }) / v.size();
     double s = mean(v);
+    return s2 - s * s;
+}
+
+// Variance of a vector with NaN values
+double nan_var(std::vector<double> const &v) {
+    double s2 = 0;
+    double s = 0;
+    int count = 0;
+    for (auto const &val : v) {
+        if (!std::isnan(val)) {
+            s2 += val * val;
+            s += val;
+            count++;
+        }
+    }
+    s2 /= count;
+    s /= count;
     return s2 - s * s;
 }
 

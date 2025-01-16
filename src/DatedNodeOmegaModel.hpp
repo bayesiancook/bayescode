@@ -5,6 +5,7 @@
 #include "CodonSequenceAlignment.hpp"
 #include "CodonSubMatrixBranchArray.hpp"
 #include "CodonSuffStat.hpp"
+#include "Eigen/Cholesky"
 #include "GTRSubMatrix.hpp"
 #include "GammaSuffStat.hpp"
 #include "IIDGamma.hpp"
@@ -52,6 +53,7 @@ class DatedNodeOmegaModel : public ChainComponent {
     bool uniq_kappa;
     PriorCovariance *prior_matrix;
     PrecisionMatrix *precision_matrix;
+    EMatrix *cov_matrix;
     NodeMultivariateProcess *node_multivariate;
 
     // Branch rates (brownian process)
@@ -144,6 +146,8 @@ class DatedNodeOmegaModel : public ChainComponent {
         if (taxon_traits != nullptr) { dimensions += taxon_traits->GetDim(); }
         prior_matrix = new PriorCovariance(dimensions, prior_cov_df, uniq_kappa);
         precision_matrix = new PrecisionMatrix(*prior_matrix);
+        cov_matrix = new EMatrix(dimensions, dimensions);
+        precision_matrix->UpdateCovarianceMatrix(*cov_matrix);
 
         node_multivariate = new NodeMultivariateProcess(*chronogram, *precision_matrix, dimensions);
 
@@ -204,6 +208,7 @@ class DatedNodeOmegaModel : public ChainComponent {
         model_node(info, "node_multivariate", *node_multivariate);
         model_node(info, "prior_cov_matrix", *prior_matrix);
         model_node(info, "precision_matrix", *precision_matrix);
+        model_node(info, "cov_matrix", *cov_matrix);
 
         model_stat(info, "logprior", [&]() { return DatedNodeOmegaModel::GetLogPrior(); });
         model_stat(info, "lnL", [&]() { return DatedNodeOmegaModel::GetLogLikelihood(); });
@@ -211,9 +216,13 @@ class DatedNodeOmegaModel : public ChainComponent {
         model_stat(info, "blengthvar", [&]() { return branchlength->GetVar(); });
         for (int i = 0; i < dimensions; i++) {
             model_stat(info, "PriorCovariance_" + std::to_string(i), prior_matrix->coeffRef(i));
+            model_stat(info, "Var_" + GetDimensionName(i), cov_matrix->coeffRef(i, i));
+
             for (int j = 0; j <= i; j++) {
                 model_stat(info, "Precision_" + std::to_string(i) + "_" + std::to_string(j),
                     precision_matrix->coeffRef(i, j));
+                model_stat(info, "Cov_" + GetDimensionName(i) + "_" + GetDimensionName(j),
+                    cov_matrix->coeffRef(i, j));
             }
         }
         // Descriptive statistics - for each branch of the tree
@@ -260,6 +269,8 @@ class DatedNodeOmegaModel : public ChainComponent {
     //! return precision matrix
     PrecisionMatrix GetPrecisionMatrix() const { return *precision_matrix; };
 
+    //! return covariance matrix
+    EMatrix GetCovarianceMatrix() const { return *cov_matrix; };
 
     //! return the value of the multivariate brownian process for a given node and a given
     //! dimensions of the process
@@ -330,7 +341,7 @@ class DatedNodeOmegaModel : public ChainComponent {
         branchomega->Update();
         branchrates->Update();
         branchlength->Update();
-        if (scale) {chronogram->Scale();}
+        if (scale) { chronogram->Scale(); }
     }
 
     //! \brief Update the chronogram (branch time) and branch lengths around the focal node.
@@ -612,6 +623,7 @@ class DatedNodeOmegaModel : public ChainComponent {
             MovePriorMatrix(0.01, 3);
             TouchMatrices();
         }
+        precision_matrix->UpdateCovarianceMatrix(*cov_matrix);
     }
 
     void SamplePrecisionMatrix() {
