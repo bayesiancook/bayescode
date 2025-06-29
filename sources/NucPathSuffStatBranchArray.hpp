@@ -52,10 +52,10 @@ class NucPathSuffStatBranchArray : public SimpleBranchArray<NucPathSuffStat>    
         }
     }
 
-    void Add(const BranchSelector<NucPathSuffStat> &suffstatarray, const NucPathSuffStat& rootss)  {
-        rootsuffstat.Add(rootss);
+    void Add(const NucPathSuffStatBranchArray& from)	{
+        rootsuffstat.Add(from.rootsuffstat);
         for (int i=0; i<GetNbranch(); i++) {
-            (*this)[i].Add(suffstatarray.GetVal(i));
+            (*this)[i].Add(from.GetVal(i));
         }
     }
 

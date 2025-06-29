@@ -279,18 +279,19 @@ class SingleOmegaModel : public ProbModel {
     //! across genes in a multi-gene context)
     bool FixedNucRates() const { return nucmode == 2; }
 
-    /*
     //! set nucleotide rates (relative exchangeabilities and eq. frequencies) to a
     //! new value (multi-gene analyses)
     void SetNucRates(double inrootkappa, double inrootgamma,
-            const std::vector<double>& inkapparray, const std::vector<double>& inbranchgamma)    {
+            const BranchSelector<double>& inbranchkappa,
+            const BranchSelector<double>& inbranchgamma)	{
         rootkappa = inrootkappa;
         rootgamma = inrootgamma;
-        branchkappa = inbranchkappa;
-        branchgamma = inbranchgamma;
+        branchkappa->Copy(inbranchkappa);
+        branchgamma->Copy(inbranchgamma);
         TouchMatrices();
     }
 
+    /*
     //! get a copy of nucleotide rates into arrays given as arguments
     void GetNucRates(double& inrootkappa, double& inrootgamma,
             std::vector<double>& inkapparray, std::vector<double>& inbranchgamma)    {
@@ -441,6 +442,7 @@ class SingleOmegaModel : public ProbModel {
             total += BranchLengthsLogPrior();
         }
         if (!FixedNucRates()) {
+            total += NucRatesHyperLogPrior();
             total += NucRatesLogPrior();
         }
         total += OmegaLogPrior();
@@ -553,7 +555,7 @@ class SingleOmegaModel : public ProbModel {
         return KappaHyperLogPrior() + KappaHyperSuffStatLogProb();
     }
 
-    // const NucPathSuffStatBranchArray &GetNucPathSuffStatBranchArray() const { return *nucpathsuffstat; }
+    const NucPathSuffStatBranchArray &GetNucPathSuffStat() const { return *nucpathsuffstat; }
 
     void CollectNucPathSuffStat() {
         TouchMatrices();
@@ -568,7 +570,6 @@ class SingleOmegaModel : public ProbModel {
     double RootNucRatesSuffStatLogProb() const  {
         return nucpathsuffstat->GetRootVal().GetLogProb(*rootnucmatrix, *GetCodonStateSpace());
     }
-
 
     double NucRatesLogProb(int branchindex) const   {
         return NucRatesLogPrior(branchindex) + NucRatesSuffStatLogProb(branchindex);
