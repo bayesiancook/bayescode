@@ -484,7 +484,8 @@ double Random::sGamma(double a) {
 double Random::logGamma(double alpha) {
     // adapted from statlib
     if (alpha < 0) {
-        std::cerr << "error in loggamma: only positive argument\n";
+        std::cerr << "error in loggamma: only positive shape param\n";
+        cerr << alpha << "\n";
         exit(1);
     }
 

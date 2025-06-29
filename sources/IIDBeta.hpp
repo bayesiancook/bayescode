@@ -1,6 +1,5 @@
 
-#ifndef BETA_H
-#define BETA_H
+#pragma once
 
 #include "Array.hpp"
 #include "CodonSuffStat.hpp"
@@ -130,6 +129,30 @@ class IIDBeta : public SimpleArray<double> {
     //! return inverse concentration
     double GetInvConcentration() const { return 1.0 / (alpha + beta); }
 
+    //! get mean over the array
+    double GetTrueMean() const {
+        double m1 = 0;
+        for (int i = 0; i < GetSize(); i++) {
+            m1 += GetVal(i);
+        }
+        m1 /= GetSize();
+        return m1;
+    }
+
+    //! get variance over the array
+    double GetVar() const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i = 0; i < GetSize(); i++) {
+            m1 += GetVal(i);
+            m2 += GetVal(i) * GetVal(i);
+        }
+        m1 /= GetSize();
+        m2 /= GetSize();
+        m2 -= m1 * m1;
+        return m2;
+    }
+
     //! set mean and inverse concentration (i.e. set alpha and beta, based on
     //! these two values)
     void SetMeanInvConc(double mean, double invconc) {
@@ -175,4 +198,107 @@ class IIDBeta : public SimpleArray<double> {
     double beta;
 };
 
-#endif
+
+class BranchIIDBeta : public SimpleBranchArray<double> {
+  public:
+    BranchIIDBeta(const Tree &intree, double inalpha, double inbeta)
+        : SimpleBranchArray<double>(intree), alpha(inalpha), beta(inbeta) {
+        Sample();
+    }
+
+    ~BranchIIDBeta() {}
+
+    //! return value of the alpha parameter
+    double GetAlpha() const { return alpha; }
+    //! return value of the beta parameter
+    double GetBeta() const { return beta; }
+
+    //! return expected mean (not actual mean)
+    double GetMean() const { return alpha / (alpha + beta); }
+    //! return inverse concentration
+    double GetInvConcentration() const { return 1.0 / (alpha + beta); }
+
+    //! set mean and inverse concentration (i.e. set alpha and beta, based on
+    //! these two values)
+    void SetMeanInvConc(double mean, double invconc) {
+        double alpha = mean / invconc;
+        double beta = (1 - mean) / invconc;
+        SetAlpha(alpha);
+        SetBeta(beta);
+    }
+
+    //! set alpha parameter to new value
+    void SetAlpha(double inalpha) { alpha = inalpha; }
+    //! set beta parameter to new value
+    void SetBeta(double inbeta) { beta = inbeta; }
+
+    //! set all entries equal to inval
+    void SetAllBranches(double inval) {
+        for (int i = 0; i < GetNbranch(); i++) {
+            (*this)[i] = inval;
+        }
+    }
+
+    //! sample all entries from prior
+    void Sample() {
+        for (int i = 0; i < GetNbranch(); i++) {
+            (*this)[i] = Random::BetaSample(alpha, beta);
+        }
+    }
+
+    //! get total log prob summed over all branches
+    double GetLogProb() {
+        double total = 0;
+        for (int i = 0; i < GetNbranch(); i++) {
+            total += GetLogProb(i);
+        }
+        return total;
+    }
+
+    //! get log prob for a given branch
+    double GetLogProb(int index) { return Random::logBetaDensity(GetVal(index), alpha, beta); }
+
+    //! add current values stored in array to BetaSuffStat given as argument
+    void AddSuffStat(BetaSuffStat &suffstat) {
+        for (int i = 0; i < GetNbranch(); i++) {
+            suffstat.AddSuffStat(log(GetVal(i)), log(1 - GetVal(i)), 1);
+        }
+    }
+    //! get sum over all entries (name is rather specialized... could change..)
+    double GetTotalLength() const {
+        double m1 = 0;
+        for (int i = 0; i < GetNbranch(); i++) {
+            m1 += GetVal(i);
+        }
+        return m1;
+    }
+
+    //! get mean over the array
+    double GetTrueMean() const {
+        double m1 = 0;
+        for (int i = 0; i < GetNbranch(); i++) {
+            m1 += GetVal(i);
+        }
+        m1 /= GetNbranch();
+        return m1;
+    }
+
+    //! get variance over the array
+    double GetVar() const {
+        double m1 = 0;
+        double m2 = 0;
+        for (int i = 0; i < GetNbranch(); i++) {
+            m1 += GetVal(i);
+            m2 += GetVal(i) * GetVal(i);
+        }
+        m1 /= GetNbranch();
+        m2 /= GetNbranch();
+        m2 -= m1 * m1;
+        return m2;
+    }
+
+  protected:
+    double alpha;
+    double beta;
+};
+

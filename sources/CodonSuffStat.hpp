@@ -5,6 +5,7 @@
 #include <typeinfo>
 #include "CodonSubMatrixArray.hpp"
 #include "CodonSubMatrixBranchArray.hpp"
+#include "NHCodonSubMatrixBranchArray.hpp"
 #include "MPIBuffer.hpp"
 #include "PathSuffStat.hpp"
 #include "RelativePathSuffStat.hpp"
@@ -395,6 +396,13 @@ class OmegaPathSuffStat : public PoissonSuffStat {
         }
 
         PoissonSuffStat::AddSuffStat(tmpcount, tmpbeta);
+    }
+
+    void AddSuffStat(const BranchSelector<MGOmegaCodonSubMatrix> &codonsubmatrixarray,
+                     const NodeSelector<PathSuffStat> &pathsuffstatarray) {
+        for (int i = 0; i < codonsubmatrixarray.GetNbranch(); i++) {
+            AddSuffStat(codonsubmatrixarray.GetVal(i), pathsuffstatarray.GetVal(i));
+        }
     }
 
     //! \brief get count and beta stats from an array of 61x61 codon path suffstat

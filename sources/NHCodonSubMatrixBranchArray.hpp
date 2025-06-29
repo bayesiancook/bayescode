@@ -1,6 +1,5 @@
 
-#ifndef CODONMATRIXBRANCHARRAY_H
-#define CODONMATRIXBRANCHARRAY_H
+#pragma once
 
 #include "AAMutSelOmegaCodonSubMatrix.hpp"
 #include "BranchArray.hpp"
@@ -20,22 +19,22 @@
  * implemented as a vector<MGOmegaCodonSubMatrix*>.
  */
 
-class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
+class NHMGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
                                          public BranchArray<MGOmegaCodonSubMatrix> {
   public:
     //! constructor parameterized by a codon state space, a single nucleotide
     //! matrix and an array (in fact, a BranchSelector) of omega's
-    MGOmegaCodonSubMatrixBranchArray(const CodonStateSpace *incodonstatespace,
-                                     const SubMatrix *innucmatrix,
+    NHMGOmegaCodonSubMatrixBranchArray(const CodonStateSpace *incodonstatespace,
+                                     const BranchSelector<SubMatrix> *innucmatrixarray,
                                      const BranchSelector<double> *inomegaarray)
         : codonstatespace(incodonstatespace),
-          nucmatrix(innucmatrix),
+          nucmatrixarray(innucmatrixarray),
           omegaarray(inomegaarray),
           matrixarray(inomegaarray->GetNbranch()) {
         Create();
     }
 
-    ~MGOmegaCodonSubMatrixBranchArray() { Delete(); }
+    ~NHMGOmegaCodonSubMatrixBranchArray() { Delete(); }
 
     //! return array size
     const Tree &GetTree() const { return omegaarray->GetTree(); }
@@ -44,9 +43,6 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     const MGOmegaCodonSubMatrix &GetVal(int i) const { return *matrixarray[i]; }
     //! non-const access to matrix i
     MGOmegaCodonSubMatrix &operator[](int i) { return *matrixarray[i]; }
-
-    //! const access to underlying nucleotide matrix
-    // const SubMatrix &GetNucMatrix() const { return *nucmatrix; }
 
     //! update all matrices
     void UpdateCodonMatrices() {
@@ -60,7 +56,7 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     void Create() {
         for (int i = 0; i < GetNbranch(); i++) {
             matrixarray[i] =
-                new MGOmegaCodonSubMatrix(codonstatespace, nucmatrix, omegaarray->GetVal(i));
+                new MGOmegaCodonSubMatrix(codonstatespace, &nucmatrixarray->GetVal(i), omegaarray->GetVal(i));
         }
     }
 
@@ -71,9 +67,8 @@ class MGOmegaCodonSubMatrixBranchArray : public BranchArray<SubMatrix>,
     }
 
     const CodonStateSpace *codonstatespace;
-    const SubMatrix *nucmatrix;
+    const BranchSelector<SubMatrix> *nucmatrixarray;
     const BranchSelector<double> *omegaarray;
     vector<MGOmegaCodonSubMatrix *> matrixarray;
 };
 
-#endif
