@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
     int every = 1;
     int until = -1;
     int blmode = 1;
-    int nucmode = 1;
+    int nucmode = 2;
     int omegamode = 1;
     double omegahypermean = 1.0;
     double omegahyperinvshape = 1.0;
