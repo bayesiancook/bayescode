@@ -821,19 +821,22 @@ class SingleOmegaModel : public ProbModel {
                [&l = totlength](int i) {return l;},
                [&om = omega](int i) {return om;});
     }
+    */
 
     void AdddSOmegaPathSuffStat(dSOmegaPathSuffStatBranchArray& into) const {
+        BranchHomogeneousSelector<double> om(tree, omega);
         PathSuffStatNodeArray pathsuffstatarray(*tree);
         pathsuffstatarray.Clear();
         pathsuffstatarray.AddSuffStat(*phyloprocess);
-        into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
+        into.AddSuffStat(*codonmatrixarray, pathsuffstatarray, *branchlength, om);
     }
 
     void AddGCConsdSOmegaPathSuffStat(GCConsdSOmegaPathSuffStatBranchArray& into) const {
+        BranchHomogeneousSelector<double> om(tree, omega);
         PathSuffStatNodeArray pathsuffstatarray(*tree);
         pathsuffstatarray.Clear();
         pathsuffstatarray.AddSuffStat(*phyloprocess);
-        into.AddSuffStat(*codonmatrix, pathsuffstatarray, *branchlength, omega);
+        into.AddSuffStat(*codonmatrixarray, pathsuffstatarray, *branchlength, om);
     }
 
     //! collect generic sufficient statistics from substitution mappings
@@ -869,7 +872,6 @@ class SingleOmegaModel : public ProbModel {
             meancounts[j] = f;
         }
     }
-    */
 
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";

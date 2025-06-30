@@ -8,7 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= nhglobom multigenenhglobom fastnecoevolps readfastnecoevolps fastnearlyneutralps readfastnearlyneutralps fastnearlyneutralpnps readfastnearlyneutralpnps fastcoevol coevol readcoevol multigenecoevol fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
+ALL= nhglobom multigenenhglobom readmultigenenhglobom fastnecoevolps readfastnecoevolps fastnearlyneutralps readfastnearlyneutralps fastnearlyneutralpnps readfastnearlyneutralpnps fastcoevol coevol readcoevol multigenecoevol fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
 #ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
@@ -222,6 +222,10 @@ $(PROGSDIR)/readmultigeneglobom$(EXEEXT): ReadMultiGeneSingleOmega.o $(OBJS)
 multigenenhglobom$(EXEEXT): $(PROGSDIR)/multigenenhglobom$(EXEEXT)
 $(PROGSDIR)/multigenenhglobom$(EXEEXT): MultiGeneNHT92SingleOmega.o $(OBJS)
 	$(CC) MultiGeneNHT92SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+readmultigenenhglobom$(EXEEXT): $(PROGSDIR)/readmultigenenhglobom$(EXEEXT)
+$(PROGSDIR)/readmultigenenhglobom$(EXEEXT): ReadMultiGeneNHT92SingleOmega.o $(OBJS)
+	$(CC) ReadMultiGeneNHT92SingleOmega.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 codonm9$(EXEEXT): $(PROGSDIR)/codonm9$(EXEEXT)
 $(PROGSDIR)/codonm9$(EXEEXT): CodonM9.o $(OBJS)
