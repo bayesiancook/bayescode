@@ -124,6 +124,22 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
         return Nbranch;
     }
 
+    int GetNtaxa() const    {
+        return Ntaxa;
+    }
+
+    const TaxonSet* GetTaxonSet() const   {
+        return refcodondata->GetTaxonSet();
+    }
+
+    const BranchSelector<double>& GetKappaTree() const  {
+        return *branchkappa;
+    }
+
+    const BranchSelector<double>& GetGammaTree() const  {
+        return *branchgamma;
+    }
+
     void Allocate() {
 
         // Branch lengths
@@ -1291,6 +1307,12 @@ class MultiGeneSingleOmegaModel : public MultiGeneProbModel {
     void SlaveAddGeneDoubleCounts(vector<vector<double>>& counts) const {
         for (int gene = 0; gene < GetLocalNgene(); gene++) {
             geneprocess[gene]->AddDoubleCounts(counts[gene]);
+        }
+    }
+
+    void SlaveAddEffectiveMutationalTargets(vector<double>& syn, vector<double>& nonsyn)   {
+        for (int gene = 0; gene < GetLocalNgene(); gene++) {
+            geneprocess[gene]->AddEffectiveMutationalTargets(syn, nonsyn);
         }
     }
 };

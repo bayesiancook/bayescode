@@ -1,6 +1,50 @@
 #include "CodonSubMatrix.hpp"
 using namespace std;
 
+void MGCodonSubMatrix::GetEffectiveMutationalTargets(int codon, double weight, double& syn, double& nonsyn)  const {
+
+    int initcodon[3];
+    int finalcodon[3];
+    for (int pos=0; pos<3; pos++)   {
+        initcodon[pos] = GetCodonStateSpace()->GetCodonPosition(pos, codon);
+        finalcodon[pos] = initcodon[pos];
+    }
+
+    for (int pos=0; pos<3; pos++)   {
+        int nuc0 = initcodon[pos];
+        for (int nuc=0; nuc<4; nuc++)   {
+            if (nuc != nuc0)    {
+                finalcodon[pos] = nuc;
+                if (! GetCodonStateSpace()->CheckStop(finalcodon[0], finalcodon[1], finalcodon[2])) {
+                    int fincodon = GetCodonStateSpace()->GetCodonFromDNA(finalcodon[0], finalcodon[1], finalcodon[2]);
+                    double rate = (*NucMatrix)(nuc0, nuc);
+                    if (rate < 0)   {
+                        cerr << "error: negative rate\t" << nuc0 << '\t' << nuc << '\t' << rate << '\n';
+                        exit(1);
+                    }
+                    if (Synonymous(codon, fincodon))    {
+                        syn += weight * rate;
+                    }
+                    else    {
+                        nonsyn += weight * rate;
+                    }
+                }
+                finalcodon[pos] = nuc0;
+            }
+        }
+    }
+}
+
+void MGCodonSubMatrix::GetMeanEffectiveMutationalTargets(const vector<int>& counts, double& syn, double& nonsyn) const {
+    if (counts.size() != GetNstate())   {
+        cerr << "error: non matching size\n";
+        exit(1);
+    }
+    for (int codon=0; codon<GetNstate(); codon++)   {
+        GetEffectiveMutationalTargets(codon, counts[codon], syn, nonsyn);
+    }
+}
+
 void MGCodonSubMatrix::ComputeArray(int i) const {
     double total = 0;
     for (int j = 0; j < GetNstate(); j++) {

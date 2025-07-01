@@ -111,6 +111,9 @@ class MGCodonSubMatrix : public NucCodonSubMatrix {
 
     void CorruptMatrix() /*override*/ { SubMatrix::CorruptMatrix(); }
 
+    void GetEffectiveMutationalTargets(int codon, double weight, double& syn, double& nonsyn) const;
+    void GetMeanEffectiveMutationalTargets(const vector<int>& counts, double& syn, double& nonsyn) const;
+
   protected:
     void ComputeArray(int i) const /*override*/;
     void ComputeStationary() const /*override*/;

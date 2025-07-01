@@ -16,6 +16,8 @@
 #include "NucPathSuffStatBranchArray.hpp"
 #include "NHCodonSubMatrixBranchArray.hpp"
 
+#include "EffectiveMutationalTargets.hpp"
+
 class SingleOmegaModel : public ProbModel {
     // tree and data
     const Tree *tree;
@@ -871,6 +873,10 @@ class SingleOmegaModel : public ProbModel {
             }
             meancounts[j] = f;
         }
+    }
+
+    void AddEffectiveMutationalTargets(vector<double>& syn, vector<double>& nonsyn) {
+        RecursiveAddEffectiveMutationalTargets(tree->GetRoot(), *codondata, *codonmatrixarray, syn, nonsyn);
     }
 
     void TraceHeader(ostream &os) const override {

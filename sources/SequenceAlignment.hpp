@@ -76,6 +76,8 @@ class SequenceAlignment {
     //! return empirical frequencies into a vector
     std::vector<double> GetEmpiricalFreq() const;
 
+    std::vector<int> GetEmpiricalCounts(int taxon) const;
+
   protected:
     bool AllMissingColumn(int site) const {
         bool ret = true;

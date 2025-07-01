@@ -3,6 +3,7 @@
 #include <fstream>
 #include "MultiGeneSample.hpp"
 #include "MultiGeneSingleOmegaModel.hpp"
+#include "DistBranchArray.hpp"
 #include "BranchToNewick.hpp"
 using namespace std;
 
@@ -300,7 +301,52 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
         }
         GetModel()->SlaveSendGeneArray(meancounts);
     }
+
+    void MasterReadEffectiveMutationalTargets() {
+
+        int Ntaxa = GetModel()->GetNtaxa();
+        vector<double> syn(Ntaxa,0);
+        vector<double> nonsyn(Ntaxa,0);
+
+        cerr << size << " points to read\n";
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->MasterUpdate();
+        }
+        cerr << '\n';
+
+        GetModel()->MasterReceiveAdditive(syn);
+        GetModel()->MasterReceiveAdditive(nonsyn);
+        for (int j=0; j<Ntaxa; j++)   {
+            syn[j] /= size;
+            nonsyn[j] /= size;
+        }
+
+        ofstream os((name + ".effmut.tab").c_str());
+        os << "#taxon\teffsyn\teffnonsyn\tratio\n";
+        for (int j=0; j<Ntaxa; j++) {
+            os << GetModel()->GetTaxonSet()->GetTaxon(j) << '\t' << syn[j] << '\t' << nonsyn[j] << '\t' << syn[j]/nonsyn[j] << '\n';
+        }
+        cerr << "effective (and relative) numbers of mutational targets in " << name << ".effmut.tab\n";
+    }
+
+    void SlaveReadEffectiveMutationalTargets() {
+
+        int Ntaxa = GetModel()->GetNtaxa();
+        vector<double> syn(Ntaxa,0);
+        vector<double> nonsyn(Ntaxa,0);
+
+        for (int i = 0; i < size; i++) {
+            GetNextPoint();
+            GetModel()->SlaveUpdate();
+            GetModel()->SlaveAddEffectiveMutationalTargets(syn, nonsyn);
+        }
+        GetModel()->SlaveSendAdditive(syn);
+        GetModel()->SlaveSendAdditive(nonsyn);
+    }
 };
+
 
 int main(int argc, char *argv[]) {
     int myid = 0;
@@ -318,6 +364,7 @@ int main(int argc, char *argv[]) {
     int dsomss = 0;
     int nodepathss = 0;
     int doublesub = 0;
+    int effmut = 0;
 
     try {
         if (argc == 1) {
@@ -359,6 +406,8 @@ int main(int argc, char *argv[]) {
                 nodepathss = 1;
             } else if (s == "-doublesub")   {
                 doublesub = 1;
+            } else if (s == "-effmut")  {
+                effmut = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -384,6 +433,13 @@ int main(int argc, char *argv[]) {
             sample->MasterPostPred();
         } else {
             sample->SlavePostPred();
+        }
+    } else if (effmut)  {
+        if (! myid) {
+            sample->MasterReadEffectiveMutationalTargets();
+        }
+        else    {
+            sample->SlaveReadEffectiveMutationalTargets();
         }
     } else if (dsomss)    {
         if (! myid) {

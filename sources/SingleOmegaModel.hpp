@@ -11,6 +11,8 @@
 #include "dSOmegaPathSuffStat.hpp"
 #include "GCConsdSOmegaPathSuffStat.hpp"
 
+#include "EffectiveMutationalTargets.hpp"
+
 /**
  * \brief A standard site- and branch-homogeneous Muse and Gaut omega-codon
  * model
@@ -731,6 +733,11 @@ class SingleOmegaModel : public ProbModel {
         os << dsompathsuffstatarray;
     }
     */
+
+    void AddEffectiveMutationalTargets(vector<double>& syn, vector<double>& nonsyn) {
+        BranchHomogeneousSelector<MGOmegaCodonSubMatrix> branchmat(GetTree(), *codonmatrix);
+        RecursiveAddEffectiveMutationalTargets(tree->GetRoot(), *codondata, branchmat, syn, nonsyn);
+    }
 
     void TraceHeader(ostream &os) const override {
         os << "#logprior\tlnL\tlength\t";
