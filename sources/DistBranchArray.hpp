@@ -52,6 +52,10 @@ template<class T> class DistBranchArray   {
 
     void RecursiveTabulateMean(vector<double>& v, const Link* from, bool nodename, bool leafonly) const {
         if ((! from->isRoot()) && ((! leafonly) || (from->isLeaf())) )   {
+            if (from->GetNode()->GetIndex() >= v.size())    {
+                cerr << "error in recursive tabulate mean\n";
+                exit(1);
+            }
             v[from->GetNode()->GetIndex()] = GetMean(from->GetBranch()->GetIndex());
         }
         for (const Link* link=from->Next(); link!=from; link=link->Next())  {

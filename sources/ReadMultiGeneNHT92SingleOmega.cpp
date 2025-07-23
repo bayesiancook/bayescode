@@ -327,14 +327,14 @@ class MultiGeneSingleOmegaSample : public MultiGeneSample {
 
         kappatree.Sort();
         vector<double> meankappa(Ntaxa,0);
-        kappatree.TabulateMean(meankappa);
+        kappatree.TabulateMean(meankappa, true, true);
 
         ofstream gos((name + ".postmeangamma.tre").c_str());
         gammatree.MeanToStream(gos);
 
         gammatree.Sort();
         vector<double> meangamma(Ntaxa,0);
-        gammatree.TabulateMean(meangamma);
+        gammatree.TabulateMean(meangamma, true, true);
 
         GetModel()->MasterReceiveAdditive(syn);
         GetModel()->MasterReceiveAdditive(nonsyn);
