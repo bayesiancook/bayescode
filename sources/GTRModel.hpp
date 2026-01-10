@@ -23,6 +23,9 @@ class GTRModel : public ProbModel {
     int nucmode;
     int fixbl;
 
+    int Nnuc;
+    int Nrr;
+
     // Branch lengths
 
     double lambda;
@@ -73,6 +76,9 @@ class GTRModel : public ProbModel {
         nucmode = 0;
 
         data = new FileSequenceAlignment(datafile);
+        cerr << data->GetNstate() << '\n';
+        Nnuc = data->GetNstate();
+        Nrr = data->GetNstate()*(data->GetNstate() - 1)/2;
 
         Nsite = data->GetNsite();  // # columns
         Ntaxa = data->GetNtaxa();
@@ -87,6 +93,8 @@ class GTRModel : public ProbModel {
         tree = tmptree;
 
         Nbranch = tree->GetNbranch();
+        cerr << "ntaxa   :" << Ntaxa << '\n';
+        cerr << "nbranch :" << Nbranch << '\n';
     }
 
     GTRModel(const SequenceAlignment* indata, const Tree* intree) {
@@ -172,6 +180,22 @@ class GTRModel : public ProbModel {
     void SetAcrossGenesModes(int inblmode, int innucmode) {
         blmode = inblmode;
         nucmode = innucmode;
+    }
+
+    void SetLG()    {
+        for (int i=0; i<Nnuc; i++) {
+            nucstat[i] = LG_Stat[i];
+        }
+
+        double tot = 0;
+        for (int i=0; i<Nrr; i++)   {
+            nucrelrate[i] = LG_RR[i];
+            tot += nucrelrate[i];
+        }
+        for (int i=0; i<Nrr; i++)   {
+            nucrelrate[i] /= tot;
+        }
+        nucmode = 2;
     }
 
     void SetFixBL(int in)   {
@@ -489,6 +513,12 @@ class GTRModel : public ProbModel {
         relpathsuffstatarray.AddSuffStat(pathsuffstatarray, *branchlength);
 
         into.Add(relpathsuffstatarray);
+    }
+
+    //! collect generic sufficient statistics from substitution mappings
+    // separately for each site and each branch
+    void AddPathSuffStat(PathSuffStatBidimArray& into, const BranchAllocationSystem& alloc) const {
+        into.AddSuffStat(*phyloprocess, alloc);
     }
 
     void TraceHeader(ostream &os) const override {

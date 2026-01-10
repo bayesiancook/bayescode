@@ -522,6 +522,15 @@ class PathSuffStatBidimArray : public SimpleBidimArray<PathSuffStat> {
             }
         }
     }
+
+    void Normalize(double f) {
+        for (int i = 0; i < this->GetNrow(); i++) {
+            for (int j = 0; j < this->GetNcol(); j++) {
+                (*this)(i, j).Normalize(f);
+            }
+        }
+    }
+
 };
 
 ostream& operator<<(ostream& os, const PathSuffStatBidimArray& suffstat);

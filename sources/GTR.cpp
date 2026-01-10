@@ -14,14 +14,16 @@ class GTRChain : public Chain {
     string modeltype;
     string datafile, treefile;
     int fixbl;
+    int fixrr;
 
   public:
     //! constructor for a new chain: datafile, treefile, saving frequency, final
     //! chain size, chain name and overwrite flag -- calls New
-    GTRChain(string indatafile, string intreefile, int infixbl, int inevery, int inuntil, string inname,
+    GTRChain(string indatafile, string intreefile, int infixbl, int infixrr, int inevery, int inuntil, string inname,
                      int force)
         : modeltype("GTR"), datafile(indatafile), treefile(intreefile) {
         fixbl = infixbl;
+        fixrr = infixrr;
         every = inevery;
         until = inuntil;
         name = inname;
@@ -40,6 +42,9 @@ class GTRChain : public Chain {
         model = new GTRModel(datafile, treefile);
         GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
+        if (fixrr)  {
+            GetModel()->SetLG();
+        }
         GetModel()->Update();
         cerr << "-- Reset" << endl;
         Reset(force);
@@ -55,16 +60,12 @@ class GTRChain : public Chain {
         }
         is >> modeltype;
         is >> datafile >> treefile;
-        fixbl = 0;
+        is >> fixbl >> fixrr;
         int tmp;
         is >> tmp;
-        if (tmp) {
-            is >> fixbl;
-            is >> tmp;
-            if (tmp)    {
-                cerr << "-- Error when reading model\n";
-                exit(1);
-            }
+        if (tmp)    {
+            cerr << "-- Error when reading model\n";
+            exit(1);
         }
         is >> every >> until >> size;
 
@@ -77,6 +78,9 @@ class GTRChain : public Chain {
         }
         GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
+        if (fixrr)  {
+            GetModel()->SetLG();
+        }
         model->FromStream(is);
         model->Update();
         cerr << size << " points saved, current ln prob = " << GetModel()->GetLogProb() << "\n";
@@ -87,8 +91,7 @@ class GTRChain : public Chain {
         ofstream param_os((name + ".param").c_str());
         param_os << GetModelType() << '\n';
         param_os << datafile << '\t' << treefile << '\n';
-        param_os << 1 << '\n';
-        param_os << fixbl << '\n';
+        param_os << fixbl << '\t' << fixrr << '\n';
         param_os << 0 << '\n';
         param_os << every << '\t' << until << '\t' << size << '\n';
         model->ToStream(param_os);
@@ -116,6 +119,7 @@ int main(int argc, char *argv[]) {
         string datafile = "";
         string treefile = "";
         int fixbl = 0;
+        int fixrr = 0;
         name = "";
         int force = 1;
         int every = 1;
@@ -140,6 +144,8 @@ int main(int argc, char *argv[]) {
                     force = 1;
                 } else if (s == "-fixbl")   {
                     fixbl = 1;
+                } else if (s == "-lg")   {
+                    fixrr = 1;
                 } else if ((s == "-x") || (s == "-extract")) {
                     i++;
                     if (i == argc) throw(0);
@@ -164,7 +170,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        chain = new GTRChain(datafile, treefile, fixbl, every, until, name, force);
+        chain = new GTRChain(datafile, treefile, fixbl, fixrr, every, until, name, force);
     }
 
     cerr << "chain " << name << " started\n";

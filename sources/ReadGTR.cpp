@@ -17,6 +17,7 @@ class GTRSample : public Sample {
     string datafile;
     string treefile;
     int fixbl;
+    int fixrr;
 
   public:
     string GetModelType() override { return modeltype; }
@@ -43,16 +44,12 @@ class GTRSample : public Sample {
         // read model type, and other standard fields
         is >> modeltype;
         is >> datafile >> treefile;
-        fixbl = 0;
+        is >> fixbl >> fixrr;
         int check;
         is >> check;
         if (check) {
-            is >> fixbl;
-            is >> check;
-            if (check)  {
-                cerr << "-- Error when reading model\n";
-                exit(1);
-            }
+            cerr << "-- Error when reading model\n";
+            exit(1);
         }
         is >> chainevery >> chainuntil >> chainsize;
 
@@ -66,6 +63,9 @@ class GTRSample : public Sample {
 
         GetModel()->SetFixBL(fixbl);
         GetModel()->Allocate();
+        if (fixrr)  {
+            GetModel()->SetLG();
+        }
 
         // read model (i.e. chain's last point) from <name>.param
         model->FromStream(is);
@@ -93,6 +93,59 @@ class GTRSample : public Sample {
         cerr << "node path suffstats in " << name << ".meannodepathsuffstat\n";
     }
 
+    void ReadSiteNodePathSuffStat() {
+        cerr << size << " points to read\n";
+        PathSuffStatBidimArray array(GetModel()->GetTree()->GetNbranch(), GetModel()->GetNsite(), GetModel()->GetStateSpace()->GetNstate());
+        BranchAllocationSystem alloc(*GetModel()->GetTree(), GetModel()->GetTree()->GetNbranch());
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AddPathSuffStat(array, alloc);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        ofstream os((name + ".suffstat").c_str());
+        const double aa_deg[] = {4.0, 2.0, 2.0, 2.0, 2.0, 4.0, 2.0, 3.0, 6.0, 6.0, 1.0, 2.0, 4.0, 2.0, 4.0, 4.0, 4.0, 4.0, 1.0, 2.0};
+        int nstate = GetModel()->GetStateSpace()->GetNstate();
+        int nsite = GetModel()->GetNsite();
+        int nbranch = GetModel()->GetTree()->GetNbranch();
+        // root:
+        for (int j=0; j<nstate; j++)    {
+            os << aa_deg[j] << '\t';
+        }
+        os << '\n';
+        for (int i=0; i<nsite; i++)    {
+            for (int j=0; j<nstate; j++)    {
+                os << array.GetVal(0,i).GetRootCount(j) << '\t';
+            }
+        }
+        os << '\n';
+        for (int b=0; b<nbranch; b++)   {
+            for (int i=0; i<nsite; i++)    {
+                double tot = 0;
+                for (int j=0; j<nstate; j++)    {
+                    tot += array.GetVal(b,i).GetWaitingTime(j);
+                }
+                for (int j=0; j<nstate; j++)    {
+                    os << array.GetVal(b,i).GetWaitingTime(j) / tot << '\t';
+                }
+                for (int j=0; j<nstate; j++)    {
+                    for (int k=0; k<nstate; k++)    {
+                        os << array.GetVal(b,i).GetPairCount(j,k) << '\t';
+                    }
+                }
+                for (int j=0; j<nstate; j++)    {
+                    for (int k=0; k<nstate; k++)    {
+                        os << array.GetVal(b,i).GetWaitingTime(j) * aa_deg[k] << '\t';
+                    }
+                }
+            }
+            os << '\n';
+        }
+        cerr << "path suffstats in " << name << ".suffstat\n";
+    }
+
     //! \brief computes the posterior mean estimate (and the posterior standard
     //! deviation) of omega
     void Read() {
@@ -111,6 +164,7 @@ int main(int argc, char *argv[]) {
     int until = -1;
     int ppred = 0;
     int nodepathss = 0;
+    int pathss = 0;
 
     string name;
 
@@ -139,6 +193,8 @@ int main(int argc, char *argv[]) {
                 ppred = 1;
             } else if (s == "-nodepathss")  {
                 nodepathss = 1;
+            } else if (s == "-ss")  {
+                pathss = 1;
             } else {
                 if (i != (argc - 1)) {
                     throw(0);
@@ -161,6 +217,8 @@ int main(int argc, char *argv[]) {
         sample->PostPred();
     } else if (nodepathss)  {
         sample->ReadNodePathSuffStat();
+    } else if (pathss)  {
+        sample->ReadSiteNodePathSuffStat();
     } else {
         sample->Read();
     }
