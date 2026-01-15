@@ -97,7 +97,6 @@ class MeanCovMatrix {
 		}
 	}
 	
-	
 	void ComputeSlopes2()	{
 		for (int i=0; i<GetDim(); i++)	{
 			for (int j=0; j<GetDim(); j++)	{
@@ -183,12 +182,51 @@ class MeanCovMatrix {
 		ComputeSlopes2();
 	}
 
+    void PrintCorrelCI(ofstream& os)  {
+        os << "i\tj\tmeancor_ij\tq025\tq975\n";
+        for (int i=0; i<GetDim(); i++)	{
+            for (int j=i+1; j<GetDim(); j++)	{
+                os << correl[i][j];
+                vector<double> corrlist(size,0);
+                for (unsigned int k=0; k<size; k++)	{
+					double r = val[i][j][k] / sqrt(val[i][i][k] * val[j][j][k]);
+                    corrlist[k] = r;
+                }
+                sort(corrlist.begin(), corrlist.end());
+                int imin = size * 0.025;
+                int imax = size * 0.975;
+                os << i << '\t' << j << '\t' << corrlist[imin] << '\t' << corrlist[imax] << '\n';
+            }
+        }
+    }
+
+    void PrintCorrelHeader(ofstream& os)  {
+        os << "i";
+        for (int i=0; i<GetDim(); i++)	{
+            for (int j=i+1; j<GetDim(); j++)	{
+                os << "\tcor_" << i << '_' << j;
+            }
+        }
+        os << '\n';
+    }
+
+    void PrintAllCorrelCoefs(ofstream& os)    {
+        for (unsigned int k=0; k<size; k++)	{
+            os << k ;
+            for (int i=0; i<GetDim(); i++)	{
+                for (int j=i+1; j<GetDim(); j++)	{
+					double r = val[i][j][k] / sqrt(val[i][i][k] * val[j][j][k]);
+                    os << '\t' << r;
+                }
+            }
+            os << '\n';
+        }
+    }
+
 	double GetPropVariance(int i)	const {
 		return meanpropvar[i];
 		// return 1.0 - 1.0 / (mean[i][i] * meaninv[i][i]);
 	}
-
-	// MeanCovMatrix Project(bool* array);
 
 	void PrintPropVariances(ostream& os) const {
 

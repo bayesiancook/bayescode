@@ -250,6 +250,23 @@ class FastCoevolSample : public Sample {
 		// mat.SetLatex(tex);
 		mos << mat;
 		cerr << "covariance matrix in " << name << ".cov\n";
+
+        ofstream fos((name + ".corrlist").c_str());
+        mat.PrintCorrelHeader(fos);
+        mat.PrintAllCorrelCoefs(fos);
+        cerr << "correl coefficients (full post sample) in " << name << ".corrlist\n";
+
+        ofstream cios((name + ".correl_ci").c_str());
+		cios << "entries are in the following order:\n";
+		GetModel()->PrintEntries(cios);
+        cios << '\n';
+        mat.PrintCorrelCI(cios);
+        cerr << "correl coefficients (post mean and CI) in " << name << ".correl_ci\n";
+
+        ofstream ssos((name + ".slopes").c_str());
+        mat.PrintSlopes(ssos);
+        cerr << "slopes in " << name << ".slopes\n";
+
 		cerr << '\n';
     }
 };
