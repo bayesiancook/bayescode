@@ -105,44 +105,80 @@ class GTRSample : public Sample {
         }
         cerr << '\n';
         array.Normalize(1.0/size);
+
         ofstream os((name + ".suffstat").c_str());
         const double aa_deg[] = {4.0, 2.0, 2.0, 2.0, 2.0, 4.0, 2.0, 3.0, 6.0, 6.0, 1.0, 2.0, 4.0, 2.0, 4.0, 4.0, 4.0, 4.0, 1.0, 2.0};
         int nstate = GetModel()->GetStateSpace()->GetNstate();
         int nsite = GetModel()->GetNsite();
         int nbranch = GetModel()->GetTree()->GetNbranch();
-        // root:
+
+        // header
+        os << nsite << '\t' << nbranch << '\n';
+
+        // root degeneracy (1 line)
         for (int j=0; j<nstate; j++)    {
             os << aa_deg[j] << '\t';
         }
         os << '\n';
+
+        // root post probs (nsite lines)
         for (int i=0; i<nsite; i++)    {
             for (int j=0; j<nstate; j++)    {
                 os << array.GetVal(0,i).GetRootCount(j) << '\t';
             }
+            os << '\n';
         }
-        os << '\n';
-        for (int b=0; b<nbranch; b++)   {
-            for (int i=0; i<nsite; i++)    {
+
+        // state post probs across branches (nbranch*nsite lines)
+        for (int i=0; i<nsite; i++)    {
+            for (int b=0; b<nbranch; b++)   {
                 double tot = 0;
                 for (int j=0; j<nstate; j++)    {
                     tot += array.GetVal(b,i).GetWaitingTime(j);
                 }
-                for (int j=0; j<nstate; j++)    {
-                    os << array.GetVal(b,i).GetWaitingTime(j) / tot << '\t';
+                if (tot > 0)   {
+                    for (int j=0; j<nstate; j++)    {
+                        os << array.GetVal(b,i).GetWaitingTime(j) / tot << '\t';
+                    }
                 }
+                else    {
+                    for (int j=0; j<nstate; j++)    {
+                        os << 0 << '\t';
+                    }
+                }
+                os << '\n';
+            }
+        }
+
+        // state counts
+        for (int i=0; i<nsite; i++)    {
+            for (int b=0; b<nbranch; b++)   {
                 for (int j=0; j<nstate; j++)    {
                     for (int k=0; k<nstate; k++)    {
                         os << array.GetVal(b,i).GetPairCount(j,k) << '\t';
                     }
-                }
-                for (int j=0; j<nstate; j++)    {
-                    for (int k=0; k<nstate; k++)    {
-                        os << array.GetVal(b,i).GetWaitingTime(j) * aa_deg[k] << '\t';
-                    }
+                    os << '\n';
                 }
             }
-            os << '\n';
         }
+
+        // state mu factors
+        for (int i=0; i<nsite; i++)    {
+            for (int b=0; b<nbranch; b++)   {
+                for (int j=0; j<nstate; j++)    {
+                    for (int k=0; k<nstate; k++)    {
+                        if (k != j) {
+                            os << array.GetVal(b,i).GetWaitingTime(j) * aa_deg[k] << '\t';
+                        }
+                        else {
+                            os << 0 << '\t';
+                        }
+                    }
+                    os << '\n';
+                }
+            }
+        }
+
         cerr << "path suffstats in " << name << ".suffstat\n";
     }
 
