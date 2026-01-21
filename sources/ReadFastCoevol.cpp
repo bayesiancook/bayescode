@@ -264,7 +264,7 @@ class FastCoevolSample : public Sample {
         cerr << "correl coefficients (post mean and CI) in " << name << ".correl_ci\n";
 
         ofstream ssos((name + ".slopes").c_str());
-        mat.PrintSlopes(ssos);
+        mat.PrintSlopes2(ssos);
         cerr << "slopes in " << name << ".slopes\n";
 
 		cerr << '\n';

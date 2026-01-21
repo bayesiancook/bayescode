@@ -186,7 +186,6 @@ class MeanCovMatrix {
         os << "i\tj\tmeancor_ij\tq025\tq975\n";
         for (int i=0; i<GetDim(); i++)	{
             for (int j=i+1; j<GetDim(); j++)	{
-                os << correl[i][j];
                 vector<double> corrlist(size,0);
                 for (unsigned int k=0; k<size; k++)	{
 					double r = val[i][j][k] / sqrt(val[i][i][k] * val[j][j][k]);
@@ -195,7 +194,7 @@ class MeanCovMatrix {
                 sort(corrlist.begin(), corrlist.end());
                 int imin = size * 0.025;
                 int imax = size * 0.975;
-                os << i << '\t' << j << '\t' << corrlist[imin] << '\t' << corrlist[imax] << '\n';
+                os << i << '\t' << j << '\t' << correl[i][j] << '\t' << corrlist[imin] << '\t' << corrlist[imax] << '\n';
             }
         }
     }
