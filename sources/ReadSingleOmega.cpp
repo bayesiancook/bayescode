@@ -117,6 +117,22 @@ class SingleOmegaSample : public Sample {
         cerr << "node path suffstats in " << name << ".meannodepathsuffstat\n";
     }
 
+    void ReadSitePathSuffStat() {
+        cerr << size << " points to read\n";
+        RelativePathSuffStatNodeArray array(*GetModel()->GetTree(), GetModel()->GetCodonStateSpace()->GetNstate());
+        for (int i = 0; i < size; i++) {
+            cerr << '.';
+            GetNextPoint();
+            GetModel()->Update();
+            GetModel()->AddNodePathSuffStat(array);
+        }
+        cerr << '\n';
+        array.Normalize(1.0/size);
+        ofstream os((name + ".meannodepathsuffstat").c_str());
+        os << array << '\n';
+        cerr << "node path suffstats in " << name << ".meannodepathsuffstat\n";
+    }
+
     void ReadBranchSuffStat()   {
         cerr << size << " points to read\n";
         dSOmegaPathSuffStatBranchArray array(*GetModel()->GetTree());

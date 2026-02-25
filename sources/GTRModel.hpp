@@ -8,6 +8,7 @@
 
 #include "PathSuffStat.hpp"
 #include "RelativePathSuffStat.hpp"
+#include "MeanPathSuffStat.hpp"
 
 class GTRModel : public ProbModel {
     // tree and data
@@ -59,6 +60,8 @@ class GTRModel : public ProbModel {
     // (bl are iid gamma, of scale parameter lambda)
     GammaSuffStat hyperlengthsuffstat;
 
+    const double min_bl = 1e-4;
+
 
   public:
     //-------------------
@@ -76,7 +79,7 @@ class GTRModel : public ProbModel {
         nucmode = 0;
 
         data = new FileSequenceAlignment(datafile);
-        cerr << data->GetNstate() << '\n';
+        // in fact: nstate = 20 -- this is a hack...
         Nnuc = data->GetNstate();
         Nrr = data->GetNstate()*(data->GetNstate() - 1)/2;
 
@@ -117,6 +120,10 @@ class GTRModel : public ProbModel {
         return Nsite;
     }
 
+    int GetNtaxa() const    {
+        return Ntaxa;
+    }
+
     const Tree* GetTree() const {
         return tree;
     }
@@ -135,7 +142,7 @@ class GTRModel : public ProbModel {
 
         if (fixbl)  {
             for (int j=0; j<Nbranch; j++)  {
-                (*branchlength)[j] = tree->GetBranchLength(j);
+                (*branchlength)[j] = tree->GetBranchLength(j) + min_bl;
             }
         }
 
@@ -517,22 +524,24 @@ class GTRModel : public ProbModel {
 
     //! collect generic sufficient statistics from substitution mappings
     // separately for each site and each branch
+    void AddPathSuffStat(MeanPathSuffStatBidimArray& into, const BranchAllocationSystem& alloc) const {
+        PathSuffStatBidimArray array(GetTree()->GetNbranch(), GetNsite(), GetStateSpace()->GetNstate());
+        array.AddSuffStat(*phyloprocess, alloc);
+        into.Add(array);
+    }
+
     void AddPathSuffStat(PathSuffStatBidimArray& into, const BranchAllocationSystem& alloc) const {
         into.AddSuffStat(*phyloprocess, alloc);
     }
 
     void TraceHeader(ostream &os) const override {
-        os << "#logprior\tlnL\tlength\t";
-        os << "statent\t";
-        os << "rrent\n";
+        os << "#logprior\tlnL\tlength\n";
     }
 
     void Trace(ostream &os) const override {
         os << GetLogPrior() << '\t';
         os << GetLogLikelihood() << '\t';
-        os << branchlength->GetTotalLength() << '\t';
-        os << Random::GetEntropy(nucstat) << '\t';
-        os << Random::GetEntropy(nucrelrate) << '\n';
+        os << branchlength->GetTotalLength() << '\n';
     }
 
     void Monitor(ostream &os) const override {}

@@ -142,12 +142,7 @@ class PathSuffStat : public SuffStat {
 
     void Normalize(double f)    {
         for (std::map<int, double >::iterator i = rootcount.begin(); i != rootcount.end(); i++) {
-            double tmp = i->second;
             i->second *= f;
-            if (i->second == tmp)   {
-                cerr << "error\n";
-                exit(1);
-            }
         }
         for (std::map<int, double>::iterator i = waitingtime.begin(); i != waitingtime.end();
              i++) {
@@ -176,6 +171,24 @@ class PathSuffStat : public SuffStat {
             exit(1);
         }
         return 2*Nstate + Nstate*(Nstate-1);
+    }
+
+    vector<double> GetVectorizedPairCounts() const	{
+	vector<double> v(Nstate*Nstate,0);
+        for (std::map<pair<int, int>, double >::const_iterator i = paircount.begin();
+             i != paircount.end(); i++) {
+            v[i->first.first * Nstate + i->first.second] = i->second;
+        }
+	return v;
+    }
+
+    vector<double> GetVectorizedWaitingTimes() const	{
+	vector<double> v(Nstate,0);
+        for (std::map<int, double>::const_iterator i = waitingtime.begin(); i != waitingtime.end();
+             i++) {
+            v[i->first] = i->second;
+        }
+	return v;
     }
 
     //! put object into stream

@@ -8,8 +8,7 @@ ALL_SRCS=$(wildcard *.cpp)
 ALL_OBJS=$(patsubst %.cpp,%.o,$(ALL_SRCS))
 
 PROGSDIR=../data
-ALL= gtr readgtr nhglobom multigenenhglobom readmultigenenhglobom fastnecoevolps readfastnecoevolps fastnearlyneutralps readfastnearlyneutralps fastnearlyneutralpnps readfastnearlyneutralpnps fastcoevol coevol readcoevol multigenecoevol fastcodonm2a globom readglobom codonm2a readcodonm2a cuttree fastcoevol readfastcoevol genebranchdnds readgenebranchdnds branchnucdnds readbranchnucdnds branchnuc readbranchnuc genebranchnuc readgenebranchnuc genebranchnucdnds readgenebranchnucdnds gtr readgtr multigenegtr readmultigenegtr get_empirical_branch_dnds readbranchtree globom readglobom multigeneglobom readmultigeneglobom multigenebranchom readmultigenebranchom 
-#ALL= getbranchdnds readbranchdnds fastcoevol readfastcoevol readbranchtree globom readglobom multigeneglobom readmultigeneglobom codonm2a readcodonm2a simucodonm2a multigenecodonm2a readmultigenecodonm2a fastreadmultigenecodonm2a aamutselddp readaamutselddp multigeneaamutselddp readmultigeneaamutselddp multigenebranchom readmultigenebranchom multigenesparsebranchom readmultigenesparsebranchom multigenesiteom siteom 
+ALL= fastmapgtr gtr readgtr 
 PROGS=$(addprefix $(PROGSDIR)/, $(ALL))
 
 # If we are on a windows platform, executables are .exe files
@@ -182,6 +181,10 @@ $(PROGSDIR)/readcoevol$(EXEEXT): ReadCoevol.o $(OBJS)
 brownclock$(EXEEXT): $(PROGSDIR)/brownclock$(EXEEXT)
 $(PROGSDIR)/brownclock$(EXEEXT): BrownianClock.o $(OBJS)
 	$(CC) BrownianClock.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+
+fastmapgtr$(EXEEXT): $(PROGSDIR)/fastmapgtr$(EXEEXT)
+$(PROGSDIR)/fastmapgtr$(EXEEXT): FastMapGTR.o $(OBJS)
+	$(CC) FastMapGTR.o $(OBJS) $(LDFLAGS) $(LIBS) -o $@
 
 gtr$(EXEEXT): $(PROGSDIR)/gtr$(EXEEXT)
 $(PROGSDIR)/gtr$(EXEEXT): GTR.o $(OBJS)
